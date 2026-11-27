@@ -1,13 +1,22 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-logs-usage`, so the web can show the link module description and settings in English (data only, no API change).
-- 5.7R.43: 기본값 데이터 창 이름 `5시간(로그 추정)`·`7일(로그 추정)` → `5시간`·`7일`(신뢰는 등급 배지가 말한다, `short_title` 그대로). 창 상태 `active`·`idle`은 이 출처가 내는 값이며 계약 어휘가 아니다(`UsageWindowSnapshot.status`는 열린 문자열).
-- 5.2R.27: 이 PC에 로그 폴더가 있는 로그 출처 기본 켜기(포트 `logs.source_defaults`, 규칙 데이터 `data/auto_log_sources.json`, `autoenable`), `local-logs` `auto_enable`·창 이름(기본값 데이터 `title`·`short_title`, `window_infos`), 첫 조회가 수집을 기다림(선택 포트 `logs.ingest`, `first_scan_wait_seconds`). 옵션 `auto_enable_log_sources`·`auto_log_sources_file`·`first_scan_wait_seconds`.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-logs-usage`, so the web app can show the link module description and settings in English (data only, no
+  API change).
+- Default data window names changed from `5시간(로그 추정)` and `7일(로그 추정)` to `5시간` and `7일` (the trust
+  level badge conveys reliability; `short_title` is unchanged). The window states `active` and `idle` are values this
+  source produces, not contract vocabulary (`UsageWindowSnapshot.status` is an open string).
+- Log sources whose log folder exists on this machine are turned on by default (port `logs.source_defaults`, rule data
+  `data/auto_log_sources.json`, `autoenable`), `local-logs` gained `auto_enable` and window names (default data
+  `title` and `short_title`, `window_infos`), and the first query waits for collection (optional port `logs.ingest`,
+  `first_scan_wait_seconds`). Options `auto_enable_log_sources`, `auto_log_sources_file` and
+  `first_scan_wait_seconds`.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`, 작업 4R.13): 사용량 출처 `local-logs`(`LocalLogsUsageSource`,
-  신뢰 등급 `estimated`), 순수 계산 `estimate_windows`, 기본값 데이터 `data/local_logs_defaults.json`,
-  `logs.ingested` 캐시 무효화, 설치자 옵션 `source_id`·`defaults_file`.
+- First release (from the scripts/pkgkit template `link`): the usage source `local-logs` (`LocalLogsUsageSource`,
+  trust level `estimated`), the pure calculation `estimate_windows`, the default data
+  `data/local_logs_defaults.json`, cache invalidation on `logs.ingested`, and the server administrator options
+  `source_id` and `defaults_file`.

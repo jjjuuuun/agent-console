@@ -83,6 +83,7 @@ def build_service(cfg: I18nModuleSettings, ctx: ModuleContext) -> I18nService:
         base_dir=ctx.paths.base_dir if ctx.paths is not None else None,
         default_language=cfg.default_language,
         fallback_language=cfg.fallback_language,
+        source_language=cfg.source_language,
     )
 
 

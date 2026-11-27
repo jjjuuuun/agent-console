@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast, ConfirmDialog } from "@agent-console/ui";
 import type { WikiCreateRequest, WikiSummary } from "@agent-console/contracts/wiki";
 import { useApi } from "../../app/ApiContext";
-import { useDescribeError } from "../../app/errors";
 import { saveBlob } from "../../lib/download";
 import { routePath, useRouteOn } from "../library";
 import { useCopyDialog } from "../projects";
@@ -20,6 +19,7 @@ import { wikiRulesPath } from "./wikiPaths";
 import { WIKI_RULES_ROLE } from "./wikiConfig";
 import { useNavigate } from "react-router";
 import { useT } from "@agent-console/i18n";
+import { WikiToast } from "./WikiToast";
 
 /** 위키 규칙 화면이 이 앱에 있고 켜져 있는가(규칙 열기·공용에서 가져오기 UI의 조건). */
 export function useRulesScreenOn(): boolean {
@@ -129,7 +129,6 @@ export function useImportDialog(onImported?: (wikiId: string, n: number) => void
 }
 
 function ImportHost({ initialWiki, onClose, onImported }: { initialWiki: string | undefined; onClose: () => void; onImported?: (wikiId: string, n: number) => void }) {
-  const t = useT("wiki");
   const space = useWikiSpace();
   const ctx = useWikiContext();
   const list = useWikiList();
@@ -150,7 +149,7 @@ function ImportHost({ initialWiki, onClose, onImported }: { initialWiki: string 
       onDone={(wiki, n) => {
         void invalidate();
         onClose();
-        toast({ tone: "success", text: t("transfer.done", { count: n }) });
+        toast({ tone: "success", text: <WikiToast render={(t) => t("transfer.done", { count: n })} /> });
         onImported?.(wiki, n);
       }}
     />
@@ -180,7 +179,6 @@ export function useExportDialog(): { open: (wiki: WikiSummary) => void; dialog: 
 
 /** 위키 삭제 확인(정의만 지워지고 페이지 폴더는 남는다는 것을 알린다). 끝나면 `onDeleted`. */
 export function useDeleteWikiDialog(onDeleted?: (wikiId: string) => void): { open: (wiki: WikiSummary) => void; dialog: ReactNode } {
-  const describeError = useDescribeError();
   const t = useT("wiki");
   const [target, setTarget] = useState<WikiSummary | null>(null);
   const space = useWikiSpace();
@@ -196,14 +194,14 @@ export function useDeleteWikiDialog(onDeleted?: (wikiId: string) => void): { ope
       const directory = w.directory ?? "";
       toast({
         tone: "success",
-        text: t("deleteWiki.done"),
+        text: <WikiToast render={(t) => t("deleteWiki.done")} />,
         durationMs: 8000,
-        ...(directory === "" ? {} : { action: { label: t("deleteWiki.copyPath"), onClick: () => void navigator.clipboard?.writeText(directory) } }),
+        ...(directory === "" ? {} : { action: { label: <WikiToast render={(t) => t("deleteWiki.copyPath")} />, onClick: () => void navigator.clipboard?.writeText(directory) } }),
       });
       onDeleted?.(w.id);
     } catch (e) {
       setTarget(null);
-      toast({ tone: "danger", text: describeError(e, t("deleteWiki.failed")).message });
+      toast({ tone: "danger", text: <WikiToast render={(t, d) => d(e, t("deleteWiki.failed")).message} /> });
     }
   };
   const name = target === null ? "" : target.name && target.name !== "" ? target.name : target.id;

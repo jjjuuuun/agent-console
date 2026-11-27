@@ -39,6 +39,7 @@ import { useServerText, useT } from "@agent-console/i18n";
 import { useMaybeT } from "../../i18n/useMaybeT";
 import { useWikiViewMessages } from "./useViewMessages";
 import { useFormat } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const P = WIKI_PARAMS;
 const EMPTY: readonly never[] = [];
@@ -220,8 +221,8 @@ export function PageTab(props: WikiTabProps) {
   };
   const copyMine = () => {
     const clip = typeof navigator === "undefined" ? undefined : navigator.clipboard;
-    if (clip === undefined) toast({ tone: "danger", text: t("editor.copyFailed") });
-    else void clip.writeText(value).then(() => toast({ tone: "success", text: t("editor.copyMine") }), () => toast({ tone: "danger", text: t("editor.copyFailed") }));
+    if (clip === undefined) toast({ tone: "danger", text: <WikiToast render={(t) => t("editor.copyFailed")} /> });
+    else void clip.writeText(value).then(() => toast({ tone: "success", text: <WikiToast render={(t) => t("editor.copyMine")} /> }), () => toast({ tone: "danger", text: <WikiToast render={(t) => t("editor.copyFailed")} /> }));
   };
 
   // ---- 저장 전 시험·링크 장식 -------------------------------------------------------------------
@@ -297,13 +298,13 @@ export function PageTab(props: WikiTabProps) {
 
   const copyPath = (p: string) => {
     void navigator.clipboard?.writeText(p);
-    toast({ tone: "success", text: t("copied") });
+    toast({ tone: "success", text: <WikiToast render={(t) => t("copied")} /> });
   };
 
   const restoreVersion = async (p: string, version: number) => {
     const result = await saver.restore(p, version);
     if (result.saved !== null) {
-      toast({ tone: "success", text: t("history.restored", { v: version }), durationMs: 5000 });
+      toast({ tone: "success", text: <WikiToast render={(t) => t("history.restored", { v: version })} />, durationMs: 5000 });
       openPath(p);
       setViewingVersion(null);
       void refresh();
@@ -319,7 +320,7 @@ export function PageTab(props: WikiTabProps) {
       if (target === undefined) throw new Error(t("history.restoreFailed"));
       await restoreVersion(p, target.version);
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("history.restoreFailed") });
+      toast({ tone: "danger", text: <WikiToast render={(t) => (e instanceof Error && e.message !== "" ? e.message : t("history.restoreFailed"))} /> });
     }
   };
   const doDelete = async (p: string) => {
@@ -335,7 +336,7 @@ export function PageTab(props: WikiTabProps) {
     try {
       await space.client.deleteWikiPage(wikiId, p, p === path ? serverHash : undefined);
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("delete.failed") });
+      toast({ tone: "danger", text: <WikiToast render={(t) => (e instanceof Error && e.message !== "" ? e.message : t("delete.failed"))} /> });
       return;
     }
     setDraft(p, undefined);
@@ -346,7 +347,7 @@ export function PageTab(props: WikiTabProps) {
     await refresh();
     if (p === path) update({ [P.path]: next?.path ?? null, [P.mode]: null, [P.line]: null, [P.anchor]: null, [P.version]: null });
     const undo = lastVersion !== null && history && !ctx.recordsUnwritable ? lastVersion : null;
-    toast({ tone: "success", text: t("delete.done"), durationMs: WIKI_LIMITS.restoreToastMs, ...(undo === null ? {} : { action: { label: t("delete.undo"), onClick: () => void restoreVersion(p, undo) } }) });
+    toast({ tone: "success", text: <WikiToast render={(t) => t("delete.done")} />, durationMs: WIKI_LIMITS.restoreToastMs, ...(undo === null ? {} : { action: { label: <WikiToast render={(t) => t("delete.undo")} />, onClick: () => void restoreVersion(p, undo) } }) });
   };
 
   // ---- 링크 동작 -----------------------------------------------------------------------------------
@@ -376,7 +377,7 @@ export function PageTab(props: WikiTabProps) {
       const r = await space.client.getWikiLinkText(wikiId, { from_page: path, target });
       editorRef.current?.insertAtCursor(r.text);
     } catch {
-      toast({ tone: "danger", text: t("editor.insertLinkFailed") });
+      toast({ tone: "danger", text: <WikiToast render={(t) => t("editor.insertLinkFailed")} /> });
     }
   };
 
@@ -481,7 +482,7 @@ export function PageTab(props: WikiTabProps) {
       onTitleModeChange={setTitleMode}
       display={display}
       onSelect={openPath}
-      onRename={(p) => (dirtyPaths.has(p) ? toast({ tone: "warning", text: t("move.dirty") }) : setMoveFor(p))}
+      onRename={(p) => (dirtyPaths.has(p) ? toast({ tone: "warning", text: <WikiToast render={(t) => t("move.dirty")} /> }) : setMoveFor(p))}
       onDelete={setDeleteFor}
       onNewHere={(folder) => openNewPage({ path: `${folder}/` })}
       onCopyPath={copyPath}
@@ -627,7 +628,7 @@ export function PageTab(props: WikiTabProps) {
         <ViewToolbar
           blockedReason={writeBlock}
           onEdit={() => startEdit()}
-          onRename={() => (dirty ? toast({ tone: "warning", text: t("move.dirty") }) : setMoveFor(page.page.path))}
+          onRename={() => (dirty ? toast({ tone: "warning", text: <WikiToast render={(t) => t("move.dirty")} /> }) : setMoveFor(page.page.path))}
           onDelete={() => setDeleteFor(page.page.path)}
           onCopyPath={() => copyPath(page.page.path)}
           onOpenHistory={() => update({ [P.side]: "history" })}
@@ -656,7 +657,7 @@ export function PageTab(props: WikiTabProps) {
             {...(writeBlock === undefined ? {} : { readOnlyReason: writeBlock })}
             highlightStart={hoverStart}
             anchor={anchorParam}
-            onAnchorMissing={(a) => toast({ tone: "info", text: t("page.anchorMissing", { anchor: a }), durationMs: 3000 })}
+            onAnchorMissing={(a) => toast({ tone: "info", text: <WikiToast render={(t) => t("page.anchorMissing", { anchor: a })} />, durationMs: 3000 })}
             handleRef={viewRef}
           />
         </div>
@@ -691,7 +692,7 @@ export function PageTab(props: WikiTabProps) {
       currentVersion={versions.find((v) => page !== undefined && v.sha256 === page.content_hash)?.version ?? null}
       selectedVersion={viewingVersion ?? compareVersion}
       onSelectVersion={(v) => {
-        if (dirty && editing) toast({ tone: "warning", text: t("move.dirty") });
+        if (dirty && editing) toast({ tone: "warning", text: <WikiToast render={(t) => t("move.dirty")} /> });
         else {
           setViewingVersion(v.version);
           update({ [P.mode]: null, [P.version]: null }, { replace: true });
@@ -730,7 +731,7 @@ export function PageTab(props: WikiTabProps) {
             qc.removeQueries({ queryKey: wikiKeys.page(space.key, wikiId, moveFor) });
             void refresh();
             if (path === moveFor || path === null) openPath(to);
-            toast({ tone: "success", text: t("move.done", { count: n }) });
+            toast({ tone: "success", text: <WikiToast render={(t) => t("move.done", { count: n })} /> });
           }}
         />
       )}

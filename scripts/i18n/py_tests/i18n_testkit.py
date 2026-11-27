@@ -194,7 +194,7 @@ def fake_http(
             return 200, responses[path]
         return 404, {"error": {"code": "not_found"}}
 
-    def send(method: str, path: str, body: Any) -> int:
+    def send(method: str, path: str, body: Any, headers: Mapping[str, str]) -> int:
         if sent is not None:
             sent.append((method, path, body))
         return 201

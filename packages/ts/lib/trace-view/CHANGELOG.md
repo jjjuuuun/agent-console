@@ -1,10 +1,18 @@
-# 변경 기록: @agent-console/trace-view
+# Changelog: @agent-console/trace-view
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
-## [미출시]
-- 문구 데이터(0.2.0, I.9b): 기본 문구를 `src/locales/ko.json`으로 옮기고(`defaultTraceMessages`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`(`messages={en}`으로 영어). 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가. 공개 API는 늘기만 했고 기본 동작은 같다.
-- 호출 span(`call`/`invoked_by`) 별도 세션 배지·과제 미리보기, 회차 ` #n`·호출 ` · 호출 n` 이름, 자식 Run 묶음 행(접기·펴기 제어형 `expandedGroupIds`/`onGroupToggle`, `onOpenChildRun`, `groupBadgeFor`), 링크 칩 `linkBadgeFor`. `flattenRows` 옵션 `runId`·`expandedGroups`, `spanOrdinals`·`defaultExpandedGroups`·`isCallSpan`·`isChildRunSpan` 공개. 새 필드가 없는 trace는 이전과 같다.
+## [Unreleased]
+- Message data (0.2.0): moved the default messages to `src/locales/ko.json` (`defaultTraceMessages` is still Korean)
+  and added `en.json`. Subpath exports `./locales/ko` and `./locales/en` (`messages={en}` for English). Added tests that
+  check keys and placeholders match and that the source has no Korean strings. The public API only grew, and the
+  default behavior is the same.
+- Separate session badges and task previews for call spans (`call`/`invoked_by`), names with the iteration ` #n` and
+  the call number, child run group rows (controlled expand and collapse with `expandedGroupIds`/`onGroupToggle`,
+  `onOpenChildRun`, `groupBadgeFor`), and link chips `linkBadgeFor`. The `flattenRows` options `runId` and
+  `expandedGroups`, and the public `spanOrdinals`, `defaultExpandedGroups`, `isCallSpan` and `isChildRunSpan`. Traces
+  without the new fields look the same as before.
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

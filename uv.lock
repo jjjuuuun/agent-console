@@ -128,7 +128,7 @@ dev = [
 
 [[package]]
 name = "agent-console-backend-claude-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-backend-claude-sdk" }
 dependencies = [
     { name = "agent-console-claude-format" },
@@ -137,6 +137,7 @@ dependencies = [
     { name = "agent-console-runtime" },
     { name = "agent-console-secret-rules" },
     { name = "claude-agent-sdk" },
+    { name = "httpx" },
     { name = "pydantic" },
 ]
 
@@ -172,6 +173,7 @@ requires-dist = [
     { name = "agent-console-runtime", editable = "packages/py/features/ac-runtime" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "claude-agent-sdk", specifier = ">=0.2.166" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "pydantic", specifier = ">=2.9" },
 ]
 provides-extras = ["hook-probe", "login"]
@@ -192,7 +194,7 @@ dev = [
 
 [[package]]
 name = "agent-console-backend-fake-agent"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-backend-fake-agent" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -365,7 +367,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.16.0"
+version = "0.16.1"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -841,7 +843,7 @@ dev = [
 
 [[package]]
 name = "agent-console-link-logs-runs"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/links/ac-link-logs-runs" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -1562,7 +1564,7 @@ dev = [
 
 [[package]]
 name = "agent-console-logs"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-logs" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -2156,7 +2158,7 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-runs"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/modules/ac-mod-runs" }
 dependencies = [
     { name = "agent-console-conditions" },
@@ -2780,7 +2782,7 @@ dev = [
 
 [[package]]
 name = "agent-console-runtime"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-runtime" }
 dependencies = [
     { name = "agent-console-contracts" },

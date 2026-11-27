@@ -1,13 +1,13 @@
 [project]
 name = "agent-console-runtime"
-version = "0.1.0"
-description = "Agent Console — 그래프 실행 엔진과 확장 인터페이스(NodeType, EdgeType, ExecutionBackend, SecretProvider), 이벤트 버스 인터페이스"
+version = "0.2.0"
+description = "Agent Console — graph execution engine and extension interfaces (NodeType, EdgeType, ExecutionBackend, SecretProvider), event bus interface"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.16,<0.17",
+    "agent-console-contracts>=0.16.1,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-graph>=0.1,<0.2",
     "pydantic>=2.9",
@@ -110,10 +110,25 @@ design_id = "X38"
 summary = "Gives a backend the optional capability to archive and restore session files, so that resuming works from project records"
 registration = { kind = "capability", name = "session_archive" }
 interface = ["agent_console_runtime:SessionArchiveCapable", "agent_console_runtime:SessionArchive", "agent_console_runtime:ArchiveFile"]
-builtin = "none"
+builtin = ["agent-console-backend-claude-sdk", "agent-console-backend-fake-agent"]
 example = [
     { kind = "package", path = "examples/extensions/agent-console-example-backend" },
     { kind = "reference", path = "packages/py/features/ac-backend-claude-sdk", note = "Built-in backend that uses `JsonlFolderSessionArchive`" },
+]
+guide = "backends.md"
+
+[tool.agent-console.extension-points.backend-model-discovery]
+title = "Backend model discovery"
+area = "backends"
+design_id = "X54"
+summary = "Gives a backend the optional capability to list the models its account can use, without calling a model, so the model field fills itself"
+registration = { kind = "capability", name = "discover_models" }
+interface = ["agent_console_runtime:ModelDiscoveryCapableBackend", "agent_console_runtime:ModelDiscoveryResult", "agent_console_runtime:BackendModelCatalogService", "agent_console_runtime:merge_models"]
+settings = ["modules.options.mod-runs.model_discovery"]
+builtin = ["agent-console-backend-claude-sdk", "agent-console-backend-fake-agent"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-backend" },
+    { kind = "reference", path = "packages/py/features/ac-backend-claude-sdk", note = "Built-in backend that asks Claude Code or the Models API" },
 ]
 guide = "backends.md"
 

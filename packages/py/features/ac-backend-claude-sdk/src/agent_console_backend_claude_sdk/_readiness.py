@@ -27,8 +27,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent_console_contracts import FixAction, FixTarget, ReadinessCheck
-from agent_console_runtime import SECRET_REF_PREFIX, is_secret_ref
+from agent_console_contracts import (
+    FixAction,
+    FixTarget,
+    ReadinessCheck,
+    TextTemplate,
+    render_text_template,
+)
+from agent_console_runtime import SECRET_REF_PREFIX, compact_number, is_secret_ref
 
 from ._options import ClaudeSdkAuth
 
@@ -109,7 +115,13 @@ class FixLink(BaseModel):
 
 
 class ClaudeSdkReadinessTexts(BaseModel):
-    """상태·연결 테스트 문구(데이터). ``{name}`` = 비밀 이름, ``{seconds}`` = 초."""
+    """상태·연결 테스트 문구(데이터). ``{name}`` = 비밀 이름, ``{seconds}`` = 초.
+
+    값이 섞인 문구(``auth_missing_detail``·``auth_dir_detail``·``permissions_loose_detail``·
+    ``note_permissions_loose``·``note_secret``·``probe_timeout``)는 응답 ``text_templates``에
+    원문 틀 + 값으로도 실린다(여러 문장을 잇는 ``detail``은 문장마다). 바꾼 문구는 화면이
+    번역하지 않는다(그 틀을 키로 한 묶음 항목을 ``mod-i18n.catalog_dirs``에 둔다).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -187,7 +199,7 @@ class ClaudeSdkReadinessTexts(BaseModel):
     probe_cli_missing: str = "Claude Code 실행 파일을 찾지 못해 테스트하지 않았습니다."
     probe_auth_failed: str = "인증에 실패했습니다. API 키나 로그인 정보를 확인하세요."
     probe_network: str = "Claude에 연결하지 못했습니다. 네트워크 연결을 확인하세요."
-    probe_timeout: str = "{seconds:g}초 안에 응답이 없었습니다."
+    probe_timeout: str = "{seconds}초 안에 응답이 없었습니다."
     probe_error: str = "연결 테스트 중 오류가 났습니다."
 
     fix_key: FixLink = Field(default_factory=lambda: FixLink(label="API 키 넣는 곳 보기"))
@@ -244,6 +256,9 @@ class ReadinessAssessment:
     Attributes:
         probe_block: 연결 테스트를 호출 없이 거부할 사유(None = 호출해도 된다).
         probe_block_message: 그때 결과 문장.
+        detail_parts: ``detail``을 만든 문장 틀(차례로 채워 공백 하나로 이은 것이 ``detail``).
+            비면 ``detail`` 한 문장(고정 문구)으로 본다.
+        note_templates: 점검 항목 id → 값이 섞인 ``note``의 틀.
     """
 
     state: str
@@ -255,6 +270,43 @@ class ReadinessAssessment:
     checks: list[ReadinessCheck] = field(default_factory=list)
     probe_block: str | None = None
     probe_block_message: str = ""
+    detail_parts: tuple[TextTemplate, ...] = ()
+    note_templates: Mapping[str, TextTemplate] = field(default_factory=dict)
+
+    def text_templates(self, extra: Iterable[TextTemplate] = ()) -> dict[str, list[TextTemplate]]:
+        """응답 ``text_templates``(``/detail``·``/checks/<i>/note``).
+
+        ``extra`` = ``detail`` 뒤에 붙인 문장.
+
+        ``detail``은 문장이 둘 이상이거나 값이 섞였을 때만 싣는다(고정 문장 하나는 원문 키 그대로).
+        """
+        out: dict[str, list[TextTemplate]] = {}
+        parts = list(self.detail_parts) or (
+            [TextTemplate(template=self.detail)] if self.detail else []
+        )
+        parts.extend(extra)
+        if len(parts) > 1 or any(p.params for p in parts):
+            out["/detail"] = parts
+        for index, check in enumerate(self.checks):
+            found = self.note_templates.get(check.id)
+            if found is not None:
+                out[f"/checks/{index}/note"] = [found]
+        return out
+
+
+def _fill(template: TextTemplate) -> str:
+    """값이 있으면 채운 문장, 없으면 문구 그대로(고정 문구는 형식 규칙을 거치지 않는다)."""
+    return render_text_template(template) if template.params else template.template
+
+
+def _detail(*parts: TextTemplate) -> dict[str, Any]:
+    """``ReadinessAssessment``의 ``detail``·``detail_parts``(빈 틀은 뺀다)."""
+    kept = tuple(p for p in parts if p.template)
+    return {"detail": " ".join(_fill(p) for p in kept), "detail_parts": kept}
+
+
+def _tt(template: str, **params: Any) -> TextTemplate:
+    return TextTemplate(template=template, params=params)
 
 
 @dataclass(frozen=True)
@@ -329,16 +381,20 @@ def find_claude_cli(cli_path: str | None = None) -> str | None:
 
 
 def _secret_check(
-    check_id: str, title: str, ref: str, has_secret: Callable[[str], bool], t: Any
+    check_id: str,
+    title: str,
+    ref: str,
+    has_secret: Callable[[str], bool],
+    t: Any,
+    notes: dict[str, TextTemplate],
 ) -> ReadinessCheck:
     if not is_secret_ref(ref):
         return ReadinessCheck(id=check_id, title=title, ok=True, note=t.note_inline)
     name = secret_name(ref)
     found = has_secret(name)
-    state = t.note_found if found else t.note_missing
-    return ReadinessCheck(
-        id=check_id, title=title, ok=found, note=t.note_secret.format(name=name, state=state)
-    )
+    note = _tt(t.note_secret, name=name, state=_tt(t.note_found if found else t.note_missing))
+    notes[check_id] = note
+    return ReadinessCheck(id=check_id, title=title, ok=found, note=render_text_template(note))
 
 
 def assess_readiness(
@@ -384,6 +440,7 @@ def assess_readiness(
             note=t.mode_subscription if auth.mode == "subscription" else t.mode_api_key,
         ),
     ]
+    notes: dict[str, TextTemplate] = {}
     blocked: ReadinessAssessment | None = None
     if not cli_found:
         blocked = ReadinessAssessment(
@@ -391,19 +448,26 @@ def assess_readiness(
             tone="error",
             summary=t.cli_missing_summary,
             short_summary=t.cli_missing_short,
-            detail=t.cli_missing_detail,
+            **_detail(_tt(t.cli_missing_detail)),
             fixes=[t.fix_cli.action()],
             probe_block=ProbeReasonCodes.CLI_MISSING,
             probe_block_message=t.probe_cli_missing,
         )
     if auth.mode == "subscription":
         result = _assess_subscription(
-            options, allow_subscription_auth, has_secret, environ, path_exists, checks, auth_dir
+            options,
+            allow_subscription_auth,
+            has_secret,
+            environ,
+            path_exists,
+            checks,
+            auth_dir,
+            notes,
         )
     else:
-        result = _assess_api_key(auth, has_secret, t, checks)
+        result = _assess_api_key(auth, has_secret, t, checks, notes)
     chosen = blocked or result
-    return dataclasses.replace(chosen, checks=checks)
+    return dataclasses.replace(chosen, checks=checks, note_templates=notes)
 
 
 def _assess_api_key(
@@ -411,9 +475,10 @@ def _assess_api_key(
     has_secret: Callable[[str], bool],
     t: ClaudeSdkReadinessTexts,
     checks: list[ReadinessCheck],
+    notes: dict[str, TextTemplate],
 ) -> ReadinessAssessment:
     ref = api_key_ref(auth)
-    check = _secret_check("api_key", t.check_key, ref, has_secret, t)
+    check = _secret_check("api_key", t.check_key, ref, has_secret, t, notes)
     checks.append(check)
     if check.ok:
         return ReadinessAssessment(
@@ -427,7 +492,7 @@ def _assess_api_key(
         tone="error",
         summary=t.auth_missing_summary,
         short_summary=t.auth_missing_short,
-        detail=t.auth_missing_detail.format(name=secret_name(ref)),
+        **_detail(_tt(t.auth_missing_detail, name=secret_name(ref))),
         fixes=[t.fix_key.action()],
         probe_block=ProbeReasonCodes.AUTH_MISSING,
         probe_block_message=t.probe_auth_missing,
@@ -442,8 +507,10 @@ def _assess_subscription(
     path_exists: Callable[[str], bool],
     checks: list[ReadinessCheck],
     auth_dir: AuthDirView | None = None,
+    notes: dict[str, TextTemplate] | None = None,
 ) -> ReadinessAssessment:
     t = options.texts
+    notes = notes if notes is not None else {}
     auth = options.auth
     checks.append(
         ReadinessCheck(
@@ -459,7 +526,7 @@ def _assess_subscription(
             tone="warn",
             summary=t.subscription_disabled_summary,
             short_summary=t.subscription_disabled_short,
-            detail=t.subscription_disabled_detail,
+            **_detail(_tt(t.subscription_disabled_detail)),
             fixes=[t.fix_subscription.action()],
             probe_block=ProbeReasonCodes.SUBSCRIPTION_DISABLED,
             probe_block_message=t.probe_subscription_disabled,
@@ -469,10 +536,12 @@ def _assess_subscription(
         tone="warn",
         summary=t.subscription_ready_summary,
         short_summary=t.subscription_ready_short,
-        detail=t.subscription_ready_detail,
+        **_detail(_tt(t.subscription_ready_detail)),
     )
     if auth.oauth_token:
-        check = _secret_check("subscription_token", t.check_token, auth.oauth_token, has_secret, t)
+        check = _secret_check(
+            "subscription_token", t.check_token, auth.oauth_token, has_secret, t, notes
+        )
         checks.append(check)
         if check.ok:
             return ready
@@ -481,13 +550,13 @@ def _assess_subscription(
             tone="error",
             summary=t.subscription_token_missing_summary,
             short_summary=t.subscription_token_missing_short,
-            detail=t.auth_missing_detail.format(name=secret_name(auth.oauth_token)),
+            **_detail(_tt(t.auth_missing_detail, name=secret_name(auth.oauth_token))),
             fixes=[t.fix_key.action()],
             probe_block=ProbeReasonCodes.AUTH_MISSING,
             probe_block_message=t.probe_auth_missing,
         )
     if auth_dir is not None:
-        return _assess_auth_dir(t, ready, path_exists, checks, auth_dir)
+        return _assess_auth_dir(t, ready, path_exists, checks, auth_dir, notes)
     path = login_file(options.subscription_files, environ)
     paths = [path] if path else []
     found = sum(1 for p in paths if path_exists(p))
@@ -506,7 +575,7 @@ def _assess_subscription(
         tone="warn",
         summary=t.subscription_unverified_summary,
         short_summary=t.subscription_unverified_short,
-        detail=f"{t.subscription_unverified_detail} {t.subscription_ready_detail}",
+        **_detail(_tt(t.subscription_unverified_detail), _tt(t.subscription_ready_detail)),
     )
 
 
@@ -516,6 +585,7 @@ def _assess_auth_dir(
     path_exists: Callable[[str], bool],
     checks: list[ReadinessCheck],
     creds: AuthDirView,
+    notes: dict[str, TextTemplate] | None = None,
 ) -> ReadinessAssessment:
     """앱 전용 자격 폴더 모드: 이 폴더의 로그인 파일만 본다(홈·``~/.claude`` 없음)."""
     checks.append(
@@ -530,9 +600,13 @@ def _assess_auth_dir(
             note=t.note_files.format(count=len(creds.files), found=found),
         )
     )
-    extra: list[str] = [t.auth_dir_detail.format(path=creds.display)]
+    notes = notes if notes is not None else {}
+    extra: list[TextTemplate] = [_tt(t.auth_dir_detail, path=creds.display)]
     if creds.permissions_ok is not None:
         names = ", ".join(creds.loose)
+        loose_note = _tt(t.note_permissions_loose, names=names)
+        if not creds.permissions_ok:
+            notes["auth_dir_permissions"] = loose_note
         checks.append(
             ReadinessCheck(
                 id="auth_dir_permissions",
@@ -541,21 +615,20 @@ def _assess_auth_dir(
                 note=(
                     t.note_permissions_ok
                     if creds.permissions_ok
-                    else t.note_permissions_loose.format(names=names)
+                    else render_text_template(loose_note)
                 ),
             )
         )
         if not creds.permissions_ok:
-            extra.append(t.permissions_loose_detail.format(names=names))
+            extra.append(_tt(t.permissions_loose_detail, names=names))
     if found:
-        detail = " ".join([ready.detail, *extra]).strip()
-        return dataclasses.replace(ready, detail=detail)
+        return dataclasses.replace(ready, **_detail(*ready.detail_parts, *extra))
     return ReadinessAssessment(
         state=ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED,
         tone="warn",
         summary=t.login_required_summary,
         short_summary=t.login_required_short,
-        detail=" ".join([t.login_required_detail.format(path=creds.display), *extra[1:]]),
+        **_detail(_tt(t.login_required_detail, path=creds.display), *extra[1:]),
     )
 
 
@@ -646,17 +719,27 @@ def classify_probe_error(exc: BaseException) -> ProbeOutcome:
     return ProbeOutcome(False, ProbeReasonCodes.ERROR, details)
 
 
+def probe_message_template(
+    reason: str | None, texts: ClaudeSdkReadinessTexts, timeout_s: float
+) -> TextTemplate:
+    """사유 → 결과 문장의 원문 틀 + 값(시간 초과만 ``{seconds}`` 값이 있다)."""
+    if reason == ProbeReasonCodes.TIMEOUT:
+        return _tt(texts.probe_timeout, seconds=compact_number(timeout_s))
+    return _tt(
+        {
+            None: texts.probe_ok,
+            ProbeReasonCodes.AUTH_FAILED: texts.probe_auth_failed,
+            ProbeReasonCodes.NETWORK: texts.probe_network,
+            ProbeReasonCodes.CLI_MISSING: texts.probe_cli_missing,
+            ProbeReasonCodes.AUTH_MISSING: texts.probe_auth_missing,
+            ProbeReasonCodes.SUBSCRIPTION_DISABLED: texts.probe_subscription_disabled,
+        }.get(reason, texts.probe_error)
+    )
+
+
 def probe_message(reason: str | None, texts: ClaudeSdkReadinessTexts, timeout_s: float) -> str:
-    """사유 → 결과 문장(데이터 문구)."""
-    return {
-        None: texts.probe_ok,
-        ProbeReasonCodes.AUTH_FAILED: texts.probe_auth_failed,
-        ProbeReasonCodes.NETWORK: texts.probe_network,
-        ProbeReasonCodes.TIMEOUT: texts.probe_timeout.format(seconds=timeout_s),
-        ProbeReasonCodes.CLI_MISSING: texts.probe_cli_missing,
-        ProbeReasonCodes.AUTH_MISSING: texts.probe_auth_missing,
-        ProbeReasonCodes.SUBSCRIPTION_DISABLED: texts.probe_subscription_disabled,
-    }.get(reason, texts.probe_error)
+    """사유 → 결과 문장(데이터 문구, ``probe_message_template``을 채운 것)."""
+    return _fill(probe_message_template(reason, texts, timeout_s))
 
 
 def probe_fixes(reason: str | None, texts: ClaudeSdkReadinessTexts) -> list[FixAction]:
@@ -697,5 +780,6 @@ __all__ = [
     "login_file",
     "probe_fixes",
     "probe_message",
+    "probe_message_template",
     "secret_name",
 ]

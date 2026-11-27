@@ -1,27 +1,44 @@
-# 변경 기록
+# Changelog
 
 ## Unreleased
 
-- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-memory`, so the web can show the module description and settings and the `memory.invalid_request` issue in English (data only, no API change). Log lines are now English.
-- REL.16(계약 0.15.0, memory 1.3.0): WS `memory.changed`의 `MemoryChanged.space`를 채운다 — 공간
-  서비스는 자기 공간 이름(등록 id), 라이브러리는 null. 공간 제공자 예외에 문자열 `reason`이 있으면 오류
-  응답 `details.reason`으로 싣는다(예: `project.memory_unavailable`). `MemorySpaceError(reason=)`.
-
-- FU.12: `search_query_hasher`는 공용 `query_hasher_from_env`를 쓴다(동작 그대로).
-- FU.6: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트 환경변수 이름) — 에이전트 검색 이벤트
-  `query_sha256`. 기본이 솔트 없는 sha256에서 프로세스마다 무작위 솔트 HMAC으로 바뀌었다. `search_query_hasher(cfg, environ)`.
-
-- 수정(11/20): 자동 정리가 서버 종료와 겹치면 기다리거나 남은 저장소를 하지 않고 끝난다. `run_retention_cycle(should_stop=)`·`RetentionCycleResult.stopped`, `run_retention_periodically(gate=, stop_wait=)`(취소되면 `WorkGate`를 닫고 하던 저장소가 끝나기를 기다린 뒤 취소를 다시 던짐 — 조립기가 종료 훅보다 먼저 하므로 공간 풀·저장소가 닫히기 전에 끝남), 종료 훅도 정리 스레드를 기다린 뒤 저장소를 닫는다.
-
-- 5.7R.46: 서버 자동 정리가 공용 다음에 `memory.spaces` 제공자의 선택 메서드 `existing()`이 준 공간도
-  돈다(대상 = 사용자 설정 `memory.retention.auto`, 공간마다 실패는 로그 + 건너뜀, 규칙이 없으면
-  아무것도 열지 않음). `run_retention_cycle`·`RetentionCycleResult`·`retention_targets`,
-  `MemorySpaceServices.existing()`·`MemoryService.existing_spaces()`, 포트 모양
-  `MemorySpacesListing`. 설정 해석: `retention.auto`는 칸마다 검증(틀린 칸은
-  `memory.settings_invalid` + 기본값, 규칙은 그대로).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-memory`, so the web app can show the module description and settings and
+  the `memory.invalid_request` issue in English (data only, no API change). Log lines are now in English.
+- Contract 0.15.0 (memory 1.3.0): fills `MemoryChanged.space` of WS `memory.changed` (a space service sends its own
+  space name, the registration id; the library sends null). When a space provider exception has a string `reason`, it
+  is put in the error response `details.reason` (for example `project.memory_unavailable`).
+  `MemorySpaceError(reason=)`.
+- `search_query_hasher` uses the shared `query_hasher_from_env` (same behavior).
+- Server administrator options `query_hash` (`hmac` by default, `sha256` or `off`) and `query_hash_salt_env` (the name
+  of the salt environment variable) for `query_sha256` in agent search events. The default changed from unsalted
+  sha256 to HMAC with a random salt per process. `search_query_hasher(cfg, environ)`.
+- Fixed: when automatic cleanup overlaps with server shutdown, it ends without waiting or processing the remaining
+  stores. `run_retention_cycle(should_stop=)` and `RetentionCycleResult.stopped`,
+  `run_retention_periodically(gate=, stop_wait=)` (when canceled, it closes the `WorkGate`, waits for the store in
+  progress to finish and then re-raises the cancellation; the assembler does this before the stop hooks, so it
+  finishes before the space pool and stores close), and the stop hook also waits for the cleanup thread before closing
+  the store.
+- After the shared library, automatic cleanup on the server also processes the spaces returned by the optional method
+  `existing()` of the `memory.spaces` provider (targets = the user setting `memory.retention.auto`; failures per space
+  are logged and skipped; nothing is opened when there are no rules). `run_retention_cycle`,
+  `RetentionCycleResult` and `retention_targets`, `MemorySpaceServices.existing()` and
+  `MemoryService.existing_spaces()`, and the port shape `MemorySpacesListing`. Settings parsing: `retention.auto` is
+  validated field by field (invalid fields give `memory.settings_invalid` and the default; rules are kept).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- 5.7R.13: 공유 메모리 서버 모듈. REST `/memory/*`(범위 종류·범위·태그·항목 CRUD·버전·정리·설정 검사·내보내기/가져오기), WS 토픽 `memory.changed`, 사용자 설정 섹션 `memory`(깨진 부분만 빼고 읽기), 계보 `memory`(`memory_0001`), 저장 위치(호스트 DB 파일 / `store_path` / 메모리 + 경고), 정리 스케줄, 포트 `memory.service`, X29 호스트 플러그인 로더, 설치자 한도 옵션, 단독 실행.
-- 5.7R.33z(design §PI.4.3): 선택 포트 `memory.spaces`(공간 이름 → 저장소 + 맥락 바꾸기), REST `?project=<id>`(항목·범위·태그·버전·정리·내보내기/가져오기·범위 종류, 제공자 없음 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`, 제공자 예외 `code` 그대로), `POST /memory/copy`(`MemoryCopyRequest` → `MemoryCopyResult`, 같은 공간 400). `MemoryService.space(name)`·`copy`·`context_overrides`·`effective_context`, `MemorySpaceServices`, 오류 `MemorySpaceError`·`MemorySpacesUnavailable`·`UnknownMemorySpace`. 계보 `memory`의 범위에 `memory`(`MEMORY_DB_SCOPE`)를 더함 — 프로젝트 메모리 DB를 여는 연동이 찾는다. `build_router(service)`는 그대로(공간은 서비스의 `space`).
+- First release (from the scripts/pkgkit template `module`).
+- Shared memory server module. REST `/memory/*` (scope kinds, scopes, tags, entry CRUD, versions, cleanup, settings
+  checks, export and import), the WS topic `memory.changed`, the user settings section `memory` (read except for the
+  broken parts), the lineage `memory` (`memory_0001`), the storage location (host database file, `store_path`, or
+  memory with a warning), the cleanup schedule, the port `memory.service`, the host plugin loader for memory scope
+  kinds, server administrator limit options, and standalone runs.
+- Optional port `memory.spaces` (space name to store plus context switching), REST `?project=<id>` (entries, scopes,
+  tags, versions, cleanup, export and import, scope kinds; 409 `feature_unavailable` without a provider, 404
+  `project.not_found` for an unknown space, provider exception `code` passed through), and `POST /memory/copy`
+  (`MemoryCopyRequest` to `MemoryCopyResult`, 400 for the same space). `MemoryService.space(name)`, `copy`,
+  `context_overrides` and `effective_context`, `MemorySpaceServices`, and the errors `MemorySpaceError`,
+  `MemorySpacesUnavailable` and `UnknownMemorySpace`. Added `memory` (`MEMORY_DB_SCOPE`) to the scopes of the lineage
+  `memory` so the link module that opens project memory databases can find it. `build_router(service)` is unchanged
+  (spaces come from the service's `space`).

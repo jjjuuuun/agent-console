@@ -2,13 +2,14 @@
 
 Agent nodes do not call models directly. They pass requests to an execution backend. The built-in backends (the
 Claude Agent SDK, and a fake backend that runs without a model) are also implementations registered in the same group.
-This page covers backends themselves, session archiving (an optional backend capability), and secret providers, which
-resolve the secret references written in settings.
+This page covers backends themselves, session archiving and model discovery (optional backend capabilities), and
+secret providers, which resolve the secret references written in settings.
 
 | What you want to do | Point |
 | --- | --- |
 | Run agents with another model SDK, CLI, or in-house gateway | [execution-backend](#execution-backend) |
 | Archive and restore raw session files so conversations can resume in another app or at another path | [backend-session-archive](#backend-session-archive) |
+| Fill the model field with the models a backend account can use, without calling a model | [backend-model-discovery](#backend-model-discovery) |
 | Look up `secret://name` somewhere other than environment variables (a file, a keychain) | [secret-provider](#secret-provider) |
 
 ## backend-session-archive
@@ -50,7 +51,7 @@ implementation `JsonlFolderSessionArchive`.
   - `agent_console_runtime:SessionArchiveCapable` — Optional capability: a backend that provides session record archive and restore.
   - `agent_console_runtime:SessionArchive` — Archive and restore backend session records: synchronous, file system only.
   - `agent_console_runtime:ArchiveFile` — One original file to archive.
-- Built-in implementations: —
+- Built-in implementations: `ac-backend-claude-sdk (agent-console-backend-claude-sdk)`, `ac-backend-fake-agent (agent-console-backend-fake-agent)`
 - Examples:
   - package: [examples/extensions/agent-console-example-backend](../../examples/extensions/agent-console-example-backend/README.md)
   - reference: [packages/py/features/ac-backend-claude-sdk](../../packages/py/features/ac-backend-claude-sdk/README.md) — Built-in backend that uses `JsonlFolderSessionArchive`
@@ -199,4 +200,105 @@ created by the provider, so it stays.
 - Examples:
   - package: [examples/extensions/agent-console-example-secret-provider](../../examples/extensions/agent-console-example-secret-provider/README.md)
 - Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
+<!-- /extdocs:facts -->
+
+## backend-model-discovery
+
+**When to use**: when a backend can find out which models its account may use (an API that lists models, or a CLI
+that reports them at start-up) without calling a model. The model field then fills itself, even when the
+administrator list `backends.<id>.models` is empty, and each option shows where it came from. A backend without such a
+source does not need this capability: the model field keeps the administrator list and typed model ids.
+
+**Minimal shape**: declare `capabilities.model_discovery = true` in the descriptor and add
+`async discover_models(ctx, timeout_s) -> ModelDiscoveryResult`. Both are needed; a method without the declaration (or
+the other way round) counts as no capability. `list_models()` keeps returning only the administrator list.
+
+```python
+>>> import asyncio
+>>> from agent_console_contracts import BackendCapabilities, BackendDescriptor, ModelInfo
+>>> from agent_console_runtime import BackendModelCatalogService, ModelDiscoveryResult
+
+>>> class GatewayBackend:
+...     descriptor = BackendDescriptor(
+...         id="gateway", title="Gateway", capabilities=BackendCapabilities(model_discovery=True)
+...     )
+...     async def list_models(self):
+...         return [ModelInfo(id="gw-large", title="Large (pinned)")]  # the administrator list
+...     async def discover_models(self, ctx, timeout_s):
+...         return ModelDiscoveryResult(
+...             ok=True,
+...             method="gateway_api",
+...             models=[{"id": "gw-small", "title": "Small"}, {"id": "gw-large", "title": "Large"}],
+...         )
+...     async def run(self, req, sink, cancel): ...
+
+>>> service = BackendModelCatalogService(lambda: {"gateway": GatewayBackend()})
+>>> catalog = asyncio.run(service.catalog("gateway"))
+>>> catalog.discovery.state
+'ok'
+>>> [(m.id, m.title, m.sources) for m in catalog.models]
+[('gw-large', 'Large (pinned)', ['config', 'discovered']), ('gw-small', 'Small', ['discovered'])]
+
+```
+
+The shared service `BackendModelCatalogService` (assembled by the runs module, which serves it at
+`GET /api/v1/backends/{id}/model-catalog` and as the merged list of `GET /api/v1/backends/{id}/models`) does the rest.
+The backend only reports what it found:
+
+- **Merging**: the administrator list comes first and in its order, models only the lookup found follow in the
+  backend's order, and the same `id` (exact string match, an alias is a different id) is one entry where the
+  administrator's non-empty `title`, `description`, `context_window` and its `attributes` keys win. `ModelInfo.sources`
+  says `config`, `discovered` or both.
+- **Caching**: per backend, in memory only. A success is reused for `ttl_s`, a failure for `failure_ttl_s`, parallel
+  requests share one lookup, and the first lookup happens on the first request (not at server start). `refresh=true`
+  skips the cache. The host calls `invalidate(backend_id)` after a sign-in or sign-out finishes.
+- **States** (`discovery.state`): `ok`; `stale` (the last good list, while a new lookup runs or after it failed);
+  `failed` (no good list yet, plus the warning issue `backend.model_discovery_failed` with `details.backend_id` and
+  `reason`); `disabled` (turned off by the administrator); `unsupported` (no capability, or the backend said so).
+  A failure is still a normal response with the administrator list, so the field keeps working.
+- **Limits and masking**: the call is cut at `timeout_s` (`reason = timeout`). Ids over 200 characters are dropped,
+  titles are cut at 200 and descriptions at 1000 characters, and at most 500 items are kept (`ModelListLimits`, set by
+  the host). Text passes through the masking function the host injects (`redact`; the runs module uses the same rules
+  as the readiness routes), and log lines carry only the backend id, state, reason, method, count, and duration.
+
+**Rules**
+
+- Never call a model to find models (no tokens). Use only a listing API, a start-up response, or local data.
+- Report failures as `ModelDiscoveryResult(ok=False, reason=...)` instead of raising. Use the shared reason names in
+  `ModelDiscoveryReasons` (`auth_missing`, `auth_failed`, `subscription_disabled`, `network`, `timeout`,
+  `invalid_response`, `cli_missing`, `cli_no_models`, `error`) when they fit; other names are allowed. An exception is
+  reported as `error` with only the exception type name in `details.error`.
+- When this sign-in can never list models, return `ModelDiscoveryResult(ok=False, unsupported=True, reason=...)`: the
+  state is `unsupported`, no warning is shown, and no earlier list is kept.
+- Refuse without starting anything when the lookup cannot work (no key, no sign-in, a method the administrator turned
+  off): return the reason right away.
+- Keep keys and tokens out of `models`, `details` and log lines. `method` is an open name for logs and `details` only;
+  the screen does not show it. Item names and descriptions are outside data: they are shown as they are, never
+  translated.
+- Do not read files outside the backend's own folders (for example a user's home settings) to guess models. Settings
+  that differ between installations (addresses, header values, page sizes) belong in the backend's own administrator
+  options, not in code.
+
+**Common mistakes**: returning the administrator list again from `discover_models` (it is merged already), turning the
+capability on when the backend cannot list models (the model field then shows a failure warning for nothing; use
+`unsupported` instead), or keeping your own cache inside the backend (the service already caches and invalidates it after
+sign-in).
+
+**Data left after removal**: nothing is stored. The list lives in server memory and is fetched again after a restart.
+Agents keep the model ids they chose, and the field shows them as typed values. Server administrators turn lookups off
+with `modules.options.mod-runs.model_discovery.enabled: false` or for single backends with `disabled_backends`.
+
+<!-- extdocs:facts backend-model-discovery -->
+- Registration: Give the implementation object (for example, a backend) the optional method `discover_models`. The host finds and uses it when it is there.
+- Interface:
+  - `agent_console_runtime:ModelDiscoveryCapableBackend` — Optional capability: a backend that lists its account's models without a model call.
+  - `agent_console_runtime:ModelDiscoveryResult` — Result of ``discover_models``: the models found, or a failure reason.
+  - `agent_console_runtime:BackendModelCatalogService` — Backend model lists (configured list plus account lookup) with caching and failure handling.
+  - `agent_console_runtime:merge_models` — Merge the configured list and the discovered list into one list (pure function).
+- Settings: `modules.options.mod-runs.model_discovery`
+- Built-in implementations: `ac-backend-claude-sdk (agent-console-backend-claude-sdk)`, `ac-backend-fake-agent (agent-console-backend-fake-agent)`
+- Examples:
+  - package: [examples/extensions/agent-console-example-backend](../../examples/extensions/agent-console-example-backend/README.md)
+  - reference: [packages/py/features/ac-backend-claude-sdk](../../packages/py/features/ac-backend-claude-sdk/README.md) — Built-in backend that asks Claude Code or the Models API
+- Turning it off or removing it: Remove the method or return None to turn off only that capability.
 <!-- /extdocs:facts -->

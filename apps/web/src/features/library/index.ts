@@ -1,8 +1,8 @@
 /** 정의 라이브러리 공용 부품의 공개 API(에이전트·리소스·팀 화면이 함께 쓰는 목록·삭제·생성 대화상자, 경로, 데이터 훅). 다른 기능 폴더는 이 파일로만 import한다(5R.20). */
 import "./library.css";
 export { ActionMenu, type ActionMenuHandle } from "./ActionMenu";
-export { ATTACHMENT_MODES, AgentSettingsForm } from "./AgentSettingsForm";
 export { Avatar } from "./Avatar";
+export { MODEL_WIDGET, ModelWidget, useModelFieldOptions, type ModelOptions } from "./ModelWidget";
 export { AVATAR_COLOR_TOKENS, nodeAvatarsOf, readAvatarUi, resolveAvatar, resolveAvatarColor, withAvatarUi, type AvatarSpec } from "./avatarSpec";
 export { DefinitionIdField, useDefinitionId, type DefinitionId } from "./DefinitionIdField";
 export { suggestId } from "./ids";

@@ -14,6 +14,9 @@
     "새 언어를 더하거나 기본 문구 몇 개를 바꾸고 싶을 때 폴더를 적으세요. 파일을 고치면 다음 요청부터 반영됩니다.": "Add a folder to add a new language or to change a few default strings. Edited files take effect from the next request.",
     "끌 문구 묶음": "Disabled catalogs",
     "읽지 않을 패키지 문구 묶음 이름(entry point 이름). 설정 plugins.disabled에 적은 이름도 빠진다. 뺀 묶음의 문구는 대체 언어나 원문으로 보인다.": "Names of package catalogs not to read (entry point names). Names in the setting plugins.disabled are left out too. Text from a left-out catalog shows in the fallback language or as the original text.",
-    "어떤 플러그인의 번역이 마음에 들지 않아 원문으로 보고 싶을 때 이름을 적으세요.": "Add a name when you would rather see the original text than a plugin's translation."
+    "어떤 플러그인의 번역이 마음에 들지 않아 원문으로 보고 싶을 때 이름을 적으세요.": "Add a name when you would rather see the original text than a plugin's translation.",
+    "서버 원문 언어": "Server source language",
+    "서버 원문 문구를 쓴 언어 코드. 이 언어 화면은 원문을 그대로 보이고, 원문의 번역은 이 언어까지만 찾는다. 비우면 모름.": "Language code of the server source text. A screen in this language shows the source text as is, and translations of source text are looked up only up to this language. Empty = unknown.",
+    "서버 원문 문구를 다른 언어로 바꾼 패키지를 쓸 때만 바꾸세요.": "Change this only when you use packages whose server source text is in another language."
   }
 }

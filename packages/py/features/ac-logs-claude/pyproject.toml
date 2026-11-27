@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 dependencies = [
     "agent-console-claude-format>=0.1,<0.2",
     "agent-console-contracts>=0.16,<0.17",
-    "agent-console-logs>=0.1,<0.2",
+    "agent-console-logs>=0.2,<0.3",
 ]
 
 # 기본 제공도 entry point로만 등록한다(특별 취급 없음). 이름 = 레지스트리 key = id.

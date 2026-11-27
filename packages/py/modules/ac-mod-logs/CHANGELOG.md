@@ -1,31 +1,50 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-logs`, so the web can show the module description, log settings, default dashboard template titles and the `logs.ignored_key`, `logs.out_of_scope` and `logs.purge_unsupported` issues in English (data only, no API change).
-- REL.14: 옛 `logs.projects` 안내를 속성 접근(`LogSettings.projects`) 대신 계약 도우미 `ignored_settings_keys(settings, section="logs")`로 찾는다 — 계약 0.15.0에서 필드가 지워져도 키가 없으면 이슈 없음, 있으면 정보 `settings.ignored_key`(지금과 같음). 세션 요약은 `project_id`만 채운다(옛 `project`는 null).
-
-- 수정(11/20 후속): 수집 기다림을 `agent_console_modkit.WorkGate`로 옮겼다(`DEFAULT_STOP_WAIT` = `DEFAULT_WORK_WAIT`). `run_periodic`이 취소되면(서버 종료) 새 수집을 막고 진행 중인 스레드 수집을 기다린 뒤 취소를 다시 던진다 — 조립기가 종료 훅보다 먼저 하므로 기록 공간 풀이 닫히기 전에 끝난다.
-
-- 수정(11/20): `LogsService.stop()`이 진행 중인 스레드 수집·비우기가 끝나기를 기다린다(상한 `stop_wait`, 기본 `DEFAULT_STOP_WAIT` 30초, 넘으면 경고). 멈춘 뒤 새 수집은 출처를 부르지 않는 빈 보고, `start()`가 다시 연다. 모듈 종료 훅이 색인을 닫기 전에 수집 스레드가 끝난다.
-
-- 5.7R.33i: `projects.folders` 값 모양 `ProjectFoldersLike` = `registered`·`archived_folders`·`project_for`(옛 `current` 삭제). 질의 맥락에 `project_for`(질의마다 캐시) → 세션 `project_id`·필터 `project=<등록 id>`·집계 차원 `project`·`token_samples`(로그 기반 사용량). 옛 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`(`details.key = logs.projects`). `testing.project_folders_module(registered, archived)`(id → 폴더 또는 목록)·`StaticProjectFolders`.
-
-- 5.7R.13(5.7R.6 후속): `POST /logs/index/purge` 본문 `all` — 범위 없이 실제로 지우려면 `all: true`가 필요(없으면 422). 비우기를 지원하지 않는 색인은 400 `logs.purge_unsupported`(`LogPurgeUnsupportedError`).
-- 5.2R.106 후속: 설치자 옵션 `base_taxonomy_file`(기본 분류 체계 교체, `false`·빈 문자열 = 끄기)과 `base_taxonomy_of`. 모듈이 `LogsService(base_taxonomy=)`에 넘긴다.
-- 5.2R.27: 선택 multi 포트 `logs.source_defaults`(설정에 `enabled`가 없는 출처의 기본값, 설정 파일 무변경), `apply_source_defaults`·`collect_source_defaults`.
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-logs`, so the web app can show the module description, log settings,
+  default dashboard template titles and the `logs.ignored_key`, `logs.out_of_scope` and `logs.purge_unsupported`
+  issues in English (data only, no API change).
+- The notice about the old `logs.projects` is found with the contract helper
+  `ignored_settings_keys(settings, section="logs")` instead of attribute access (`LogSettings.projects`). Even after
+  the field is removed in contract 0.15.0, there is no issue when the key is absent, and info `settings.ignored_key`
+  when it is present (same as now). Session summaries fill only `project_id` (the old `project` is null).
+- Fixed: moved waiting for collection to `agent_console_modkit.WorkGate` (`DEFAULT_STOP_WAIT` =
+  `DEFAULT_WORK_WAIT`). When `run_periodic` is canceled (server shutdown), it blocks new collections, waits for thread
+  collection in progress and then re-raises the cancellation. The assembler does this before the stop hooks, so it
+  finishes before the record space pool closes.
+- Fixed: `LogsService.stop()` waits for thread collection and purging in progress to finish (limit `stop_wait`,
+  default `DEFAULT_STOP_WAIT` 30 seconds, with a warning beyond that). After stopping, new collections return an empty
+  report without calling sources, and `start()` opens them again. The collection thread finishes before the module stop
+  hook closes the index.
+- The value shape of `projects.folders` is `ProjectFoldersLike` = `registered`, `archived_folders` and `project_for`
+  (the old `current` is removed). The query context has `project_for` (cached per query), which feeds the session
+  `project_id`, the filter `project=<registration id>`, the aggregation dimension `project` and `token_samples`
+  (log-based usage). The old `logs.projects` is not read and gives info `settings.ignored_key`
+  (`details.key = logs.projects`). `testing.project_folders_module(registered, archived)` (id to a folder or list) and
+  `StaticProjectFolders`.
+- `POST /logs/index/purge` body `all`: actually purging without a scope requires `all: true` (422 without it). Indexes
+  that do not support purging give 400 `logs.purge_unsupported` (`LogPurgeUnsupportedError`).
+- Server administrator option `base_taxonomy_file` (replaces the default classification; `false` or an empty string
+  turns it off) and `base_taxonomy_of`. The module passes it to `LogsService(base_taxonomy=)`.
+- Optional multi port `logs.source_defaults` (defaults for sources without `enabled` in the settings; the settings file
+  is not changed), `apply_source_defaults` and `collect_source_defaults`.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- 4R.5: 저장 계층(`storage`: 계보 `logs`, `open_log_storage`).
-- 4R.10: 모듈 서술자(제공 `logs.query`·`logs.ingest`·`server.warnings`, 선택 `logs.sources`·
-  `workspace.settings`·`secrets.rules`, web_roles `logs`, 계보 `logs`)와 entry point
-  (`agent_console.server_modules` `mod-logs`, `agent_console.host_plugin_loaders` `logs`) 등록.
-  `LogsService`(배경·수동 수집, 수집 예약, 보존 정리, 질의), REST `/logs…` 12개 경로, WS `logs`·토픽
-  `logs.ingested`, 비밀 의심 가리기 주입, 출처 실패 경고, 대시보드 템플릿(패키지 데이터 2개),
-  설치자 옵션(`LogsModuleSettings`), 단독 실행(`standalone.main`, `--with` 없이 `local-settings`).
-- 4R.14: `GET /logs/archive?<LogFilter>&format=json|html&tz=`(첨부, `Content-Disposition`), `LogsService.archive`,
-  설치자 옵션 `archive_max_events`·`archive_max_bytes`·`archive_file_prefix`·`archive_title`.
-- 5R.19: 설치자 옵션 `session_title_rules`(null = ac-logs 기본 데이터).
-- 5.7R.6(M-3): `POST /logs/index/purge`(본문 `LogPurgeRequest`, 응답 `LogPurgeResponse` — 모듈 안 모델, dry_run 기본 true), `LogsService.purge`(수집 잠금 안에서 `purge_index`).
+- First release (from the scripts/pkgkit template `module`).
+- Storage layer (`storage`: lineage `logs`, `open_log_storage`).
+- Registered the module descriptor (provides `logs.query`, `logs.ingest` and `server.warnings`; optional
+  `logs.sources`, `workspace.settings` and `secrets.rules`; web_roles `logs`; lineage `logs`) and the entry points
+  (`agent_console.server_modules` `mod-logs`, `agent_console.host_plugin_loaders` `logs`). `LogsService` (background
+  and manual collection, collection scheduling, retention cleanup, queries), 12 REST routes under `/logs…`, WS `logs`
+  and the topic `logs.ingested`, injected masking of suspected secrets, source failure warnings, dashboard templates
+  (two in package data), server administrator options (`LogsModuleSettings`), and standalone runs (`standalone.main`,
+  `local-settings` without `--with`).
+- `GET /logs/archive?<LogFilter>&format=json|html&tz=` (an attachment with `Content-Disposition`),
+  `LogsService.archive`, and the server administrator options `archive_max_events`, `archive_max_bytes`,
+  `archive_file_prefix` and `archive_title`.
+- Server administrator option `session_title_rules` (null = the ac-logs default data).
+- `POST /logs/index/purge` (body `LogPurgeRequest`, response `LogPurgeResponse`; models inside the module, dry_run
+  true by default) and `LogsService.purge` (`purge_index` inside the collection lock).

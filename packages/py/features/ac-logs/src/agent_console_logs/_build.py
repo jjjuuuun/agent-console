@@ -7,6 +7,9 @@ from collections.abc import Callable
 from dataclasses import fields, replace
 from typing import Any
 
+from pydantic import ValidationError
+
+from agent_console_contracts import TextTemplate, render_text_parts
 from agent_console_contracts.logs import LogEvent
 
 from ._draft import TAG_TOOL, LogEventDraft
@@ -63,6 +66,31 @@ def _scrub_draft(draft: LogEventDraft) -> LogEventDraft:
         if cleaned is not value:
             changes[name] = cleaned
     return replace(draft, **changes) if changes else draft
+
+
+def _matching_templates(
+    given: Any,
+    fields_: dict[str, str],
+    redact: Callable[[JsonValue], JsonValue] | None,
+) -> dict[str, list[JsonValue]]:
+    """초안 틀 중 가린·자른 칸 값과 맞는 것만(JSON). 틀 값도 칸과 같은 ``redact``를 거친다."""
+    out: dict[str, list[JsonValue]] = {}
+    for pointer, parts in dict(given or {}).items():
+        value = fields_.get(pointer)
+        if value is None or not parts:
+            continue
+        dumped: JsonValue = [
+            p.model_dump(mode="json") if isinstance(p, TextTemplate) else p for p in parts
+        ]
+        if redact is not None:
+            dumped = scrub_surrogates(redact(dumped))
+        try:
+            kept = [TextTemplate.model_validate(p) for p in dumped]
+        except (ValidationError, TypeError):
+            continue
+        if render_text_parts(kept) == value:
+            out[pointer] = [p.model_dump(mode="json") for p in kept]
+    return out
 
 
 def build_record(
@@ -129,6 +157,10 @@ def build_record(
                 "time": usage.time if usage.time is not None else draft.time,
             }
         )
+    shown_title = str(title)[:2000] if title is not None else ""
+    templates = _matching_templates(
+        draft.text_templates, {"/title": shown_title, "/summary": summary}, redact
+    )
     event = LogEvent.model_validate(
         {
             "uid": uid,
@@ -137,7 +169,7 @@ def build_record(
             "ref": origin,
             "observed_at": observed_at,
             "category": draft.category,
-            "title": str(title)[:2000] if title is not None else "",
+            "title": shown_title,
             "summary": summary,
             "stage": draft.stage,
             "status": draft.status,
@@ -164,6 +196,7 @@ def build_record(
             "correlation": dict(draft.correlation),
             "detail": detail,
             "raw": raw,
+            "text_templates": templates,
         }
     )
     return IndexRecord(event=event, identity=identity, usage=usage, agent=draft.agent)

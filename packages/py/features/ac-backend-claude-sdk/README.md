@@ -11,7 +11,7 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # standalone
 ```
 
 Dependencies: `agent-console-runtime`, `agent-console-contracts`, `agent-console-claude-format`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
-`claude-agent-sdk`. Optional: `[hook-probe]`, `[login]`.
+`claude-agent-sdk`, `httpx`. Optional: `[hook-probe]`, `[login]`.
 
 | Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
@@ -20,6 +20,7 @@ Dependencies: `agent-console-runtime`, `agent-console-contracts`, `agent-console
 | `agent-console-claude-format` (internal) | The folder key `project_key` for session archives (project folder → `projects/<key>`) | One place for the same function as the log source (no copies). Only `ruamel.yaml` comes along | Depending on `agent-console-logs-claude` (drags in the log index dependency) / copying the rule |
 | `agent-console-hook-probe` (internal, **optional** extra `hook-probe`) | Hook command wrapping arguments (`wrap_command`, `wrap_command_line`) when `observe.hook_probe` is on | Keeps the wrapping rules and record format in one place, the probe package. Optional so that the dependencies of the record source and classifier (`agent-console-logs`) are not pulled into a standalone backend install | A required dependency (heavier backend install) / rebuilding the wrapping arguments here (copying the same logic) |
 
+| `httpx` (BSD-3) | Async Anthropic Models API calls for model discovery (time limit per request, page by page) | Async with timeouts out of the box; tests replace the network with `httpx.MockTransport` (no real calls). Already in the lock through `claude-agent-sdk` → `mcp` | The standard library `urllib` (blocking, needs a thread wrapper and a separate test double) |
 | `agent-console-secret-rules` (internal) | Safety checks of the subscription sign-in screen text rules (user-editable regexes, through `ac-safe-regex`) | The rule that user regexes go through one validator | Plain `re.compile` (cannot block dangerous regexes) |
 | `agent-console-pty-session` (internal, **optional** extra `login`) | Starts `claude auth login` in a PTY, reads the screen text, and sends input (subscription sign-in) | The CLI sign-in screen requires a TTY. PTY handling and terminal text interpretation live in one package | The user runs `claude auth login` in a terminal themselves (no sign-in from the app screen) |
 
@@ -210,6 +211,10 @@ is checked separately at run time by `validate_settings` and `run`.
     name, never response text, exception messages, or secret values. CLI stderr is discarded.
   - The cost notice is the descriptor's `probe_cost_note` (`PROBE_COST_NOTE`).
 - Text and fix buttons (web route roles, settings sections) are data: `readiness.texts` (`ClaudeSdkReadinessTexts`, `FixLink`).
+  Sentences with values (missing secret name, credentials location, loose permissions, secret check note, connection test
+  timeout) are also sent as source template + values in `text_templates` (`/detail` one entry per sentence, `/checks/<i>/note`,
+  `/message`), so the web can show them in the screen language. Text you change in `texts` is not translated (it no longer
+  matches the catalog key); to translate it, put your template as a `text` key in a catalog folder (`mod-i18n.catalog_dirs`).
 - The parts can be used on their own: `assess_readiness` (authentication interpretation → status), `classify_probe_messages`, `classify_probe_error`,
   `find_claude_cli`, `expand_path`.
 
@@ -240,6 +245,54 @@ is checked separately at run time by `validate_settings` and `run`.
 
 Tests (`tests/…_readiness_52r68.py`) use only fake SDK clients and check that the status check and refused connection tests create zero real
 `ClaudeSDKClient` instances, and that key values (and parts of them) appear nowhere in responses, logs, or exceptions.
+
+### Model discovery (optional capability)
+
+The descriptor declares `capabilities.model_discovery = true` and implements `discover_models(ctx, timeout_s)`
+(`agent_console_runtime.ModelDiscoveryCapableBackend`). The server wraps it in `BackendModelCatalogService` (cache, merging with the
+administrator list `models`, failures as data) and fills the model field (`GET /api/v1/backends/{id}/models`, `…/model-catalog`).
+**Neither method calls a model** (no token usage):
+
+- `sdk_init` (subscription): starts the Claude Code CLI with the connection test's options (app-only credentials folder, a temporary
+  working folder, no tools, no settings files, session persistence off) and only calls `connect()`, `get_server_info()` and
+  `disconnect()` — never `query()`. The `models` items of the CLI initialize response (`value` → id, `displayName` → title,
+  `description`, other keys → `attributes`) become `ModelInfo`; items without `value` are skipped (`details.skipped`). A response
+  without `models` is `unsupported` (`cli_no_models`). `disconnect()` always runs, also on timeout or error.
+- `models_api` (API key): `GET {base}/v1/models` page by page (`limit` = `page_limit`, `after_id` = `last_id` while `has_more`) with
+  the headers `x-api-key` and `anthropic-version`. `id` → id, `display_name` → title, `max_input_tokens` → `context_window`, other
+  keys (except `type`) → `attributes`. 401 and 403 → `auth_failed`, connection errors → `network`, timeouts → `timeout`, other
+  shapes → `invalid_response`, other HTTP errors → `error` (`details.http_status`). The key is only in the request header, never in
+  results, `details`, or logs.
+- Refused without a CLI start or HTTP call: subscription method with `allow_subscription_auth` off (`subscription_disabled`), no key,
+  token, or app-only sign-in (`auth_missing`), no executable for `sdk_init` (`cli_missing`).
+
+Administrator setting `model_discovery` (`ClaudeSdkModelDiscoveryOptions`):
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `method` | `auto` | `auto` = `models_api` when `readiness.auth` is an API key, `sdk_init` when it is a subscription. `sdk_init` or `models_api` forces one |
+| `api_base_url` | `null` | Models API address (proxy or gateway). Empty = environment variable `ANTHROPIC_BASE_URL`, then the official address |
+| `api_version` | `2023-06-01` | The `anthropic-version` header |
+| `page_limit` | `1000` | Models per page (1–1000) |
+
+Turning discovery on or off and the cache and wait times are server settings for every backend
+(`modules.options.mod-runs.model_discovery`). Injection points for tests: `client_factory` (an object with `get_server_info`,
+`ServerInfoClient`) and `http_client_factory` (`HttpClientFactory`).
+
+Known limits:
+- The list follows the administrator check authentication (`readiness.auth`), the same one the connection test uses. Agents that set
+  a different `backend_options.auth` are not looked up separately; pick their model by typing it.
+- The subscription list is what the installed Claude Code CLI puts in its initialize response for its own model picker (checked with
+  CLI 2.1.299 bundled in `claude-agent-sdk` 0.2.166). Another CLI version may list different models or none (`unsupported`). The app
+  does not read `~/.claude` or other home settings files to find models.
+
+```python
+>>> from agent_console_backend_claude_sdk import models_from_server_info
+>>> parsed = models_from_server_info({"models": [{"value": "m-1", "displayName": "One"}]})
+>>> parsed.models, parsed.skipped
+([{'id': 'm-1', 'title': 'One'}], 0)
+
+```
 
 ### Subscription sign-in
 
@@ -289,7 +342,7 @@ Server administrator setting `login` (`ClaudeSdkLoginOptions`, all data; **the s
 | `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | With the app-only folder turned off, the write path shown in the start confirmation dialog (the first one that resolves). With the app-only folder, its location (relative path) and `texts.writes_private` |
 | `status_timeout_s`, `logout_timeout_s`, `exit_wait_s`, `terminate_grace_s` | `20`, `20`, `10`, `2` | Times (seconds) |
 | `screen_lines` | `40` | Number of screen lines carried in progress |
-| `texts` | `ClaudeSdkLoginTexts` | Text for buttons, steps, reasons, and the at-your-own-risk notice |
+| `texts` | `ClaudeSdkLoginTexts` | Text for buttons, steps, reasons, and the at-your-own-risk notice. The environment variable warning and the sign-out failure and timeout sentences are also sent as `text_templates` (`/warnings/<i>`, `/message`); changed text is not translated unless a catalog folder has it as a `text` key |
 
 ```python
 >>> from agent_console_backend_claude_sdk import ClaudeSdkLoginOptions, allowed_open_url
@@ -475,7 +528,8 @@ Model call duration: `ResultMessage.duration_api_ms` (the total model API wait a
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `models` | `[]` | The `list_models()` list (`ModelInfo`). Model ids are not in the code |
+| `models` | `[]` | The `list_models()` list (`ModelInfo`). Model ids are not in the code. The account lookup adds its models after these (this list keeps its order and wins on the same id) |
+| `model_discovery` | `ClaudeSdkModelDiscoveryOptions()` | Account model discovery method and Models API address and header (see "Model discovery" above) |
 | `env_policy` | `null` (= the default allow list) | Child process environment inheritance (`EnvPolicy{inherit, allow}`) |
 | `max_raw_chars` | `DEFAULT_MAX_RAW_CHARS` | The maximum JSON length of one event raw |
 | `cancel_grace` | `5.0` | Interrupt wait after cancellation (seconds) |

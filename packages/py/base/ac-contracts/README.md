@@ -134,8 +134,16 @@ Only the user rule settings model `SecretRuleSettings` (`WorkspaceSettings.secre
 False
 >>> x_ui(tier="advanced", unit="초")
 {'x-ui': {'tier': 'advanced', 'unit': '초'}}
+>>> from agent_console_contracts import TextTemplate, render_text_template
+>>> note = TextTemplate(template="{seconds}초 안에 응답이 없었습니다.", params={"seconds": 20.0})
+>>> render_text_template(note)  # a sentence with values: source template (translation key) + values
+'20초 안에 응답이 없었습니다.'
 
 ```
+
+A server text field that mixes in values is sent with `text_templates` (JSON Pointer of the field → the
+`TextTemplate` sentences that made it). The template is the translation key, so text an installer changes is
+not translated unless a catalog has that template.
 
 Command line: `python -m agent_console_contracts export <dir>` / `check <dir>` (exit 1 when different).
 

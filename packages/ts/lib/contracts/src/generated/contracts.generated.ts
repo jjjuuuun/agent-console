@@ -119,6 +119,16 @@ export type BackendLoginPhase =
   "starting" | "waiting_user" | "verifying" | "succeeded" | "failed" | "cancelled" | "expired";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ModelSource".
+ */
+export type ModelSource = "config" | "discovered";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ModelDiscoveryState".
+ */
+export type ModelDiscoveryState = "ok" | "stale" | "failed" | "disabled" | "unsupported";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ReadinessTone".
  */
 export type ReadinessTone = "ok" | "warn" | "error" | "unknown";
@@ -2233,8 +2243,7 @@ export interface ConditionItem {
   [k: string]: unknown;
 }
 /**
- * 칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. "
- * "묶음 값으로 같은 그림을 다시 그립니다.
+ * 칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. 묶음 값으로 같은 그림을 다시 그립니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ArchitectureDrill".
@@ -3300,6 +3309,12 @@ export interface LogEvent {
    * 원문(상세에서만, 크기 제한·비밀 가림 적용).
    */
   raw?: unknown;
+  /**
+   * 값이 섞인 `title`·`summary`의 원문 틀 + 값(2.1.0): 칸 JSON Pointer(`/title` 등) → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값, 칸과 같은 가림). 빈 표 = 틀 없음(출처가 주지 않았거나 옛 색인).
+   */
+  text_templates?: {
+    [k: string]: TextTemplate[];
+  };
 }
 /**
  * 이벤트가 가리키는 문서(SKILL.md·SPEC.md 등). 이름만 언급된 것은 읽음으로 보지 않는다.
@@ -3320,6 +3335,28 @@ export interface LogDocumentRef {
    * 이벤트와의 관계(예: mentioned, read, written).
    */
   action?: string;
+}
+/**
+ * 값이 섞인 서버 문장 하나의 원문 틀과 값(2.2.0).
+ *
+ * 틀은 서버 원문(문구 데이터 그대로)이라 화면 번역의 원문 키다. 자리표시자는 `{name}`만 쓴다.
+ * 값은 JSON 스칼라 또는 중첩 틀(번역할 고정 낱말)이다. 서버 채우기는 `render_text_template`.
+ * 문자열 값은 그 칸과 같은 비밀 가림을 거친다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TextTemplate".
+ */
+export interface TextTemplate {
+  /**
+   * 원문 틀(`{name}` 자리표시자). 화면 번역의 원문 키다.
+   */
+  template: string;
+  /**
+   * 자리표시자 이름 → 값(JSON 스칼라 또는 중첩 틀). 중첩 틀은 먼저 채운다. 없는 이름은 `{name}` 그대로 남는다.
+   */
+  params?: {
+    [k: string]: string | number | boolean | TextTemplate | null;
+  };
 }
 /**
  * 응답(thread, message_id) 하나의 토큰 표본(F-8: 같은 응답이 여러 행이어도 한 번만 센다).
@@ -3622,6 +3659,10 @@ export interface BackendCapabilities {
    * 앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`(백엔드가 이유를 알리면 그 코드, 예: `backend.subscription_auth_disabled`).
    */
   logout?: boolean;
+  /**
+   * 모델 호출 없이 이 계정이 쓸 수 있는 모델 목록을 물을 수 있다(0.16.1). 서버는 조회 결과를 설치자 설정 목록에 더해 `GET /backends/{id}/models`·`…/model-catalog`로 낸다. false면 설정 목록만.
+   */
+  model_discovery?: boolean;
 }
 /**
  * 백엔드가 실제로 강제할 수 있는 실행 범위 항목. false면 화면이 경고한다.
@@ -3854,6 +3895,12 @@ export interface BackendLoginSession {
    * 끝난 시각. 진행 중이면 null.
    */
   finished_at?: number | null;
+  /**
+   * 값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.
+   */
+  text_templates?: {
+    [k: string]: TextTemplate[];
+  };
 }
 /**
  * ``POST /backends/{id}/login`` 요청(본문 생략 가능). 실행 명령은 요청으로 바꿀 수 없다.
@@ -3896,6 +3943,66 @@ export interface BackendLogoutResult {
    * 끝난 시각(epoch 초).
    */
   finished_at: number;
+  /**
+   * 값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.
+   */
+  text_templates?: {
+    [k: string]: TextTemplate[];
+  };
+}
+/**
+ * 실행 백엔드 하나의 모델 목록(설정 + 계정 조회)과 조회 상태.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendModelCatalog".
+ */
+export interface BackendModelCatalog {
+  backend_id: string;
+  /**
+   * 합친 모델 목록. 설치자 설정 목록이 앞(그 순서), 조회에만 있는 모델은 뒤(백엔드가 준 순서). 같은 id는 한 항목이고 `sources`에 둘 다 적힌다.
+   */
+  models?: ModelInfo[];
+  discovery: ModelDiscoveryInfo;
+}
+/**
+ * 백엔드가 제공하는 모델 하나(`list_models()`). 모델 목록은 코드에 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ModelInfo".
+ */
+export interface ModelInfo {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  context_window?: number | null;
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 이 항목이 나온 곳(0.16.1): `config` 설치자 설정 목록, `discovered` 계정 조회. 둘 다면 합친 항목. 빈 목록 = 출처 모름(옛 서버, 또는 백엔드가 직접 준 목록).
+   */
+  sources?: ModelSource[];
+}
+/**
+ * 백엔드 계정 모델 조회 상태.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ModelDiscoveryInfo".
+ */
+export interface ModelDiscoveryInfo {
+  state: ModelDiscoveryState;
+  /**
+   * 목록에 쓴 조회가 끝난 시각(epoch 초). null = 조회한 적 없음.
+   */
+  fetched_at?: number | null;
+  /**
+   * 이 결과를 다시 조회하지 않고 쓰는 마지막 시각(epoch 초). null = 정하지 않음.
+   */
+  expires_at?: number | null;
+  /**
+   * 조회 문제(예: `backend.model_discovery_failed` 경고, `details.backend_id`·`reason`). 비면 문제 없음.
+   */
+  issues?: Issue[];
 }
 /**
  * ``POST /backends/{id}/probe`` 요청(본문 생략 가능).
@@ -3944,6 +4051,12 @@ export interface BackendProbeResult {
    * 끝난 시각(epoch 초).
    */
   finished_at: number;
+  /**
+   * 값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.
+   */
+  text_templates?: {
+    [k: string]: TextTemplate[];
+  };
 }
 /**
  * 실행 백엔드의 정적 점검 상태(모델·네트워크 호출 없음).
@@ -3986,6 +4099,12 @@ export interface BackendReadiness {
    * 상태에 맞는 동작 버튼(로그인·로그아웃 등). 비면 없음.
    */
   actions?: ReadinessAction[];
+  /**
+   * 값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.
+   */
+  text_templates?: {
+    [k: string]: TextTemplate[];
+  };
 }
 /**
  * 정적 점검 항목 하나(예: "API 키 환경변수: 있음"). 값은 담지 않는다.
@@ -6591,6 +6710,10 @@ export interface I18nInfo {
    * 고른 언어 묶음에 없는 문구를 찾을 대체 언어(설정 `mod-i18n.fallback_language`). `LanguageInfo.complete`의 기준이다.
    */
   fallback_language: string;
+  /**
+   * 서버 원문 문구의 언어(설정 `mod-i18n.source_language`, 1.1.0). 화면은 원문 키 조회를 이 언어에서 멈춘다(그 언어 묶음까지 본다). null = 모름(옛 서버) — 대체 언어 사슬 전체를 본다.
+   */
+  source_language?: string | null;
 }
 /**
  * 묶음이 있는 언어 하나(`I18nInfo.languages` 항목).
@@ -8690,21 +8813,6 @@ export interface MessageCatalog {
     [k: string]: {
       [k: string]: unknown;
     };
-  };
-}
-/**
- * 백엔드가 제공하는 모델 하나(`list_models()`). 모델 목록은 코드에 없다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ModelInfo".
- */
-export interface ModelInfo {
-  id: string;
-  title?: string | null;
-  description?: string | null;
-  context_window?: number | null;
-  attributes?: {
-    [k: string]: unknown;
   };
 }
 /**
@@ -13370,15 +13478,15 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.16.0" as const;
+export const CONTRACTS_VERSION = "0.16.1" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "2.1.0",
+  "common": "2.2.0",
   "resources": "1.1.0",
-  "logs": "2.0.0",
-  "i18n": "1.0.0",
+  "logs": "2.1.0",
+  "i18n": "1.1.0",
   "definitions": "3.0.0",
-  "runs": "1.9.0",
+  "runs": "1.10.0",
   "usage": "1.1.0",
   "projects": "4.1.0",
   "chat": "1.4.0",
@@ -13713,6 +13821,7 @@ export const KNOWN_ISSUE_CODES = {
   "TEAM_CHILD_NO_ENTRY": "team.child_no_entry",
   "DELEGATION_DEPTH_EXCEEDED": "delegation.depth_exceeded",
   "BACKEND_UNRESOLVED": "backend.unresolved",
+  "BACKEND_MODEL_DISCOVERY_FAILED": "backend.model_discovery_failed",
   "PROJECT_UNKNOWN": "project.unknown",
   "PROJECT_REFERENCES_UNAVAILABLE": "project.references_unavailable",
   "MEMORY_DENIED": "memory.denied",

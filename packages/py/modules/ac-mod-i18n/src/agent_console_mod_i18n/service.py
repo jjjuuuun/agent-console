@@ -126,6 +126,8 @@ class I18nService:
         base_dir: base folder of relative ``folders`` (usually the settings file folder).
         default_language: ``I18nInfo.default_language``.
         fallback_language: ``I18nInfo.fallback_language`` and the base of ``complete``.
+        source_language: ``I18nInfo.source_language`` (the language of the server source text;
+            None = unknown, the screen then looks through the whole fallback chain).
         read_folders: injected folder reader (tests). Default ``folder_catalogs``.
     """
 
@@ -137,6 +139,7 @@ class I18nService:
         base_dir: Path | None = None,
         default_language: str = "en",
         fallback_language: str = "en",
+        source_language: str | None = None,
         read_folders: Callable[..., CatalogLoad] = folder_catalogs,
     ) -> None:
         self._packages = packages
@@ -145,6 +148,7 @@ class I18nService:
         self._resolved = tuple(self._resolve(f) for f in self._folders)
         self.default_language = default_language
         self.fallback_language = fallback_language
+        self.source_language = source_language
         self._read_folders = read_folders
         self._lock = threading.Lock()
         self._snapshot: _Snapshot | None = None
@@ -212,6 +216,7 @@ class I18nService:
             languages=languages,
             default_language=self.default_language,
             fallback_language=self.fallback_language,
+            source_language=self.source_language,
         )
         snap.info = info
         return info

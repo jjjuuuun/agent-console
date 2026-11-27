@@ -1,13 +1,22 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-resources`, so the web can show the module description and settings and the `resource.not_multi_file`, `resource.reserved_file_name` issues in English (data only, no API change). Log lines are now English.
-- 5.7R.33x: 선택 포트 `definitions.spaces`. `/resources`·`/resources/{id}/…`(목록·조회·만들기·저장·삭제·본문·여러 파일)이 `?project=<공간>`을 받는다. 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`. 공간 목록의 `usage_count`는 null. **깨는 변경**: `build_router(service)`의 `service`가 공간 이름 하나를 받는다.
-- 5.2R.31: 목록 `ResourceSummary.project`를 채운다(요약 `extra.project`, 공용 = null).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-resources`, so the web app can show the module description and settings and
+  the `resource.not_multi_file` and `resource.reserved_file_name` issues in English (data only, no API change). Log
+  lines are now in English.
+- Optional port `definitions.spaces`. `/resources` and `/resources/{id}/…` (list, read, create, save, delete, content,
+  multiple files) take `?project=<space>`. Without the port they give 409 `feature_unavailable`, and an unknown space
+  gives 404 `project.not_found`. `usage_count` in space lists is null. **Breaking change**: the `service` of
+  `build_router(service)` takes a space name.
+- The list fills `ResourceSummary.project` (summary `extra.project`; the shared library = null).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- `apps/server`의 리소스 CRUD·본문·여러 파일·`/resource-types`·`/merge-strategies`를 옮겼다(3R.12). 제공 포트 `resources.lookup`·`resources.types`, 선택 포트 `definitions.usages`(목록 `usage_count`, 없으면 null).
-- 5R.19: 예약 이름 경고 이슈에 위치 `path`(JSON Pointer `/files/<파일 경로>`)를 채우고 메시지에 파일 경로를 넣는다(4R.19 QA — 저장 경고 배너에 경로가 비던 문제).
+- First release (from the scripts/pkgkit template `module`).
+- Moved resource CRUD, content, multiple files, `/resource-types` and `/merge-strategies` out of `apps/server`.
+  Provided ports `resources.lookup` and `resources.types`, optional port `definitions.usages` (list `usage_count`,
+  null without it).
+- Reserved name warning issues fill the location `path` (JSON Pointer `/files/<file path>`) and include the file path
+  in the message (the save warning banner used to show no path).

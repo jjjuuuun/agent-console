@@ -1,46 +1,90 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Settings warnings that also reach the web now carry a code and `details`: new `SettingsNotice` (`code`, `message`, `details`) and `SettingsNoticeCodes` (`plugins.unknown_disabled`, `plugins.disabled_distribution`, `plugins.disabled_distribution_nothing`, `plugins.disabled_module_id`, `plugins.disabled_module_id_nothing`, `secrets.provider_no_settings_hook`, `secrets.provider_unknown`). `HostPlugins.notices` and `SecretProviderSetup.notices` hold them; `warnings` is now a read-only property with the same messages (no longer a constructor argument). Message catalogs `locales/en.json` and `locales/ko.json` (entry point `agent_console.message_catalogs` `ac-modkit`) hold the code texts and the English of the `plugins.*` report reasons, which the terminal log line now prints in English. `host.MASKED_LINE_NOTE` (the comment on masked lines of the settings YAML snippet) is now English: `<masked value: set it as secret://name>`.
-- P1.19: `KindContribution.open_role` (default `None`): the web route role of the screen that opens an item of the contributed kind. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only; the range `>=0.1,<0.2` stays.
-- I.6: Terminal text is now English: `Assembly.warnings` (unknown module ids, bindings, options for modules without settings), `RemovedSetting.message()` (`The settings key … is no longer read. Move it to …`, `New location: …`, `… was removed. Delete it from the settings file`), log-only lines (module start, stop, build, migration, background task, event subscriber, WS relay, plugin and database factory loading), the standalone runner (`standalone.run`: help, report `warning:` lines, `check:` and settings errors), `load_host_settings` shape error, and the secret provider settings hook error. Warnings that also reach the web (`plugins.disabled` unknown names, `secrets.providers` warnings in `HostPlugins.warnings` and `SecretProviderSetup.warnings`) keep their Korean text; only their log line is English. `FlagSetting.help` and `RemovedSetting.reason` are documented as English terminal text.
-- P1.24: `load_host_plugins`의 `plugins.disabled` 모르는 이름 경고가 흔한 실수를 알아본다. 설치된 배포 이름이면 그 배포의 entry point 이름(적어야 할 이름)을, 서버 모듈 id(`agent_console.server_modules` 이름)면 `modules.disabled`(`--disable-module`) 안내와 같은 배포의 entry point 이름을 덧붙인다. 그 밖의 이름은 전과 같은 문장이다.
-- 11/20: `WorkGate`·`DEFAULT_WORK_WAIT` — 배경 스레드 작업 수 세기 + 닫힘(`run`·`close`·`reopen`·`wait_idle`·`close_and_wait`). 배경 작업 취소·종료 훅이 진행 중인 스레드 작업을 기다리게 한다(`mod-logs` 수집·`mod-memory` 자동 정리가 쓴다).
-
-- 7R.4: `LoopPublisher[T](publish, *, key=None)` — 다른 스레드 알림을 바인드한 이벤트 루프로 옮기는 발행기(같은 키 연속 한 번, 바인드한 루프가 닫힌 뒤에는 버리고 `dropped`를 센다). `mod-memory` `LoopPublisher`·`mod-sdd` `ChangePublisher`를 합쳐 올렸다.
-- 6R.5: 정의 종류 기여(X44) `KindContribution[K]{kind, references?, summary_fields}`·`KindReferences`와 여러 제공자 포트 `DEFINITION_KIND_CONTRIBUTIONS`(`definitions.kind_contributions`). 키트는 종류 값의 타입을 모른다(매개변수).
-- 5.7R.33x: `host.SpaceQuery`·`SPACE_QUERY`(저장 공간 질의 `?project=`, 라우트 매개변수 형식).
-- 5.7R.33w2: `MigrationBranch.scopes`(기본 `("app",)`, X39)와 `ModuleContext.active_migrations(scope)`. 호스트는 `app` 범위 계보만 앱 DB에 올린다(기존 모듈은 그대로).
-
-- 5.5R.10: 조립 순서. 선택 포트 순환을 끊을 때 "순환 구성원 사이 선택 간선 모두 빼기" 대신 "필수 간선 전부 + 순환을 만들지 않는 선택 간선만(단일 포트 먼저, 여러 제공자 포트 나중)"으로 정렬한다. 큰 선택 순환(강연결 요소)에 묶여도 설정 제공자 → 소비자 순서를 잃지 않는다.
-- 5.2R.93(설정 호환 정리): 옛 키를 읽어 옮기는 장치 `MovedSetting`·`SettingsMove`·`migrate_settings`와 `SettingsCompat.moved`·`SeedSetting.before_moves`를 지웠다(4R.18부터 선언 0개, 정책은 "옛 키는 읽지 않고 `RemovedSetting`으로 거부"). 기본값 채우기는 새 함수 `seed_settings(data, compats)`가 한다. 예제 `ECHO_SETTINGS_COMPAT`에서 옮기기 선언을 뺐다. 0.1.0 미출시 범위 안의 변경이라 버전은 그대로다.
-- 5.2R.29: 모듈 옵션 읽기 전용 보기. 코어 `read_module_options`·`ModuleOptions`·`mask_values`·`OPTIONS_MASK`·`SECRET_SCHEMA_KEY`·`SecretPathFinder`, `Assembly.module_options(id)`(`Assembly.descriptors`·`Assembly.options` 필드 추가). 호스트 `GET /modules/{id}/options`(`build_module_options_router`·`default_module_options_payload`, `create_host_app(options_payload=)`)와 YAML 조각 `options_yaml_snippet`(가린 줄은 주석 `MASKED_LINE_NOTE`, 비게 된 객체·목록은 `{}`·`[]`). 가림 문자열은 `OPTIONS_MASK` 하나(`host.REDACTED`가 같은 값), `mask=` 인자로 호스트가 맞춘다. 쓰기 없음.
-- 4R.18: `RemovedSetting`에 `new`(새 위치)·`reason` 기본값·`message()`를 더했다. 읽기 호환이 끝난 옛 키를 새 위치 안내 오류로 바꿀 때 쓴다.
+- Settings warnings that also reach the web now carry a code and `details`: new `SettingsNotice` (`code`, `message`,
+  `details`) and `SettingsNoticeCodes` (`plugins.unknown_disabled`, `plugins.disabled_distribution`,
+  `plugins.disabled_distribution_nothing`, `plugins.disabled_module_id`, `plugins.disabled_module_id_nothing`,
+  `secrets.provider_no_settings_hook`, `secrets.provider_unknown`). `HostPlugins.notices` and
+  `SecretProviderSetup.notices` hold them; `warnings` is now a read-only property with the same messages (no longer a
+  constructor argument). Message catalogs `locales/en.json` and `locales/ko.json` (entry point
+  `agent_console.message_catalogs` `ac-modkit`) hold the code texts and the English of the `plugins.*` report
+  reasons, which the terminal log line now prints in English. `host.MASKED_LINE_NOTE` (the comment on masked lines of
+  the settings YAML snippet) is now English: `<masked value: set it as secret://name>`.
+- `KindContribution.open_role` (default `None`): the web route role of the screen that opens an item of the
+  contributed kind. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only;
+  the range `>=0.1,<0.2` stays.
+- Terminal text is now English: `Assembly.warnings` (unknown module ids, bindings, options for modules without
+  settings), `RemovedSetting.message()` (`The settings key … is no longer read. Move it to …`, `New location: …`,
+  `… was removed. Delete it from the settings file`), log-only lines (module start, stop, build, migration, background
+  task, event subscriber, WS relay, plugin and database factory loading), the standalone runner (`standalone.run`:
+  help, report `warning:` lines, `check:` and settings errors), the `load_host_settings` shape error, and the secret
+  provider settings hook error. Warnings that also reach the web (`plugins.disabled` unknown names, `secrets.providers`
+  warnings in `HostPlugins.warnings` and `SecretProviderSetup.warnings`) keep their Korean text; only their log line
+  is English. `FlagSetting.help` and `RemovedSetting.reason` are documented as English terminal text.
+- The `plugins.disabled` unknown name warning of `load_host_plugins` recognizes common mistakes. For an installed
+  distribution name it adds the entry point names of that distribution (the names to write); for a server module id
+  (an `agent_console.server_modules` name) it adds a pointer to `modules.disabled` (`--disable-module`) and the entry
+  point names of the same distribution. Other names get the same sentence as before.
+- `WorkGate` and `DEFAULT_WORK_WAIT`: counting of background thread work plus closing (`run`, `close`, `reopen`,
+  `wait_idle`, `close_and_wait`). Background task cancel and stop hooks wait for thread work in progress (used by
+  `mod-logs` collection and `mod-memory` automatic cleanup).
+- `LoopPublisher[T](publish, *, key=None)`: a publisher that moves notifications from other threads onto the bound
+  event loop (consecutive notifications with the same key are sent once; after the bound loop closes they are dropped
+  and counted in `dropped`). Merges `mod-memory` `LoopPublisher` and `mod-sdd` `ChangePublisher`.
+- Definition kind contributions `KindContribution[K]{kind, references?, summary_fields}` and `KindReferences`, with
+  the multi-provider port `DEFINITION_KIND_CONTRIBUTIONS` (`definitions.kind_contributions`). The kit does not know
+  the type of kind values (a type parameter).
+- `host.SpaceQuery` and `SPACE_QUERY` (the storage space query `?project=`, in route parameter form).
+- `MigrationBranch.scopes` (default `("app",)`) and `ModuleContext.active_migrations(scope)`. The host upgrades only
+  `app`-scope lineages in the app database (existing modules are unchanged).
+- Assembly order. When breaking optional port cycles, sorting no longer removes every optional edge between cycle
+  members; it keeps all required edges plus only the optional edges that do not create a cycle (single ports first,
+  multi-provider ports later). Even when tied into a large optional cycle (strongly connected component), the
+  settings provider to consumer order is kept.
+- Settings compatibility cleanup: removed the mechanism that read and moved old keys (`MovedSetting`,
+  `SettingsMove`, `migrate_settings`, `SettingsCompat.moved` and `SeedSetting.before_moves`). No declarations used it
+  any more, and the policy is to not read old keys and reject them with `RemovedSetting`. Filling defaults is done by
+  the new function `seed_settings(data, compats)`. Removed the move declaration from the example
+  `ECHO_SETTINGS_COMPAT`. The change is within the unreleased 0.1.0 range, so the version is unchanged.
+- Read-only view of module options. Core `read_module_options`, `ModuleOptions`, `mask_values`, `OPTIONS_MASK`,
+  `SECRET_SCHEMA_KEY` and `SecretPathFinder`, and `Assembly.module_options(id)` (added the `Assembly.descriptors` and
+  `Assembly.options` fields). Host `GET /modules/{id}/options` (`build_module_options_router`,
+  `default_module_options_payload`, `create_host_app(options_payload=)`) and the YAML snippet `options_yaml_snippet`
+  (masked lines carry the comment `MASKED_LINE_NOTE`, and objects or lists that become empty are `{}` or `[]`). There
+  is one mask string, `OPTIONS_MASK` (`host.REDACTED` has the same value), and the host aligns it with the `mask=`
+  argument. No writes.
+- `RemovedSetting` gained `new` (the new location), a default `reason` and `message()`. Used to turn old keys whose
+  read compatibility has ended into errors that point to the new location.
 
 ## 0.1.0
 
-- 3R.13: `Assembly.routers(first_kinds=)`, 호스트 `include_routers(app, assembly, prefix=, first_kinds=ROUTE_FIRST_KINDS)` — 연동 모듈 라우터를 먼저 붙여 고정 하위 경로(예: `/runs/handoffs`)가 기능 모듈의 매개변수 경로(`/runs/{run_id}`)에 가리지 않게 한다. `create_host_app`이 이것을 쓴다.
-
-- 3R.12: HTTP 도우미 `host.IfMatchHeader`·`if_match_version`·`etag`·`json_with_etag`·`attachment_response`(버전 있는 자원·본문 파일 응답, 모듈 공통).
-
-- 3R.11: `DatabaseHandle`(프로토콜)·`MigrationBranch`, `ModuleDescriptor.migrations`, `assemble`이 켜진 모듈의 계보만 build 직전에 `database.upgrade`(실패 시 그 모듈만 `failed`), `standalone.run(database=)`.
-
-- 처음 만듦(scripts/pkgkit 템플릿 `kit`, 3R.8).
-- 코어: `PortKey(multi=)`·`Topic`·`ModuleDescriptor`·`ModuleParts`·`Module`·`ModuleContext`·`assemble`
-  (위상 정렬·상태 5종·bindings·multi 목록)·`EventBus`(구독자 예외 격리)·`Hub`·`BaseServices`·
-  `load_installed_modules`.
-- extra `[host]`: 보안 미들웨어·토큰·`/health`·WS 다중화·로그 가림을 `apps/server`에서 옮겨 왔다
-  (동작 불변), `create_host_app`·`HostSettings`.
-- `standalone.run(module, argv)`: `--with`·`--config`·`--host`·`--port 0`·`--check`.
-- `testing`: `fake_module`, 예제 `EchoModule`.
-- 3R.9: `ModuleDescriptor.contracts`·`ModuleReport.contracts`를 `{계약 하위 모듈: 버전}` 매핑으로 바꿈,
-  `ModuleReport.to_dict()`, `ModulesConfig.with_overrides(enable=, disable=)`(명령행 켜고 끄기),
-  `Assembly.start(fail_fast=)`, `FeatureUnavailableError`·`FEATURE_UNAVAILABLE`·`ModuleContext.unavailable(key)`.
-  호스트: `GET /modules`(`build_modules_router`·`default_modules_payload`, `create_host_app(modules_payload=)`),
-  `install_feature_unavailable`(409 `{module, port}`), `DEFAULT_ERROR_STATUS`에 `feature_unavailable`. 예제
-  `EchoModule`에 `GET /echo/transformed`(선택 포트 없으면 409). 코어가 fastapi·uvicorn·websockets·ruamel·
-  starlette 없이 import·조립되는지 확인하는 import 차단 테스트.
-- 3R.10: `ErrorReply`·`ErrorMapper`·`ErrorMapping`·`error_reply` — `ModuleParts.error_map` 값으로 코드 문자열 대신
-  예외 → `ErrorReply`(코드·메시지·`details`·헤더) 함수를 받는다(`install_error_map`이 처리). `standalone.run(default_with=,
-  error_status=)`: `--with`가 없을 때 붙일 모듈, 오류 코드 → HTTP 상태 표.
+- `Assembly.routers(first_kinds=)` and the host `include_routers(app, assembly, prefix=,
+  first_kinds=ROUTE_FIRST_KINDS)`: link module routers are attached first, so fixed subpaths (for example
+  `/runs/handoffs`) are not shadowed by parameter paths of feature modules (`/runs/{run_id}`). `create_host_app` uses
+  this.
+- HTTP helpers `host.IfMatchHeader`, `if_match_version`, `etag`, `json_with_etag` and `attachment_response`
+  (responses for versioned resources and content files, shared by modules).
+- `DatabaseHandle` (protocol) and `MigrationBranch`, `ModuleDescriptor.migrations`; `assemble` runs
+  `database.upgrade` for the lineages of enabled modules right before build (on failure only that module is
+  `failed`), and `standalone.run(database=)`.
+- First release (from the scripts/pkgkit template `kit`).
+- Core: `PortKey(multi=)`, `Topic`, `ModuleDescriptor`, `ModuleParts`, `Module`, `ModuleContext`, `assemble`
+  (topological sort, five states, bindings, multi lists), `EventBus` (subscriber exception isolation), `Hub`,
+  `BaseServices` and `load_installed_modules`.
+- Extra `[host]`: the security middleware, tokens, `/health`, WS multiplexing and log masking moved here from
+  `apps/server` (same behavior), with `create_host_app` and `HostSettings`.
+- `standalone.run(module, argv)`: `--with`, `--config`, `--host`, `--port 0` and `--check`.
+- `testing`: `fake_module` and the example `EchoModule`.
+- `ModuleDescriptor.contracts` and `ModuleReport.contracts` became a `{contract submodule: version}` mapping, with
+  `ModuleReport.to_dict()`, `ModulesConfig.with_overrides(enable=, disable=)` (command-line enable and disable),
+  `Assembly.start(fail_fast=)`, and `FeatureUnavailableError`, `FEATURE_UNAVAILABLE` and
+  `ModuleContext.unavailable(key)`. Host: `GET /modules` (`build_modules_router`, `default_modules_payload`,
+  `create_host_app(modules_payload=)`), `install_feature_unavailable` (409 `{module, port}`), and
+  `feature_unavailable` in `DEFAULT_ERROR_STATUS`. The example `EchoModule` has `GET /echo/transformed` (409 without
+  the optional port). An import-blocking test checks that the core imports and assembles without fastapi, uvicorn,
+  websockets, ruamel or starlette.
+- `ErrorReply`, `ErrorMapper`, `ErrorMapping` and `error_reply`: `ModuleParts.error_map` values take a function from
+  exception to `ErrorReply` (code, message, `details`, headers) instead of a code string (handled by
+  `install_error_map`). `standalone.run(default_with=, error_status=)`: modules to attach when `--with` is absent, and a
+  table from error code to HTTP status.

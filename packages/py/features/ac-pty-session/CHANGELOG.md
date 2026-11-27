@@ -1,8 +1,8 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 처음 만듦(5.2R.81, ux-overhaul §15.9): `PtySession`(띄우기·읽기·쓰기·키·대기·유예 뒤 강제 종료),
-  `TerminalText`·`strip_ansi`(제어 시퀀스 제거, `\r` 덮어쓰기, 줄 단위 화면, OSC 8 링크), `ExpectRules`·
-  `ExpectWatcher`(규칙 → 신호, 컴파일 함수 주입), POSIX `ptyprocess`·Windows `pywinpty`(선택 `windows`) 어댑터,
-  `PtyUnavailableError`, 테스트용 `FakePty`·`FakePtySpawner`.
+- First release: `PtySession` (spawn, read, write, keys, wait, forced stop after a grace period), `TerminalText` and
+  `strip_ansi` (removes control sequences, handles `\r` overwrites, line-based screen, OSC 8 links), `ExpectRules` and
+  `ExpectWatcher` (rules to signals, with an injected compile function), adapters for POSIX `ptyprocess` and Windows
+  `pywinpty` (optional `windows` extra), `PtyUnavailableError`, and the test doubles `FakePty` and `FakePtySpawner`.

@@ -86,7 +86,11 @@
     "붙인 에이전트가 특정 도구를 쓰지 못하게 하고 싶을 때 더하세요.": "Add tools here to keep the attached agents from using them.",
     "붙인 에이전트가 실행할 수 있는 명령입니다.": "Commands the attached agents may run.",
     "붙인 에이전트가 특정 명령을 실행해야 할 때 더하세요.": "Add commands here when the attached agents need to run them.",
-    "권": "P"
+    "권": "P",
+    "any 타입을 쓰지 않습니다.": "Do not use the any type.",
+    "다음 파일에 적용: {paths}": "Applies to these files: {paths}",
+    "코드 스타일": "Code style",
+    "함수는 짧게 유지하세요.": "Keep functions short."
   },
   "codes": {
     "resource.unsafe_path": "The path must be a relative path inside the run folder."

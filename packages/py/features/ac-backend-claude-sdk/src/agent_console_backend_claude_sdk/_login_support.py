@@ -16,6 +16,8 @@ from agent_console_contracts import (
     ErrorCodes,
     LoginMethodInfo,
     ReadinessAction,
+    TextTemplate,
+    render_text_template,
 )
 from agent_console_runtime import BackendLoginContext, LoginDriver, LoginRefusedError
 
@@ -29,8 +31,9 @@ from ._login import (
     CLI_LOGIN_METHOD_ID,
     ClaudeSdkLoginOptions,
     LoginReasonCodes,
-    env_warnings,
+    env_warning_templates,
     login_env,
+    logout_timeout_template,
     writes_lines,
 )
 from ._readiness import ClaudeSdkReadinessOptions, ReadinessStates
@@ -240,7 +243,7 @@ class ClaudeLoginSupport:
             argv=self._argv(self.options.command, "login"),
             status_argv=self._argv(self.options.status_command, "status"),
             env=self._child_env(parent),
-            warnings=env_warnings(parent, self.options),
+            warnings=env_warning_templates(parent, self.options),
             spawner=self._spawner,
         )
 
@@ -252,15 +255,21 @@ class ClaudeLoginSupport:
         t = self.options.texts
         argv = self._argv(self.options.logout_command, "logout")
 
-        def result(ok: bool, message: str, reason: str | None = None) -> BackendLogoutResult:
+        def result(
+            ok: bool, message: str | TextTemplate, reason: str | None = None
+        ) -> BackendLogoutResult:
             fixes = [t.fix_cli.action()] if reason == LoginReasonCodes.CLI_MISSING else []
+            templates = {"/message": [message]} if isinstance(message, TextTemplate) else {}
             return BackendLogoutResult(
                 backend_id=ctx.backend_id,
                 ok=ok,
                 reason=reason,
-                message=message,
+                message=(
+                    render_text_template(message) if isinstance(message, TextTemplate) else message
+                ),
                 fixes=fixes,
                 finished_at=ctx.clock(),
+                text_templates=templates,
             )
 
         if argv is None:
@@ -288,13 +297,10 @@ class ClaudeLoginSupport:
         finally:
             await session.terminate(self.options.terminate_grace_s)
         if code is None:
-            return result(
-                False,
-                t.logout_timeout.format(seconds=self.options.logout_timeout_s),
-                LoginReasonCodes.TIMEOUT,
-            )
+            return result(False, logout_timeout_template(self.options), LoginReasonCodes.TIMEOUT)
         if code != 0:
-            return result(False, t.logout_failed.format(code=code), LoginReasonCodes.LOGOUT_FAILED)
+            failed = TextTemplate(template=t.logout_failed, params={"code": code})
+            return result(False, failed, LoginReasonCodes.LOGOUT_FAILED)
         return result(True, t.logout_ok_private if self._creds is not None else t.logout_ok)
 
 

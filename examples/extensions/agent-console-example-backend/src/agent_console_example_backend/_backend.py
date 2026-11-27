@@ -6,6 +6,9 @@
   채운 글이다.
 - 어떻게 동작할지는 설치자 설정 ``modules.options.mod-runs.backends."example.scripted"``
   (``InstallOptions``)가 정하고, 앱이 ``from_options`` 훅으로 넘긴다(앱은 키의 뜻을 모른다).
+- ``models_file``을 주면 선택 능력 "계정 모델 조회"(X54)를 선언하고, ``discover_models``가 그
+  JSON 파일(``[{"id": …, "title": …}, …]``)을 읽어 모델 목록을 준다(사내 게이트웨이가 내려 주는
+  목록 같은 바깥 데이터 흉내). 서버가 설정 목록 ``models``와 합친다.
 - ``session_dir``을 주면 실행마다 ``<session_dir>/<작업 폴더 키>/<세션>.jsonl``에 한 줄을 더하고,
   ``session_archive()``로 그 파일의 보관·복원을 준다(선택 능력). 이어 쓰는 요청인데 기록이 없으면
   실패한다.
@@ -43,10 +46,13 @@ from agent_console_contracts import (
 from agent_console_runtime import (
     AgentRequest,
     AgentResult,
+    BackendCheckContext,
     BackendEventSink,
     BackendHostContext,
     CancelToken,
     JsonlFolderSessionArchive,
+    ModelDiscoveryReasons,
+    ModelDiscoveryResult,
     SecretResolver,
     SessionArchive,
     SessionRef,
@@ -60,6 +66,9 @@ SESSION_MISSING_CODE = "example.session_missing"
 """이어 쓸 세션 기록이 없을 때 실패 코드(예제 고유 코드 — 화면은 원문 그대로 보인다)."""
 
 SESSION_SUFFIX = ".jsonl"
+
+MODELS_FILE_MISSING = "models_file_missing"
+"""``models_file``이 없을 때 조회 실패 사유(예제 고유 사유 — 사유는 열린 어휘다)."""
 
 
 class ScriptRule(BaseModel):
@@ -103,6 +112,11 @@ class InstallOptions(BaseModel):
     chunk_chars: int = Field(
         default=0, ge=0, description="답을 이 글자 수씩 나눠 흘린다. 0이면 한 번에."
     )
+    models_file: str | None = Field(
+        default=None,
+        description="계정 모델 조회 흉내 파일(JSON 목록). 상대 경로는 앱 workspace 기준. 비우면 "
+        "조회 능력 없음(설정 목록만).",
+    )
 
 
 def render(template: str, variables: Mapping[str, str]) -> str:
@@ -137,6 +151,7 @@ class ScriptedBackend:
         session_dir: 세션 기록 폴더(절대 경로). None이면 기록·보관·이어 쓰기 확인 없음.
         chunk_chars: 답을 나눠 흘릴 글자 수(0 = 한 번에).
         ids: 새 세션 id 생성기(테스트 주입용, 기본 uuid4).
+        models_file: 계정 모델 조회 흉내 파일(절대 경로). 주면 ``model_discovery`` 능력을 선언한다.
     """
 
     def __init__(
@@ -146,10 +161,12 @@ class ScriptedBackend:
         session_dir: Path | None = None,
         chunk_chars: int = 0,
         ids: Callable[[], str] | None = None,
+        models_file: Path | None = None,
     ) -> None:
         self._models = [ModelInfo.model_validate(m) for m in models]
         self._session_dir = session_dir
         self._chunk_chars = chunk_chars
+        self._models_file = models_file
         self._ids = ids or (lambda: uuid.uuid4().hex)
         self.descriptor = BackendDescriptor(
             id=BACKEND_ID,
@@ -163,6 +180,8 @@ class ScriptedBackend:
                 cancel=True,
                 # 이어 쓰기는 세션 기록이 있을 때만 뜻이 있다(설정에 따라 능력 선언이 바뀐다).
                 resume=session_dir is not None,
+                # 계정 모델 조회(X54)도 같다: 읽을 파일이 있을 때만 선언한다.
+                model_discovery=models_file is not None,
             ),
         )
 
@@ -187,15 +206,12 @@ class ScriptedBackend:
             parsed = InstallOptions.model_validate(dict(options))
         except ValidationError as exc:
             raise ValueError(f"대본 백엔드 설정 오류: {_problems(exc)}") from None
-        session_dir: Path | None = None
-        if parsed.session_dir:
-            path = Path(parsed.session_dir).expanduser()
-            if not path.is_absolute():
-                if host is None or host.workspace_dir is None:
-                    raise ValueError("session_dir: 상대 경로는 앱 workspace가 있어야 합니다")
-                path = host.workspace_dir / path
-            session_dir = path
-        return cls(models=parsed.models, session_dir=session_dir, chunk_chars=parsed.chunk_chars)
+        return cls(
+            models=parsed.models,
+            session_dir=_resolve("session_dir", parsed.session_dir, host),
+            chunk_chars=parsed.chunk_chars,
+            models_file=_resolve("models_file", parsed.models_file, host),
+        )
 
     def session_archive(self) -> SessionArchive | None:
         """선택 능력(세션 기록 보관·복원): ``session_dir``이 있을 때만."""
@@ -205,6 +221,38 @@ class ScriptedBackend:
 
     async def list_models(self) -> list[ModelInfo]:
         return list(self._models)
+
+    async def discover_models(
+        self, ctx: BackendCheckContext, timeout_s: float
+    ) -> ModelDiscoveryResult:
+        """선택 능력(X54): ``models_file``을 읽는다(모델·네트워크 호출 없음).
+
+        실패는 예외가 아니라 ``ok=False`` + 사유다. 시간 상한은 서비스가 건다.
+        """
+        path = self._models_file
+        if path is None:  # 능력을 선언하지 않았으면 서비스가 부르지 않는다
+            return ModelDiscoveryResult(ok=False, unsupported=True)
+        try:
+            text = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        except FileNotFoundError:
+            return ModelDiscoveryResult(ok=False, method="file", reason=MODELS_FILE_MISSING)
+        except OSError as exc:
+            return ModelDiscoveryResult(
+                ok=False,
+                method="file",
+                reason=ModelDiscoveryReasons.ERROR,
+                details={"error": type(exc).__name__},
+            )
+        try:
+            items = json.loads(text)
+        except json.JSONDecodeError:
+            items = None
+        if not isinstance(items, list):
+            return ModelDiscoveryResult(
+                ok=False, method="file", reason=ModelDiscoveryReasons.INVALID_RESPONSE
+            )
+        # 항목 모양 확인·길이 자르기·비밀 가림은 서비스가 한다(틀린 항목은 빠진다).
+        return ModelDiscoveryResult(ok=True, models=items, method="file")
 
     async def run(
         self, req: AgentRequest, sink: BackendEventSink, cancel: CancelToken
@@ -297,6 +345,22 @@ def _append_line(path: Path, record: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _resolve(name: str, value: str | None, host: BackendHostContext | None) -> Path | None:
+    """설정 경로 → 절대 경로(상대 경로는 앱 workspace 기준). 비면 None.
+
+    Raises:
+        ValueError: 상대 경로인데 앱 workspace를 모를 때.
+    """
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        if host is None or host.workspace_dir is None:
+            raise ValueError(f"{name}: 상대 경로는 앱 workspace가 있어야 합니다")
+        path = host.workspace_dir / path
+    return path
 
 
 def _problems(exc: ValidationError) -> str:

@@ -1,23 +1,48 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-memory`, so the web can show the default memory scope kinds and the `memory.import_*` issues in English (data only, no API change).
-- FU.12: 검색어 해셔(`query_hasher`·`QueryHasher`·`QueryHashModes`·`QUERY_HASH_MODES`)는 기반 패키지
-  `agent-console-query-hash`로 옮겨 다시 내보낸다(공개 이름 그대로, 위키와 같은 객체). `query_hasher_from_env`를
-  더했다. 검색어 인코딩은 `surrogatepass`(짝 없는 서로게이트도 예외 없이 해시).
-- FU.6: `query_hasher(mode, salt=)`·`QueryHasher`·`QueryHashModes`·`QUERY_HASH_MODES`, `MemoryToolkit(query_hash=)` — 검색 이벤트
-  `query_sha256`의 기본이 솔트 없는 sha256에서 무작위 솔트 HMAC-SHA256으로 바뀌었다(`sha256`으로 옛 값, `off`면 싣지 않음).
-
-- FU.5: `WriteBudget`은 `agent-console-write-budget`을 다시 내보낸 것(위키와 같은 객체). `MemoryToolkit(write_budget=)`은
-  프로토콜 `WriteBudgetLike`를 받는다.
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-memory`, so the web app can show the default memory scope kinds and the
+  `memory.import_*` issues in English (data only, no API change).
+- The search query hasher (`query_hasher`, `QueryHasher`, `QueryHashModes`, `QUERY_HASH_MODES`) moved to the base
+  package `agent-console-query-hash` and is re-exported (same public names, the same objects the wiki uses). Added
+  `query_hasher_from_env`. Search queries are encoded with `surrogatepass` (unpaired surrogates hash without an
+  exception).
+- `query_hasher(mode, salt=)`, `QueryHasher`, `QueryHashModes`, `QUERY_HASH_MODES` and
+  `MemoryToolkit(query_hash=)`: the default for `query_sha256` in search events changed from unsalted sha256 to
+  HMAC-SHA256 with a random salt (`sha256` gives the old value, `off` leaves it out).
+- `WriteBudget` is a re-export of `agent-console-write-budget` (the same object the wiki uses).
+  `MemoryToolkit(write_budget=)` accepts the protocol `WriteBudgetLike`.
 
 ## 0.1.0
 
-- FU.2: `DeferredMemoryStore` — 처음 쓸 때 여는 저장소 감싸개(저장소가 없으면 읽기는 빈 메모리, 첫 `write`에서
-  `open_store()`, 정책 전달, 선택 능력 `scan_entries`·`count_tags`, 닫은 뒤 새로 열지 않음). 계약 묶음 통과.
-- zip 가져오기 안전 검사(경로·심볼릭 링크·암호화·압축 폭탄 상한)를 `ac-safe-zip`으로 옮김(7R.8, 위키 가져오기와 같은 규칙 한 벌). 공개 API·사유 코드·`TooLargeError.limit` 값은 그대로(`unsafe_archive_path`는 다시 내보냄).
-- 처음 만듦(5.7R.9, design §5.7R.2): 저장소 프로토콜 `MemoryStore`(X31)·`InMemoryMemoryStore`(버전·`if_version` 충돌·동시 쓰기 순서·표시 삭제·완전 삭제·되돌리기·보관·옮기기·검색), 쓰기 정책(키 규칙·한도·비밀 검사 주입 `reject`·`redact`), 범위 종류(X29: 패키지 기본 데이터 `data/default_scope_kinds.yaml`, 병합·출처·끄기, id 틀 해석, entry point 로더), 접근 판단 `allowed`, 도구 묶음 `MemoryToolkit`(도구 4개, 사유 코드, 본문·검색어 없는 이벤트 payload), `testing`(가짜 시계·표본·저장소 계약 묶음).
-- SQLite 저장소 하위 모듈 `sqlite`(5.7R.10): `open_sqlite_memory_store`·`SqliteMemoryStore`(표 `memory_entries`·`memory_versions`·`memory_tags`·`memory_stats` + FTS5 trigram `memory_search`, `BEGIN IMMEDIATE` 쓰기·바쁨 재시도, 3글자 미만·FTS5 없음은 포함 검색, 완전 삭제는 버전·태그·검색 행까지, `warnings()`), 표 정의 `sqlite.schema`, 규모 측정 도구 `testing.build_scale_store`·`WorkCounter`. 의존 `sqlalchemy` 추가.
-- 정리 규칙·내보내기/가져오기(5.7R.11): `retention_plan`·`apply_retention`·`compile_retention_rules`·`retention_issues`·`retention_subject`(기본 규칙 없음, 고정 제외, 첫 맞는 규칙, `ac-conditions` 컴파일 경로, 적용 버전 `system`·`label` = 규칙 id), `export_markdown`·`write_markdown_archive`·`import_markdown`(`skip`·`overwrite`·`rename`, `dry_run`, 경로 공격·zip 폭탄·비밀 거부, `MemoryTransferLimits`·`MemoryTransferCodes`·`InvalidArchiveError`), 항목 훑기 `iter_entries`·`SearchableStore`·저장소 선택 능력 `EntryScanner`(`InMemoryMemoryStore.scan_entries`), 표본 `testing.sample_entry`·`sample_entry_summary`.
-- 5.7R.33z(design §PI.4.3): 저장소 사이 복사 `copy_memory`(조건 `MemoryCopyFilter`·충돌 `skip`·`overwrite`·`rename`·범위 id 바꾸기 `remap`·보관 상태 유지·대상 정책의 비밀 거부는 `issues`로, 본문 없음, 복사 뒤 독립)와 `matches_filter`·`remap_scope`·`copy_author`. `ScopeKindCatalog.unresolvable()`(같은 목록, 범위를 풀지 않는 사본). SQLite 저장소 `journal`(`WAL` 기본·`DELETE`, `sqlite.JOURNAL_MODES`).
+- `DeferredMemoryStore`: a store wrapper that opens on first use (without a store, reads see empty memory; the first
+  `write` calls `open_store()`; policies are passed through; optional capabilities `scan_entries` and `count_tags`;
+  it does not reopen after closing). Passes the contract suite.
+- Moved the zip import safety checks (paths, symbolic links, encryption, zip bomb limits) to `ac-safe-zip` (one set of
+  rules shared with the wiki import). The public API, reason codes and `TooLargeError.limit` values are unchanged
+  (`unsafe_archive_path` is re-exported).
+- First release: the store protocol `MemoryStore` and `InMemoryMemoryStore` (versions, `if_version` conflicts,
+  ordering of concurrent writes, soft delete, hard delete, revert, archive, move, search), the write policy (key
+  rules, limits, injected secret checks `reject` and `redact`), scope kinds (package default data
+  `data/default_scope_kinds.yaml`, merging, origin, turning off, id template resolution, entry point loader), the
+  access decision `allowed`, the tool set `MemoryToolkit` (four tools, reason codes, event payloads without content or
+  search queries), and `testing` (fake clock, samples, store contract suite).
+- SQLite store submodule `sqlite`: `open_sqlite_memory_store` and `SqliteMemoryStore` (tables `memory_entries`,
+  `memory_versions`, `memory_tags` and `memory_stats` plus the FTS5 trigram table `memory_search`; writes with
+  `BEGIN IMMEDIATE` and busy retries; substring search for queries under three characters or without FTS5; hard
+  delete also removes version, tag and search rows; `warnings()`), the table definitions `sqlite.schema`, and the
+  scale measurement tools `testing.build_scale_store` and `WorkCounter`. Added the dependency `sqlalchemy`.
+- Cleanup rules and export or import: `retention_plan`, `apply_retention`, `compile_retention_rules`,
+  `retention_issues` and `retention_subject` (no default rules, pinned entries excluded, first matching rule wins,
+  compiled through `ac-conditions`, the applied version has `system` and `label` = rule id), `export_markdown`,
+  `write_markdown_archive` and `import_markdown` (`skip`, `overwrite`, `rename`, `dry_run`, rejection of path attacks,
+  zip bombs and secrets, `MemoryTransferLimits`, `MemoryTransferCodes`, `InvalidArchiveError`), entry scanning
+  `iter_entries`, `SearchableStore` and the optional store capability `EntryScanner`
+  (`InMemoryMemoryStore.scan_entries`), and the samples `testing.sample_entry` and `sample_entry_summary`.
+- Copy between stores `copy_memory` (filter `MemoryCopyFilter`, conflicts `skip`, `overwrite` and `rename`, scope id
+  rewriting `remap`, archive state kept, secret rejections by the target policy reported as `issues`, no content,
+  independent after copying) with `matches_filter`, `remap_scope` and `copy_author`.
+  `ScopeKindCatalog.unresolvable()` (the same list, a copy that does not resolve scopes). SQLite store `journal`
+  (`WAL` by default or `DELETE`, `sqlite.JOURNAL_MODES`).

@@ -51,7 +51,7 @@ export interface LanguageController {
   /** 저장 실패 뒤 다시 저장한다 */
   retrySave(): void;
   /** 설정 문서와 서버 언어 목록을 받은 뒤 한 번 맞춘다(§4.1 단계 B). 조용히 바꾼다 */
-  sync(input: { preference: string | null | undefined; info: Pick<I18nInfo, "languages" | "default_language"> | null }): void;
+  sync(input: { preference: string | null | undefined; info: Pick<I18nInfo, "languages" | "default_language" | "source_language"> | null }): void;
   /** 타이머를 정리한다 */
   dispose(): void;
 }
@@ -65,7 +65,7 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
   const { i18n, storage, browser, bundled, fetchCatalog, save } = deps;
   const debounceMs = deps.debounceMs ?? 250;
   const setDocumentLanguage = deps.setDocumentLanguage ?? defaultSetDocumentLanguage;
-  const setOptions = { ...(fetchCatalog ? { fetchCatalog } : {}), ...(deps.timeoutMs === undefined ? {} : { timeoutMs: deps.timeoutMs }) };
+  const baseOptions = { ...(fetchCatalog ? { fetchCatalog } : {}), ...(deps.timeoutMs === undefined ? {} : { timeoutMs: deps.timeoutMs }) };
   const listeners = new Set<() => void>();
   let state: LanguageState = {
     language: i18n.language,
@@ -80,7 +80,7 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
   let timer: ReturnType<typeof setTimeout> | undefined;
   let chain: Promise<unknown> = Promise.resolve();
   let syncKey = "";
-  let info: Pick<I18nInfo, "languages" | "default_language"> | null = null;
+  let info: Pick<I18nInfo, "languages" | "default_language" | "source_language"> | null = null;
   let lastSaved: string | null | undefined;
 
   const set = (patch: Partial<LanguageState>) => {
@@ -101,7 +101,11 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
   const switchTo = (language: string, isCurrent: () => boolean): Promise<SetLanguageResult | undefined> => {
     const run = chain.then(async () => {
       if (!isCurrent()) return undefined;
-      const result = await setLanguage(i18n, language, setOptions);
+      // 서버 원문 언어(I.12e, I-18): 원문 조회 사슬을 거기서 멈추고, 그 앞 대체 언어의 서버 묶음도 받는다.
+      const result = await setLanguage(i18n, language, {
+        ...baseOptions,
+        ...(info?.source_language === undefined ? {} : { sourceLanguage: info.source_language }),
+      });
       if (isCurrent()) {
         writeStoredLanguage(storage, language);
         setDocumentLanguage(language);

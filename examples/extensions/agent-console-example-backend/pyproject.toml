@@ -1,15 +1,15 @@
-# 예제 확장: 실행 백엔드(X3) + 세션 기록 보관(X38) 플러그인 하나. uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+# 예제 확장: 실행 백엔드(X3) + 세션 기록 보관(X38) + 계정 모델 조회(X54) 플러그인 하나. uv workspace 멤버가 아니다 — 따로 설치·제거한다.
 [project]
 name = "agent-console-example-backend"
-version = "0.1.0"
-description = "Agent Console 예제 확장 — 모델 없이 규칙 데이터로 답하는 대본 실행 백엔드(example.scripted)"
+version = "0.2.0"
+description = "Agent Console example extension — a scripted execution backend that answers from rule data without a model (example.scripted)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.16,<0.17",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-contracts>=0.16.1,<0.17",
+    "agent-console-runtime>=0.2,<0.3",
     "pydantic>=2.9",
 ]
 
@@ -24,7 +24,7 @@ agent-console-example-backend = "agent_console_example_backend"
 
 # 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
 [tool.agent-console.example]
-points = ["execution-backend", "backend-session-archive"]
+points = ["execution-backend", "backend-session-archive", "backend-model-discovery"]
 
 # 개발 의존: 엔진 시험(에이전트 노드)과 서버 조립 시험(실행 모듈 + 테스트 호스트).
 [dependency-groups]
@@ -35,7 +35,7 @@ dev = [
     "ruff>=0.6",
     "httpx>=0.27",
     "agent-console-nodes-core>=0.1,<0.2",
-    "agent-console-mod-runs>=0.1,<0.2",
+    "agent-console-mod-runs>=0.2,<0.3",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-store>=0.2,<0.3",
 ]

@@ -20,6 +20,7 @@ import { sddKeys, useSddSpace, useSpecDocument } from "./useSddApi";
 import { hasCode } from "./sddErrors";
 import { FailureBlock, ListSkeleton, MenuButton } from "./parts";
 import { useT } from "@agent-console/i18n";
+import { SddToast } from "./SddToast";
 
 const P = SDD_PARAMS;
 
@@ -135,8 +136,8 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
     await save(fresh.data?.version_hash ?? serverHash);
   };
   const copyMine = () => {
-    const done = () => toast({ tone: "success", text: t("doc.copyMine") });
-    const fail = () => toast({ tone: "danger", text: t("doc.copyFailed") });
+    const done = () => toast({ tone: "success", text: <SddToast render={(t) => t("doc.copyMine")} /> });
+    const fail = () => toast({ tone: "danger", text: <SddToast render={(t) => t("doc.copyFailed")} /> });
     const clip = typeof navigator === "undefined" ? undefined : navigator.clipboard;
     if (clip === undefined) fail();
     else void clip.writeText(value).then(done, fail);

@@ -1,6 +1,6 @@
 # agent-console-example-backend
 
-An example that adds a new **execution backend** and the optional capability **session record archive** with a single plugin package.
+An example that adds a new **execution backend** and the optional capabilities **session record archive** and **model discovery** with a single plugin package.
 No engine, server, or web code changes. Once installed, it appears in the backend list (`GET /api/v1/backends`)
 and can be chosen in agent settings; it disappears when removed.
 
@@ -15,6 +15,9 @@ Backend `example.scripted` (script backend)
 - Session record archive (optional): with `session_dir`, every run appends one line to `<session_dir>/<project folder key>/<session>.jsonl`,
   and `session_archive()` provides archiving and restoring that file (it only passes a key function to the shared implementation `JsonlFolderSessionArchive`).
   A request that continues a session fails with `example.session_missing` when there is no record.
+- Model discovery (optional): with `models_file`, the backend declares `capabilities.model_discovery` and `discover_models()` reads that JSON list
+  (`[{"id": ..., "title": ...}, ...]`, standing in for a list that a gateway hands out). The server merges it after the configured `models`
+  (see [Model discovery](#model-discovery)). A missing file is reason `models_file_missing`, a file that is not a JSON list is `invalid_response`.
 - Events (`agent.session_started`, `agent.text_delta`, `agent.message`, `agent.usage`) carry only the session id, backend id, model id, and reply text.
   They do not carry the project folder or record folder paths or environment values (the tests check this).
 
@@ -123,6 +126,51 @@ backend_options:
     - {contains: "Status", reply: "Status: OK (turn $turn)", ignore_case: false}
   default_reply: "Received: $prompt"
 ```
+
+## Model discovery
+
+The optional capability lists the models an account can use **without calling a model**. Declare `capabilities.model_discovery = true`
+and add `discover_models(ctx, timeout_s)`, which returns a `ModelDiscoveryResult`. Report a failure as `ok=False` with a `reason` (open
+vocabulary, `ModelDiscoveryReasons` has the shared names) instead of raising; report "this setup cannot list models" as `unsupported=True`.
+The shared service `BackendModelCatalogService` adds caching, one lookup for parallel requests, the time limit, length limits, masking, and
+the warning issue `backend.model_discovery_failed`; the configured list stays first and wins on the same id (`merge_models`).
+
+```python
+>>> from agent_console_contracts import BackendCapabilities, BackendDescriptor, ModelInfo
+>>> from agent_console_runtime import BackendModelCatalogService, ModelDiscoveryResult
+
+>>> class Listing:
+...     descriptor = BackendDescriptor(
+...         id="listing", title="Listing", capabilities=BackendCapabilities(model_discovery=True)
+...     )
+...     async def list_models(self):
+...         return [ModelInfo(id="m-mine", title="Mine")]          # administrator list
+...     async def discover_models(self, ctx, timeout_s):
+...         return ModelDiscoveryResult(ok=True, models=[{"id": "m-mine"}, {"id": "m-other"}])
+...     async def run(self, req, sink, cancel): ...
+
+>>> service = BackendModelCatalogService(lambda: {"listing": Listing()})
+>>> catalog = asyncio.run(service.catalog("listing"))
+>>> catalog.discovery.state, [(m.id, m.sources) for m in catalog.models]
+('ok', [('m-mine', ['config', 'discovered']), ('m-other', ['discovered'])])
+
+```
+
+Server settings: turning discovery on or off and the cache times are `modules.options.mod-runs.model_discovery`
+(`enabled`, `ttl_s`, `failure_ttl_s`, `timeout_s`, `disabled_backends`). For this example:
+
+```yaml
+modules:
+  options:
+    mod-runs:
+      backends:
+        example.scripted:
+          models_file: scripted-models.json   # relative = app workspace; empty = no discovery capability
+```
+
+End-to-end tests can do the same without this package: the built-in test backend `fake-agent` takes `discovered_models`
+(the list the lookup returns; the test picks the ids), `discovery_failure` (a reason code, `unsupported` for "cannot list"), and
+`discovery_delay_s` under `modules.options.mod-runs.backends.fake-agent`.
 
 ## Install and remove
 

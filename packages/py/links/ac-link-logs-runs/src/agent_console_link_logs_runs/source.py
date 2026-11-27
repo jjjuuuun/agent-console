@@ -59,6 +59,7 @@ from .event_map import (
     resolve,
     resolve_documents,
     resolve_strings,
+    resolve_text_template,
 )
 from .ports import EventReader, RunReader
 
@@ -437,8 +438,10 @@ class PlatformRunsClassifier:
                 elif found:  # 목록 값(each): 값이 여러 개일 수 있다
                     correlation[str(basis)] = found
         title = value("title") or event.type
+        title_template = resolve_text_template(rule.get("title"), data, names)
         if len(title) > self._title_chars:
             title = title[: self._title_chars - 1] + "…"
+            title_template = None  # 자른 제목은 틀과 같지 않다
         draft = LogEventDraft(
             category=value("category") or fallback,
             title=title,
@@ -468,6 +471,7 @@ class PlatformRunsClassifier:
             detail=dict(event.payload),
             raw=event.raw,
             usage=_usage(rule, data, value("message_id"), value("model"), event),
+            text_templates={"/title": [title_template]} if title_template is not None else {},
             agent=(
                 LogLane(
                     id=thread,

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import { useToast, type MenuItemDef } from "@agent-console/ui";
 import { useProjectId } from "../../app/projectScope";
 import { useStorage } from "../../app/StorageContext";
-import { useDescribeError } from "../../app/errors";
 import { useModule } from "../../modules";
 import { PROMOTE } from "./integrationConfig";
 import type { PromoteSource } from "./PromoteDialog";
@@ -11,6 +10,7 @@ import { useInvalidateWiki, useWikiList } from "./useWikiApi";
 import { WIKI_ROLE } from "./wikiConfig";
 import { wikiPagePath } from "./wikiPaths";
 import { useT } from "@agent-console/i18n";
+import { WikiToast } from "./WikiToast";
 
 // 대화상자는 처음 열 때 내려받는다(메모리 화면 번들에 위키 편집 부품이 들어가지 않게).
 const Dialog = lazy(() => import("./PromoteDialog").then((m) => ({ default: m.PromoteDialog })));
@@ -35,7 +35,6 @@ export interface PromoteToWiki {
  * 켜짐 조건 = 위키 화면 역할이 있고 현재 프로젝트가 있을 때(호출 쪽은 자기 화면 역할이 이미 있다). 프로젝트의 위키가 0개면 줄은 보이되 비활성이다.
  */
 export function usePromoteToWiki(): PromoteToWiki {
-  const describeError = useDescribeError();
   const t = useT("wiki");
   // 서버 모듈 목록의 웹 역할로 본다. 목록을 받기 전(확인 중)에는 켜지 않는다(`useRoutesOn`은 확인 중에 켜짐으로 읽는다)
   const wikiRole = useModule(WIKI_ROLE);
@@ -63,12 +62,12 @@ export function usePromoteToWiki(): PromoteToWiki {
             (s) => {
               if (s !== null) setSource(s);
             },
-            (e: unknown) => toast({ tone: "danger", text: `${t("link.fromMemory.loadFailed")}: ${describeError(e, t("link.fromMemory.loadFailed")).message}` }),
+            (e: unknown) => toast({ tone: "danger", text: <WikiToast render={(t, d) => `${t("link.fromMemory.loadFailed")}: ${d(e, t("link.fromMemory.loadFailed")).message}`} /> }),
           );
         },
       };
     },
-    [on, noWiki, toast, t, describeError],
+    [on, noWiki, toast, t],
   );
 
   const dialog = useMemo(() => {
@@ -85,7 +84,7 @@ export function usePromoteToWiki(): PromoteToWiki {
             storage.set(lastKey, wikiId);
             setSource(null);
             void invalidate();
-            toast({ tone: "success", text: t("link.fromMemory.created"), durationMs: PROMOTE.toastMs, action: { label: t("link.fromMemory.open"), onClick: () => void navigate(wikiPagePath(wikiId, path)) } });
+            toast({ tone: "success", text: <WikiToast render={(t) => t("link.fromMemory.created")} />, durationMs: PROMOTE.toastMs, action: { label: <WikiToast render={(t) => t("link.fromMemory.open")} />, onClick: () => void navigate(wikiPagePath(wikiId, path)) } });
           }}
           onOpenExisting={(wikiId, path) => {
             setSource(null);
@@ -94,7 +93,7 @@ export function usePromoteToWiki(): PromoteToWiki {
         />
       </Suspense>
     );
-  }, [source, list.data, storage, lastKey, invalidate, toast, navigate, t]);
+  }, [source, list.data, storage, lastKey, invalidate, toast, navigate]);
 
   return { menuItem, dialog };
 }

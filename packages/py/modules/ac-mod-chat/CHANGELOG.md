@@ -1,21 +1,45 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: The conversation locator log label is English (`conversation`).
-- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-chat`, so the web can show the module description, chat settings and the `chat.storage_memory` warning in English (data only, no API change).
-- 등록이 풀린 프로젝트(모르는 기록 공간)에서 다른 곳에서 도는 턴 확인(`busy_elsewhere`)과 재시작 대기열 정책 적용이 `UnknownSpace`를 잡지 않아 예외 로그로 새던 것을 고쳤다. 읽을 수 없는 공간은 `mod-runs`와 같은 정책(`RecordsUnavailable`·`UnknownSpace`·`LookupError`)으로 조용히 "없음"이다.
+- The conversation locator log label is in English (`conversation`).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-chat`, so the web app can show the module description, chat settings and
+  the `chat.storage_memory` warning in English (data only, no API change).
+- Fixed: for an unregistered project (an unknown record space), checking for turns running elsewhere
+  (`busy_elsewhere`) and applying the restart queue policy did not catch `UnknownSpace` and leaked exception logs.
+  Spaces that cannot be read are now quietly treated as "none" with the same policy as `mod-runs`
+  (`RecordsUnavailable`, `UnknownSpace`, `LookupError`).
 
 ## 0.1.0
 
-- 5.7R.33p: `GET /conversations/project-counts?source=app` — 앱(호스트) DB의 대화만 센다(프로젝트 기록 DB는 읽지 않는다). 생략하면 지금처럼 앱 DB + 보관하지 않은 등록 프로젝트 기록 DB. 다른 값은 422. 계약 변경 없음.
-- 요청 11/08 후속: 대화 위치 찾기(`SpacedChatService.locate`)의 후보·기억 정책을 `agent_console_store.SpaceLocator`로 옮겼다(실행 위치 찾기와 공유). 동작·설정·`DEFAULT_LOCATE_LIMIT` 이름은 같다.
-- 요청 11/07 후속: `GET /conversations/{id}/locate`(`ConversationLocation`, 계약 0.14.7) — 대화 id → 그 대화가 있는 기록 공간(이 프로세스에서 연 공간 + 선택 포트 `projects.lookup`의 등록 프로젝트 기록 DB를 상한 `locate_max_projects`(기본 200)까지 읽기만, 앱 기록 = null). 없으면 404, 여러 곳이면 409 `conversation.ambiguous`(`ConversationAmbiguousError`). 상세 `GET /conversations/{id}`는 그대로(`?project=` 없이 다른 공간을 대신 읽지 않음). WS `conversation:<id>`도 `service_of` → `locate`로 아직 열지 않은 프로젝트 기록 DB의 대화를 찾는다(작업 스레드에서). 새 모듈 설정 `locate_max_projects`.
-- 6R.12: `GET /conversations/page`(`ConversationPage`, `cursor`·`limit`·`graph_id`·`archived`·`project`·`source`, 폴더 기록 끝 → `source=app` 잇기, Q14), 옛 `GET /conversations` OpenAPI deprecated, `InvalidCursor` → 400 `bad_request`.
-
-- 5.7R.33j2: `POST /conversations/move-to-project`(앱 DB 옛 대화 + 대기열 → 프로젝트 기록 DB, `ConversationMover`), 선택 포트 `chat.move_hooks`(`MoveHook` - 딸린 기록 옮기기·옮긴 뒤 훅), `SqliteChatStorage.engine`. 표 변경 없음.
-- 5.7R.33y2: 선택 포트 `records.spaces` — 프로젝트 대화·대기열을 그 기록 DB에(`SpacedChatService.for_project`), 대기열 `host_id`(다른 앱 항목 `other_host`), 경로 `?project=`·목록 `?source=app`, 모듈 설정 `records_space_prefix`(새 설정 스키마).
-- 5.7R.33w2: 계보 `chat`에 `chat_0003`(`chat_queue.host_id`), 서술자 `scopes=("app","project")`.
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- `apps/server`의 대화 조립(대화·턴·메시지·대기열 경로, WS `conversation:`)을 옮겼다(3R.14). 턴 실행·Run 조회·상호작용은 선택 포트 `chat.turn_launcher`·`chat.runs`·`chat.run_events`·`chat.interactions`로 받는다(없으면 전송 409 `feature_unavailable`). 
-- 3R.15: 대화·대기열 저장소(SQLite·인메모리)를 `storage/`로 가져왔다(`ac-store`에서 제거). 마이그레이션 계보 `chat`(첫 리비전은 기준점, 테이블은 legacy 0002·0003 그대로). 대화 삭제는 대기열을 같은 트랜잭션에서 지운다.
+- `GET /conversations/project-counts?source=app`: counts only conversations in the app (host) database (project record
+  databases are not read). Omitted means the app database plus the record databases of registered projects that are
+  not archived, as now. Other values give 422. No contract changes.
+- The candidate and memory policy of conversation locating (`SpacedChatService.locate`) moved to
+  `agent_console_store.SpaceLocator` (shared with run locating). Behavior, settings and the name
+  `DEFAULT_LOCATE_LIMIT` are the same.
+- `GET /conversations/{id}/locate` (`ConversationLocation`, contract 0.14.7): conversation id to the record space
+  that holds it (spaces opened in this process plus, read only, the record databases of registered projects from the
+  optional port `projects.lookup` up to the limit `locate_max_projects`, default 200; app records = null). 404 when not
+  found, 409 `conversation.ambiguous` (`ConversationAmbiguousError`) when found in several places. The detail
+  `GET /conversations/{id}` is unchanged (it does not read another space in place of a missing `?project=`). WS
+  `conversation:<id>` also finds conversations in project record databases that are not open yet through
+  `service_of` to `locate` (on a worker thread). New module setting `locate_max_projects`.
+- `GET /conversations/page` (`ConversationPage`, `cursor`, `limit`, `graph_id`, `archived`, `project` and `source`;
+  after the folder records end it continues with `source=app`), the old `GET /conversations` is marked deprecated in
+  OpenAPI, and `InvalidCursor` gives 400 `bad_request`.
+- `POST /conversations/move-to-project` (old conversations and queue items in the app database to the project record
+  database, `ConversationMover`), the optional port `chat.move_hooks` (`MoveHook`: moves dependent records and runs
+  after-move hooks), and `SqliteChatStorage.engine`. No table changes.
+- Optional port `records.spaces`: project conversations and queues go to that record database
+  (`SpacedChatService.for_project`), queue `host_id` (items of another app are `other_host`), routes with `?project=`
+  and lists with `?source=app`, and the module setting `records_space_prefix` (new settings schema).
+- Lineage `chat` gained `chat_0003` (`chat_queue.host_id`), and the descriptor has `scopes=("app","project")`.
+- First release (from the scripts/pkgkit template `module`).
+- Moved the conversation assembly of `apps/server` (conversation, turn, message and queue routes, WS
+  `conversation:`). Running turns, reading runs and interactions come through the optional ports `chat.turn_launcher`,
+  `chat.runs`, `chat.run_events` and `chat.interactions` (without them, sending gives 409 `feature_unavailable`).
+- Brought the conversation and queue stores (SQLite and in memory) into `storage/` (removed from `ac-store`). Migration
+  lineage `chat` (the first revision is a baseline; tables stay as legacy 0002 and 0003). Deleting a conversation
+  deletes its queue in the same transaction.

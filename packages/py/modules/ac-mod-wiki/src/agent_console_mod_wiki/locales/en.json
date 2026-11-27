@@ -74,6 +74,7 @@
     "검색 플러그인을 설치했을 때 바꾸세요.": "Change this when you install a search plugin.",
     "위키 zip 가져오기 상한.": "Wiki zip import limits.",
     "zip 상한": "Zip limits",
-    "큰 위키를 옮겨야 할 때 늘리세요.": "Raise this when you need to move a large wiki."
+    "큰 위키를 옮겨야 할 때 늘리세요.": "Raise this when you need to move a large wiki.",
+    "만듦": "Created"
   }
 }

@@ -1,14 +1,14 @@
 [project]
 name = "agent-console-backend-fake-agent"
-version = "0.1.0"
-description = "Agent Console — 모델 없이 결정적 응답을 주는 실행 백엔드(테스트·데모·오프라인)"
+version = "0.2.0"
+description = "Agent Console — an execution backend that gives deterministic answers without a model (testing, demos, offline)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.16,<0.17",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-contracts>=0.16.1,<0.17",
+    "agent-console-runtime>=0.2,<0.3",
     "pydantic>=2.9",
 ]
 

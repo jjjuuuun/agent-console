@@ -1,21 +1,30 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-definitions-teams`, so the web can show the link module description and settings in English (data only, no API change).
-- 6R.20k: 제공 포트 `graphs.session_summary`(`TeamViews.session_summary(graph)` → `ac-teams.session_summary(plan, catalog.strategies)`, 해석할 수 없는 그래프 = None). `GET /graphs` 행의 `session_summary`가 이 값이다. 프로토콜 `SessionSummaries`.
-- 5.2R.104: 프리셋 기능 삭제에 따라 개발 의존 `agent-console-mod-presets`와 그 소비 프로토콜 검사를 뺐다. `definitions.dependencies` 포트는 그대로 제공한다(기본 모듈 중 소비자 없음).
-- 5.2R.34: 유효 설정 경로 3개에 선택 질의 `project`, 선택 포트 `settings.scope_layers`(`ScopeLayersSource`) — 범위 층을
-  공통 바로 아래에 끼우고 공급자 경고를 `warnings`에 더한다.
-- 5.2R.31: 제공 포트 `definitions.references`(X25, 여러 제공자 `multi=True`) — 참조 추출 함수
-  `TeamDocumentDependencies.references(kind, doc) -> [(kind, id)]`(중복 없음, 잘못된 문서·모르는 종류 = 빈 목록).
-
-- 5R.15: 제공 포트 `definitions.dependencies`(`TeamDocumentDependencies`, 문서 → 쓰는 정의). dev 의존에
-  `agent-console-mod-presets`(소비 프로토콜 계약 테스트).
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-definitions-teams`, so the web app can show the link module description and settings in English (data
+  only, no API change).
+- Provided port `graphs.session_summary` (`TeamViews.session_summary(graph)` calls
+  `ac-teams.session_summary(plan, catalog.strategies)`; a graph that cannot be resolved gives None). The
+  `session_summary` of `GET /graphs` rows is this value. Protocol `SessionSummaries`.
+- With the presets feature removed, the development dependency `agent-console-mod-presets` and its consumer protocol
+  check were dropped. The `definitions.dependencies` port is still provided (no default module consumes it).
+- The three effective settings routes take an optional query `project`, and the optional port
+  `settings.scope_layers` (`ScopeLayersSource`) inserts scope layers right below Common and adds provider warnings to
+  `warnings`.
+- Provided port `definitions.references` (multiple providers, `multi=True`): the reference extraction function
+  `TeamDocumentDependencies.references(kind, doc) -> [(kind, id)]` (no duplicates; invalid documents and unknown kinds
+  give an empty list).
+- Provided port `definitions.dependencies` (`TeamDocumentDependencies`, from a document to the definitions it uses).
+  Dev dependency `agent-console-mod-presets` (consumer protocol contract tests).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`).
-- `apps/server`의 사용처·유효 설정·실행 계획·묶음 미리보기 경로(`_rest_graph_views` 등)를 옮겼다(3R.12, L9). 제공 포트 `graphs.entry_labels`·`definitions.usages`.
-- 3R.13(3R.12 QA 후속): 테스트 — 공통 설정 기본값 단언(동어 반복 제거), 가짜 `secrets.redact` 주입 시 묶음 미리보기(저장본·초안) 가림.
-- 3R.32a: 웹 역할 `definitions:teams`(`WEB_ROLES`, 팀 구성 초안 미리보기·에이전트 사용처 패널)를 디스크립터에 선언했다.
+- First release (from the scripts/pkgkit template `link`).
+- Moved the usage, effective settings, run plan and bundle preview routes of `apps/server` (`_rest_graph_views` and
+  others). Provided ports `graphs.entry_labels` and `definitions.usages`.
+- Tests: assertions on common settings defaults (removed tautologies), and masking of bundle previews (saved and
+  draft) when a fake `secrets.redact` is injected.
+- Declared the web role `definitions:teams` (`WEB_ROLES`, team draft preview and agent usage panel) in the
+  descriptor.

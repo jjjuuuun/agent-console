@@ -1,32 +1,33 @@
-# 변경 기록: @agent-console/projects
+# Changelog: @agent-console/projects
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
 
 ## [0.3.0]
-- Messages (I.9c, folded into 0.3.0): moved `DEFAULT_PROJECT_MESSAGES` to `src/locales/ko.json` (still the Korean default) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`createProjectsText(en)`), `flattenMessageTree`, the `MessageTree` and `ProjectMessages` types, and the English retired-word lists `RETIRED_TERMS_EN` and `PROJECT_CONTEXT_RETIRED_TERMS_EN` (the Korean lists moved to `locales/retired.json`, same values). The error `buildApplyRequest` throws is now English. Added tests for matching keys and placeholders and for no Korean string literals in the source.
-- **BREAKING CHANGE**: 웹 소비자가 없는 로그 필터 도우미 `applyLogFilter`·`logFilterFor`와 타입 `LogProjectRef`·`ProjectLogFilter`(`logs.ts`)를 지웠다. 대신 로그 질의 필터 `project=<id>`를 직접 만든다(`LogSessionSummary.project_id` 기준).
-- 더함(minor): `validateNewId(newId, taken, reserved?)`의 세 번째 인자(서버가 준 예약어, 대소문자 무시)와 문제 종류 `reserved`(`NewIdProblem` 합집합이 넓어진다), `canSubmit`의 네 번째 인자(종류별 예약어), `reservedIdsByKind`(`CopyKindInfo.reserved_ids` → 종류 표)·`reservedIdsForPlan`(종류 정보 → 계획 경고 `details.reserved` 순), 문구 키 `copy.plan.new_id_reserved`.
+- Messages (folded into 0.3.0): moved `DEFAULT_PROJECT_MESSAGES` to `src/locales/ko.json` (still the Korean default) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`createProjectsText(en)`), `flattenMessageTree`, the `MessageTree` and `ProjectMessages` types, and the English retired-word lists `RETIRED_TERMS_EN` and `PROJECT_CONTEXT_RETIRED_TERMS_EN` (the Korean lists moved to `locales/retired.json`, same values). The error `buildApplyRequest` throws is now English. Added tests for matching keys and placeholders and for no Korean string literals in the source.
+- **BREAKING CHANGE**: removed the log filter helpers `applyLogFilter` and `logFilterFor` and the types `LogProjectRef` and `ProjectLogFilter` (`logs.ts`), which had no web consumers. Build the log query filter `project=<id>` directly instead (based on `LogSessionSummary.project_id`).
+- Added (minor): the third argument of `validateNewId(newId, taken, reserved?)` (reserved words from the server, case-insensitive) and the problem kind `reserved` (the `NewIdProblem` union widens), the fourth argument of `canSubmit` (reserved words per kind), `reservedIdsByKind` (`CopyKindInfo.reserved_ids` → a table per kind) and `reservedIdsForPlan` (the kind info first, then the plan warning `details.reserved`), and the message key `copy.plan.new_id_reserved`.
 
 ## [0.2.0]
-- **BREAKING CHANGE**: 프로젝트 전용 범위(0.11~0.12에서 deprecated) 내보내기를 지웠다. 정의에 프로젝트 전용 범위가 없어졌기 때문이다.
-  - 보기 규칙·기본 범위(`scope.ts`): `DEFAULT_SCOPE_VIEW_MODE`·`SCOPE_GROUP_ORDER`·`SCOPE_VIEW_MODES`·`defaultScopeFor`·`filterByScope`·`groupByScope`·`groupOf`·`isShared`·`isVisible`·`normalizeScope`·`withScope`, 타입 `NewScopePreferences`·`Scope`·`ScopeGroup`·`ScopeViewMode`·`VisibilityOptions`. `CurrentProject` 타입은 남기고 `current.ts`에서 같은 이름으로 내보낸다.
-  - 범위 배지(`badge.ts`): `DEFAULT_BADGE_MESSAGES`·`SCOPE_BADGE_KEYS`·`badgeLabel`·`scopeBadge`, 타입 `ScopeBadge`·`ScopeBadgeKind`·`ScopeBadgeOptions`·`ScopeBadgeTone`.
-  - 옮기기 계획(`moves.ts`): `MOVE_TO_SHARED_SUGGESTION_ID`·`SCOPE_ISSUE_CODES`·`isRequiredMove`·`mergeMovePlans`·`moveKey`·`moveTargetOfIssue`·`selectMoves`.
-  - REST 클라이언트(`client.ts`): `createProjectsClient`, 타입 `ProjectsClient`·`ProjectsIo`·`ProjectsVersioned`. 대신 `@agent-console/api-client`의 `rest`(프로젝트 REST)를 쓴다.
-  - `configDirLabel`과 문구 키 `projects.dir_fallback`. 대신 짝 문장 `*_unknown`을 쓴다.
-- 새 정의의 저장 위치는 만드는 공간(`spaceParam`·`spaceQuery`)이 정한다. 옛 `project` 필드 정리는 복사 계획(`copy.ts`)이 맡는다.
-- 계약 타입을 `@agent-console/contracts` `^0.14.0`에서 가져온다(REL.16이 `^0.15.0`으로 올린다).
-- 폐기어 데이터 `PROJECT_CONTEXT_RETIRED_TERMS`를 더했다(`RETIRED_TERMS` 중 프로젝트 문구에서만 폐기어인 말, 5.7R.35). 앱 메시지 표 검사가 다른 기능 문구에는 이 말을 적용하지 않는다.
-- `configDirLabel`·메시지 `projects.dir_fallback`을 deprecated로 표시했다(쓰는 곳 0건). 다음 메이저에서 함께 제거하며, 대신 짝 문장 `*_unknown`을 쓴다.
-- 문구 표에 복사 계획 대화상자·공간 칩 키를 더했다(`copy.import.*`·`copy.plan.*`·`copy.result.*`·`copy.submit.*`·`space.view_*`, 5.7R.33o). 도우미 함수는 그대로다.
-- `folderCheckData`가 `FolderCheck.existing`(found·invalid)을 folder-picker의 `manifest{name,count,valid}`로 옮긴다(5.7R.33n, 33m 후속).
-- 프로젝트 2(5.7R.33m, 계약 0.12.0): 상태 표현·능력 표(`statusInfo`·`projectAbilities`, 데이터 표 `ABILITY_TABLE`), 공간 표시와 질의 인자(`spaceLabel`·`spaceParam`), 복사 계획 도우미(`copy.ts`: 기본 동작·선택지·검사·적용 요청·결과 요약), 폴더 선택 어댑터(`folders.ts`, 계약 → folder-picker 모양), 문구 표(`DEFAULT_PROJECT_MESSAGES`, `createProjectsText`).
-- `logFilterFor`·`applyLogFilter`는 프로젝트 id(또는 프로젝트 객체) 하나로 `project=<id>`를 만든다. `LegacyLogProjectsHolder`·`ProjectLogFilter.groups/linked`를 없앴다(깨는 변경: 소비자는 웹 로그 연결 UI뿐, 33p가 지운다).
-- `uses`·`import_mode` 관련 로직은 만들지 않았다(0.12.0에서 필드가 없어짐).
-- 보기 범위 함수(`scope`·`badge`·`moves`)와 옛 REST 클라이언트(`createProjectsClient`)는 33p·33t가 [정리] 전환을 끝낼 때까지 남긴다(deprecated). 새 REST는 `@agent-console/api-client`의 `projects` 클라이언트를 쓴다.
+- **BREAKING CHANGE**: removed the project-only scope exports (deprecated in 0.11–0.12), because definitions no longer have a project-only scope.
+  - View rules and default scope (`scope.ts`): `DEFAULT_SCOPE_VIEW_MODE`, `SCOPE_GROUP_ORDER`, `SCOPE_VIEW_MODES`, `defaultScopeFor`, `filterByScope`, `groupByScope`, `groupOf`, `isShared`, `isVisible`, `normalizeScope` and `withScope`, and the types `NewScopePreferences`, `Scope`, `ScopeGroup`, `ScopeViewMode` and `VisibilityOptions`. The `CurrentProject` type stays and is exported under the same name from `current.ts`.
+  - Scope badges (`badge.ts`): `DEFAULT_BADGE_MESSAGES`, `SCOPE_BADGE_KEYS`, `badgeLabel` and `scopeBadge`, and the types `ScopeBadge`, `ScopeBadgeKind`, `ScopeBadgeOptions` and `ScopeBadgeTone`.
+  - Move plans (`moves.ts`): `MOVE_TO_SHARED_SUGGESTION_ID`, `SCOPE_ISSUE_CODES`, `isRequiredMove`, `mergeMovePlans`, `moveKey`, `moveTargetOfIssue` and `selectMoves`.
+  - REST client (`client.ts`): `createProjectsClient` and the types `ProjectsClient`, `ProjectsIo` and `ProjectsVersioned`. Use the project REST client of `@agent-console/api-client` instead.
+  - `configDirLabel` and the message key `projects.dir_fallback`. Use the paired `*_unknown` sentences instead.
+- Where a new definition is saved is decided by the space it is created in (`spaceParam`, `spaceQuery`). Cleaning up the old `project` field is handled by the copy plan (`copy.ts`).
+- Contract types come from `@agent-console/contracts` `^0.14.0` (a later release raises this to `^0.15.0`).
+- Added the retired-word data `PROJECT_CONTEXT_RETIRED_TERMS` (words in `RETIRED_TERMS` that are retired only in project texts). The app message table check does not apply these words to the texts of other features.
+- Marked `configDirLabel` and the message `projects.dir_fallback` deprecated (no uses). They are removed together in the next major; use the paired `*_unknown` sentences instead.
+- Added the keys of the copy plan dialog and space chips to the message table (`copy.import.*`, `copy.plan.*`, `copy.result.*`, `copy.submit.*`, `space.view_*`). The helper functions are unchanged.
+- `folderCheckData` maps `FolderCheck.existing` (found, invalid) to the folder-picker `manifest{name,count,valid}`.
+- Projects, second round (contract 0.12.0): status display and the ability table (`statusInfo`, `projectAbilities`, data table `ABILITY_TABLE`), space display and query arguments (`spaceLabel`, `spaceParam`), copy plan helpers (`copy.ts`: default actions, choices, checks, apply requests and result summaries), the folder picking adapter (`folders.ts`, contract → folder-picker shape), and the message table (`DEFAULT_PROJECT_MESSAGES`, `createProjectsText`).
+- `logFilterFor` and `applyLogFilter` build `project=<id>` from a single project id (or project object). Removed `LegacyLogProjectsHolder` and `ProjectLogFilter.groups/linked` (a breaking change; the only consumer was the web log link UI, which is removed later).
+- No logic for `uses` and `import_mode` was built (the fields are gone in 0.12.0).
+- The view scope functions (`scope`, `badge`, `moves`) and the old REST client (`createProjectsClient`) stay (deprecated) until the switch to cleanup through the copy plan is finished. New REST code uses the `projects` client of `@agent-console/api-client`.
 
 ## [0.1.0]
-- 처음 만듦(5.2R.35): 보기 규칙·기본 범위·범위 배지·로그 필터·현재 프로젝트 저장소·옮기기 계획 도우미·REST 클라이언트. 의존은 contracts 타입뿐.
-- 5.2R.3 후속: `SCOPE_ISSUE_CODES`·`MOVE_TO_SHARED_SUGGESTION_ID`의 값을 손 복사 대신 계약 생성 상수(`@agent-console/contracts/constants`의 `KNOWN_ISSUE_CODES`·`KNOWN_SUGGESTION_IDS`)에서 가져온다. contracts 값 import는 이 상수 진입점만 허용한다(dependency-cruiser `projects-contracts-types-only`).
+- First release: view rules, the default scope, scope badges, log filters, the current project store, move plan helpers and a REST client. The only dependency is the contract types.
+- Follow-up: the values of `SCOPE_ISSUE_CODES` and `MOVE_TO_SHARED_SUGGESTION_ID` come from the generated contract constants (`KNOWN_ISSUE_CODES` and `KNOWN_SUGGESTION_IDS` of `@agent-console/contracts/constants`) instead of hand copies. Value imports from contracts are allowed only through this constants entry point (dependency-cruiser `projects-contracts-types-only`).

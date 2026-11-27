@@ -1,14 +1,21 @@
-# 변경 기록
+# Changelog
 
-## 0.1.1 (미발행)
+## 0.1.1 (unreleased)
 
-- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-logs-architecture`, so the web can show the link module description and settings and the `architecture.invalid_query` issue in English (data only, no API change).
-- 6R.9(M-1): `MemoMatcher.match_row`(`seq`·`uid`로 판정 캐시만 봄), `ScopeCache.lookup_seq`·`ScopeEvents.match_seq`. 구조도를 그린 범위의 `arch` 표 질의가 본문을 읽지 않는다(맞는 행이 끝에만 있는 첫 쪽 약 4배 빠름). 규모 테스트에 strict 0.3초 상한.
-- 5.7R.8(M-4, X32): 포트 `architecture.profile_checks` 제공(`UnlistedPathCheck`) — 프로필 조건이 목록
-  본문에 없는 경로를 보면 warning `architecture.condition_path_unlisted`. 접두는 설치자 옵션
-  `unlisted_paths`(기본 `DEFAULT_UNLISTED_PATHS` = `/detail`·`/raw`).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-link-logs-architecture`, so the web app can show the link module description
+  and settings and the `architecture.invalid_query` issue in English (data only, no API change).
+- `MemoMatcher.match_row` (looks only at the decision cache by `seq` and `uid`), `ScopeCache.lookup_seq` and
+  `ScopeEvents.match_seq`. Queries on the `arch` table within the range the architecture map was drawn for do not read
+  bodies (about four times faster for a first page whose matching rows are only at the end). Scale tests have a strict
+  0.3 second limit.
+- Provides the port `architecture.profile_checks` (`UnlistedPathCheck`): when a profile condition looks at a path that
+  is not in the list body, a warning `architecture.condition_path_unlisted` is reported. The prefixes are the server
+  administrator option `unlisted_paths` (default `DEFAULT_UNLISTED_PATHS` = `/detail` and `/raw`).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`).
-- 5.5R.10: `GET /logs/architecture`·`GET /logs/events/{uid}/architecture`, X28 필터 `arch`·`arch_group`·`arch_sources`, 범위 캐시(증분 읽기·판정 재사용·결과 캐시), 출처 종류 대응 옵션, 웹 역할 `logs:architecture`, 단독 실행·테스트 도구.
+- First release (from the scripts/pkgkit template `link`).
+- `GET /logs/architecture` and `GET /logs/events/{uid}/architecture`, the extension log filters `arch`,
+  `arch_group` and `arch_sources`, a scope cache (incremental reads, reuse of decisions, result cache), source kind
+  mapping options, the web role `logs:architecture`, and standalone run and test tools.

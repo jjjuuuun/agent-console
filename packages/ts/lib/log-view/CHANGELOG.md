@@ -1,22 +1,36 @@
-# 변경 기록: @agent-console/log-view
+# Changelog: @agent-console/log-view
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
-- Locale (0.2.1): `Formatters` gains `fullTime(epochSeconds)` (tooltip time, default `fullTimeTitle`); `fullTimeTitle(epochSeconds, locale = "en-US")` takes a locale instead of the host locale. `LogEventDetail`, `SessionList`, and `formatEventTime` use `formatters.fullTime`, so an app that injects `formatters` (duration, number, fullTime) localizes every number and time on screen.
-- 문구 데이터(0.2.0, I.9b): 기본 문구를 `src/locales/ko.json`(`messages`·`builtinWidgets`)으로 옮기고(`defaultLogViewMessages`·`builtinWidgets`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`, `createBuiltinWidgets(texts)`·`BuiltinWidgetTexts`·`LogViewLocale` 공개(내장 위젯 제목·설명을 언어별로 만든다). `formatDurationMs`의 한글 기본 단위를 ko 묶음으로 옮겼다. 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가.
-- 5.7R.32: 화면을 단순하게 하는 모양 옵션(기능은 그대로, 기본 모양이 바뀐다).
-  `LogFilterBar`: `savedPlacement`(`menu` 기본 = 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역, `button` = 예전 [★ ▾] 단추). 메시지 `saveCurrentFilter` 추가.
-  `PlaybackBar`: `settingsPlacement`(`popover` 기본 = 속도·공백 건너뛰기가 [재생 설정 ▾] 팝오버 안, 1×가 아니면 단추 옆에 "2×", `inline` = 예전 모양). 메시지 `playSettings`·`playSettingsShort` 추가.
-  `CategoryChips`: 접힌 동안에도 선택된 칩은 보이고, 접힌 단추에 숨은 개수 `(+n)`을 적는다.
-- 5R.21: 앱이 DOM을 읽지 않게 하는 추가 API(모두 선택, 기존 사용처는 그대로 동작).
-  `LogEventTable`: `ref`(`LogEventTableHandle`: `scrollToUid`·`focus`), `onActivate(uid)`(Enter).
-  `LogEventDetail`: `activeTab`·`onActiveTabChange`(제어형), `ref`(`LogEventDetailHandle`: `selectTabAt`·`focusTab`·`visibleTabs`).
-  `SessionList`: `onActiveChange(id|null)`(키보드 커서 행).
-- dependency-cruiser `log-view-contracts-types-only`: contracts는 `import type`만 허용.
+- Locale (0.2.1): `Formatters` gains `fullTime(epochSeconds)` (tooltip time, default `fullTimeTitle`);
+  `fullTimeTitle(epochSeconds, locale = "en-US")` takes a locale instead of the host locale. `LogEventDetail`,
+  `SessionList` and `formatEventTime` use `formatters.fullTime`, so an app that injects `formatters` (duration, number,
+  fullTime) localizes every number and time on screen.
+- Message data (0.2.0): moved the default messages to `src/locales/ko.json` (`messages` and `builtinWidgets`;
+  `defaultLogViewMessages` and `builtinWidgets` are still Korean) and added `en.json`. Subpath exports `./locales/ko`
+  and `./locales/en`, and the public `createBuiltinWidgets(texts)`, `BuiltinWidgetTexts` and `LogViewLocale` (build the
+  built-in widget titles and descriptions per language). Moved the Korean default units of `formatDurationMs` into the
+  ko bundle. Added tests that check keys and placeholders match and that the source has no Korean strings.
+- Layout options that simplify the screen (same features, the default layout changes).
+  `LogFilterBar`: `savedPlacement` (`menu` by default = saved filters in a section at the bottom of the [+ Filter]
+  menu; `button` = the previous [★ ▾] button). Added the message `saveCurrentFilter`.
+  `PlaybackBar`: `settingsPlacement` (`popover` by default = speed and gap skipping inside a [Playback settings ▾]
+  popover, with "2×" next to the button when the speed is not 1×; `inline` = the previous layout). Added the messages
+  `playSettings` and `playSettingsShort`.
+  `CategoryChips`: selected chips stay visible while collapsed, and the collapse button shows the hidden count `(+n)`.
+- Additional APIs so the app does not have to read the DOM (all optional; existing usage keeps working).
+  `LogEventTable`: `ref` (`LogEventTableHandle`: `scrollToUid`, `focus`) and `onActivate(uid)` (Enter).
+  `LogEventDetail`: `activeTab` and `onActiveTabChange` (controlled), and `ref` (`LogEventDetailHandle`:
+  `selectTabAt`, `focusTab`, `visibleTabs`).
+  `SessionList`: `onActiveChange(id|null)` (the keyboard cursor row).
+- dependency-cruiser `log-view-contracts-types-only`: only `import type` is allowed from contracts.
 
 ## [0.1.0]
-- 처음 만듦(작업 4R.16). 이벤트 표(가상 스크롤)·필터 막대·범주 칩·이벤트 상세·세션 목록·재생 막대·레인 띠·handoff 행렬·
-  대시보드 격자·위젯 편집기·템플릿 선택·색 슬롯 선택, 위젯 레지스트리(`builtinWidgets`: metric·bar·line·table),
-  recharts 지연 로드 차트 어댑터, 재생 훅 `usePlayback`, 순수 함수(정렬·자르기·묶기·URL 파라미터 분리·배치·보존).
-- 사내 의존은 `@agent-console/contracts` 타입만. 새 외부 의존: `@tanstack/react-virtual`, `recharts`, `react-is`.
+- First release: event table (virtual scrolling), filter bar, category chips, event detail, session list, playback
+  bar, lane strip, handoff matrix, dashboard grid, widget editor, template picker and color slot picker; a widget
+  registry (`builtinWidgets`: metric, bar, line, table); a lazily loaded recharts chart adapter; the playback hook
+  `usePlayback`; and pure functions (sorting, truncation, grouping, URL parameter splitting, layout, retention).
+- The only internal dependency is the types of `@agent-console/contracts`. New external dependencies:
+  `@tanstack/react-virtual`, `recharts` and `react-is`.

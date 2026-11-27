@@ -28,6 +28,7 @@ import { useUiLibMessages } from "../../i18n/useViewLibMessages";
 import { useWikiViewMessages } from "./useViewMessages";
 import { useLanguageCode } from "../../i18n";
 import { useFormat } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const wikiName = (w: WikiSummary): string => (w.name !== undefined && w.name !== "" ? w.name : w.id);
 
@@ -104,7 +105,7 @@ export function WikiListScreen() {
       items={[
         { id: "open", label: t("list.open"), onSelect: () => open(w) },
         ...(rulesScreen ? [{ id: "rules", label: t("list.rules"), onSelect: () => void navigate(wikiPath(w.id, { tab: "rules" })) }] : []),
-        { id: "copy", label: t("list.copyPath"), disabled: (w.directory ?? "") === "", onSelect: () => { void navigator.clipboard?.writeText(w.directory ?? ""); toast({ tone: "success", text: t("copied") }); } },
+        { id: "copy", label: t("list.copyPath"), disabled: (w.directory ?? "") === "", onSelect: () => { void navigator.clipboard?.writeText(w.directory ?? ""); toast({ tone: "success", text: <WikiToast render={(t) => t("copied")} /> }); } },
         ...(ctx.capabilities.import_export ? [{ id: "export", label: t("list.export"), onSelect: () => exporter.open(w) }] : []),
         { id: "delete", label: t("list.delete"), danger: true, disabled: writeBlock !== undefined, onSelect: () => remover.open(w) },
       ]}

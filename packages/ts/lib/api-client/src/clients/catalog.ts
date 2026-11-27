@@ -1,6 +1,7 @@
 /** 서버가 알려 주는 종류 목록(노드·엣지·백엔드·위임 전략·상호작용·리소스 종류·병합 전략). 전부 읽기 전용. */
 import type {
   BackendDescriptor,
+  BackendModelCatalog,
   BackendProbeRequest,
   BackendProbeResult,
   BackendReadiness,
@@ -9,12 +10,27 @@ import type {
   EdgeTypeDescriptor,
   InteractionKindDescriptor,
   MergeStrategyInfo,
+  ModelDiscoveryInfo,
   ModelInfo,
   NodeTypeDescriptor,
   PortSpec,
   ResourceTypeDescriptor,
 } from "@agent-console/contracts";
+import { ApiError } from "../errors";
 import { enc, type RestIo } from "../io";
+
+/**
+ * `getBackendModelCatalog`의 결과. 서버가 카탈로그 경로를 모르는 옛 서버면 `discovery`가 `null`이고
+ * `models`는 `GET /backends/{id}/models`가 준 목록이다(조회 상태를 모른다).
+ */
+export type BackendModelCatalogResult = Omit<BackendModelCatalog, "discovery"> & { discovery: ModelDiscoveryInfo | null };
+
+/** `getBackendModelCatalog` 옵션. */
+export interface ModelCatalogOptions {
+  /** true면 서버 캐시를 건너뛰고 다시 조회한다(`?refresh=true`). */
+  refresh?: boolean;
+  signal?: AbortSignal;
+}
 
 export interface CatalogClient {
   listNodeTypes(): Promise<NodeTypeDescriptor[]>;
@@ -22,6 +38,12 @@ export interface CatalogClient {
   listEdgeTypes(): Promise<EdgeTypeDescriptor[]>;
   listBackends(): Promise<BackendDescriptor[]>;
   listBackendModels(backendId: string): Promise<ModelInfo[]>;
+  /**
+   * 모델 목록(설치자 설정 + 계정 조회)과 조회 상태(`GET /backends/{id}/model-catalog`). 조회가 실패해도 서버는 200을
+   * 주고 `discovery.state`로 알린다. 경로가 없으면(404, 옛 서버) `listBackendModels` 결과를 `discovery: null`로 돌려준다.
+   * 백엔드를 모르면 그 대체 호출도 404라 `ApiError`로 reject된다.
+   */
+  getBackendModelCatalog(backendId: string, options?: ModelCatalogOptions): Promise<BackendModelCatalogResult>;
   /** 모든 백엔드의 정적 점검 상태(모델 호출 없음). 모듈이 꺼져 있으면 404. */
   listBackendStatuses(): Promise<BackendReadiness[]>;
   /** 백엔드 하나의 정적 점검 상태(다시 확인). */
@@ -40,12 +62,23 @@ export interface CatalogClient {
 }
 
 export function createCatalogClient(io: RestIo): CatalogClient {
+  const listBackendModels: CatalogClient["listBackendModels"] = (id) => io.request("GET", `/backends/${enc(id)}/models`);
   return {
     listNodeTypes: () => io.request("GET", "/node-types"),
     resolvePorts: (id, config) => io.request("POST", `/node-types/${enc(id)}/ports`, { body: { config } }),
     listEdgeTypes: () => io.request("GET", "/edge-types"),
     listBackends: () => io.request("GET", "/backends"),
-    listBackendModels: (id) => io.request("GET", `/backends/${enc(id)}/models`),
+    listBackendModels,
+    getBackendModelCatalog: async (id, options = {}) => {
+      const query = options.refresh === true ? "?refresh=true" : "";
+      const opts = options.signal === undefined ? undefined : { signal: options.signal };
+      try {
+        return await io.request<BackendModelCatalogResult>("GET", `/backends/${enc(id)}/model-catalog${query}`, opts);
+      } catch (e) {
+        if (!(e instanceof ApiError) || e.status !== 404) throw e;
+        return { backend_id: id, models: await listBackendModels(id), discovery: null };
+      }
+    },
     listBackendStatuses: () => io.request("GET", "/backends/status"),
     getBackendStatus: (id) => io.request("GET", `/backends/${enc(id)}/status`),
     probeBackend: (id, request) => io.request("POST", `/backends/${enc(id)}/probe`, { body: request ?? {} }),

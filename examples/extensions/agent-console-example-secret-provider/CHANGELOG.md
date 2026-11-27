@@ -1,11 +1,14 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: Internal log messages are now in English.
-- REL.31: 설치자 설정 스키마에 사람이 읽는 제목·설명을 준다(설정 화면 "확장 옵션" 머리말에 클래스 이름과 코드 문서가 보이던 것).
-- REL.20: 개발 의존 범위를 `agent-console-server>=1.0,<2`로 올렸다(서버 표시 버전 1.0.0). 코드 변경 없음.
+- Internal log messages are now in English.
+- The server administrator settings schema has a human-readable title and description (the *Extension options*
+  heading in Settings used to show the class name and code docstring).
+- Raised the development dependency range to `agent-console-server>=1.0,<2` (server display version 1.0.0). No code
+  changes.
 
 ## 0.1.0
 
-- 첫 판: 지정한 로컬 파일의 `KEY=VALUE` 줄에서 비밀 값을 읽는 공급자 `example-file`(비밀 값 공급자 확장 예제) — 파일 경로는 환경변수, 줄 규칙은 옵션 데이터.
+- First release: an example secret provider `example-file` that reads secret values from `KEY=VALUE` lines in a local
+  file you choose. The file path comes from an environment variable and the line rule is option data.

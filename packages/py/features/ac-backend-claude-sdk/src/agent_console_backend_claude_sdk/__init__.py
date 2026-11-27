@@ -66,13 +66,20 @@
       ``PtySize``), 사유 ``LoginReasonCodes``. PTY는 선택 추가 기능 ``login``
       (`agent-console-pty-session`), 없으면 능력 없음. 부품: ``login_env``·``allowed_open_url``·
       ``safe_rule_compile``·``verify_login``·``parse_auth_method``·``run_command``·
-      ``resolve_writes``·``writes_lines``·``env_warnings``, ``ClaudeLoginSupport``·``PtySupport``·
-      ``detect_pty``. 드라이버 ``ClaudeCliLoginDriver``는 하위 모듈
-      ``agent_console_backend_claude_sdk.login_driver``(PTY 필요)
+      ``resolve_writes``·``writes_lines``·``env_warnings``·``env_warning_templates``,
+      ``ClaudeLoginSupport``·``PtySupport``·``detect_pty``. 드라이버 ``ClaudeCliLoginDriver``는
+      하위 모듈 ``agent_console_backend_claude_sdk.login_driver``(PTY 필요)
     - 세션 기록 보관·복원(X38, 5.7R.33y3, design §PI.4.6.4): ``ClaudeSdkBackend.session_archive``
       (앱 전용 자격 폴더가 있을 때만, ``projects/<키>/<세션>.jsonl`` + ``<세션>/``만 다룬다 — 자격·
       설정·다른 세션 파일 제외), 부품 ``claude_session_archive``, 상수 ``CLAUDE_PROJECTS_DIR``·
       ``CLAUDE_SESSION_SUFFIX``
+    - 계정 모델 조회(X54, design §1.1-MB MD-4): ``ClaudeSdkBackend.discover_models``(선택 능력,
+      ``capabilities.model_discovery = true``, 모델 호출 없음). 구독 = CLI 초기화 응답
+      (``connect``·``get_server_info``·``disconnect``, 주입 인터페이스 ``ServerInfoClient``),
+      API 키 = Models API(``list_models_api``, 주입 ``HttpClientFactory``). 설치자 설정
+      ``model_discovery``(``ClaudeSdkModelDiscoveryOptions``). 부품 ``models_from_server_info``·
+      ``models_from_api_page``·``api_base_url``, 상수 ``METHOD_SDK_INIT``·``METHOD_MODELS_API``·
+      ``DEFAULT_ANTHROPIC_API_BASE_URL``·``DEFAULT_ANTHROPIC_API_VERSION``
 """
 
 from agent_console_backend_claude_sdk._auth_dir import (
@@ -103,6 +110,7 @@ from agent_console_backend_claude_sdk._backend import (
     ClaudeSdkInstallOptions,
     ClientFactory,
     SdkClient,
+    ServerInfoClient,
     build_sdk_options,
     risky_option_warnings,
 )
@@ -165,6 +173,7 @@ from agent_console_backend_claude_sdk._login import (
     PtySize,
     VerifyOutcome,
     allowed_open_url,
+    env_warning_templates,
     env_warnings,
     login_env,
     parse_auth_method,
@@ -178,6 +187,19 @@ from agent_console_backend_claude_sdk._login_support import (
     ClaudeLoginSupport,
     PtySupport,
     detect_pty,
+)
+from agent_console_backend_claude_sdk._models import (
+    ANTHROPIC_BASE_URL_ENV,
+    DEFAULT_ANTHROPIC_API_BASE_URL,
+    DEFAULT_ANTHROPIC_API_VERSION,
+    METHOD_MODELS_API,
+    METHOD_SDK_INIT,
+    ClaudeSdkModelDiscoveryOptions,
+    HttpClientFactory,
+    api_base_url,
+    list_models_api,
+    models_from_api_page,
+    models_from_server_info,
 )
 from agent_console_backend_claude_sdk._options import (
     CLAUDE_SDK_BACKEND_ID,
@@ -242,6 +264,7 @@ from agent_console_backend_claude_sdk._translate import (
 
 __all__ = [
     "ALLOW_ALL",
+    "ANTHROPIC_BASE_URL_ENV",
     "AUTH_ISSUES",
     "BLOCK_EXIT_CODE",
     "CLAUDE_PROJECTS_DIR",
@@ -251,6 +274,8 @@ __all__ = [
     "COLLECTOR_ISSUES",
     "COMMAND_HOOK_SLOTS",
     "DEFAULT_ALLOWED_URL_HOSTS",
+    "DEFAULT_ANTHROPIC_API_BASE_URL",
+    "DEFAULT_ANTHROPIC_API_VERSION",
     "DEFAULT_AUTH_DIR",
     "DEFAULT_CANCEL_GRACE_SECONDS",
     "DEFAULT_DELEGATION_TOOL",
@@ -273,6 +298,8 @@ __all__ = [
     "HOOK_PROBE_ISSUES",
     "HOST_TOOL_NAME_PATTERN",
     "INTERACTION_ISSUES",
+    "METHOD_MODELS_API",
+    "METHOD_SDK_INIT",
     "MODEL_TOOL_NAME_LIMIT",
     "PERSON_PLACEHOLDER",
     "PROBE_CATEGORIES",
@@ -297,6 +324,7 @@ __all__ = [
     "ClaudeSdkLoginOptions",
     "ClaudeSdkLoginRules",
     "ClaudeSdkLoginTexts",
+    "ClaudeSdkModelDiscoveryOptions",
     "ClaudeSdkReadinessOptions",
     "ClaudeSdkReadinessTexts",
     "ClientFactory",
@@ -309,6 +337,7 @@ __all__ = [
     "HookRunner",
     "HookSpec",
     "HostToolMapping",
+    "HttpClientFactory",
     "InteractionKindMap",
     "LoginReasonCodes",
     "MessageTranslator",
@@ -324,12 +353,14 @@ __all__ = [
     "ReadinessAssessment",
     "ReadinessStates",
     "SdkClient",
+    "ServerInfoClient",
     "SubagentMapping",
     "SubagentOutcome",
     "ToolGuard",
     "ToolServerFactory",
     "VerifyOutcome",
     "allowed_open_url",
+    "api_base_url",
     "apply_env_policy",
     "assess_readiness",
     "build_agent_definitions",
@@ -343,6 +374,7 @@ __all__ = [
     "delegation_result_text",
     "detect_pty",
     "ensure_gitignore_entry",
+    "env_warning_templates",
     "env_warnings",
     "expand_path",
     "find_claude_cli",
@@ -354,9 +386,12 @@ __all__ = [
     "hook_probe_note",
     "hook_settings_json",
     "host_tool_rule",
+    "list_models_api",
     "login_env",
     "login_file",
     "map_bundle",
+    "models_from_api_page",
+    "models_from_server_info",
     "parse_auth_method",
     "parse_hooks",
     "plan_hook_probe",

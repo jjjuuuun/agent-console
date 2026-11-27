@@ -3,7 +3,8 @@
 # 코드 펜스·인라인 코드(백틱) 밖 글을 본다.
 # 줄 하나만 예외로 두려면 그 줄에 `<!-- extdocs:allow <규칙 id> -->`를 단다(README "공개 가능 린트").
 # 규칙 칸(선택): `files`·`exclude_files`(저장소 상대 glob — 규칙을 볼 파일 범위),
-# `skip_line`(이 정규식에 맞는 줄은 이 규칙만 건너뜀), `severity`(error 기본 · warning = 늘 경고).
+# `skip_line`(이 정규식에 맞는 줄은 이 규칙만 건너뛴다), `severity`(error 기본 · warning = 늘 경고).
+
 rules:
   - id: internal-doc-link
     message: 내부 설계 문서(specs/·docs/design/)를 가리킨다
@@ -50,5 +51,3 @@ rules:
     # 맨 위 언어 전환 줄(`**English** | [한국어](README.ko.md)`): `|`로 나뉜 항목이 둘 이상이고
     # 항목마다 굵은 이름 또는 .md 문서 링크 하나뿐인 줄.
     skip_line: "^\\s*(?:\\*\\*[^*|]+\\*\\*|\\[[^\\]|]+\\]\\([^)\\s|]+\\.md\\))(?:\\s*\\|\\s*(?:\\*\\*[^*|]+\\*\\*|\\[[^\\]|]+\\]\\([^)\\s|]+\\.md\\)))+\\s*$"
-    # 문서 영어화가 끝날 때까지는 경고. 끝나면 이 줄을 지워 오류로 바꾼다.
-    severity: warning

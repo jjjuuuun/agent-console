@@ -61,7 +61,22 @@
     "새 관측 수집기가 다른 접두어로 이벤트를 낼 때 더하거나, 관측 탭을 끌 때.": "Add one when a new observation collector emits events with another prefix, or use it to turn off the Observe tab.",
     "프로젝트 기능은 켜져 있는데 프로젝트·실행 연동이 꺼졌을 때, 프로젝트를 붙인 실행을 막을지와 안내 문구.": "When the projects feature is on but the projects and runs integration is off: whether to block runs with a project, and the text shown.",
     "실행 오류의 해결 버튼 표(JSON, 예: [맨 위 실행 열기]). 비우면 기본 표, 표에 버튼이 없으면 버튼 없음. 상대 경로는 설정 파일 폴더 기준.": "Fix button table for run errors (JSON, for example [Open top run]). Leave empty for the default table; no button in the table means no button. Relative paths are resolved from the settings file folder.",
-    "해결 버튼 문구·데려갈 화면을 바꾸거나 끌 때.": "Use this to change the fix button text and target screen, or to turn them off."
+    "해결 버튼 문구·데려갈 화면을 바꾸거나 끌 때.": "Use this to change the fix button text and target screen, or to turn them off.",
+    "실행 백엔드 계정 모델 조회(모델 칸 목록 자동 채우기).": "Execution backend account model lookup (fills the model field list automatically).",
+    "모델 목록 자동 조회": "Look up the model list automatically",
+    "실행 백엔드가 지원하면 이 계정이 쓸 수 있는 모델 목록을 가져와 설정한 목록 뒤에 더한다(모델 호출 없음). 끄면 설정한 목록과 직접 입력만 쓴다.": "When the execution backend supports it, gets the models this account can use and adds them after the configured list (no model call). When off, only the configured list and typed model ids are used.",
+    "이 PC에서 계정 조회(CLI 실행·네트워크)를 하지 않게 할 때 끕니다.": "Turn this off so this PC never runs the account lookup (starting the CLI or calling the network).",
+    "목록 보관 시간": "Model list retention",
+    "가져온 목록을 다시 묻지 않고 쓰는 시간. 0이면 요청마다 다시 묻는다.": "How long a fetched list is used without asking again. 0 asks on every request.",
+    "실패 뒤 다시 묻기 전 시간": "Wait before asking again after a failure",
+    "가져오기에 실패한 뒤 이 시간 동안은 다시 묻지 않는다.": "After a failed lookup, the server doesn't ask again for this long.",
+    "가져오기 최대 대기": "Maximum lookup wait",
+    "목록 가져오기 한 번을 기다리는 최대 시간. 넘으면 실패로 본다.": "Maximum time to wait for one model list lookup. After it, the lookup counts as failed.",
+    "느린 네트워크에서 목록 가져오기가 자꾸 시간 초과로 끝날 때 늘립니다.": "Raise this when model list lookups keep timing out on a slow network.",
+    "조회하지 않을 실행 백엔드": "Execution backends not to look up",
+    "이 목록의 실행 백엔드 id는 계정 모델 목록을 묻지 않는다(설정한 목록만).": "Execution backend ids in this list are never asked for their account model list (configured list only).",
+    "실행 백엔드 하나만 조회를 끄고 싶을 때 그 id를 넣습니다.": "Add an execution backend id here to turn off the lookup for that backend only.",
+    "모델 고르기 칸에 실행 백엔드 계정이 쓸 수 있는 모델을 자동으로 채우는 기능의 켜고 끄기·보관 시간·대기 시간.": "Turns on or off filling the model field with the models the execution backend account can use, and sets its retention and wait times."
   },
   "codes": {
     "runs.storage_memory": "There's no database, so run history is kept in memory only (it's lost on restart)",

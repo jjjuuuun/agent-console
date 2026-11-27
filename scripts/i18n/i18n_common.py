@@ -76,6 +76,10 @@ class Seed:
     method: str
     path: str
     body: Any = None
+    if_match: ParamSource | None = None
+    """``If-Match`` 값을 얻을 GET 경로(``source``)와 ``select``.
+
+    버전이 필요한 저장(예: 리소스 본문)에 쓴다."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,8 +91,51 @@ class ServerConfig:
     options: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     seeds: tuple[Seed, ...] = ()
     params: Mapping[str, ParamSource] = field(default_factory=dict)
+    query_params: Mapping[str, ParamSource] = field(default_factory=dict)
+    """질의 변수 값. 경로가 OpenAPI에 그 질의 변수를 선언했으면 값마다 한 번 더 읽는다."""
     max_param_values: int = 50
     skip_paths: tuple[str, ...] = ()
+    dirs: tuple[str, ...] = ()
+    """씨앗 전에 만들 폴더(값의 ``{tmp}`` = 임시 폴더) — 예: 등록할 프로젝트 폴더."""
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaDiscover:
+    """웹 소스에서 화면이 그리는 계약 모델 이름을 찾는 규칙(``static.schemas[].discover``)."""
+
+    files: tuple[str, ...]
+    """저장소 루트 기준 glob."""
+    pattern: re.Pattern[str]
+    """첫 묶음이 모델 이름인 정규식."""
+    exclude: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaSource:
+    """정적 S1 출처: JSON Schema 문서 하나에서 화면이 그리는 모델들(``$ref`` 따라감)."""
+
+    document: str
+    """저장소 루트 기준 경로."""
+    defs: str = "$defs"
+    models: tuple[str, ...] = ()
+    discover: SchemaDiscover | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DataSource:
+    """정적 S1 출처: 패키지 데이터 파일에서 화면에 가는 값(``select`` 경로, 없으면 전부)."""
+
+    files: tuple[str, ...]
+    """저장소 루트 기준 glob."""
+    select: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class StaticConfig:
+    """서버 응답 밖에서 화면에 가는 원문(웹이 서버 묶음으로 번역하는 것)."""
+
+    schemas: tuple[SchemaSource, ...] = ()
+    data: tuple[DataSource, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,10 +164,23 @@ class Config:
     exclude_codes: tuple[re.Pattern[str], ...]
     exclude_texts: tuple[re.Pattern[str], ...]
     skip_keys: tuple[str, ...]
+    keep_keys_in: Mapping[str, tuple[str, ...]]
+    """``skip_keys``의 키라도 이 부모 키 안에서는 모은다(부모 → 키, 예: ``x-ui`` → ``example``)."""
+    name_maps: tuple[str, ...]
+    """값이 ``이름 → 스키마`` 표인 키(``properties`` 등).
+
+    그 안의 키는 이름이라 ``skip_keys``로 보지 않는다."""
     prefer_owners: tuple[str, ...]
+    templates_key: str
+    """값이 섞인 칸의 원문 틀 + 값 표 키.
+
+    계약 ``text_templates``: JSON Pointer → ``[{template, params}]``.
+
+    이 키가 있는 객체는 틀(중첩 포함)을 원문으로 모으고, 틀이 덮은 칸 값은 모으지 않는다."""
     issue: IssueShape
     severity: Mapping[str, str]
     server: ServerConfig
+    static: StaticConfig = field(default_factory=StaticConfig)
 
     def is_code(self, value: str) -> bool:
         """코드 모양이고 제외 목록에 없는지."""
@@ -188,18 +248,36 @@ def parse_config(data: Any) -> Config:
     if bad:
         raise I18nToolError(f"severity: {bad} must be one of {SEVERITIES}")
     srv = _map(top.get("server"), "server")
-    params: dict[str, ParamSource] = {}
-    for name, spec in _map(srv.get("params"), "server.params").items():
-        spec_map = _map(spec, f"server.params.{name}")
-        params[str(name)] = ParamSource(
-            values=tuple(str(v) for v in spec_map.get("values") or []),
-            source=spec_map.get("from"),
-            select=str(spec_map.get("select", "")),
-        )
-    seeds = tuple(
-        Seed(str(s["method"]).upper(), str(s["path"]), s.get("body"))
-        for s in srv.get("seeds") or []
-    )
+
+    def param_sources(key: str) -> dict[str, ParamSource]:
+        out: dict[str, ParamSource] = {}
+        for name, spec in _map(srv.get(key), f"server.{key}").items():
+            spec_map = _map(spec, f"server.{key}.{name}")
+            out[str(name)] = ParamSource(
+                values=tuple(str(v) for v in spec_map.get("values") or []),
+                source=spec_map.get("from"),
+                select=str(spec_map.get("select", "")),
+            )
+        return out
+
+    params = param_sources("params")
+
+    def seed(raw: Any, i: int) -> Seed:
+        spec = _map(raw, f"server.seeds[{i}]")
+        match = spec.get("if_match")
+        if_match = None
+        if match is not None:
+            m = _map(match, f"server.seeds[{i}].if_match")
+            if not isinstance(m.get("from"), str):
+                raise I18nToolError(f"server.seeds[{i}].if_match.from must be a GET path")
+            if_match = ParamSource(source=m["from"], select=str(m.get("select", "")))
+        return Seed(str(spec["method"]).upper(), str(spec["path"]), spec.get("body"), if_match)
+
+    seeds = tuple(seed(s, i) for i, s in enumerate(srv.get("seeds") or []))
+    keep_in = {
+        str(parent): _strs(keys, f"texts.keep_keys_in.{parent}")
+        for parent, keys in _map(texts.get("keep_keys_in"), "texts.keep_keys_in").items()
+    }
     languages = _strs(top.get("languages"), "languages")
     if not languages:
         raise I18nToolError("languages must not be empty")
@@ -221,7 +299,10 @@ def parse_config(data: Any) -> Config:
             _regex(p, "texts.exclude") for p in _strs(texts.get("exclude"), "texts.exclude")
         ),
         skip_keys=_strs(texts.get("skip_keys"), "texts.skip_keys"),
+        keep_keys_in=keep_in,
+        name_maps=_strs(texts.get("name_maps"), "texts.name_maps"),
         prefer_owners=_strs(texts.get("prefer_owners"), "texts.prefer_owners"),
+        templates_key=str(texts.get("templates_key", "text_templates")),
         issue=IssueShape(
             code=str(issue.get("code", "code")),
             message=str(issue.get("message", "message")),
@@ -237,10 +318,50 @@ def parse_config(data: Any) -> Config:
             },
             seeds=seeds,
             params=params,
+            query_params=param_sources("query_params"),
             max_param_values=int(srv.get("max_param_values", 50)),
             skip_paths=_strs(srv.get("skip_paths"), "server.skip_paths"),
+            dirs=_strs(srv.get("dirs"), "server.dirs"),
         ),
+        static=_static(_map(top.get("static"), "static")),
     )
+
+
+def _static(top: Mapping[str, Any]) -> StaticConfig:
+    schemas: list[SchemaSource] = []
+    for i, raw in enumerate(top.get("schemas") or []):
+        where = f"static.schemas[{i}]"
+        spec = _map(raw, where)
+        if not isinstance(spec.get("document"), str):
+            raise I18nToolError(f"{where}.document must be a string")
+        disc = spec.get("discover")
+        discover = None
+        if disc is not None:
+            d = _map(disc, f"{where}.discover")
+            pattern = _regex(str(d.get("pattern", "")), f"{where}.discover.pattern")
+            if pattern.groups < 1:
+                raise I18nToolError(f"{where}.discover.pattern needs a group for the model name")
+            discover = SchemaDiscover(
+                files=_strs(d.get("files"), f"{where}.discover.files"),
+                pattern=pattern,
+                exclude=_strs(d.get("exclude"), f"{where}.discover.exclude"),
+            )
+        schemas.append(
+            SchemaSource(
+                document=spec["document"],
+                defs=str(spec.get("defs", "$defs")),
+                models=_strs(spec.get("models"), f"{where}.models"),
+                discover=discover,
+            )
+        )
+    data = tuple(
+        DataSource(
+            files=_strs(_map(raw, f"static.data[{i}]").get("files"), f"static.data[{i}].files"),
+            select=_strs(_map(raw, f"static.data[{i}]").get("select"), f"static.data[{i}].select"),
+        )
+        for i, raw in enumerate(top.get("data") or [])
+    )
+    return StaticConfig(tuple(schemas), data)
 
 
 def load_config(path: Path = DEFAULT_CONFIG) -> Config:
@@ -451,6 +572,7 @@ __all__ = [
     "TOOL_DIR",
     "CatalogIndex",
     "Config",
+    "DataSource",
     "Finding",
     "Group",
     "I18nToolError",
@@ -458,8 +580,11 @@ __all__ = [
     "Package",
     "PackageCatalogs",
     "ParamSource",
+    "SchemaDiscover",
+    "SchemaSource",
     "Seed",
     "ServerConfig",
+    "StaticConfig",
     "discover_packages",
     "group_of",
     "load_config",

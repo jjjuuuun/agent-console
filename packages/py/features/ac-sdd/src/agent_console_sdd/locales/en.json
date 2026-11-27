@@ -13,6 +13,10 @@
     "스펙 이름입니다.": "Spec name.",
     "스펙 문서 폴더입니다(프로젝트 폴더 기준 상대 경로).": "Spec document folder (relative to the project folder).",
     "작업 줄의 [필드: 값] 값입니다. <field> 자리에 필드 이름을 씁니다.": "Value of [field: value] on the task line. Write the field name in place of <field>.",
-    "변수 이름에 적힌 작업 필드의 값입니다.": "Value of the task field named in the variable name."
+    "변수 이름에 적힌 작업 필드의 값입니다.": "Value of the task field named in the variable name.",
+    "할 일": "To do",
+    "완료": "Done",
+    "만듦": "Created",
+    "변수 이름에 적힌 문서의 파일 이름입니다(스펙 폴더 기준).": "The file name of the document named in the variable (relative to the spec folder)."
   }
 }

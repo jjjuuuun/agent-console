@@ -2,15 +2,14 @@
  * 항목 쓰기 동작(보관·지우기·완전 삭제·복원·내보내기)과 토스트. 호출 결과는 호출자가 쓰도록 돌려주고
  * 실패는 토스트로 알린 뒤 null/false를 돌려준다. 성공하면 메모리 질의를 모두 다시 읽게 한다.
  */
-import { useCallback, useMemo } from "react";
+import { createElement, useCallback, useMemo } from "react";
 import { useToast } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { useDescribeError } from "../../app/errors";
 import { saveBlob } from "../../lib/download";
+import { MemoryToast } from "./MemoryToast";
 import { MEMORY_LIMITS } from "./memoryConfig";
 import { useInvalidateMemory } from "./useMemoryApi";
-import { useViewMessages } from "./format";
 import { useMemoryRest } from "./useMemoryApi";
 import { useT } from "@agent-console/i18n";
 
@@ -25,18 +24,16 @@ export interface MemoryActions {
 }
 
 export function useMemoryActions(): MemoryActions {
-  const describeError = useDescribeError();
   const t = useT("memory");
-  const viewMessages = useViewMessages();
   const rest = useMemoryRest();
   const toast = useToast();
   const invalidate = useInvalidateMemory();
 
   const fail = useCallback(
     (e: unknown) => {
-      toast({ tone: "danger", text: `${t("toast.failed")}: ${describeError(e, t("toast.failed")).message}` });
+      toast({ tone: "danger", text: createElement(MemoryToast, { render: ({ t }, d) => `${t("toast.failed")}: ${d(e, t("toast.failed")).message}` }) });
     },
-    [toast, t, describeError],
+    [toast],
   );
 
   return useMemo<MemoryActions>(() => {
@@ -56,10 +53,10 @@ export function useMemoryActions(): MemoryActions {
         await invalidate();
         toast({
           tone: "success",
-          text: archived ? t("toast.archived") : t("toast.unarchived"),
+          text: createElement(MemoryToast, { render: ({ t }) => (archived ? t("toast.archived") : t("toast.unarchived")) }),
           durationMs: MEMORY_LIMITS.undoMs,
           action: {
-            label: t("toast.undo"),
+            label: createElement(MemoryToast, { render: ({ t }) => t("toast.undo") }),
             onClick: () => {
               void (async () => {
                 try {
@@ -83,7 +80,7 @@ export function useMemoryActions(): MemoryActions {
       try {
         const out = await rest.deleteMemoryEntry(entry.id, entry.version);
         await invalidate();
-        toast({ tone: "success", text: t("toast.deleted"), durationMs: MEMORY_LIMITS.undoMs, action: { label: t("toast.undo"), onClick: () => void restore(entry) } });
+        toast({ tone: "success", text: createElement(MemoryToast, { render: ({ t }) => t("toast.deleted") }), durationMs: MEMORY_LIMITS.undoMs, action: { label: createElement(MemoryToast, { render: ({ t }) => t("toast.undo") }), onClick: () => void restore(entry) } });
         return out;
       } catch (e) {
         fail(e);
@@ -94,7 +91,7 @@ export function useMemoryActions(): MemoryActions {
       try {
         await rest.purgeMemoryEntry(entry.id);
         await invalidate();
-        toast({ tone: "success", text: t("toast.purged") });
+        toast({ tone: "success", text: createElement(MemoryToast, { render: ({ t }) => t("toast.purged") }) });
         return true;
       } catch (e) {
         fail(e);
@@ -106,13 +103,13 @@ export function useMemoryActions(): MemoryActions {
         const file = await rest.exportMemory(scope === null ? {} : { scopes: [scope] });
         const name = file.filename ?? t("export.fallbackName", { date: new Date().toISOString().slice(0, 10) });
         saveBlob(file.blob, name);
-        toast({ tone: "success", text: t("toast.exported", { name, size: formatBytes(file.blob.size, viewMessages) }) });
+        toast({ tone: "success", text: createElement(MemoryToast, { render: ({ t, view }) => t("toast.exported", { name, size: formatBytes(file.blob.size, view) }) }) });
         return true;
       } catch (e) {
-        toast({ tone: "danger", text: `${t("toast.exportFailed")}: ${describeError(e, t("toast.exportFailed")).message}` });
+        toast({ tone: "danger", text: createElement(MemoryToast, { render: ({ t }, d) => `${t("toast.exportFailed")}: ${d(e, t("toast.exportFailed")).message}` }) });
         return false;
       }
     };
     return { archive, remove, purge, restore, exportScope };
-  }, [rest, toast, invalidate, fail, t, viewMessages, describeError]);
+  }, [rest, toast, invalidate, fail, t]);
 }

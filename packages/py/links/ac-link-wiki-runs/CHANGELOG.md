@@ -1,32 +1,38 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-wiki-runs`, so the web can show the link module description and settings and the `wiki.access_invalid` issue in English (data only, no API change). Log lines are now English.
-- FU.12: 위키 도구 묶음에 검색어 해셔를 넘긴다 — 서비스의 선택 속성 `query_hash`(`QueryHashSource`,
-  `service_query_hash`)가 먼저, 없으면 `WikiRunScope(query_hash=)`(기본: 범위 하나에 무작위 솔트 해셔 하나).
-  `WikiToolProvider(query_hash=)`.
-- FU.5: `merge_access`가 `agent_console_nodes_core.merge_access_layers`로 합친 뒤 검증만 한다(메모리 연동과 같은 규칙, 동작 그대로).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-link-wiki-runs`, so the web app can show the link module description and
+  settings and the `wiki.access_invalid` issue in English (data only, no API change). Log lines are now in English.
+- The wiki tool set receives a search query hasher: the optional service attribute `query_hash` (`QueryHashSource`,
+  `service_query_hash`) comes first, otherwise `WikiRunScope(query_hash=)` (default: one hasher with a random salt per
+  scope). `WikiToolProvider(query_hash=)`.
+- `merge_access` merges with `agent_console_nodes_core.merge_access_layers` and then only validates (the same rules as
+  the memory link module, same behavior).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`, 7R.14).
-- 리소스 종류 `wiki`(패키지 데이터 `data/wiki_resource_type.yaml`, 설정 스키마 = 계약
-  `WikiAccessConfig`), entry point `agent_console.resource_types`.
-- X30 공급자 `WikiToolProvider`(층 합치기 `merge_access`, 그 실행 공간의 위키만, 지침 =
-  `WikiToolkit.instructions()`, 쓴 주체 `author_for`(+ 에이전트 정의 이름 `label`), 도구 호출마다
-  RunEvent `wiki.*`, 성공한 쓰기·옮기기·지우기 뒤 `notify`, 공간에 없는 위키 경고
-  `wiki.wiki_unavailable`), 실행 범위 `WikiRunScope`(`runs.scopes`, 루트 Run마다 공급자·쓰기 한도),
-  저장 전 검사 `WikiResourceCheck`(`definitions.checks`, 모르는 위키 id 경고 `wiki.unknown_wiki`),
-  `wiki.integrations` 선언 `{runs}`. `wiki.service` 필수, `projects.lookup` 선택.
-- 설정 `max_writes_per_run`(기본 100). 단독 실행용 `testing.wiki_service_module`·`StaticWikiService`·
-  `memory_repository`.
-- 노드 종류 `wiki-update`(7R.17, entry point `agent_console.node_types`): LLM 없이 앞 노드 결과를 위키 페이지에
-  쓴다(`WikiUpdateNode`·`WikiUpdateConfig` — 위키·경로 틀·`mode` append·section·replace·절 제목·내용 틀·새 페이지
-  틀·기록 메모, 틀 = `ac-text-template`, 변수 `WIKI_UPDATE_VARIABLES`·`render_values`). 쓴 주체 `system`
-  (`label` = 노드 id, `system_author`). 노드 서비스 `WIKI_UPDATE_SERVICE`를 `runs.services`(`WikiNodeServices`)로
-  준다. 서비스가 없으면 검증 경고·실행 때 건너뜀(`wiki.update_unavailable`). 새 사내 의존
-  `agent-console-text-template`.
-- 계약 0.14.1 후속: `WikiUpdateCodes.UNAVAILABLE`이 계약 문서 상수 `KnownIssueCodes.WIKI_UPDATE_UNAVAILABLE`을 쓴다(값 같음).
-  설정 `wiki`·`page_template` id 검증은 복사한 정규식 대신 계약 공개 별칭 `Slug`(모양 같음). 계약 기본값 변경으로
-  설정을 고치지 않은 workspace에서 이 노드(쓴 주체 system)의 평문 비밀 쓰기는 거부된다(전: 경고 후 저장).
+- First release (from the scripts/pkgkit template `link`).
+- Resource type `wiki` (package data `data/wiki_resource_type.yaml`, settings schema = contract `WikiAccessConfig`),
+  entry point `agent_console.resource_types`.
+- Tool provider `WikiToolProvider` (layer merging `merge_access`, only the wikis of that run's space, instructions =
+  `WikiToolkit.instructions()`, author `author_for` (plus the agent definition name `label`), a RunEvent `wiki.*` per
+  tool call, `notify` after successful writes, moves and deletes, and a warning `wiki.wiki_unavailable` for wikis not
+  in the space), the run scope `WikiRunScope` (`runs.scopes`, a provider and write limit per root run), the pre-save
+  check `WikiResourceCheck` (`definitions.checks`, warns about unknown wiki ids with `wiki.unknown_wiki`), and the
+  `wiki.integrations` declaration `{runs}`. `wiki.service` is required and `projects.lookup` is optional.
+- Setting `max_writes_per_run` (default 100). `testing.wiki_service_module`, `StaticWikiService` and
+  `memory_repository` for standalone runs.
+- Node type `wiki-update` (entry point `agent_console.node_types`): writes the previous node's result to a wiki page
+  without an LLM (`WikiUpdateNode` and `WikiUpdateConfig`: wiki, path template, `mode` append, section or replace,
+  section heading, content template, new page template and history note; templates use `ac-text-template`, variables
+  `WIKI_UPDATE_VARIABLES` and `render_values`). The author is `system` (`label` = node id, `system_author`). The node
+  service `WIKI_UPDATE_SERVICE` is provided through `runs.services` (`WikiNodeServices`). Without the service, a
+  validation warning is shown and the node is skipped at run time (`wiki.update_unavailable`). New internal
+  dependency `agent-console-text-template`.
+- Contract 0.14.1 follow-up: `WikiUpdateCodes.UNAVAILABLE` uses the contract document constant
+  `KnownIssueCodes.WIKI_UPDATE_UNAVAILABLE` (same value). Validation of the `wiki` and `page_template` id settings uses
+  the public contract alias `Slug` instead of a copied regular expression (same shape). Because of the contract
+  default change, in a workspace whose settings were not changed, plain-text secret writes by this node (author
+  system) are rejected (previously: warned, then saved).

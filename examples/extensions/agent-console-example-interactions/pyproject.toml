@@ -9,7 +9,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-contracts>=0.16,<0.17",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-runtime>=0.2,<0.3",
 ]
 
 # 상호작용 종류는 디스크립터 객체 하나로 등록한다(코드 없음). 그룹 이름 =

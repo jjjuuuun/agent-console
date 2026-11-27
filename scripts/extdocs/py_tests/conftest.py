@@ -1,4 +1,4 @@
-"""공용 픽스처: 대조가 통과하는 완전한 임시 저장소."""
+"""공용 픽스처: 대조가 통과하는 완전한 임시 저장소(문서에 들어가는 글은 영어 — 공개 문서 규칙)."""
 
 from __future__ import annotations
 
@@ -12,22 +12,22 @@ def notes_tool(repo: Repo) -> str:
     m = repo.mod("notes")
     return f"""\
 [tool.agent-console]
-internal-ports = [{{ port = "notes.store", reason = "노트 모듈 안에서만 쓴다" }}]
-internal-groups = [{{ group = "agent_console.server_modules", reason = "시험 대상 아님" }}]
+internal-ports = [{{ port = "notes.store", reason = "Used only inside the notes module" }}]
+internal-groups = [{{ group = "agent_console.server_modules", reason = "Not under test" }}]
 
 [tool.agent-console.extension-points.note-kind]
-title = "노트 종류"
+title = "Note kind"
 area = "memory"
-summary = "노트 종류를 하나 더한다"
+summary = "Adds one more note kind"
 registration = {{ kind = "entry-point", group = "{m}:NOTE_KINDS_GROUP" }}
 interface = ["{m}:NoteKind"]
 example = {{ kind = "package", path = "examples/extensions/example-notes" }}
 guide = "memory.md#note-kind"
 
 [tool.agent-console.extension-points.note-hooks]
-title = "노트 훅"
+title = "Note hooks"
 area = "memory"
-summary = "노트 저장 뒤에 할 일을 더한다"
+summary = "Adds work to run after a note is saved"
 registration = {{ kind = "port", port = "{m}.module:HOOKS" }}
 example = {{ kind = "snippet" }}
 guide = "memory.md#note-hooks"
@@ -41,8 +41,8 @@ def build_notes(repo: Repo, *, tool: str | None = None, constant: str | None = N
         "agent-console-notes",
         files={
             f"{m}/__init__.py": (
-                f'"""노트."""\nfrom {m}._plugins import NOTE_KINDS_GROUP\n\n\n'
-                'class NoteKind:\n    """노트 종류 플러그인."""\n\n\n'
+                f'"""Notes."""\nfrom {m}._plugins import NOTE_KINDS_GROUP\n\n\n'
+                'class NoteKind:\n    """Note kind plugin."""\n\n\n'
                 '__all__ = ["NOTE_KINDS_GROUP", "NoteKind"]\n'
             ),
             f"{m}/_plugins.py": constant or 'NOTE_KINDS_GROUP = "agent_console.note_kinds"\n',

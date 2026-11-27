@@ -31,6 +31,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from agent_console_contracts import TextTemplate, render_text_template
+from agent_console_runtime import compact_number
 from agent_console_secret_rules import check_extra_rules
 
 from ._env import EnvPolicy
@@ -178,7 +180,12 @@ class PtySize(BaseModel):
 
 
 class ClaudeSdkLoginTexts(BaseModel):
-    """로그인 방법·단계·사유 문구(데이터). ``{name}`` = 변수 이름, ``{path}`` = 경로."""
+    """로그인 방법·단계·사유 문구(데이터). ``{name}`` = 변수 이름, ``{path}`` = 경로.
+
+    값이 섞인 문구(``warning_env``·``logout_failed``·``logout_timeout``)는 응답 ``text_templates``에
+    원문 틀 + 값으로도 실린다. 바꾼 문구는 화면이 번역하지 않는다(그 틀을 키로 한 묶음 항목을
+    ``mod-i18n.catalog_dirs``에 둔다).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -234,7 +241,7 @@ class ClaudeSdkLoginTexts(BaseModel):
         "자격 폴더를 준비하지 못했습니다. 폴더 권한과 설치자 설정 auth_dir.config_dir을 확인하세요."
     )
     logout_failed: str = "로그아웃하지 못했습니다(종료 코드 {code})."
-    logout_timeout: str = "로그아웃이 {seconds:g}초 안에 끝나지 않았습니다."
+    logout_timeout: str = "로그아웃이 {seconds}초 안에 끝나지 않았습니다."
     logout_cli_missing: str = "Claude Code 실행 파일을 찾지 못해 로그아웃하지 못했습니다."
 
     fix_cli: FixLink = Field(default_factory=lambda: FixLink(label="실행 파일 경로 설정 보기"))
@@ -356,13 +363,28 @@ def login_env(
     return out
 
 
-def env_warnings(parent: Mapping[str, str], options: ClaudeSdkLoginOptions) -> list[str]:
-    """``env_clear`` 변수가 서버 환경에 값이 있으면 안내 문장(이름만, 값 없음)."""
+def env_warning_templates(
+    parent: Mapping[str, str], options: ClaudeSdkLoginOptions
+) -> list[TextTemplate]:
+    """``env_clear`` 변수가 서버 환경에 값이 있으면 안내 문장의 원문 틀 + 값(이름만, 값 없음)."""
     return [
-        options.texts.warning_env.format(name=name)
+        TextTemplate(template=options.texts.warning_env, params={"name": name})
         for name in options.env_clear
         if parent.get(name)
     ]
+
+
+def env_warnings(parent: Mapping[str, str], options: ClaudeSdkLoginOptions) -> list[str]:
+    """``env_clear`` 변수가 서버 환경에 값이 있으면 안내 문장(이름만, 값 없음)."""
+    return [render_text_template(t) for t in env_warning_templates(parent, options)]
+
+
+def logout_timeout_template(options: ClaudeSdkLoginOptions) -> TextTemplate:
+    """로그아웃 시간 초과 문장의 원문 틀 + 값(``{seconds}`` = ``logout_timeout_s``)."""
+    return TextTemplate(
+        template=options.texts.logout_timeout,
+        params={"seconds": compact_number(options.logout_timeout_s)},
+    )
 
 
 def allowed_open_url(url: str, hosts: Sequence[str]) -> str | None:
@@ -531,8 +553,10 @@ __all__ = [
     "PtySize",
     "VerifyOutcome",
     "allowed_open_url",
+    "env_warning_templates",
     "env_warnings",
     "login_env",
+    "logout_timeout_template",
     "parse_auth_method",
     "resolve_writes",
     "run_command",

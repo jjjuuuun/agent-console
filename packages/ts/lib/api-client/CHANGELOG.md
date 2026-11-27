@@ -1,25 +1,68 @@
-# 변경 기록: @agent-console/api-client
+# Changelog: @agent-console/api-client
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
-- 화면 문구 묶음 클라이언트(I.10, 서버 I.4, 계약 `i18n` 1.0.0): 하위 경로 `i18n`(`createI18nClient`, `I18nClient`) — `getI18nInfo()`(`GET /i18n`)·`getI18nCatalog(language, { signal })`(`GET /i18n/{lang}`, 그 언어 묶음이 없으면 404 대신 `null`). `createRestClient`에 합쳐진다. 새 기능이라 minor(0.2.0).
-- 앱 DB 기록 개수(5.7R.33p): `getRunProjectCounts(params?)`·`getConversationProjectCounts(params?)`가 `ProjectCountsParams{source?: "app"}`를 받는다(`?source=app` = 앱 DB의 기록만, 생략하면 지금처럼 앱 DB + 프로젝트 기록 DB). 타입 `ProjectCountsParams`.
-- 실행 위치 찾기(요청 11/08 후속, 계약 `runs` 1.9.0·0.14.8): `RunsClient.locateRun(id)`(`GET /runs/{id}/locate` → `RunLocation{project_id}`, 없으면 404, 여러 기록 공간이면 409 `run.ambiguous`). Run 단위 호출의 기록 공간: `getRun(id, project?)`, `ListRunEventsParams.project`, `listRunInteractions(runId, project?)`(`?project=`, 생략하면 주소 그대로). 타입 `RunSpace`.
-- 대화 위치 찾기(요청 11/07 후속, 계약 `chat` 1.4.0·0.14.7): `ChatClient.locateConversation(id)`(`GET /conversations/{id}/locate` → `ConversationLocation{project_id}`). 없으면 404, 여러 기록 공간이면 409 `conversation.ambiguous`.
-- 위키 클라이언트(7R.19, 서버 7R.12, 계약 `wiki` 1.0.0): 하위 경로 `wiki`(`createWikiClient`, `WikiClient`) — 위키 목록·보기·저장·삭제, 페이지 목록·보기·쓰기(`If-Match`·`If-None-Match: *`)·미리보기·이름 바꾸기(`dry_run`)·지우기, 기록(목록·버전 본문 text·되돌리기), 링크 넣기 글자·페이지 틀, 검색·그래프·점검·최근 변경·유효 문법·다시 읽기, zip 내보내기(POST)·가져오기(본문 zip, `policy`·`dry_run`), 위키 규칙 목록·단건·저장·삭제·검사. 공간(`?project=`)은 `withSpace`로 묶는다. WS `subscribeWiki`(토픽 `wiki.changed`).
-- 문서 틀 단건 REST(6R.20b, 서버 6R.20a, 계약 `sdd` 1.1.0): `SddClient`에 `createSpecTemplate`·`getSpecTemplate`·`putSpecTemplate`(`If-Match`)·`deleteSpecTemplate`·`listSpecTemplateVariables`·뼈대 파일 `listSpecTemplateFiles`·`readSpecTemplateFile`·`putSpecTemplateFile`·`deleteSpecTemplateFile`. 버전 기록은 기존 `versions` 클라이언트에 경로 `/sdd/templates/{id}`를 주면 된다.
-- 복사 종류·항목(6R.20c, 서버 6R.20a, 계약 `projects` 3.2.0): `projects`에 `listCopyKinds(project)`(`GET /projects/copy/kinds`, `CopyKindInfo{kind, library, portable}`)·`listCopyItems(project, kind?)`(`GET /projects/copy/items`, `CopyItem`).
-- 스펙(SDD) 클라이언트(6R.20, 서버 6R.13, 계약 `sdd` 1.0.0): 하위 경로 `sdd`(`createSddClient`, `SddClient`) — 스펙 목록·보기·저장·삭제, 문서 본문(`If-Match`·`If-None-Match: *`)·상태 전환, 작업 거르기·줄 고치기, 계획·추적·문법, 작업 동작·한꺼번에 시작, 자동 진행, 규칙 검사, 가져오기·내보내기, 문서 틀 목록·틀로 저장. 공간(`?project=`)은 `withSpace`로 묶는다. WS `subscribeSdd`(토픽 `sdd.changed`).
-- 목록 커서 페이지(6R.19, 서버 6R.12): `runsPage`(`GET /runs/page`, `RunsPageParams`)·`conversationsPage`(`GET /conversations/page`, `ConversationsPageParams`)와 이벤트 질의 `listRunEvents(id, { node })`. `query()`가 배열 값을 같은 키 되풀이(`status=a&status=b`)로 보낸다.
-- `previewImport`·`importResources`가 선택 인자 `ImportScope{project, target}`을, `planExport`·`downloadExportArchive`·`writeExport`가 `ExportScope{project, source}`를 받아 질의로 넘긴다(5.7R.33o, 서버 33i·33k). 생략하면 주소가 그대로다.
-- `projects`에 `resetProjectManifest`(`POST /projects/{id}/manifest/reset`)·`appendProjectGitignore`(`POST /projects/{id}/gitignore/append`) 추가(5.7R.33n).
-- 프로젝트 2(5.7R.33m, 계약 0.12.0): 하위 경로 `projects`(`createProjectsClient`) — 등록·조회·수정·해제, 폴더 확인·만들기·목록·고르는 방법·OS 선택 창(`pickFolder`의 `AbortSignal`), 복사 계획·적용, 옛 기록 계획. `RestIo.request`·`requestVersioned`가 `signal`을 받는다. `memory`에 `copyMemory`, `runs`·`chat`에 프로젝트별 개수·프로젝트에 넣기(`get…ProjectCounts`·`assign…ToProject`)와 목록 질의 `project`·`source`.
-- 공간 인자: `withSpace(io, project)`가 모든 요청에 `?project=<id>`를 붙이는 전송을 만든다(공용이면 `io` 그대로 = 주소 불변). `createSpaceRestClient(options, project)`는 정의·버전·메모리 클라이언트를 한 공간에 묶는다.
-- REST를 기능별 클라이언트로 나눴다(`clients/*`). 하위 경로 export: `core`·`catalog`·`agents`·`graphs`·`runs`·`chat`·`interactions`·`usage`·`resources`·`imports`·`exports`·`settings`·`versions`, 전송은 `io`(타입·도구)·`transport`(`createRestIo`). 기능 클라이언트끼리는 import하지 않는다. `createRestClient`(모든 기능을 합친 클라이언트)와 루트 export는 그대로다.
-- 프리셋 클라이언트(`presets` 하위 경로, `listPresets`·`applyPreset`)를 지웠다(5.2R.104, 프리셋 기능 삭제).
-- `listModules()`(`GET /modules`) 추가.
-- 하위 경로 `logs`(4R.17): 로그 REST 클라이언트(`createLogsClient`, `logQuery`)와 WS `subscribeLogs`(토픽 `logs`).
+- Model catalog (contract 0.16.1): `getBackendModelCatalog(backendId, { refresh, signal })`
+  (`GET /backends/{id}/model-catalog`, `?refresh=true` skips the server cache) returns the merged model list and the
+  lookup state (`discovery.state`; a failed lookup is still a 200). When the path is missing (404, older server) it
+  falls back to `listBackendModels` and returns `discovery: null`. Types `BackendModelCatalogResult`,
+  `ModelCatalogOptions`. Contract range raised to `^0.16.1`. Patch (0.2.1).
+- Message catalog client (contract `i18n` 1.0.0): subpath `i18n` (`createI18nClient`, `I18nClient`) with
+  `getI18nInfo()` (`GET /i18n`) and `getI18nCatalog(language, { signal })` (`GET /i18n/{lang}`; returns `null` instead
+  of a 404 when that language has no catalog). Merged into `createRestClient`. A new feature, so minor (0.2.0).
+- App database record counts: `getRunProjectCounts(params?)` and `getConversationProjectCounts(params?)` take
+  `ProjectCountsParams{source?: "app"}` (`?source=app` = only records in the app database; omitted means the app
+  database plus project record databases, as now). Type `ProjectCountsParams`.
+- Run locating (contract `runs` 1.9.0, 0.14.8): `RunsClient.locateRun(id)` (`GET /runs/{id}/locate` returns
+  `RunLocation{project_id}`; 404 when not found, 409 `run.ambiguous` when in several record spaces). The record space
+  of per-run calls: `getRun(id, project?)`, `ListRunEventsParams.project` and `listRunInteractions(runId, project?)`
+  (`?project=`; omitted leaves the URL as is). Type `RunSpace`.
+- Conversation locating (contract `chat` 1.4.0, 0.14.7): `ChatClient.locateConversation(id)`
+  (`GET /conversations/{id}/locate` returns `ConversationLocation{project_id}`). 404 when not found, 409
+  `conversation.ambiguous` when in several record spaces.
+- Wiki client (contract `wiki` 1.0.0): subpath `wiki` (`createWikiClient`, `WikiClient`) with wiki list, view, save
+  and delete; page list, view, write (`If-Match`, `If-None-Match: *`), preview, rename (`dry_run`) and delete; history
+  (list, version content as text, revert); link insertion text and page templates; search, graph, checks, recent
+  changes, effective syntax and rescan; zip export (POST) and import (zip body, `policy`, `dry_run`); and wiki rule
+  list, single item, save, delete and check. Spaces (`?project=`) are bound with `withSpace`. WS `subscribeWiki`
+  (topic `wiki.changed`).
+- Single document template REST (contract `sdd` 1.1.0): `SddClient` gained `createSpecTemplate`, `getSpecTemplate`,
+  `putSpecTemplate` (`If-Match`), `deleteSpecTemplate`, `listSpecTemplateVariables`, and the skeleton file calls
+  `listSpecTemplateFiles`, `readSpecTemplateFile`, `putSpecTemplateFile` and `deleteSpecTemplateFile`. For version
+  history, pass the path `/sdd/templates/{id}` to the existing `versions` client.
+- Copy kinds and items (contract `projects` 3.2.0): `projects` gained `listCopyKinds(project)`
+  (`GET /projects/copy/kinds`, `CopyKindInfo{kind, library, portable}`) and `listCopyItems(project, kind?)`
+  (`GET /projects/copy/items`, `CopyItem`).
+- Specs (SDD) client (contract `sdd` 1.0.0): subpath `sdd` (`createSddClient`, `SddClient`) with spec list, view, save
+  and delete; document content (`If-Match`, `If-None-Match: *`) and state transitions; task filtering and line edits;
+  plan, trace and syntax; task actions and batch start; auto-advance; rule checks; import and export; and document
+  template list and save as template. Spaces (`?project=`) are bound with `withSpace`. WS `subscribeSdd` (topic
+  `sdd.changed`).
+- Cursor pages for lists: `runsPage` (`GET /runs/page`, `RunsPageParams`), `conversationsPage`
+  (`GET /conversations/page`, `ConversationsPageParams`) and the event query `listRunEvents(id, { node })`. `query()`
+  sends array values as a repeated key (`status=a&status=b`).
+- `previewImport` and `importResources` take the optional argument `ImportScope{project, target}`, and `planExport`,
+  `downloadExportArchive` and `writeExport` take `ExportScope{project, source}`, passed as query parameters. Omitted
+  leaves the URL as is.
+- `projects` gained `resetProjectManifest` (`POST /projects/{id}/manifest/reset`) and `appendProjectGitignore`
+  (`POST /projects/{id}/gitignore/append`).
+- Projects (contract 0.12.0): subpath `projects` (`createProjectsClient`) with register, read, update and unregister;
+  folder check, create, list, picker methods and the OS picker dialog (`AbortSignal` of `pickFolder`); copy plan and
+  apply; and the old records plan. `RestIo.request` and `requestVersioned` take `signal`. `memory` gained
+  `copyMemory`, and `runs` and `chat` gained per-project counts and moving into a project
+  (`get…ProjectCounts`, `assign…ToProject`) and the list queries `project` and `source`.
+- Space argument: `withSpace(io, project)` builds a transport that adds `?project=<id>` to every request (for the
+  shared library it returns `io` as is, so URLs are unchanged). `createSpaceRestClient(options, project)` binds the
+  definitions, versions and memory clients to one space.
+- Split REST into per-feature clients (`clients/*`). Subpath exports: `core`, `catalog`, `agents`, `graphs`, `runs`,
+  `chat`, `interactions`, `usage`, `resources`, `imports`, `exports`, `settings` and `versions`; the transport is `io`
+  (types and tools) and `transport` (`createRestIo`). Feature clients do not import each other. `createRestClient`
+  (the client combining all features) and the root export are unchanged.
+- Removed the presets client (subpath `presets`, `listPresets`, `applyPreset`) together with the presets feature.
+- Added `listModules()` (`GET /modules`).
+- Subpath `logs`: the logs REST client (`createLogsClient`, `logQuery`) and WS `subscribeLogs` (topic `logs`).
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

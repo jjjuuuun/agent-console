@@ -11,7 +11,7 @@ dependencies = [
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-store>=0.2,<0.3",
     "agent-console-project-space>=0.1,<0.2",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-runtime>=0.2,<0.3",
     "pydantic>=2.9",
 ]
 
@@ -27,7 +27,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
-    "agent-console-mod-runs>=0.1,<0.2",
+    "agent-console-mod-runs>=0.2,<0.3",
     "agent-console-mod-chat>=0.1,<0.2",
 ]
 

@@ -38,6 +38,7 @@ extension point. If a setting is not enough, you add a plugin package instead of
   Code folder layout, and keep versions of every definition so you can restore them.
 - **Modular server**: each backend feature (chat, runs, usage, logs, definitions, import and export, ...) is a server
   module that you can turn on or off. The web app only shows modules that are on.
+- **Languages**: English and Korean screens. Add a language or change wording with message catalog files.
 
 ## Screenshots
 
@@ -108,13 +109,15 @@ The server starts with an empty workspace. No agents or teams are installed in a
 2. **Create a team.** Place agent nodes on the graph and connect them. A team with a single agent is fine.
 3. **Open Chat**, pick the team and send a task. Runs, usage and logs each have their own page.
 
-**Using real Claude models.** Switch the backend to `claude-agent-sdk` in *Settings › Agent defaults*. Model ids are not
-built in. List the ones you want under `modules.options.mod-runs.backends.claude-agent-sdk.models`. By default the
-backend signs in with your Claude subscription. The sign-in happens on the backend status card inside the app, the
-credentials are kept in an app-only folder (`<workspace>/.state/claude`), and the app never receives or stores the
-token. Anthropic's documentation recommends API keys for apps built on the Agent SDK, so check the terms yourself
-before using subscription credentials. To use an API key instead, keep the key in an environment variable and refer
-to it as `secret://anthropic_api_key`. The full steps are in [USAGE.md](USAGE.md).
+**Using real Claude models.** Switch the backend to `claude-agent-sdk` in *Settings › Agent defaults*. By default the
+backend signs in with your Claude subscription. Sign in from the **Backend connection** dialog (the plug icon at the
+bottom of the sidebar) or the backend status card in the same settings page. The credentials are kept in an app-only
+folder (`<workspace>/.state/claude`), and the app never receives or stores the token. Once you are signed in, the
+model field lists the models your account can use, without calling a model. Model ids are not built in; to rename
+models or keep a list of your own, add them under `modules.options.mod-runs.backends.claude-agent-sdk.models`.
+Anthropic's documentation recommends API keys for apps built on the Agent SDK, so check the terms yourself before
+using subscription credentials. To use an API key instead, keep the key in an environment variable and refer to it as
+`secret://anthropic_api_key`. The full steps are in [USAGE.md](USAGE.md).
 
 **Already using Claude Code?** Register the project folder and import its `.claude/` agents and settings. The
 original files are only read. Global configuration under `~/.claude` is not imported.
@@ -127,6 +130,7 @@ original files are only read. Global configuration under `~/.claude` is not impo
 | Workspace | Default `.agent-console/` (setting `workspace`, or `--workspace`). Holds your definitions as YAML (agents, teams, resources, `settings.yaml`). Runtime state (SQLite database, app sign-in, usage bridge file) is kept under `<workspace>/.state/` |
 | Project folders | Created or registered from the UI. The app only works inside registered folders and its own workspace. Each project keeps its copy of the configuration in `<folder>/.agent-console/`. Removing a project only unregisters it, and nothing in the folder is deleted |
 | Feature modules | `modules.enabled` / `modules.disabled`, or `--enable-module` / `--disable-module`. Module settings go under `modules.options.<module id>`. `GET /api/v1/modules` lists the modules and their state |
+| Screen language | *Settings › Appearance › Language* (English or Korean; the default follows the browser). To change wording or add a language without changing code, put `<language>.json` message catalogs in a folder and list it in `modules.options.mod-i18n.catalog_dirs`. See [Language](USAGE.md#language) in the user guide |
 
 Relative paths in the settings file are resolved against the folder that contains it. If the file has unknown or
 removed keys, the server refuses to start and explains what to change. The full key reference is in
@@ -141,8 +145,9 @@ register through Python entry points, and each one can be turned off with `plugi
 
 Extension points include node types, edge types, condition operators, execution backends, delegation strategies,
 interaction kinds, log sources and classifiers, usage sources, import sources, export formats, resource types,
-secret providers, memory scopes, wiki checks, and whole server modules. On the web side there are settings form
-widgets and dashboard widgets.
+secret providers, memory scopes, wiki checks, message catalogs (screen text in other languages), and whole server
+modules. Backends can also list the models of their account. On the web side there are settings form widgets and
+dashboard widgets.
 
 - [Extension guide](docs/extending/README.md): which extension point fits your change, and how to build, test and ship a
   plugin
@@ -155,20 +160,25 @@ uv pip install -e examples/extensions/agent-console-example-condition   # then r
 
 ## Documentation
 
-- [USAGE.md](USAGE.md): user guide (Korean)
+- [USAGE.md](USAGE.md): user guide
 - [CHANGELOG.md](CHANGELOG.md): release notes
-- [docs/extending/](docs/extending/README.md): extension guide (Korean)
-- [apps/server/README.md](apps/server/README.md): server settings, REST and WebSocket (Korean)
-- [apps/cli/README.md](apps/cli/README.md): the `agent-console` command: `serve`, `statusline`, `logs purge` (Korean)
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): how this project was built with Claude Code (Korean)
+- [docs/extending/](docs/extending/README.md): extension guide
+- [apps/server/README.md](apps/server/README.md): server settings, REST and WebSocket
+- [apps/cli/README.md](apps/cli/README.md): the `agent-console` command: `serve`, `statusline`, `logs purge`
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): how this project was built with Claude Code
 - Each package under `packages/` and `apps/` has its own README with its API and settings
 
 ## Known limitations
 
-Automated tests use the fake backend. Real Claude Agent SDK runs and some platform setups (Windows file system
-details, the native folder picker, IME input, SQLite builds without FTS5, very large wikis, binding to non-loopback
-addresses) are outside the automated tests, so check them in your own environment. The web UI and most documentation are in Korean for now. Packages are not
-published to PyPI or npm, so install from source. See [CHANGELOG.md](CHANGELOG.md) for details.
+Automated tests use the fake backend. Real Claude Agent SDK runs, model lookups against a real account, and some
+platform setups (Windows file system details, the native folder picker, IME input, SQLite builds without FTS5, very
+large wikis, binding to non-loopback addresses) are outside the automated tests, so check them in your own
+environment. The model list follows the authentication that the backend status card checks and what the installed
+Claude Code CLI reports. Whether the terms of service allow subscription credentials with the Agent SDK has not been
+confirmed, so check them yourself and use it at your own risk. Only app text is translated: names, instructions and
+other data you write, agent output and log contents stay as written, and so does text from extensions that ship no
+message catalog. Packages are not published to PyPI or npm, so install from source. See [CHANGELOG.md](CHANGELOG.md)
+for details.
 
 ## Contributing
 

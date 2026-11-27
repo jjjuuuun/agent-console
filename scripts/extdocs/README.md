@@ -1,55 +1,56 @@
 # extdocs
 
-확장 지점 선언을 코드와 대조하고(`poe extpoints-check`), 확장 가이드의 사실 부분을 생성하고(`poe extdocs`), 생성 문서가 낡지 않았는지 검사한다(`poe extdocs-check`). 저장소 도구이며 배포하지 않는다. 워크스페이스 venv(pydantic·ruamel.yaml)에서 돈다.
+Checks extension point declarations against the code (`poe extpoints-check`), generates the factual parts of the extension guide (`poe extdocs`), and checks that the generated documents are not stale (`poe extdocs-check`). It is a repository tool and is not shipped. It runs in the workspace venv (pydantic, ruamel.yaml).
 
-경로·대상은 인자와 데이터 파일로 받는다. 다른 저장소에 복사해 쓸 때는 `extdocs.yaml`만 고친다(`--root`·`--config`·`--tool-dir`).
+Paths and targets come from arguments and data files. To use the tool in another repository, change only `extdocs.yaml` (`--root`, `--config`, `--tool-dir`).
 
-## 명령
+## Commands
 
-| poe 작업 | 직접 실행 | 하는 일 | `poe check` |
+| poe task | Direct | What it does | In `poe check` |
 | --- | --- | --- | --- |
-| `extpoints-check` | `python scripts/extdocs/extdocs.py points [--allow-missing [CAT ...]]` | 코드 ↔ 선언 대조(아래 "대조 항목"). 문서 없이 동작 | 포함 |
-| `extdocs` | `python scripts/extdocs/extdocs.py generate [--scaffold]` | `docs/extending/reference.md`, 문서 폴더 안 `extdocs:facts` 구간, `examples/extensions/README.md` 생성. `--scaffold`는 선언의 `guide`가 가리키는 절이 없으면 빈 틀(`extdocs:todo`)을 만든다 | — |
-| `extdocs-check` | `python scripts/extdocs/extdocs.py docs [--allow-missing [CAT ...]]` | 재생성 diff 0, `areas.yaml`의 영역 페이지 파일 있음, 가이드 절 손글·생성 구간, `extdocs:todo` 없음, 상대 링크·앵커, 공개 가능 린트, `>>>` doctest, `extdocs:validate` 조각 검증. 문서 폴더가 없으면 "문서 폴더 없음 — 건너뜀"으로 0 종료 | 포함 |
-| — | `python scripts/extdocs/extdocs.py docs --report [GLOB ...]` | 공개 가능 린트만 경고로(기본 `report_globs` — 패키지·앱 README). 늘 0 종료 | — |
-| — | `python scripts/extdocs/extdocs.py schema [--check]` | `declaration.schema.json`을 모델에서 다시 쓴다(`points`가 드리프트를 잡는다) | — |
-| `extdocs-test` | `pytest -q -c scripts/extdocs/pytest.ini scripts/extdocs` | 도구 자체 mypy(strict)·테스트(임시 저장소) | 포함 |
+| `extpoints-check` | `python scripts/extdocs/extdocs.py points [--allow-missing [CAT ...]]` | Checks code against declarations (see "What `points` checks" below). Works without the documents | yes |
+| `extdocs` | `python scripts/extdocs/extdocs.py generate [--scaffold]` | Generates `docs/extending/reference.md`, the `extdocs:facts` blocks inside the documents folder, and `examples/extensions/README.md`. `--scaffold` creates an empty stub (`extdocs:todo`) when the section a declaration's `guide` points to does not exist | — |
+| `extdocs-check` | `python scripts/extdocs/extdocs.py docs [--allow-missing [CAT ...]]` | Regeneration diff is empty, the area page files in `areas.yaml` exist, guide sections have hand-written text and generated blocks, no `extdocs:todo` is left, relative links and anchors resolve, public lint, `>>>` doctests, and `extdocs:validate` snippet validation. Without the documents folder it prints "no documents folder — skipped" and exits 0 | yes |
+| — | `python scripts/extdocs/extdocs.py docs --report [GLOB ...]` | Public lint only, as warnings (default `report_globs`: package and app READMEs). Always exits 0 | — |
+| — | `python scripts/extdocs/extdocs.py schema [--check]` | Rewrites `declaration.schema.json` from the model (`points` catches drift) | — |
+| `extdocs-test` | `pytest -q -c scripts/extdocs/pytest.ini scripts/extdocs` | The tool's own mypy (strict) and tests (temporary repositories) | yes |
 
-공통 옵션: `--root`(기본 현재 폴더), `--config`, `--tool-dir`, `--quiet`(경고는 규칙별 건수만). 종료 코드 0 통과, 1 위반, 2 설정·입력 오류.
+Common options: `--root` (default: the current folder), `--config`, `--tool-dir`, `--quiet` (warnings only as counts per rule). Exit codes: 0 pass, 1 violations, 2 configuration or input error.
 
-## 선언 형식
+## Declaration format
 
-모델은 `extdocs_model.py`(Pydantic)이고 공용 JSON Schema `declaration.schema.json`은 그 모델에서 만든다(TS 쪽 검사도 이 파일을 쓴다).
+The model is `extdocs_model.py` (Pydantic), and the shared JSON Schema `declaration.schema.json` is generated from it (the TS checks use this file too).
 
-Python 패키지 `pyproject.toml`:
+Python package `pyproject.toml`:
 
 ```toml
 [tool.agent-console]
-# 확장 지점이 아닌 포트·그룹(대조에서 뺀다, 사유 필수)
-internal-ports = [{ port = "wiki.service", reason = "위키 모듈과 연동 모듈 사이 전용" }]
+# Ports and groups that are not extension points (left out of the checks, a reason is required)
+internal-ports = [{ port = "wiki.service", reason = "Private between the wiki module and its link modules" }]
 internal-groups = [{ group = "agent_console.config_schemas", reason = "..." }]
 
 [tool.agent-console.extension-points.wiki-search-index]
 title = "Wiki search index"
-area = "wiki"                     # areas.yaml의 id
-design_id = "X48"                 # 선택, 문서에 나가지 않는다
+area = "wiki"                     # an id from areas.yaml
+design_id = "X48"                 # optional, not published in the documents
 summary = "Replaces wiki search with another index implementation"
 registration = { kind = "entry-point", group = "agent_console_wiki:SEARCH_INDEX_GROUP" }
 interface = ["agent_console_wiki:WikiSearchIndex"]
 settings = ["wiki.search_backend"]
-builtin = "entry-points"          # 선택: entry-points(기본, entry-point 종류) · providers(기본, port 종류) · none
+builtin = "entry-points"          # optional: entry-points (default for entry-point kinds) · providers (default for port kinds) · none · a list of member distributions
 example = { kind = "package", path = "examples/extensions/agent-console-example-wiki-search" }
-guide = "wiki.md#wiki-search-index"   # 문서 폴더 기준, 절을 생략하면 slug
+guide = "wiki.md#wiki-search-index"   # relative to the documents folder; the slug when the section is omitted
 ```
 
-- slug(표 키): 소문자·숫자·하이픈. 저장소 전체에서 하나.
-- 문장 칸(`title`·`summary`·`example.note`·`internal-ports`/`internal-groups`의 `reason`)은 영어로 쓴다. 생성 문서(`reference.md`·영역 페이지 생성 구간·예제 색인)가 영어 단일 문서라서 그대로 옮겨진다.
-- `registration.kind`는 열린 문자열이다. 아는 값: `entry-point`(`group`), `port`(`port`, `multi`), `data`(`path`·`settings`·`disable`), `injection`, `annotation`·`descriptor`·`registry`(`name`), `props`(`export`). 모르는 값은 원문 그대로 표에 나오고 `templates/registration.yaml`의 `_default` 문장을 쓴다. 문장 틀 하나를 더하면 전용 문장이 된다.
-- `group`·`port`는 기호(`모듈:이름`)가 원칙이다. 기호가 아닌 문자열이면 그대로 그룹·포트 이름으로 본다.
-- `example`은 표 하나 또는 목록. 종류: `package`(설치형 예제 폴더 `path`), `reference`(저장소 안 참조 구현 `path`), `contract-tests`(`symbols` — 계약 테스트 묶음·대역 기호), `snippet`(가이드 절 안의 `>>>` 또는 `extdocs:validate` 조각).
-- `interface`·`settings`는 문자열 하나 또는 목록.
+- Slug (the table key): lowercase letters, digits and hyphens. Unique across the repository.
+- Sentence fields (`title`, `summary`, `example.note`, and `reason` of `internal-ports`/`internal-groups`) are written in English. The generated documents (`reference.md`, the generated blocks of area pages, the example index) are English-only and copy them as is.
+- `registration.kind` is an open string. Known values: `entry-point` (`group`), `port` (`port`, `multi`), `data` (`path`, `settings`, `disable`), `injection`, `annotation`, `descriptor` and `registry` (`name`), and `props` (`export`). Unknown values appear in the table as written and use the `_default` sentence of `templates/registration.yaml`. Adding one sentence template gives them their own sentence.
+- `group` and `port` are normally symbols (`module:name`). A string that is not a symbol is taken as the group or port name itself.
+- `example` is a single table or a list. Kinds: `package` (an installable example folder `path`), `reference` (a reference implementation inside the repository `path`), `contract-tests` (`symbols`: contract test suites and test double symbols), and `snippet` (a `>>>` or `extdocs:validate` snippet inside the guide section).
+- `interface` and `settings` are a single string or a list.
+- `builtin` as a list names the workspace distributions that implement the point (for an optional capability with no registration group or port, such as `capability` kinds). The generated "Built-in implementations" shows them as `folder (distribution)` in the listed order.
 
-TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
+TS package and app `package.json` (the same model, under the key `extensionPoints`):
 
 ```json
 {
@@ -68,93 +69,93 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 }
 ```
 
-예제 패키지는 자기가 보이는 지점을 적는다: Python `[tool.agent-console.example] points = ["wiki-search-index"]`, TS `"agentConsole": {"example": {"points": [...]}}`. 지점 선언의 `example`(kind `package`)과 서로 맞아야 한다.
+An example package lists the points it demonstrates: Python `[tool.agent-console.example] points = ["wiki-search-index"]`, TS `"agentConsole": {"example": {"points": [...]}}`. These must match the `example` (kind `package`) of the point declarations.
 
-## 대조 항목(`points`)
+## What `points` checks
 
-1. 그룹: 워크스페이스 멤버 `src`의 그룹 상수(이름 `*_GROUP`, 값 `agent_console.*` — 패턴은 `extdocs.yaml` `code`) + 멤버 pyproject entry point 그룹 = 선언 `registration.group` + `internal-groups`
-2. 포트: 멤버 서버 모듈 entry point의 `descriptor`(build하지 않음)의 provides·requires·optional = 선언 `registration.port` + `internal-ports`. 상한 `descriptor_time_limit_seconds`(10초)
-3. 선언의 Python 기호가 import된다. TS 기호(`@pkg#이름`)는 `pnpm extdocs-check`가 본다
-4. 예제 경로가 있다, 예제 `points` ↔ 선언 `example` 짝, 지점마다 예제 하나 이상
-5. 선언된 지점을 보이는 예제의 README에 필수 절(`readme_sections.yaml`, 제목에 별칭이 들어 있으면 인정)
-6. slug 중복 없음, `area`가 `areas.yaml`에 있음, 선언 형식(스키마)
-7. `declaration.schema.json`이 모델과 같다
+1. Groups: group constants in the `src` of workspace members (name `*_GROUP`, value `agent_console.*`; the patterns are `code` in `extdocs.yaml`) plus the entry point groups of member pyprojects = declared `registration.group` plus `internal-groups`
+2. Ports: provides, requires and optional of the `descriptor` (not built) of member server module entry points = declared `registration.port` plus `internal-ports`. Time limit `descriptor_time_limit_seconds` (10 seconds)
+3. Declared Python symbols import. TS symbols (`@pkg#name`) are checked by `pnpm extdocs-check`
+4. Example paths exist, example `points` and declared `example` match in pairs, and every point has at least one example
+5. The README of an example that demonstrates a declared point has the required sections (`readme_sections.yaml`; a heading that contains an alias counts)
+6. No duplicate slugs, `area` exists in `areas.yaml`, the distributions a `builtin` list names are workspace members (`builtin-unknown`), and the declaration format (schema) is valid
+7. `declaration.schema.json` matches the model
 
-대상은 루트 `[tool.uv.workspace] members` 중 `[tool.uv.sources]`에서 `workspace = true`로 이은 배포뿐이다. 설치해 둔 예제·바깥 플러그인은 섞이지 않는다(결정성).
+The targets are only the distributions among the root `[tool.uv.workspace] members` that are linked with `workspace = true` in `[tool.uv.sources]`. Installed examples and outside plugins are not mixed in (determinism).
 
-## 단계적 적용(`--allow-missing`)
+## Gradual adoption (`--allow-missing`)
 
-"아직 채우지 않음"만 범주로 나눠 경고로 낮춘다. 형식 오류·기호 import 실패·짝 불일치·README 절 빠짐·생성 낡음·링크·공개 가능 린트·조각 검증은 늘 오류다.
+Only "not filled in yet" findings are split into categories and lowered to warnings. Format errors, symbol import failures, pair mismatches, missing README sections, stale generated output, links, public lint and snippet validation are always errors.
 
-| 범주 | 경고가 되는 것 |
+| Category | What becomes a warning |
 | --- | --- |
-| `declarations` | 선언 없는 그룹·포트(`group-undeclared`·`port-undeclared`), 예제가 가리키는데 선언 없는 지점(`example-point-undeclared`) |
-| `examples` | 예제가 없는 지점(`example-missing`), snippet 예제인데 절에 검증 조각이 없음(`snippet-missing`) |
-| `guides` | 가이드 파일·절·생성 구간 없음, 손글 없음, `extdocs:todo` 남음, `areas.yaml`의 영역 페이지 파일 없음(`area-page-missing`), 아직 쓰지 않은 영역 페이지로 가는 링크 |
+| `declarations` | Groups and ports without a declaration (`group-undeclared`, `port-undeclared`), and points an example refers to without a declaration (`example-point-undeclared`) |
+| `examples` | Points without an example (`example-missing`), and snippet examples whose section has no validated snippet (`snippet-missing`) |
+| `guides` | Missing guide files, sections or generated blocks, missing hand-written text, leftover `extdocs:todo`, missing area page files from `areas.yaml` (`area-page-missing`), and links to area pages that are not written yet |
 
-`--allow-missing`만 주면 세 범주 전부다. 선언·예제·가이드가 다 채워져 `poe check`는 이 옵션을 주지 않는다(8R.4b에서 뗐다). 새 영역을 단계적으로 채울 때 손으로 돌리는 용도로 남긴다.
+`--allow-missing` alone means all three categories. Declarations, examples and guides are all filled in, so `poe check` does not pass this option. It remains for manual runs while a new area is filled in gradually.
 
-## 문서 조각
+## Document snippets
 
-- `>>>`가 든 코드 펜스는 파일마다 같은 이름 공간으로 doctest한다(ELLIPSIS·NORMALIZE_WHITESPACE).
-- 데이터 조각은 펜스 정보 문자열로 모델을 지정한다: ` ```yaml extdocs:validate=agent_console_contracts.wiki:WikiRulesDefinition `. yaml·json·toml을 읽어 그 Pydantic 모델로 검증하고, 모르는 키를 보존하는 모델이면 남은 키(`model_extra`)도 실패로 본다.
+- Code fences that contain `>>>` are run as doctests with one namespace per file (ELLIPSIS, NORMALIZE_WHITESPACE).
+- Data snippets name their model in the fence info string: ` ```yaml extdocs:validate=agent_console_contracts.wiki:WikiRulesDefinition `. The yaml, json or toml is read and validated with that Pydantic model; for models that keep unknown keys, leftover keys (`model_extra`) also count as a failure.
 
-## 공개 가능 린트
+## Public lint
 
-규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다. 패키지·앱 README(`packages/**/README.md`·`apps/*/README.md`·`apps/web/src/**/README.md`)와 루트 공개 문서(`README.md`·`README.ko.md`·`USAGE.md`·`USAGE.ko.md`·`docs/DEVELOPMENT.md`·`docs/DEVELOPMENT.ko.md`·`CONTRIBUTING.md`·`CHANGELOG.md` — 없는 파일은 건너뛴다)는 정리가 끝나 `public_lint_globs`에 들어 있다(새 설계 id·작업 번호는 오류). 테스트 안내인 `apps/web/e2e/README.md`는 대상 밖이다.
+The rules are in `public_lint.yaml` (regular expressions, line by line). The targets are `public_lint_globs` (errors) and `docs --report` (`report_globs`, warnings only). Package and app READMEs (`packages/**/README.md`, `apps/*/README.md`, `apps/web/src/**/README.md`), package and app changelogs (`packages/**/CHANGELOG.md`, `apps/*/CHANGELOG.md`, `examples/**/CHANGELOG.md`), the tool READMEs (`scripts/**/README.md`) and the root public documents (`README.md`, `README.ko.md`, `USAGE.md`, `USAGE.ko.md`, `docs/DEVELOPMENT.md`, `docs/DEVELOPMENT.ko.md`, `CONTRIBUTING.md`, `CHANGELOG.md`; missing files are skipped) are in `public_lint_globs` (new design ids and task numbers are errors). The test guide `apps/web/e2e/README.md` is not a target.
 
-| 규칙 | 잡는 것 | 잡지 않는 것 |
+| Rule | Catches | Does not catch |
 | --- | --- | --- |
-| `internal-doc-link` | 링크 대상 안의 `specs/`·`docs/design/`, `./`·`../` 상대 경로로 이어지는 것, 맨 앞에서 시작하는 `specs/<...>.md`·`docs/design/` | 앞에 경로 조각이 붙은 API 경로(`GET /sdd/specs/{id}`), `.md`가 아닌 제품 폴더(`specs/demo`) |
-| `internal-config` | 아래 "제품 파일과 개발 설정" | 같은 표 |
-| `design-section` | `§` | — |
-| `task-number` | 작업 번호(`5.2R.3`, `8R.4a`) | — |
-| `design-id` | 확장 지점·결정·요구사항 id(`X22`, `(X25)`, `R8.6`, `R0·R10.4`, `K33-19`). 코드 펜스·인라인 코드 밖 글만 본다(`prose_only`) | 코드 안 예제 데이터(`` `R1` ``, `requirement_ids=["R1"]`), 이름 일부(`test_R1_x`, `k8s`, `R2D2`, `0X1F`) |
-| `local-path`·`email` | 로컬 경로, 이메일 | — |
-| `korean-prose` | 영어 문서(공개 가능 린트 대상 중 `*.ko.md`가 아닌 파일)의 코드 펜스·인라인 코드 밖 한글. 지금은 경고(`severity: warning`) — 문서 영어화가 끝나면 그 줄을 지워 오류로 바꾼다 | 코드 펜스·인라인 코드 안(doctest 출력의 한국어 원문 문구), 한국어 사본 `*.ko.md`, 맨 위 언어 전환 줄(`**English** \| [한국어](README.ko.md)` — `\|`로 나뉜 항목이 둘 이상이고 항목마다 굵은 이름이나 `.md` 링크 하나뿐인 줄) |
+| `internal-doc-link` | `specs/` and `docs/design/` inside a link target, the same following a `./` or `../` relative path, and `specs/<...>.md` or `docs/design/` at the start of a path | API paths with a path segment in front (`GET /sdd/specs/{id}`), and product folders that are not `.md` files (`specs/demo`) <!-- extdocs:allow internal-doc-link --> |
+| `internal-config` | See "Product files and development settings" below | Same |
+| `design-section` | `§` <!-- extdocs:allow design-section --> | — |
+| `task-number` | Task numbers (`5.2R.3`, `8R.4a`) <!-- extdocs:allow task-number --> | — |
+| `design-id` | Extension point, decision and requirement ids (`X22`, `(X25)`, `R8.6`, `R0·R10.4`, `K33-19`). Only text outside code fences and inline code is checked (`prose_only`) | Example data inside code (`` `R1` ``, `requirement_ids=["R1"]`), and parts of names (`test_R1_x`, `k8s`, `R2D2`, `0X1F`) |
+| `local-path`, `email` | Local paths, email addresses | — |
+| `korean-prose` | Korean text outside code fences and inline code in English documents (public lint targets that are not `*.ko.md`). An error, like the other rules | Inside code fences and inline code (Korean source messages in doctest output), Korean copies `*.ko.md`, and the language switch line at the top (`**English** \| [한국어](README.ko.md)`: a line with two or more items separated by `\|`, where each item is only a bold name or a single `.md` link) |
 
-**제품 파일과 개발 설정.** 앱은 Claude Code 파일(`~/.claude/projects`, `~/.claude/settings.json`, 프로젝트 `.claude/agents`, 내보낸 `CLAUDE.md`)을 읽고 쓴다. 이런 문장에서 파일 이름은 **데이터(제품 형식)**다. 반면 이 저장소를 만드는 개발용 `CLAUDE.md`·`.claude/agents`를 가리키는 문장은 공개 문서에 남으면 안 된다. 둘은 이렇게 가른다.
+**Product files and development settings.** The app reads and writes Claude Code files (`~/.claude/projects`, `~/.claude/settings.json`, a project's `.claude/agents`, an exported `CLAUDE.md`). In such sentences the file names are **data (product formats)**. Sentences that point to the development `CLAUDE.md` and `.claude/agents` used to build this repository, on the other hand, must not remain in public documents. The two are told apart like this. <!-- extdocs:allow internal-config -->
 
-- 개발 설정으로 본다(잡는다): 링크 대상(`[규칙](../../CLAUDE.md)`), "저장소(의) (루트) `CLAUDE.md`"처럼 이 저장소 것이라고 말함, 따옴표·백틱 없이 글 속에 맨이름으로 씀("규칙은 CLAUDE.md에 있다", 코드 주석 `# CLAUDE.md "고정·환경 메모"`).
-- 제품 형식으로 본다(통과): 백틱·따옴표로 감싼 파일 이름(`` `CLAUDE.md` ``, `'.claude/agents/pl.md'`), 경로 조각이 앞에 붙은 것(`~/.claude/…`, `${CLAUDE_CONFIG_DIR}/…`, `./.claude/hooks`, `*/.claude/rules`, `/srv/me/.claude/…`).
-- 그래서 공개 문서에서 제품 파일을 말할 때는 파일 이름을 백틱으로 감싼다(코드 블록 주석 안에서도).
+- Treated as development settings (caught): link targets (`[rules](../../CLAUDE.md)`), sentences that say the file belongs to this repository, such as "the repository (root) `CLAUDE.md`", and bare names in text without quotes or backticks ("the rules are in CLAUDE.md", a code comment `# CLAUDE.md "fixed and environment notes"`). <!-- extdocs:allow internal-config -->
+- Treated as product formats (pass): file names wrapped in backticks or quotes (`` `CLAUDE.md` ``, `'.claude/agents/pl.md'`), and names with a path segment in front (`~/.claude/…`, `${CLAUDE_CONFIG_DIR}/…`, `./.claude/hooks`, `*/.claude/rules`, `/srv/me/.claude/…`).
+- So when a public document talks about product files, wrap the file names in backticks (even inside code block comments).
 
-**줄 단위 허용.** 규칙이 맞지 않는 줄 하나는 그 줄에 `<!-- extdocs:allow <규칙 id> -->`를 달아 뺀다. id 여럿은 공백·쉼표로 잇는다(`<!-- extdocs:allow internal-config, task-number -->`). 표시는 그 줄의 그 규칙만 끈다. 규칙 자체를 고칠 수 있으면 표시보다 규칙을 고친다.
+**Allowing a single line.** To exempt one line where a rule does not fit, add `<!-- extdocs:allow <rule id> -->` to that line. Join several ids with spaces or commas (`<!-- extdocs:allow internal-config, task-number -->`). The marker turns off only that rule on that line. If the rule itself can be fixed, fix the rule instead of adding markers.
 
-**새 규칙.** `public_lint.yaml`에 `id`·`message`·`pattern`을 더한다. 오류 코드는 `public-<id>`다. 선택 칸:
+**New rules.** Add `id`, `message` and `pattern` to `public_lint.yaml`. The error code is `public-<id>`. Optional fields:
 
-| 칸 | 뜻 |
+| Field | Meaning |
 | --- | --- |
-| `prose_only: true` | 코드 펜스·인라인 코드 밖 글만 본다 |
-| `files` | 이 glob(저장소 상대, 문자열 하나 또는 목록)에 맞는 파일만 본다. 없으면 대상 파일 전부 |
-| `exclude_files` | 이 glob에 맞는 파일은 빼고 본다(예: `**/*.ko.md`) |
-| `skip_line` | 이 정규식에 맞는 줄은 이 규칙만 건너뛴다(예: 언어 전환 줄) |
-| `severity` | `error`(기본) 또는 `warning`(늘 경고 — 새 규칙을 단계적으로 켤 때). 다른 값은 데이터 형식 오류(종료 코드 2) |
+| `prose_only: true` | Checks only text outside code fences and inline code |
+| `files` | Checks only files that match these globs (relative to the repository, a single string or a list). Without it, all target files |
+| `exclude_files` | Skips files that match these globs (for example `**/*.ko.md`) |
+| `skip_line` | Lines that match this regular expression skip only this rule (for example the language switch line) |
+| `severity` | `error` (default) or `warning` (always a warning, for turning on a new rule gradually). Other values are a data format error (exit code 2) |
 
-## 데이터 파일
+## Data files
 
-| 파일 | 내용 |
+| File | Contents |
 | --- | --- |
-| `extdocs.yaml` | 경로·대상 glob(`glob_skip_dirs` 폴더와 숨김 폴더는 내려가지 않는다)·코드 패턴·계약 표 기호·시간 상한 |
-| `areas.yaml` | 영역(id·제목·파일) — 새 영역은 한 줄 |
-| `readme_sections.yaml` | 예제 README 필수 절과 별칭(영어 제목). `language_aliases`는 그 언어 예제에서만 인정하는 옛 제목(지금은 TS 예제의 한국어 제목, TS README 영어화 뒤 지운다) |
-| `public_lint.yaml` | 공개 가능 린트 규칙(정규식, `prose_only`·`files`·`exclude_files`·`skip_line`·`severity`) |
-| `templates/registration.yaml` | 등록 종류별 "등록"·"끄기·제거" 문장. 값이 목록이면 자리표시자가 다 채워지는 첫 문장(마지막은 무조건) — 빈 값으로 "끄는 키: ." 같은 문장이 나오지 않게 |
-| `templates/text.yaml` | 생성 파일 제목·머리말·표 머리·`extdocs:todo` 틀. 생성 문서는 영어 단일 문서라 영어로 쓴다. 제목을 바꾸면 그 앵커(예: `reference.md#entry-point-groups`)로 가는 링크도 고친다(`extdocs-check`의 `anchor-broken`이 잡는다) |
+| `extdocs.yaml` | Paths and target globs (globs do not descend into `glob_skip_dirs` folders or hidden folders), code patterns, contract table symbols and time limits |
+| `areas.yaml` | Areas (id, title, file); a new area is one line |
+| `readme_sections.yaml` | Required sections of example READMEs and their aliases (English headings). `language_aliases` are old headings accepted only in examples of that language (currently the Korean headings of TS examples, to be removed once the TS READMEs are in English) |
+| `public_lint.yaml` | Public lint rules (regular expressions, `prose_only`, `files`, `exclude_files`, `skip_line`, `severity`) |
+| `templates/registration.yaml` | "Registration" and "turning off or removing" sentences per registration kind. When a value is a list, the first sentence whose placeholders are all filled is used (the last one unconditionally), so sentences like "Keys that turn it off: ." are not produced from empty values |
+| `templates/text.yaml` | Titles, introductions, table headers and the `extdocs:todo` stub of generated files. The generated documents are English-only, so these are written in English. When a title changes, also fix links to its anchor (for example `reference.md#entry-point-groups`); `anchor-broken` in `extdocs-check` catches them |
 
-## TS 쪽(`pnpm extdocs-check`)과의 경계
+## Boundary with the TS side (`pnpm extdocs-check`)
 
-Python 쪽은 TS `package.json` 선언도 읽어 형식·slug·영역·예제 짝을 검사하고 문서를 생성한다(Node 없이 결정적). TS 쪽 도구는 다음을 맡는다.
+The Python side also reads the TS `package.json` declarations, checks their format, slugs, areas and example pairs, and generates the documents (deterministically, without Node). The TS tool covers the following.
 
-- 읽을 곳: `extdocs.yaml`의 `ts_package_globs`, 표 이름 `ts_table`(`agentConsole`), 키 `extensionPoints`
-- 형식: `declaration.schema.json`(최상위 = slug → 선언)
-- 기호: `interface`와 `registration.export`의 `@pkg#이름`이 그 패키지 `src/index.ts`에서 export되는지(TypeScript 컴파일러 API)
-- 출력: 사람이 읽는 줄 `오류 [code] where: message` + 선택 `--json`. Python 생성기는 이 JSON에 기대지 않는다
+- Where to read: `ts_package_globs` in `extdocs.yaml`, the table name `ts_table` (`agentConsole`) and the key `extensionPoints`
+- Format: `declaration.schema.json` (top level = slug to declaration)
+- Symbols: whether the `@pkg#name` of `interface` and `registration.export` is exported from that package's `src/index.ts` (TypeScript compiler API)
+- Output: human-readable lines `오류 [code] where: message` plus optional `--json`. The Python generator does not depend on this JSON
 
-## 테스트
+## Tests
 
 ```sh
 uv run poe extdocs-test
 ```
 
-임시 저장소(루트 pyproject + 멤버 패키지 + 예제 + 문서)를 만들어 규칙마다 실패·통과를 본다. 저장소 실제 서버 모듈 서술자 대조 시간도 확인한다.
+The tests build temporary repositories (a root pyproject plus member packages, examples and documents) and check failure and success for each rule. They also check the time it takes to check the descriptors of the repository's real server modules.

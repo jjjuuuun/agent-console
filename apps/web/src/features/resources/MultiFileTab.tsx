@@ -8,6 +8,7 @@ import { isImeKeyEvent } from "../../lib/ime";
 import { LazyTextEditor } from "../library";
 import { checkPath, decodeUtf8, dirOf, entryChanged, entrySize, languageForFile, removeEntries, renameEntries, sortEntries, totalSize, upsertEntry, type FileEntry } from "./fileTreeLogic";
 import { useResourceMessages } from "./messages";
+import { ResourceToast } from "./ResourceToast";
 import { MAX_EDIT_BYTES } from "./resourceLogic";
 
 export interface MultiFileTabProps {
@@ -102,7 +103,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
     if (t0 === null) return;
     const entry = files.find((f) => f.path === t0.path);
     if (t0.kind === "file" && entry?.text === null) {
-      toast({ tone: "info", text: t.files.binaryNoRename });
+      toast({ tone: "info", text: <ResourceToast render={(r) => r.files.binaryNoRename} /> });
       return;
     }
     beginName({ kind: "rename", from: t0.path, isFolder: t0.kind === "folder" }, t0.path);
@@ -126,8 +127,8 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
     setTarget(null);
     toast({
       tone: "info",
-      text: removed === 1 ? t.files.removed(path) : t.files.removedFolder(removed),
-      action: { label: t.files.undo, onClick: () => onChange(sortEntries([...filesRef.current, ...gone.filter((g) => !filesRef.current.some((f) => f.path === g.path))])) },
+      text: <ResourceToast render={(r) => (removed === 1 ? r.files.removed(path) : r.files.removedFolder(removed))} />,
+      action: { label: <ResourceToast render={(r) => r.files.undo} />, onClick: () => onChange(sortEntries([...filesRef.current, ...gone.filter((g) => !filesRef.current.some((f) => f.path === g.path))])) },
     });
   };
 
@@ -157,7 +158,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
     onChange(sortEntries(next));
     if (selected !== null) setSelected(renameEntries([{ path: selected, text: "", size: 0 }], nameMode.from, value).files[0]!.path);
     setNameMode(null);
-    if (nameMode.isFolder) toast({ tone: "info", text: t.files.moved(moved), action: { label: t.files.undo, onClick: () => onChange(before) } });
+    if (nameMode.isFolder) toast({ tone: "info", text: <ResourceToast render={(r) => r.files.moved(moved)} />, action: { label: <ResourceToast render={(r) => r.files.undo} />, onClick: () => onChange(before) } });
     setTimeout(focusTree, 0);
   };
 
@@ -188,7 +189,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
     }
     onChange(sortEntries(next));
     if (last !== null) setSelected(last);
-    if (skipped.length > 0) toast({ tone: "danger", text: t.files.uploadSkipped(skipped) });
+    if (skipped.length > 0) toast({ tone: "danger", text: <ResourceToast render={(r) => r.files.uploadSkipped(skipped)} /> });
   };
 
   const onTreeKeyDown = (event: KeyboardEvent) => {
@@ -200,7 +201,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
       if (tg !== null) setTarget(tg);
       if (tg !== null) {
         const entry = files.find((f) => f.path === tg.path);
-        if (tg.kind === "file" && entry?.text === null) toast({ tone: "info", text: t.files.binaryNoRename });
+        if (tg.kind === "file" && entry?.text === null) toast({ tone: "info", text: <ResourceToast render={(r) => r.files.binaryNoRename} /> });
         else beginName({ kind: "rename", from: tg.path, isFolder: tg.kind === "folder" }, tg.path);
       }
     } else if (event.key === "Delete") {

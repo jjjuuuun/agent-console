@@ -37,6 +37,7 @@ import { useMaybeT } from "../../i18n/useMaybeT";
 import { useUiLibMessages } from "../../i18n/useViewLibMessages";
 import { useWikiViewMessages } from "./useViewMessages";
 import { useFormat } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const P = WIKI_PARAMS;
 
@@ -145,9 +146,9 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
     try {
       const r = await space.client.scanWiki(wikiId);
       const n = (r.external ?? []).length + (r.imported ?? []).length + (r.deleted ?? []).length;
-      toast({ tone: "info", text: n > 0 ? t("rescanDone", { count: n }) : t("rescanNone"), durationMs: 4000 });
+      toast({ tone: "info", text: <WikiToast render={(t) => (n > 0 ? t("rescanDone", { count: n }) : t("rescanNone"))} />, durationMs: 4000 });
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("problem.generic") });
+      toast({ tone: "danger", text: <WikiToast render={(t) => (e instanceof Error && e.message !== "" ? e.message : t("problem.generic"))} /> });
     }
     await invalidate();
   };
@@ -178,7 +179,7 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
   const others = (listQ.data ?? []).filter((w) => w.id !== wikiId);
   const copyDirectory = () => {
     void navigator.clipboard?.writeText(directory);
-    toast({ tone: "success", text: t("copied") });
+    toast({ tone: "success", text: <WikiToast render={(t) => t("copied")} /> });
   };
   const currentSummary: WikiSummary = summary ?? { id: wikiId, name };
 

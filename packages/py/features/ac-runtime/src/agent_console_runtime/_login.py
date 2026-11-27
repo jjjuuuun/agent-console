@@ -38,11 +38,14 @@ from agent_console_contracts import (
     BackendLoginSession,
     BackendLogoutResult,
     FixAction,
+    TextTemplate,
+    render_text_parts,
 )
 
 from ._interfaces import ExecutionBackend
 from ._readiness import UnknownBackendError
 from ._secrets import REDACTED
+from ._text_templates import compact_number, matching_text_templates
 
 _log = logging.getLogger("agent_console_runtime.login")
 
@@ -90,16 +93,21 @@ class LoginReasons:
 
 @dataclass(frozen=True)
 class LoginTexts:
-    """서비스가 만드는 문구(데이터). 앱이 바꿔 넣을 수 있다."""
+    """서비스가 만드는 문구(데이터). 앱이 바꿔 넣을 수 있다.
+
+    값이 섞인 문구(``expired``의 ``{minutes}``, ``logout_timeout``의 ``{seconds}``)는 응답
+    ``text_templates``에 원문 틀 + 값으로도 실린다. 바꾼 문구는 화면이 번역하지 않는다(그 틀을 키로
+    한 묶음 항목을 ``catalog_dirs``에 둔다).
+    """
 
     starting: str = "로그인을 준비하고 있습니다."
     cancelled: str = "취소했습니다. 로그인 정보는 바뀌지 않았습니다."
     heartbeat: str = "화면과 연결이 끊겨 로그인을 취소했습니다. 로그인 정보는 바뀌지 않았습니다."
     shutdown: str = "서버가 종료되어 로그인을 취소했습니다."
-    expired: str = "시간({minutes:g}분) 안에 끝나지 않아 로그인을 멈췄습니다. 다시 시도해 주세요."
+    expired: str = "시간({minutes}분) 안에 끝나지 않아 로그인을 멈췄습니다. 다시 시도해 주세요."
     start_failed: str = "로그인을 시작하지 못했습니다."
     error: str = "로그인 중 오류가 났습니다."
-    logout_timeout: str = "로그아웃이 {seconds:g}초 안에 끝나지 않았습니다."
+    logout_timeout: str = "로그아웃이 {seconds}초 안에 끝나지 않았습니다."
     logout_error: str = "로그아웃 중 오류가 났습니다."
 
 
@@ -140,6 +148,9 @@ class LoginProgress:
         reason: 실패 사유 코드.
         details: 접힌 상세(비밀 값 없음).
         fixes: 해결 버튼.
+        text_templates: 값이 섞인 글자 칸의 원문 틀 + 값(세션 응답 기준 JSON Pointer, 예:
+            ``/message``·``/warnings/0`` → 문장 틀 목록). 서비스가 칸 값과 맞는 항목만 응답에 싣고
+            칸과 같이 가린다. 고정 문구 칸은 항목이 없다.
     """
 
     phase: str
@@ -153,6 +164,7 @@ class LoginProgress:
     reason: str | None = None
     details: Mapping[str, Any] = field(default_factory=dict)
     fixes: Sequence[FixAction] = ()
+    text_templates: Mapping[str, Sequence[TextTemplate]] = field(default_factory=dict)
 
 
 @runtime_checkable
@@ -445,6 +457,8 @@ class BackendLoginService:
         tick_s: 감시 간격(테스트에서 줄인다).
         id_factory: 세션 id 생성.
         texts: 서비스 문구.
+        on_account_change: 로그인 세션이 끝나거나(어떤 끝 단계든) 로그아웃이 돌아온 뒤 백엔드
+            id로 부른다(예: 모델 목록 캐시 비우기). 예외는 로그만 남기고 무시한다. None = 없음.
     """
 
     def __init__(
@@ -465,6 +479,7 @@ class BackendLoginService:
         tick_s: float = 0.5,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex,
         texts: LoginTexts | None = None,
+        on_account_change: Callable[[str], None] | None = None,
     ) -> None:
         if min(timeout_default_s, timeout_max_s, heartbeat_s, logout_timeout_s, tick_s) <= 0:
             raise ValueError("시간 값은 0보다 커야 합니다")
@@ -485,6 +500,7 @@ class BackendLoginService:
         self._tick = tick_s
         self._new_id = id_factory
         self._texts = texts or LoginTexts()
+        self._on_account_change = on_account_change
         self._sessions: dict[str, _Session] = {}
         self._active: _Session | None = None
         self._lock = asyncio.Lock()
@@ -551,6 +567,9 @@ class BackendLoginService:
             expires_at=rec.expires_at,
             finished_at=self._clock() if progress.phase in TERMINAL_PHASES else None,
         )
+        if progress.text_templates:
+            matched = matching_text_templates(raw.model_dump(mode="json"), progress.text_templates)
+            raw = raw.model_copy(update={"text_templates": matched})
         return self._masked(rec, raw)
 
     def _masked(self, rec: _Session, session: BackendLoginSession) -> BackendLoginSession:
@@ -614,7 +633,20 @@ class BackendLoginService:
             rec.final.reason,
             max(0, round((rec.finished_mono - rec.started_mono) * 1000)),
         )
+        self._account_changed(rec.backend_id)
         return rec.final
+
+    def _account_changed(self, backend_id: str) -> None:
+        if self._on_account_change is None:
+            return
+        try:
+            self._on_account_change(backend_id)
+        except Exception as exc:  # 알림 실패가 로그인 결과를 바꾸지 않는다
+            _log.warning(
+                "Login account change listener failed: backend=%s error=%s",
+                backend_id,
+                type(exc).__name__,
+            )
 
     # ------------------------------------------------------------ 로그인
 
@@ -740,7 +772,10 @@ class BackendLoginService:
                 await self._stop(
                     rec,
                     "expired",
-                    self._texts.expired.format(minutes=rec.timeout_s / 60),
+                    TextTemplate(
+                        template=self._texts.expired,
+                        params={"minutes": compact_number(rec.timeout_s / 60)},
+                    ),
                     LoginReasons.TIMEOUT,
                     details={"timeout_s": rec.timeout_s},
                 )
@@ -753,12 +788,15 @@ class BackendLoginService:
         self,
         rec: _Session,
         phase: str,
-        message: str,
+        message: str | TextTemplate,
         reason: str | None,
         *,
         details: Mapping[str, Any] | None = None,
     ) -> BackendLoginSession:
-        """드라이버를 멈추고 서비스 단계로 끝낸다(화면 줄은 마지막 상태에서 가져온다)."""
+        """드라이버를 멈추고 서비스 단계로 끝낸다(화면 줄·주의 문장은 마지막 상태에서 가져온다).
+
+        ``message``가 틀이면 채운 문장을 싣고 ``/message`` 틀로도 싣는다.
+        """
         if rec.final is not None:
             return rec.final
         last = LoginProgress(phase=phase)
@@ -776,16 +814,26 @@ class BackendLoginService:
                     rec.session_id,
                     type(exc).__name__,
                 )
+        # 주의 문장은 그대로 옮기므로 그 틀도 옮긴다. 문장은 서비스 것으로 바뀐다.
+        templates: dict[str, Sequence[TextTemplate]] = {
+            k: v for k, v in last.text_templates.items() if k.startswith("/warnings/")
+        }
+        if isinstance(message, TextTemplate):
+            templates["/message"] = [message]
+            text = render_text_parts([message])
+        else:
+            text = message
         return self._finish(
             rec,
             LoginProgress(
                 phase=phase,
-                message=message,
+                message=text,
                 open_url=None,
                 screen=last.screen,
                 warnings=last.warnings,
                 reason=reason,
                 details=dict(details or {}),
+                text_templates=templates,
             ),
         )
 
@@ -903,12 +951,19 @@ class BackendLoginService:
                 backend.logout(self._context(backend_id), method_id), self._logout_timeout
             )
         except TimeoutError:
+            parts = [
+                TextTemplate(
+                    template=self._texts.logout_timeout,
+                    params={"seconds": compact_number(self._logout_timeout)},
+                )
+            ]
             result = BackendLogoutResult(
                 backend_id=backend_id,
                 ok=False,
                 reason=LoginReasons.TIMEOUT,
-                message=self._texts.logout_timeout.format(seconds=self._logout_timeout),
+                message=render_text_parts(parts),
                 finished_at=self._clock(),
+                text_templates={"/message": parts},
             )
         except Exception as exc:
             result = BackendLogoutResult(
@@ -923,6 +978,10 @@ class BackendLoginService:
             )
         try:
             dumped = result.model_copy(update={"backend_id": backend_id}).model_dump(mode="json")
+            dumped["text_templates"] = {  # 칸 값과 맞지 않는 틀은 빼고 같이 가린다
+                pointer: [part.model_dump(mode="json") for part in parts]
+                for pointer, parts in matching_text_templates(dumped, result.text_templates).items()
+            }
             result = BackendLogoutResult.model_validate(
                 {**self._redact(dumped), "backend_id": backend_id}
             )
@@ -941,6 +1000,7 @@ class BackendLoginService:
             result.reason,
             max(0, round((self._mono() - started) * 1000)),
         )
+        self._account_changed(backend_id)
         return result
 
 

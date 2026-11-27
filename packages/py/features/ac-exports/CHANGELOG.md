@@ -1,12 +1,18 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-exports`, so the web can show the Claude Code exporter and the `export.*` issues in English (data only, no API change). Internal log messages are now in English.
-- FU.19: `ExportCatalog.content(kind, id)` — 한 파일 본문(문서의 본문 필드가 파일 하나를 가리키는 종류)을 읽는 길. `files`는 여러 파일 본문만이다. 카탈로그를 직접 만드는 앱은 이 메서드를 더해야 한다(없는 본문은 None). `MemoryCatalog.add(content=)`·`contents`. `claude-dir`은 리소스 본문을 `files`에서 못 찾으면 `content`에서 읽는다.
-- 5R.15: `claude-dir`이 쓰는 정의 중 팀 구성(중첩 팀의 자식)을 따라가 그 구성원도 내보낸다(주 노드는 고른
-  팀 구성만, 순환은 한 번씩).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-exports`, so the web app can show the Claude Code exporter and the `export.*`
+  issues in English (data only, no API change). Internal log messages are now in English.
+- `ExportCatalog.content(kind, id)`: a way to read single-file content (kinds whose content field points to one file).
+  `files` now holds only multi-file content. Apps that build their own catalog must add this method (missing content
+  is None). `MemoryCatalog.add(content=)` and `contents`. `claude-dir` reads resource content from `content` when it
+  is not found in `files`.
+- `claude-dir` follows the teams (children of nested teams) among the definitions it writes and exports their members
+  too (the main node is only the selected team, and cycles are visited once).
 
 ## 0.1.0
 
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.

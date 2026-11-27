@@ -1,13 +1,37 @@
-# 변경 기록: @agent-console/chat
+# Changelog: @agent-console/chat
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
-## [미출시]
-- Locale (0.2.1): `MessageList` and `TurnView` take an optional `locale` (BCP 47, normally the display language) for the turn time tooltip and the token count; the default is `"en-US"` instead of the host locale.
-- 문구 데이터(0.2.0, I.9b): 기본 문구를 `src/locales/ko.json`(`chat`·`interaction`·`composer`·`markdown`)으로 옮기고(`defaultChatMessages`·`defaultInteractionMessages`·`defaultComposerMessages`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`, `ChatLocale` 타입 공개. `Composer`·`Markdown`·`formatSeconds` 안의 하드코딩 한글 기본값을 ko 묶음으로 옮겼다(동작·기본 문구 같음). 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가.
-- 되묻기 답 입력칸 하나로(5.7R.40, screen-chat §10): `resolveAnswerSurface`·`answerViaOf`·`answerCardIds` 공개. `InteractionCard`에 `answerVia`·`answerPaused`·`onDraftChange`, `RendererProps`에 `readOnlyInput`·`onDraftChange`(선택 렌더러·내장 폴백이 따름). `Composer` 답변 모드 띠를 두 칸 토글로(`Alt+Shift+A`, `aria-describedby`, 전환 낭독), `placeholderHint` 추가, `pendingHint`는 호환용(deprecated). 문구 키: `ComposerMessages`의 `answerPlaceholder`·`answer`(문자열)·`answeringTo`·`switchToMessage`·`messageMode`·`switchToAnswer`를 `answer.*` 묶음으로 옮기고 지움, `InteractionMessages.answer` 추가. Ctrl+Shift+Enter는 `onSendAsMessage`만 부른다(없으면 아무 일도 없음).
-- 채팅 턴 재디자인(5.2R.21, ux-overhaul §7): 메시지 영역(`MessageList`·`TurnView`·`ReplyGroup`·`ProgressStrip`)의 인라인 스타일을 `styles.css`의 `ac-chat-*` 클래스(토큰만 사용)로 옮김. 내 메시지는 오른쪽 말풍선("나" 라벨 없음, 시각·복사·다시 보내기 아이콘 단추, 호버/포커스에서 표시). 진행 정보는 한 줄 요약("지금: …") + 펼치면 트리, 소요 1초 미만은 숨김(`showDuration` 공개). 자식 실행 링크는 아이콘 하나, 답변 머리의 실행 상세 링크 제거(푸터에 턴당 하나), 최종 답변은 카드 없음. 턴 `tabindex=0`·`↑↓`/`C`/`R`/`Alt+Enter`. `TurnView`·`MessageList`에 `formatTime`, 문구 `yourMessage`·`copyReply`·`progressNow`·`progressSummaryDuration`·`childOpenTip` 추가, `progressSummary`는 `{duration}`을 더 이상 쓰지 않음. 상호작용 카드·입력창의 인라인 스타일은 이번에 옮기지 않음.
-- 진행 줄 중첩 표시(5R.16): `ProgressStep`에 `indent`(정수)·`badge`·`iterationLabel`·`callLabel`·`tone`·`child`·`children`·`hint` 추가, 칩 접기·펴기(`expandedStepKeys`/`onStepToggle`), 자식 실행 링크(`onOpenChild`/`onOpenChildRun`), 후손까지 센 단계 수·8개 초과 요약. `flattenSteps`·`visibleSteps`·`currentStepLabel` 공개. 기존 단계(`indent` 0|1, 새 필드 없음)의 표시는 같다.
+## [Unreleased]
+- Locale (0.2.1): `MessageList` and `TurnView` take an optional `locale` (BCP 47, normally the display language) for
+  the turn time tooltip and the token count; the default is `"en-US"` instead of the host locale.
+- Message data (0.2.0): moved the default messages to `src/locales/ko.json` (`chat`, `interaction`, `composer`,
+  `markdown`; `defaultChatMessages`, `defaultInteractionMessages` and `defaultComposerMessages` are still Korean) and
+  added `en.json`. Subpath exports `./locales/ko` and `./locales/en`, and the public `ChatLocale` type. Moved the
+  hardcoded Korean defaults inside `Composer`, `Markdown` and `formatSeconds` into the ko bundle (same behavior and
+  default messages). Added tests that check keys and placeholders match and that the source has no Korean strings.
+- A single answer box for questions: `resolveAnswerSurface`, `answerViaOf` and `answerCardIds` are public.
+  `InteractionCard` has `answerVia`, `answerPaused` and `onDraftChange`, and `RendererProps` has `readOnlyInput` and
+  `onDraftChange` (optional renderers and the built-in fallback follow them). The `Composer` answer mode banner is a
+  two-way toggle (`Alt+Shift+A`, `aria-describedby`, announced on switch), `placeholderHint` was added, and
+  `pendingHint` is kept for compatibility (deprecated). Message keys: `answerPlaceholder`, `answer` (string),
+  `answeringTo`, `switchToMessage`, `messageMode` and `switchToAnswer` of `ComposerMessages` moved to the `answer.*`
+  group and were removed, and `InteractionMessages.answer` was added. Ctrl+Shift+Enter only calls `onSendAsMessage`
+  (nothing happens without it).
+- Chat turn redesign: inline styles of the message area (`MessageList`, `TurnView`, `ReplyGroup`, `ProgressStrip`)
+  moved to `ac-chat-*` classes in `styles.css` (tokens only). Your messages are right-aligned bubbles (no "me" label;
+  time, copy and resend icon buttons shown on hover or focus). Progress is a one-line summary of the current step plus
+  a tree when expanded, and durations under one second are hidden (`showDuration` is public). The child run link is a
+  single icon, the run detail link in the reply header was removed (one per turn in the footer), and the final reply
+  has no card. Turns have `tabindex=0` and `↑↓`/`C`/`R`/`Alt+Enter`. Added `formatTime` to `TurnView` and
+  `MessageList` and the messages `yourMessage`, `copyReply`, `progressNow`, `progressSummaryDuration` and
+  `childOpenTip`; `progressSummary` no longer uses `{duration}`. The inline styles of interaction cards and the message
+  box were not moved in this change.
+- Nested progress lines: `ProgressStep` gained `indent` (an integer), `badge`, `iterationLabel`, `callLabel`, `tone`,
+  `child`, `children` and `hint`, chip expand and collapse (`expandedStepKeys`/`onStepToggle`), child run links
+  (`onOpenChild`/`onOpenChildRun`), and step counts including descendants with a summary beyond eight. `flattenSteps`,
+  `visibleSteps` and `currentStepLabel` are public. Existing steps (`indent` 0|1, no new fields) look the same.
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

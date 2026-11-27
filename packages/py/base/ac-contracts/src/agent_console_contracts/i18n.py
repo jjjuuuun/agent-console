@@ -1,4 +1,5 @@
-"""화면 문구 묶음(다국어) 계약(design §I18N.3·§I18N.7, 0.16.0에서 1.0.0).
+"""화면 문구 묶음(다국어) 계약(design §I18N.3·§I18N.7, 0.16.0에서 1.0.0, 0.16.1에서 1.1.0 —
+`I18nInfo.source_language`, §I18N.13 I-18).
 
 서버(`mod-i18n`)는 패키지 묶음(entry point `agent_console.message_catalogs`)과 사용자 폴더 묶음을
 언어별로 병합해 준다. 서버는 요청 언어를 모르고 응답을 번역하지 않는다 — 웹이 서버 원문(T)·코드(C)를
@@ -57,6 +58,14 @@ class I18nInfo(ContractModel):
             "고른 언어 묶음에 없는 문구를 찾을 대체 언어(설정 `mod-i18n.fallback_language`). "
             "`LanguageInfo.complete`의 기준이다."
         )
+    )
+    source_language: str | None = Field(
+        default=None,
+        description=(
+            "서버 원문 문구의 언어(설정 `mod-i18n.source_language`, 1.1.0). 화면은 원문 키 "
+            "조회를 이 언어에서 멈춘다(그 언어 묶음까지 본다). null = 모름(옛 서버) — 대체 언어 "
+            "사슬 전체를 본다."
+        ),
     )
 
 

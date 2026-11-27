@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.16.0"
+CONTRACTS_VERSION: Final = "0.16.1"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -40,12 +40,12 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "2.1.0",
+    "common": "2.2.0",
     "resources": "1.1.0",
-    "logs": "2.0.0",
-    "i18n": "1.0.0",
+    "logs": "2.1.0",
+    "i18n": "1.1.0",
     "definitions": "3.0.0",
-    "runs": "1.9.0",
+    "runs": "1.10.0",
     "usage": "1.1.0",
     "projects": "4.1.0",
     "chat": "1.4.0",
@@ -138,7 +138,16 @@ Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMB
 위젯 이름 `language`), `projects` 4.1.0(`CopyKindInfo.reserved_ids` — 종류별 id 예약어, 정의 종류
 데이터 `DefinitionKind.reserved_ids`. `CopyKindInfo.open_role` — 항목을 여는 웹 화면 역할),
 `sdd` 1.4.0(`SddInfo.reserved_template_ids` — 문서 틀 id 예약어, 서버 경로 어휘).
-사내 의존 범위 `>=0.16,<0.17`(TS `^0.16.0`)."""
+사내 의존 범위 `>=0.16,<0.17`(TS `^0.16.0`).
+0.16.1(더하기만 — design §1.1-MB MD-8): `runs` 1.10.0(`ModelInfo.sources` — 설정·조회 출처,
+`BackendCapabilities.model_discovery` — 계정 모델 조회 능력, `BackendModelCatalog`·
+`ModelDiscoveryInfo` — `GET /backends/{id}/model-catalog`), `common` 2.2.0(문서 상수
+`KnownIssueCodes.BACKEND_MODEL_DISCOVERY_FAILED`, `TextTemplate`·`render_text_template` — 값이 섞인
+서버 문장의 원문 틀 + 값, design §I18N.13 I-15·I-16), `runs` 1.10.0에 `text_templates`
+(`BackendReadiness`·`BackendProbeResult`·`BackendLoginSession`·`BackendLogoutResult`), `i18n` 1.1.0
+(`I18nInfo.source_language` — 서버 원문 언어, I-18), `logs` 2.1.0(`LogEvent.text_templates` —
+값이 섞인 로그 제목의 원문 틀 + 값). 새 필드를 쓰는 소비자만 하한을 `>=0.16.1`
+(TS `^0.16.1`)로 올린다."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -555,6 +564,12 @@ class KnownIssueCodes:
     BACKEND_UNRESOLVED: Final = "backend.unresolved"
     """백엔드를 쓰는 노드의 실행 백엔드가 층 어디에도 정해지지 않았다(노드 이슈로도, 실행 거부 오류
     코드 `ErrorCodes.BACKEND_UNRESOLVED`로도 쓴다). `fix`로 [노드에서 지정]·[기본값으로 지정]."""
+    BACKEND_MODEL_DISCOVERY_FAILED: Final = "backend.model_discovery_failed"
+    """(0.16.1, design §1.1-MB MD-7) 실행 백엔드 계정의 모델 목록을 가져오지 못했다(warning,
+    `ModelDiscoveryInfo.issues`). 모델 칸은 설치자 설정 목록과 직접 입력으로 그대로 쓴다.
+    `details.backend_id` = 백엔드 id, `details.reason` = 사유(열린 어휘, 예: `auth_missing`·
+    `auth_failed`·`subscription_disabled`·`network`·`timeout`·`invalid_response`·`cli_missing`·
+    `cli_no_models`·`error`)."""
     PROJECT_UNKNOWN: Final = "project.unknown"
     """정의·실행이 없는 프로젝트 id를 가리킨다(info, 공용·프로젝트 층 없음으로 취급)."""
     PROJECT_REFERENCES_UNAVAILABLE: Final = "project.references_unavailable"

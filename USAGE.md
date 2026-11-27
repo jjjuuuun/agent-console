@@ -1,53 +1,66 @@
-# 사용 안내
+# User guide
 
-설치와 첫 실행은 [README](README.md)를 따릅니다. 이 문서는 실제로 쓰는 데 필요한 것만 다룹니다.
+**English** | [한국어](USAGE.ko.md)
 
-## 목차
+Installation and the first start are covered in the [README](README.md). This guide covers what you need to use the
+app day to day.
 
-1. [처음 설정: 실제 Claude 연결](#1-처음-설정-실제-claude-연결)
-2. [기능별 사용법](#2-기능별-사용법)
-   - [한눈에 보기](#한눈에-보기)
-   - [에이전트](#에이전트)
-   - [리소스](#리소스)
-   - [팀 구성](#팀-구성)
-   - [채팅](#채팅)
-   - [실행 기록](#실행-기록)
-   - [사용량](#사용량)
-   - [로그](#로그)
-   - [프로젝트](#프로젝트)
-   - [설정과 기능 모듈](#설정과-기능-모듈)
-   - [가져오기·내보내기](#가져오기내보내기)
-3. [서버 운용](#3-서버-운용)
-4. [개발자용](#4-개발자용)
+## Contents
 
-## 1. 처음 설정: 실제 Claude 연결
+1. [First setup: connecting to Claude](#1-first-setup-connecting-to-claude)
+2. [Using each feature](#2-using-each-feature)
+   - [At a glance](#at-a-glance)
+   - [Language](#language)
+   - [Projects](#projects)
+   - [Agents](#agents)
+   - [Resources](#resources)
+   - [Teams](#teams)
+   - [Chat](#chat)
+   - [Runs](#runs)
+   - [Memory](#memory)
+   - [Wiki](#wiki)
+   - [Specs and templates](#specs-and-templates)
+   - [Usage](#usage)
+   - [Logs](#logs)
+   - [Settings and feature modules](#settings-and-feature-modules)
+   - [Import and export](#import-and-export)
+3. [Running the server](#3-running-the-server)
+4. [For developers](#4-for-developers)
 
-에이전트는 **Claude Agent SDK** 실행 백엔드(`claude-agent-sdk`)로 Claude를 호출합니다.
-**기본 인증은 구독 로그인(Claude Code 로그인)입니다. API 키도 선택할 수 있습니다.**
+## 1. First setup: connecting to Claude
 
-### 구독 로그인(기본)
+Agents call Claude through the **Claude Agent SDK** execution backend (`claude-agent-sdk`).
+**By default the backend signs in with your Claude subscription (the Claude Code sign-in). You can use an API key
+instead.**
 
-**로그인은 앱 하나에 하나입니다.** 자격은 작업 공간(`--workspace`) 안의 앱 전용 폴더 한 곳(기본 `<작업 공간>/.state/claude`)에
-두고 모든 프로젝트가 함께 씁니다. 프로젝트 폴더에는 아무것도 쓰지 않습니다. 앱은 이 폴더를 `CLAUDE_CONFIG_DIR`로 실행·연결
-테스트·로그인에 함께 씁니다. 자격이 있으면 자동으로 쓰고("구독 준비됨"), 없으면 상태 카드에 "로그인 필요"와 자격 위치가
-보입니다. **`~/.claude`의 로그인으로 대신하지 않습니다**(터미널의 Claude Code 로그인과 따로입니다). 폴더는 700, 파일은 600으로
-만들고, 작업 공간 `.gitignore`에 `.state/`를 더합니다(파일이 없으면 만들고, 있으면 그대로 둡니다). 위치는
-`modules.options.mod-runs.backends.claude-agent-sdk.auth_dir.config_dir`로 바꿉니다(`null`이면 서버 환경을 따릅니다).
+### Subscription sign-in (default)
 
-- **앱 화면에서(기본 켜짐)**: **설정 › 에이전트 기본값**의 **백엔드 인증·실행 준비** 카드에서 **[구독으로 로그인]**을 누릅니다.
-  서버가 `claude auth login`을 띄워 로그인 주소와 코드 입력을 화면으로 중계하고, Claude Code가 자격을 위 앱 전용 폴더에
-  씁니다. **앱은 토큰을 받거나 저장하지 않습니다.**
-- **터미널에서**: 같은 폴더를 지정합니다. `CLAUDE_CONFIG_DIR=<작업 공간>/.state/claude claude auth login`
+**There is one sign-in per app.** The credentials are kept in one app-only folder inside the workspace (`--workspace`),
+by default `<workspace>/.state/claude`, and every project shares them. Nothing is written to project folders for this.
+The app passes this folder as `CLAUDE_CONFIG_DIR` to runs, connection tests and sign-in. When credentials are there they
+are used automatically. When they are missing, the status card says that sign-in is required and shows where the
+credentials are expected. **The sign-in in `~/.claude` is not used as a substitute** (it is separate from the Claude
+Code sign-in in your terminal). The folder is created with mode 700 and the files with 600, and `.state/` is added to
+the workspace `.gitignore` (the file is created if it does not exist and left alone otherwise). To change the location,
+set `modules.options.mod-runs.backends.claude-agent-sdk.auth_dir.config_dir` (`null` follows the server environment).
 
-이전 버전에서 `<작업 폴더>/.agent-console/claude`에 로그인했다면 처음 한 번 "로그인 필요"가 보이므로 한 번 다시 로그인합니다
-(옛 폴더는 옮기거나 지우지 않으니 필요 없으면 직접 지웁니다). `auth`를 아예 적지 않은 에이전트는 서버 환경의
-`ANTHROPIC_API_KEY`가 있을 때 그것을 씁니다.
+- **From the app (on by default)**: open the **Backend connection** dialog from the sidebar
+  ([shortcut below](#backend-connection-shortcut)), or go to *Settings › Agent defaults*, and select
+  **[Sign in with subscription]** on the **Backend sign-in and readiness** card. The server starts `claude auth login` and relays the sign-in address and the
+  code entry to the screen (*Sign in in the browser* → *Paste the code (if the browser shows one)* → *Confirm*). Claude
+  Code writes the credentials to the app-only folder above. **The app never receives or stores the token.**
+- **From a terminal**: point to the same folder. `CLAUDE_CONFIG_DIR=<workspace>/.state/claude claude auth login`
 
-이 버튼을 쓰지 않으려면 `agent-console.yaml`에서 `modules.options.mod-runs.backend_login.enabled: false`로 끕니다.
+If you signed in with an earlier version that kept credentials elsewhere, the card asks you to sign in once more. The
+old folder is not moved or deleted, so remove it yourself if you no longer need it. An agent with no `auth` setting at
+all uses `ANTHROPIC_API_KEY` from the server environment when it is set.
 
-구독 자격으로 Agent SDK를 쓰는 것이 이용 약관상 허용되는지는 확인되지 않았습니다(Anthropic 문서는 Agent SDK 기반 앱에
-API 키 사용을 안내합니다). **약관을 직접 확인하고 본인 책임으로 쓰세요.** 구독 방식으로 실행할 때마다 경고 로그가 남고,
-설정 검증에도 경고가 표시됩니다. 구독 방식을 아예 막으려면 `agent-console.yaml`에서 끕니다.
+To hide this button, set `modules.options.mod-runs.backend_login.enabled: false` in `agent-console.yaml`.
+
+It has not been confirmed whether the terms of service allow using subscription credentials with the Agent SDK
+(Anthropic's documentation recommends API keys for apps built on the Agent SDK). **Check the terms yourself and use it
+at your own risk.** Every run with subscription credentials writes a warning to the log, and settings validation shows
+a warning as well. To block subscription credentials entirely, turn them off in `agent-console.yaml`:
 
 ```yaml
 modules:
@@ -55,22 +68,23 @@ modules:
     mod-runs:
       backends:
         claude-agent-sdk:
-          allow_subscription_auth: false   # 기본 true. false면 구독 방식 실행을 거부합니다
+          allow_subscription_auth: false   # default true; false refuses runs that use the subscription
 ```
 
-### API 키 쓰기(선택)
+### Using an API key (optional)
 
-키는 파일에 적지 않고 환경변수로만 둡니다. 설정에는 키 대신 `secret://anthropic_api_key` 참조를 씁니다.
-서버는 이 참조를 환경변수 `anthropic_api_key`, 없으면 `ANTHROPIC_API_KEY`에서 찾습니다.
+Keep the key in an environment variable, never in a file. In settings, refer to it as `secret://anthropic_api_key`.
+The server resolves this reference from the environment variable `anthropic_api_key`, then `ANTHROPIC_API_KEY`.
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...      # 셸에서만. 설정 파일·커밋에 남기지 않습니다
+export ANTHROPIC_API_KEY=sk-ant-...      # in your shell only; keep it out of settings files and commits
 ```
 
-그다음 에이전트 인증을 `auth: {mode: api_key, api_key: "secret://anthropic_api_key"}`로 고릅니다(아래 2번).
-환경변수 이름에 접두어를 붙이고 싶으면 `agent-console.yaml`의 `secrets.env_prefix`를 정합니다
-(예: `env_prefix: "AC_"` → `AC_ANTHROPIC_API_KEY`).
-상태 카드도 API 키를 점검하게 하려면 설치자 설정 `readiness.auth`를 같은 값으로 둡니다.
+Then set the agent authentication to `auth: {mode: api_key, api_key: "secret://anthropic_api_key"}` (step 2 below).
+To add a prefix to environment variable names, set `secrets.env_prefix` in `agent-console.yaml`
+(for example `env_prefix: "AC_"` → `AC_ANTHROPIC_API_KEY`).
+For the status card to check the API key as well, set the administrator setting `readiness.auth` to the same value.
+The model list is fetched with this key too ([see below](#how-the-model-list-is-filled)):
 
 ```yaml
 modules:
@@ -82,225 +96,455 @@ modules:
             auth: {mode: api_key, api_key: "secret://anthropic_api_key"}
 ```
 
-### 백엔드와 모델 정하기
+### Backend connection shortcut
 
-1. 화면 모델 목록에 쓸 모델을 `agent-console.yaml`에 등록합니다(모델 id는 코드에 고정되어 있지 않습니다).
+The **Backend connection** button (a plug icon) is the first button in the row of icons at the bottom of the sidebar,
+before help, theme and settings. Its badge shows the state of the default backend in the common settings (when no
+default is set, the backend in the worst state); hover over it to see the backend name and a short summary. The same
+dialog also opens from:
 
-   ```yaml
-   modules:
-     options:
-       mod-runs:
-         backends:
-           claude-agent-sdk:
-             models:
-               - {id: <모델 id>, title: <표시 이름>}
-   ```
+- the **Backend · {state}** chip in the header of the **Usage** screen (`g u`), next to the refresh button, and
+- **Quick navigation** (`Ctrl+K`) → **Backend connection…** (there is no default keyboard shortcut).
 
-2. 웹의 **설정 › 에이전트 기본값**에서 백엔드를 Claude Agent SDK로, 모델과 인증을 고릅니다.
-   인증 방식의 기본값은 구독(`subscription`)이고, API 키(`api_key`)로 바꿀 수 있습니다.
-   YAML로는 작업 공간 `settings.yaml`의 다음 모양과 같습니다.
+The dialog shows the same cards as the **Backend sign-in and readiness** card in *Settings › Agent defaults*: the
+status, **[Sign in with subscription]** (when the backend offers sign-in), **[Test connection]** and **[Check again]**,
+so you can sign in and test without leaving the screen you are on. The default backend is at the top, marked
+**Default**. For backends that can fetch their models, a line under the card shows how many models this account can use,
+with **[Refresh]**; it refreshes by itself after you sign in. **More in Settings** closes the dialog and goes to the card
+in *Settings › Agent defaults*.
+
+The button, the chip and the command are left out when the server has no backend status feature (for example
+`mod-runs` is off) or no backend that reports its status.
+
+### Choosing the backend and model
+
+1. In the web app, open *Settings › Agent defaults* and choose Claude Agent SDK as the backend, then a model and the
+   authentication. The model field lists the models your account can use
+   ([how the list is filled](#how-the-model-list-is-filled)); **Enter manually** takes any model id. The authentication
+   default is the subscription (`subscription`); you can switch to an API key (`api_key`). In YAML this is the
+   following shape in the workspace `settings.yaml`:
 
    ```yaml
    agent_defaults:
      backend: claude-agent-sdk
-     model: <모델 id>
+     model: <model id>
      backend_options:
        auth: {mode: subscription}
-       # API 키로 바꾸려면: auth: {mode: api_key, api_key: "secret://anthropic_api_key"}
+       # for an API key: auth: {mode: api_key, api_key: "secret://anthropic_api_key"}
    ```
 
-3. 같은 화면의 **백엔드 인증·실행 준비** 카드에서 로그인(또는 키)이 잡혔는지 확인합니다.
-   상태 카드는 기본으로 구독 로그인을 점검합니다(에이전트마다 다른 인증은 실행할 때 따로 검사합니다).
-   **[연결 테스트]**는 모델을 실제로 한 번 호출하므로 **비용(구독 사용량 또는 API 요금)이 조금 듭니다.**
-   채팅이 시작되지 않으면 먼저 여기를 봅니다.
+2. On the same screen (or in the **Backend connection** dialog), check on the **Backend sign-in and readiness** card
+   that the sign-in (or key) is picked up. By default the card checks the subscription sign-in (other authentication
+   set per agent is checked when it runs). **[Test connection]** calls the model once for real, so it **costs a little
+   (subscription usage or API charges)**. If a chat does not start, look here first.
 
-팀 구성·에이전트·노드마다 백엔드와 모델을 따로 정할 수도 있습니다. 비워 두면 위 기본값을 따릅니다.
+You can also set the backend and model per team, agent or node. Empty values follow the defaults above.
 
-## 2. 기능별 사용법
+### How the model list is filled
 
-### 한눈에 보기
+The model field (in *Settings › Agent defaults*, the agent editor and node settings) puts two lists together:
 
-```text
-                   [에이전트] ─┐
-                   [리소스]   ─┴─ 노드로 놓기 ─▶ [팀 구성] ── 실행 ─▶ [채팅]
-                                                                    │ 메시지 1개 = 실행 1개
-                                                                    ▼
- [가져오기] ── 복사 ─▶ 에이전트·리소스                         [실행 기록]
- [내보내기] ◀── 에이전트·리소스·팀 구성                         위임 흐름·hook·MCP
-                                                                    │
-                                                [로그] ── 로컬 로그 ─▶ [사용량]
+- **Models set in configuration**: the administrator list `backends.<id>.models` in `agent-console.yaml`. It is
+  optional and empty by default (model ids are not built into the code).
+- **Models from your account**: what the backend reports for the account it checks. Claude Agent SDK asks Claude Code
+  for the models in its start-up information when you use the subscription, and the Anthropic Models API when you use an
+  API key. **Neither calls a model, so fetching the list costs nothing.**
 
- [프로젝트]: 정의·대화·실행을 한 범위로 묶음      [설정]: 기본값·로그 출처·기능 모듈
+Configured models come first, in their order, and models found only for the account follow. When both lists have the
+same id, they become one entry and the name and description you set win. Each option ends with where it came from:
+**Config** or **Account** (or both). Whatever the list says, **Enter manually** still accepts any model id.
+
+A line under the field shows the state of the list:
+
+| Line | Meaning |
+| --- | --- |
+| *Fetching models…* | The lookup is running. You can keep typing |
+| *N models from your account · as of …* **[Refresh]** | The account list is in. **[Refresh]** asks again right away |
+| *Last fetched N models · as of … — couldn't refresh* | A newer lookup failed, so the last good list is still shown |
+| *Couldn't fetch the model list. Only models set in configuration are shown.* | The lookup failed (the reason follows). **[Check connection…]** opens the Backend connection dialog (it does not call a model) |
+| *Automatic model lookup is off. …* | The administrator turned the lookup off |
+| *This sign-in method can't list models. …* | This backend or sign-in method has no model list. Use the configured models or type one |
+
+- The first lookup happens when a model field first asks for the list, not when the server starts. The result is kept
+  in server memory for one hour, and a failure for one minute. Signing in or out from the app clears the kept list, so
+  the next lookup asks the account again. Nothing is saved to disk.
+- A failed lookup never blocks the field: the configured models and **Enter manually** keep working.
+
+To rename models, put them in your own order, or add models the account does not report, list them yourself:
+
+```yaml
+modules:
+  options:
+    mod-runs:
+      backends:
+        claude-agent-sdk:
+          models:
+            - {id: <model id>, title: <display name>}
 ```
 
-왼쪽 메뉴 단축키는 `g`를 누른 뒤 글자 키입니다: 채팅 `g c`, 실행 기록 `g h`, 팀 구성 `g t`, 에이전트 `g a`,
-리소스 `g r`, 사용량 `g u`, 로그 `g l`, 설정 `g s`. 꺼진 기능 모듈의 화면은 메뉴에서 빠집니다.
+The administrator turns the lookup off or changes its timing in `agent-console.yaml`:
 
-### 에이전트
+```yaml
+modules:
+  options:
+    mod-runs:
+      model_discovery:
+        enabled: true            # false = configured lists only
+        ttl_s: 3600              # seconds a fetched list is reused (0 = ask on every request)
+        failure_ttl_s: 60        # seconds a failure is reused before asking again
+        timeout_s: 20            # maximum wait for one lookup, in seconds
+        disabled_backends: []    # backend ids that are never looked up
+      backends:
+        claude-agent-sdk:
+          model_discovery:
+            method: auto         # auto, sdk_init (Claude Code start-up information) or models_api (Models API)
+            api_base_url: null   # Models API address; null = ANTHROPIC_BASE_URL, then the official address
+            api_version: "2023-06-01"   # the anthropic-version header
+            page_limit: 1000     # models per page (1-1000)
+```
 
-에이전트는 이름, 지침(시스템 프롬프트), 백엔드·모델, 붙일 리소스를 담습니다.
+With `method: auto`, the method follows the authentication that the status card checks (`readiness.auth`): an API key
+uses `models_api`, the subscription uses `sdk_init`.
 
-1. **에이전트**(`g a`) → **새 에이전트** → id와 이름을 정합니다.
-2. 상세에서 지침, 백엔드·모델, 첨부 리소스를 정하고 저장합니다.
+Known limits:
 
-에이전트는 [팀 구성](#팀-구성)에 노드로 놓아야 실행됩니다. 저장할 때마다 버전이 남아 비교하고 되돌릴 수 있습니다.
+- The list follows the authentication that the status card checks (`readiness.auth`, the subscription by default).
+  Agents that set a different `backend_options.auth` do not get a list of their own; type their model id.
+- The subscription list is what the installed Claude Code CLI reports for its own model picker. A CLI version that
+  reports no models shows *This sign-in method can't list models* (`unsupported`), and only configured models appear.
+- When the app-only credentials folder has no sign-in (or the API key for `readiness.auth` is not set), the lookup does
+  not start and the line shows a failure with the reason `auth_missing`. Sign in from the **Backend connection** dialog,
+  and the list is fetched again.
+- With `allow_subscription_auth: false`, the subscription lookup is refused as well (`subscription_disabled`).
 
-### 리소스
+## 2. Using each feature
 
-리소스는 여러 에이전트가 함께 쓰는 재료입니다. 지침, 파일, MCP 서버, 도구 권한 등의 종류가 있고 플러그인으로 늘릴 수 있습니다.
+### At a glance
 
-1. **리소스**(`g r`) → **새 리소스** → 종류를 고르고 내용을 채워 저장합니다.
-2. 상세에서 이 리소스를 쓰는 에이전트·팀 구성을 확인합니다.
+```text
+ Shared library                            Project (a registered folder)
+ [Agents] [Resources] [Teams]   ── copy ─▶ project configuration ─▶ [Chat] ── 1 message = 1 run
+ [Templates] [Wiki rules]                                             │
+                                                                      ▼
+ [Import] ── copy ─▶ agents, resources                              [Runs]  delegation flow, hooks, MCP
+ [Export] ◀── agents, resources, teams                                │
+                                     [Memory] [Wiki] [Specs]        [Logs] ── local logs ─▶ [Usage]
 
-에이전트에 첨부하거나, 팀 구성에 리소스 노드로 놓고 `uses` 연결로 붙입니다. 공통 설정에 붙이면 모든 에이전트에 적용됩니다.
-API 키 같은 비밀은 본문에 쓰지 말고 `secret://이름`으로 참조합니다.
+ [Settings]: defaults, language, log sources, feature modules
+```
 
-### 팀 구성
+The menu on the left has three groups. **Shared library** (Teams, Agents, Resources, Templates, Wiki rules) holds the
+originals that projects copy from. **Run** (Chat, Runs, Memory, Specs, Wiki) and **Observe** (Usage, Logs) show the
+current project. Screens of feature modules that are turned off are left out of the menu.
 
-팀 구성은 사용자·에이전트·리소스 노드를 연결해 일이 흐르는 길을 정하는 그래프입니다.
+- To move between screens, press `g` and then a letter: Chat `g c`, Runs `g h`, Memory `g m`, Specs `g e`, Wiki `g w`,
+  Teams `g t`, Agents `g a`, Resources `g r`, Usage `g u`, Logs `g l`, Settings `g s`.
+- `Ctrl+K` (`Cmd+K` on macOS) opens **Quick navigation** to find screens, items and actions. `?` lists the keyboard
+  shortcuts. Change the keys in *Settings › Keyboard shortcuts*.
+- When you type a new id, the app tells you right away if the name is reserved. Use another id.
 
-| 연결 | 뜻 |
+### Language
+
+1. Choose the language in *Settings › Appearance › Language*. You can also open **Quick navigation** (`Ctrl+K`) and
+   choose **Change language…**.
+2. The default is **Automatic (browser language)**: the first of your browser languages that the app has, or else the
+   server default language (English unless the administrator changes it).
+3. The choice is saved in the workspace settings (`ui.language` in `settings.yaml`), so every browser that connects to
+   this server uses it.
+
+- Only the app text changes. Names, descriptions, instructions and prompts you wrote, text written by agents, and log
+  contents are never translated.
+- A language marked **Partly translated** shows its missing text in the fallback language. Text that comes from the
+  server (setting descriptions, kind names) appears in its original language when no message catalog covers it.
+- The server administrator sets `modules.options.mod-i18n`: `default_language`, `fallback_language`, `catalog_dirs`
+  (folders of your own `<language>.json` files, to change wording or add a language without changing code), and
+  `disabled_catalogs` (catalogs to leave out). Plugins can ship their own message catalogs. The file format is described
+  in [apps/server/README.md](apps/server/README.md) and the `ac-mod-i18n` package README.
+- Terminal output (CLI help, server start messages, settings errors) is always in English.
+
+### Projects
+
+**One folder is one project.** Chat, runs, logs, memory, wiki and specs work only inside a registered project folder.
+The shared library and settings work without a project.
+
+1. In the sidebar **Projects** area, select **Add folder**, then pick the folder and a name in the **Add project folder**
+   dialog. Registering creates `.agent-console/` in the folder (the settings file `project.yaml` and a `.gitignore`). If
+   the folder already has one, nothing new is created: its configuration and records are loaded as they are.
+2. In the project home, under **This project's configuration**, use **Copy from shared library…** to copy teams, agents
+   and resources from the shared library, or create new ones in the project. The copies are stored inside the folder,
+   so the folder works on its own.
+3. Pick a project in the sidebar. Chat, runs, logs and memory then show that project.
+
+**Unregister…** in the project menu only removes the registration. The files, configuration and records in the folder
+are not deleted, and they show again when you register the same folder again. Unregistered projects can be viewed
+read-only under *Settings › Projects* (*Unregistered projects*). If you moved the folder, use **Change path…** in the
+menu. When the folder cannot be found or written to, the sidebar and the project home show the problem and how to fix
+it.
+
+### Agents
+
+An agent holds a name, a role, instructions (the system prompt), a backend and model, and the resources attached to it.
+
+1. **Agents** (`g a`) → **New agent** → set the name (and the id under the advanced options).
+2. In the detail view, set the instructions, backend and model on the **Settings** tab, choose attached resources on the
+   **Resources** tab, and save. Gray values are inherited from the common settings.
+
+An agent runs only when it is placed as a node in a [team](#teams). Every save keeps a version that you can compare and
+revert to.
+
+### Resources
+
+Resources are materials that several agents share: instructions, files, MCP servers, tool permissions and more. Plugins
+can add new resource types.
+
+1. **Resources** (`g r`) → **New resource** → choose a type, fill in the content and save.
+2. In the detail view, check which agents and teams use the resource.
+
+Attach it to an agent, or place it in a team as a resource node and connect it with a `uses` edge. A resource attached
+to the common settings applies to every agent. Do not put secrets such as API keys in the content; refer to them as
+`secret://<name>`.
+
+### Teams
+
+A team is a graph that connects user, agent and resource nodes to decide how work flows. The edge types below come with
+the default plugin package; plugins can add more.
+
+| Edge | Meaning |
 | --- | --- |
-| `message` / `reply` | 사용자에서 들어오는 입구 / 사용자에게 돌아가는 답변 |
-| `handoff` | 결과를 다음 에이전트에 넘기기 |
-| `subagent` | 서브에이전트로 위임(호출한 쪽이 결과를 받아 이어 감) |
-| `uses` | 리소스를 에이전트에 붙이기 |
+| `message` / `reply` | Entry from the user / reply back to the user |
+| `ask_user` | Question and approval: the agent asks you something or asks for approval during the run |
+| `handoff` | Pass the result to the next agent (separate session, fixed order) |
+| `subagent` | Delegate as a subagent (the caller gets the result back and continues) |
+| `delegate` | Independent delegation (the target works in its own session) |
+| `uses` | Attach a resource to an agent |
+| `when` / `on_error` / `loop` | Condition / error path / loop |
 
-이 밖에 팀 안의 팀, 독립 위임, 조건·반복 연결이 있습니다.
+You can also place a team inside a team (a nested team) as a node.
 
-1. **팀 구성**(`g t`) → **새 팀 구성**.
-2. 캔버스 왼쪽 위 **[+ 추가]**(또는 `Alt+N`)로 에이전트·리소스·사용자 노드를 놓습니다. 에이전트를 놓으면 입구·답변 연결이 자동으로 이어집니다.
-3. 노드의 연결점을 끌어 다른 노드에 놓으면 연결이 생깁니다. 노드나 연결을 누르면 오른쪽 패널에서 종류·조건·설정을 고칩니다.
-4. 검증 표시가 문제(입구 없음, 끊긴 연결 등)와 고치기 제안을 보여 줍니다. 경고가 있어도 저장할 수 있습니다.
-5. 저장한 뒤 [채팅](#채팅)에서 이 팀 구성으로 대화를 시작합니다.
+1. **Teams** (`g t`) → **New team** → choose how to start (*One user node*, *Empty team* or *Copy of a team*).
+2. Use **Add** on the canvas (or `Alt+N`) to place agent, resource and user nodes. The picker groups items from this
+   project, the shared library and other projects. Placing an agent connects the entry and reply edges automatically.
+3. Drag from a node's handle and drop it on another node to create an edge. Select a node or an edge to change its type,
+   conditions and settings in the panel on the right.
+4. **Validate** shows problems (no entry, broken edges and so on) with suggested fixes. You can save with warnings, but a
+   blocking problem stops you from starting a chat.
+5. After saving, start a chat with this team from **Start chat ▸** or from [Chat](#chat).
 
-### 채팅
+### Chat
 
-팀 구성 하나를 골라 대화합니다. **메시지 하나가 실행 하나**입니다.
+Inside a project, pick a team and talk to it. **Each message is one run.**
 
-1. **채팅**(`g c`) → **새 대화** → 팀 구성을 고릅니다.
-2. 메시지를 보냅니다. 실행 중에 또 보내면 기본으로 대기열에 들어가 앞 턴이 끝난 뒤 실행됩니다.
-3. 에이전트가 되묻거나, 도구 승인을 구하거나, 검토를 요청하면 대화 안에 응답 칸이 나타납니다. 기다리는 대화는 목록에 배지로 표시됩니다.
-4. 같은 대화에서는 에이전트 세션이 이어져 앞 맥락이 유지됩니다.
+1. **Chat** (`g c`) → **New chat** → choose a team.
+2. Send a message. If you send another while a run is in progress, by default it is queued and runs after the current
+   turn ends.
+3. When an agent asks a question, asks for tool approval or requests a review, a reply card appears in the conversation.
+   Conversations that are waiting for you get a badge in the list.
+4. Within one conversation the agent sessions continue, so the earlier context is kept.
 
-각 턴에서 [실행 기록](#실행-기록)으로 이동할 수 있고, 토큰은 [사용량](#사용량)에 반영됩니다. 대기열·답변 표시·제목 규칙은 **설정 › 채팅**에서 바꿉니다.
+From each turn you can go to its [run](#runs), and the tokens are counted in [Usage](#usage). Change the queue, reply
+display and title rules in *Settings › Chat*.
 
-### 실행 기록
+### Runs
 
-모든 실행의 목록과 상세입니다. **실행 기록**(`g h`)에서 상태·팀 구성으로 거르고, 실행을 열면 그래프 위에 노드별 상태가 표시됩니다.
+The list and details of every run. In **Runs** (`g h`), filter by status, team, agent and period, or start a run
+without a chat using **New run**. Switch the view to **Handoffs** to see a table of how often each agent handed work to
+another in recent runs. Opening a run shows the status of each node on the graph.
 
-| 탭 | 내용 |
+| Tab | Contents |
 | --- | --- |
-| 위임 흐름 | 위임과 넘기기를 시간 순서로 그린 흐름도(실패만 보기, 사용자 대기 포함) |
-| 에이전트 | 에이전트별 실행과 결과 |
-| hook·MCP | hook 실행, MCP 서버·도구 호출, 소요 시간, 오류 |
-| 상호작용 | 되묻기·승인·검토 요청과 응답 |
-| 노드·연결 | 노드 입력·출력, 연결 판정 |
-| 세션 로그 | 이 실행에 해당하는 로그 세션([로그](#로그)가 켜져 있을 때) |
+| Delegation flow | Delegation and handoffs drawn in time order (failed only, waiting for you included) |
+| Agents | Runs and results per agent |
+| hook · MCP | Hook executions, MCP server and tool calls, durations, errors |
+| Interactions | Questions, approvals and review requests with their replies |
+| Nodes and edges | Node inputs and outputs, edge decisions |
+| Session logs | The log sessions that belong to this run (when [Logs](#logs) is on) |
+| Architecture map | The run's events drawn as cells and connections (the drawing rules are the profiles in *Settings › Architecture map*) |
 
-팀 안의 팀은 자식 실행으로 이어지며, 상단 경로로 부모·자식 실행을 오갑니다.
+A team inside a team continues as a child run. Use the path at the top to move between parent and child runs.
 
-### 사용량
+### Memory
 
-5시간·주간 사용률과 토큰 집계를 보여 줍니다. 출처가 주지 않은 값은 지어내지 않습니다.
+Memory is a shared record that agents and people read and write. Each project has its own (inside the project folder),
+and the shared library has memory that you can copy into projects.
 
-- 출처: Agent Console 실행분, 이 PC의 Claude Code 로그([로그](#로그) 기능과 연동), Claude Code 상태 줄 브리지
-- **사용량**(`g u`)의 **출처** 패널에서 확인하고, 표시 방식은 **설정 › 사용량**에서 바꿉니다.
-- Claude Code 사용률을 함께 보려면 아래 명령을 Claude Code의 statusLine 명령으로 등록합니다.
-  `~/.claude/settings.json`은 직접 고칩니다(Agent Console은 `~/.claude`에 쓰지 않습니다). 사용량 화면의 안내가 붙여 넣을 조각을 만들어 줍니다.
+1. **Memory** (`g m`) → **New entry** → set the key, content and tags.
+2. Filter by search text, tag and author (agent, person, or cleanup and import), and include archived entries when
+   needed.
+3. Agents read and write memory during runs when you attach a resource that gives memory access. The run detail shows how
+   many reads and writes happened.
+
+Set the scope kinds and cleanup rules in *Settings › Memory*. Move entries with **Export** and **Import…**.
+
+### Wiki
+
+A wiki is a set of linked Markdown pages stored in the project folder.
+
+1. (Optional) In the shared library, open **Wiki rules** → **New wiki rule** to define what a wiki records, how it is
+   checked and what instructions agents get, then copy the rule to the project. A wiki also works without rules.
+2. **Wiki** (`g w`) → **New wiki…** → choose a name and rules, then create it. Rules are merged from the top down. To
+   bring in an existing folder of Markdown files, use **Import (zip)…**.
+3. Tabs: **Page** (view and edit), **Graph** (link graph), **Checks** (rule check results), **Rules** (wiki info plus the
+   merged instructions, rules and syntax).
+4. For an agent to manage the wiki, attach the “Wiki” resource to that agent in the team.
+
+Changes made in the app show right away. Files edited in another editor can show up to one freshness window later (2
+seconds by default), and **Rescan** checks right away and records the outside changes. The server administrator changes
+this with `modules.options.mod-wiki.freshness_seconds` (0 checks on every request) and `scan_interval_seconds` (reread
+opened wikis at an interval). If the folder is not writable, the wiki is view-only.
+
+### Specs and templates
+
+A spec is a set of documents stored in the project folder; the tasks in those documents are tracked and can be run. A
+template is shared library configuration that fills in the document list and rules when you create a spec.
+
+1. In the shared library, open **Templates** → **New template**. The editor tabs are **Rules**, **Skeleton files** and
+   **Versions**. On the **Versions** tab you compare a saved version with the current one, or two versions with each
+   other, and go back with **Revert…**. You can also create a template with “Save as template” from a project's
+   documents.
+2. In a project, open **Specs** (`g e`) → **New spec…** → choose a template (or a blank spec). If the project has no
+   templates, copy one from the shared library in the same dialog. To bring in existing Markdown documents, use
+   **Import from folder…**.
+3. Tabs: **Documents**, **Tasks** (task states and runs), **Plan** (dependency graph, batches of tasks that can start
+   together, and the longest dependency chain), **Trace** (requirements ↔ tasks ↔ runs) and **Rules**.
+4. With **Auto-advance** on, ready tasks start automatically as earlier tasks finish. Runs that cost money may start with
+   nobody present, so set the limits before you turn it on. Running tasks needs the runs integration to be on.
+
+Set defaults such as the task syntax and verification sources in *Settings › Specs*; each spec can override them on its
+**Rules** tab.
+
+### Usage
+
+Shows the 5-hour and weekly usage windows and token totals. Values that a source does not provide are never made up.
+The usage windows cover the whole account (they cannot be split by project); the token totals are for the current
+project.
+
+- Sources: runs in Agent Console, Claude Code logs on this PC (through the [Logs](#logs) feature), and the Claude Code
+  status line bridge.
+- Check them in the **Sources** panel of **Usage** (`g u`), and change how they are shown in *Settings › Usage*.
+- If usage stays empty because the backend is not signed in, the **Backend · {state}** chip in the header opens the
+  [Backend connection](#backend-connection-shortcut) dialog.
+- To include Claude Code usage, register the command below as the Claude Code statusLine command. Edit
+  `~/.claude/settings.json` yourself (Agent Console does not write to `~/.claude`). The guide on the usage screen builds
+  the snippet to paste.
 
   ```bash
-  uv run agent-console statusline --output <작업 공간>/.state/usage/statusline.json
+  uv run agent-console statusline --output <workspace>/.state/usage/statusline.json
   ```
 
-### 로그
+### Logs
 
-Claude Code 같은 다른 도구의 로그와 실행 기록을 읽어 같은 형식으로 색인합니다. **원본 로그는 읽기만 합니다.**
+Reads logs from other tools such as Claude Code, plus the app's run history, and indexes them in one format. **Original
+logs are only read.**
 
-1. **설정 › 로그 출처**에서 읽을 출처를 켭니다(`claude-code-jsonl`, 기본 꺼짐). **앱에 등록된 프로젝트 폴더의 세션만** 모읍니다.
-   기본 범위는 현재 프로젝트이고, 출처 설정 `project_scope: registered`로 등록된 프로젝트 전체를 고릅니다. 등록된 프로젝트가
-   없으면 아무것도 모으지 않고 "프로젝트를 먼저 만들거나 등록하세요" 경고를 보입니다. 읽는 곳은 CLI 세션 `~/.claude/projects`
-   (읽기만, 앱이 `~/.claude`에서 읽는 유일한 것)와 앱이 실행한 세션 `<작업 공간>/.state/claude/projects`(출처 설정
-   `workspace_roots`)입니다. `roots`를 직접 적어도 등록된 프로젝트의 기록만 읽고, 범위를 좁히면 다음 수집 때 범위 밖 색인을
-   지우고 다시 읽습니다. 로그 기반 사용량 추정도 이 색인을 쓰므로 등록된 프로젝트의 세션만 셉니다.
-2. **로그**(`g l`)를 엽니다. 수집은 자동으로 시작되며 **[지금 수집]**으로 바로 읽을 수도 있습니다.
-3. 세션 목록에서 세션을 재생하고, **검색**에서 범주·출처·프로젝트·모델로 거르고, **대시보드**에서 위젯을 구성합니다.
-4. **보관본 내려받기**(HTML·JSON)로 오프라인에서 열 수 있는 파일을 만듭니다.
+1. Turn on a source in *Settings › Log sources* (`claude-code-jsonl`, off by default). Turning it on tells you that the
+   source contents, including conversation text, are copied into this app's index. Values that look like secrets are
+   masked before saving, but not perfectly.
+2. **Only sessions of project folders registered in the app are collected** (subfolders included). With no registered
+   projects nothing is collected, and the screen asks you to add a project first. The app reads CLI sessions in
+   `~/.claude/projects` (read-only; the only thing the app reads from `~/.claude`) and the sessions it ran itself in
+   `<workspace>/.state/claude/projects` (source setting `workspace_roots`). Even if you set `roots` yourself, only records
+   of registered projects are read. Log-based usage estimates use this index too, so they count only sessions of
+   registered projects.
+3. Open **Logs** (`g l`). Collection starts automatically, and **Collect now** reads right away. The list shows the
+   sessions of the current project.
+4. Play back a session on the **Sessions** tab, filter by category, source, project and model on the **Search** tab, and
+   arrange widgets on the **Dashboards** tab.
+5. **Download archive** (HTML and JSON) creates a file you can open offline.
 
-수집 주기와 보존 기간은 `agent-console.yaml`의 `modules.options.mod-logs`에서 정합니다.
+Change category names, colors and visibility in *Settings › Log classification*. The collection interval and retention
+period are set in `modules.options.mod-logs` in `agent-console.yaml`.
 
-### 프로젝트
+### Settings and feature modules
 
-정의·대화·실행을 한 범위로 묶습니다. 정의는 공용이거나 특정 프로젝트 전용입니다.
+**Settings** (`g s`) are user settings stored in the workspace. Settings are overridden in the order **Common → Project
+→ Team → Agent → Node**, and empty values follow the layer above. Edit the project layer with **Settings for this
+project…** in the project home menu. Changed settings apply from the next run, and every save keeps a version.
 
-1. 사이드바의 프로젝트 전환기나 **설정 › 프로젝트**에서 **새 프로젝트**를 만듭니다.
-2. 에이전트가 일할 **작업 폴더**와 볼 **로그 연결**을 정합니다.
-3. 프로젝트를 고른 상태에서 시작한 대화와 실행은 그 프로젝트로 묶이고, 채팅·실행 기록·로그 목록도 그 프로젝트로 걸러집니다.
-
-정의를 다른 프로젝트나 공용으로 옮길 수 있고, 범위가 어긋나면 경고와 고치기 제안이 나옵니다.
-
-### 설정과 기능 모듈
-
-**설정**(`g s`)은 작업 공간에 저장되는 사용자 설정입니다. 설정은 **공통 → 팀 구성 → 에이전트 → 노드** 순서로 덮어쓰고,
-비워 둔 값은 위 층을 따릅니다. 바꾼 설정은 다음 실행부터 적용되며 저장할 때마다 버전이 남습니다.
-
-서버의 각 기능은 모듈입니다. 목록과 상태는 **설정 › 기능 모듈**이나 `GET /api/v1/modules`에서 보고(웹에서는 읽기 전용),
-켜고 끄기는 서버를 띄우는 쪽에서 합니다.
+Each server feature is a module. See the list and states in *Settings › Feature modules* or at `GET /api/v1/modules`
+(read-only in the web app). Modules are turned on and off by whoever starts the server:
 
 ```bash
 uv run agent-console serve --disable-module mod-logs
 ```
 
-설정 파일에서는 `modules.disabled: [mod-logs]`로 적습니다. 명령행이 설정 파일보다 우선합니다.
+In the settings file, write `modules.disabled: [mod-logs]`. The command line wins over the settings file.
 
-| 모듈 | 기능 |
+| Module | Feature |
 | --- | --- |
-| `mod-definitions` · `mod-resources` | 에이전트·팀 구성·리소스 정의 |
-| `mod-runs` | 실행 엔진과 실행 기록 |
-| `mod-chat` | 채팅 |
-| `mod-usage` | 사용량 |
-| `mod-logs` | 로그 수집·색인 |
-| `mod-projects` | 프로젝트 |
-| `mod-imports` · `mod-exports` | 가져오기·내보내기 |
-| `mod-versions` | 정의·설정 버전 |
-| `link-*` | 두 기능을 잇는 연동(예: `link-logs-usage`) |
+| `mod-definitions` · `mod-resources` | Agent, team and resource definitions, and settings |
+| `mod-runs` | Run engine, run history and backend sign-in |
+| `mod-chat` | Chat |
+| `mod-projects` | Projects |
+| `mod-memory` | Memory |
+| `mod-wiki` | Wiki and wiki rules |
+| `mod-sdd` | Specs and templates |
+| `mod-usage` | Usage |
+| `mod-logs` | Log collection and index |
+| `mod-architecture` | Architecture map |
+| `mod-i18n` | Message catalogs (languages) |
+| `mod-imports` · `mod-exports` | Import and export |
+| `mod-versions` | Definition and settings versions |
+| `link-*` | Integrations that connect two features (for example `link-logs-usage`) |
 
-한 기능을 끄면 그 기능과 이어진 연동만 멈추고 나머지는 그대로 동작합니다.
+Turning a feature off stops only the integrations connected to it; everything else keeps working.
 
-### 가져오기·내보내기
+### Import and export
 
-**가져오기.** 기존 Claude Code 프로젝트 설정(`.claude/`·`CLAUDE.md`·`.mcp.json`)에서 에이전트와 리소스를 **복사**해 옵니다. 원본은 읽기만 합니다. 사용자 전역 구성(`~/.claude`)은 가져오지 않습니다. 옛 설정 `modules.options.mod-imports.home`이 남아 있으면 서버가 시작을 거부하고 안내합니다.
+**Import.** Copies agents and resources from an existing Claude Code project setup (`.claude/`, `CLAUDE.md`,
+`.mcp.json`). The originals are only read. The user-wide configuration (`~/.claude`) is not imported. If the old setting
+`modules.options.mod-imports.home` is still present, the server refuses to start and explains what to change.
 
-1. **리소스** 화면 → **.claude 가져오기**.
-2. 출처(프로젝트 폴더)를 고르면 미리보기가 나옵니다. 이 단계에서는 아무것도 쓰지 않습니다.
-3. 가져올 항목을 고르고 확인합니다. 비밀로 보이는 값(MCP `env`·`headers` 등)은 `secret://이름` 참조로 바뀌고 경고가 남습니다.
+1. On the **Resources** screen, select **Import…** to open **Import from .claude**. When you pick a project in the
+   sidebar, the sources in that project folder appear.
+2. **Choose source** → **Choose items**: pick what to import from the list that was read, and decide what happens on a
+   name conflict (*Skip*, *Use a new name* or *Overwrite*). Nothing is written up to this step.
+3. Check the imported items under **Result**. Values that look like secrets (MCP `env`, `headers` and so on) are marked
+   and not saved as they are; after importing, replace them with `secret://<name>` references.
 
-**내보내기.** 에이전트·리소스·팀 구성을 다른 도구 형식으로 내보냅니다. 기본 형식은 Claude Code 프로젝트 구조(`.claude/agents`, `.claude/skills`, `.claude/settings.json`, `CLAUDE.md`, `.mcp.json`)입니다.
+**Export.** Exports agents, resources and teams in another tool's format. Formats come from plugins; the default
+package provides the Claude Code project layout (`.claude/agents`, `.claude/skills`, `.claude/settings.json`,
+`CLAUDE.md`, `.mcp.json`).
 
-1. 에이전트·리소스 상세나 팀 구성 편집기의 메뉴 → **내보내기**.
-2. 형식 → 정의 → 옵션을 고르고 미리보기에서 만들어질 파일과 충돌을 확인합니다.
-3. 기본은 zip 내려받기입니다. 폴더에 바로 쓰는 것은 서버 설정에서 허용한 폴더에서만 되고, `~/.claude` 같은 보호 위치에는 쓰지 않습니다.
+1. From the menu of an agent or resource detail view, or of the team editor, select **Export…**.
+2. Go through **Format** → **Items and options** → **Preview** (check the files to be created and any conflicts) →
+   **Destination**. The saved version is exported; unsaved changes are not included.
+3. The default is a zip download. Writing straight into a folder works only for folders allowed in the server settings,
+   and protected locations such as `~/.claude` are never written to.
 
-팀 구성을 내보내면 그 팀이 쓰는 에이전트·리소스·자식 팀 구성도 함께 묶입니다.
+Exporting a team also bundles the agents, resources and child teams it uses. Wikis, specs and memory have their own
+export and import on their screens.
 
-## 3. 서버 운용
+## 3. Running the server
 
-- **브라우저를 닫아도 실행은 계속됩니다.** 실행은 서버가 맡으므로 다시 열면 그동안의 기록이 그대로 보입니다.
-- **저장 위치.** 정의(에이전트·팀 구성·리소스·공통 설정)는 작업 공간 폴더(기본 `.agent-console/`)에 YAML로,
-  대화·실행 기록·이벤트는 `.agent-console/.state/` 아래 SQLite에 저장됩니다. 작업 공간은 `agent-console.yaml`의 `workspace`로 바꿉니다.
-  백업은 이 폴더를 복사하면 됩니다.
-- **재시작.** 서버를 재시작하면 진행 중이던 턴이 끊깁니다. 채팅에서 그 턴의 **[이 지점부터 다시 실행]**을 눌러 고른 노드부터 이어 실행합니다.
-- **포트·바인딩.** 기본은 `127.0.0.1:8765`입니다. `serve --host`·`--port`나 `agent-console.yaml`의 `host`·`port`로 바꿉니다.
-  `127.0.0.1` 밖으로 열려면 `security.allow_remote: true`가 함께 있어야 하며, 외부 공개는 직접 판단해서 켭니다.
-- **설정 파일.** 설정 파일 없이도 기본값으로 뜹니다. 설정을 바꾸려면 `cp agent-console.example.yaml agent-console.yaml`로 예시를 복사해 고칩니다.
-  서버는 현재 폴더의 `agent-console.yaml`을 읽습니다. 다른 경로는 `--config <경로>`나 `AGENT_CONSOLE_CONFIG`로 줍니다.
-  우선순위는 `명령행 > AGENT_CONSOLE_* 환경변수 > 설정 파일 > 기본값`이고, 각 키 설명은 예시 파일 주석과 `apps/server/README.md`에 있습니다.
-- **웹 정적 제공 고정.** 환경변수 대신 설정 파일에 `web: {serve_static: true, static_dir: apps/web/dist}`를 적어도 됩니다.
-- **준비 확인.** `GET /api/v1/health`가 200이면 준비된 것입니다.
+- **Runs keep going when you close the browser.** The server owns the runs, so when you open the app again the history
+  is all there.
+- **Where things are stored.** The shared library (agents, teams, resources, templates, wiki rules) and the common
+  settings (`settings.yaml`) are YAML files in the workspace folder (default `.agent-console/`). The app database
+  (shared library versions, log index, usage samples), the sign-in credentials and run files are under
+  `.agent-console/.state/`. A project's configuration copies, project settings, chat and run records, memory, wiki pages
+  and spec documents are **inside the project folder** (`<folder>/.agent-console/` and so on). Change the workspace with
+  `workspace` in `agent-console.yaml`. To back up, copy the workspace and the project folders.
+- **Restarting.** Restarting the server interrupts turns in progress. In the chat, select **[Rerun from here]** on that
+  turn to continue from the node you pick. Queued messages are put on hold; handle them with **Run all** or **Cancel
+  all** in the banner.
+- **Port and binding.** The default is `127.0.0.1:8765`. Change it with `serve --host` and `--port`, or `host` and `port`
+  in `agent-console.yaml`. Listening outside `127.0.0.1` also needs `security.allow_remote: true`; decide for yourself
+  before exposing the server.
+- **Settings file.** The server starts with defaults even without a settings file. To change settings, copy the example
+  with `cp agent-console.example.yaml agent-console.yaml` and edit it. The server reads `agent-console.yaml` in the current
+  folder; give another path with `--config <path>` or `AGENT_CONSOLE_CONFIG`. Precedence is
+  `command line > AGENT_CONSOLE_* environment variables > settings file > defaults`. Each key is described in the comments
+  of the example file and in [apps/server/README.md](apps/server/README.md). If the file has unknown or removed keys, the
+  server does not start and explains what to change.
+- **Serving the web app from the settings file.** Instead of environment variables, you can write
+  `web: {serve_static: true, static_dir: apps/web/dist}` in the settings file.
+- **Ready check.** The server is ready when `GET /api/v1/health` returns 200.
 
-## 4. 개발자용
+## 4. For developers
 
-`uv run poe check`(ruff·mypy·import-linter·pytest)와 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser)로 전체 검사를 합니다.
-화면을 고칠 때는 `pnpm app`으로 서버(127.0.0.1:8765)와 웹 미리보기(127.0.0.1:4173)를 함께 띄우거나
-(`--build`로 웹 다시 빌드, `--` 뒤 인자는 `serve`로 전달), `uv run agent-console serve`와 `pnpm --filter @agent-console/web dev`(5173)를 따로 띄웁니다.
-개발 규칙과 명령 전체는 루트의 `CLAUDE.md`, 개발 방식과 확장 지점은 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)에 있습니다.
+Run all checks with `uv run poe check` (ruff, mypy, import-linter, pytest) and `pnpm check` (ESLint, tsc, Vitest,
+dependency-cruiser). When you work on the UI, start the server (127.0.0.1:8765) and a web preview (127.0.0.1:4173)
+together with `pnpm app` (`--build` rebuilds the web app, and arguments after `--` go to `serve`), or start
+`uv run agent-console serve` and `pnpm --filter @agent-console/web dev` (5173) separately.
+The development rules and the full command list are in `CLAUDE.md` at the root, the workflow is in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), and the extension points are in [docs/extending/](docs/extending/README.md).

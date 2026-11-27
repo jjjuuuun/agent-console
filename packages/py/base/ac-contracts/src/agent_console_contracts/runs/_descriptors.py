@@ -297,6 +297,16 @@ class BackendCapabilities(ContractModel):
             "(백엔드가 이유를 알리면 그 코드, 예: `backend.subscription_auth_disabled`)."
         ),
     )
+    # 0.16.1(design §1.1-MB MD-1, X54): 선택 능력. ``discover_models`` 구현 선언.
+    model_discovery: bool = Field(
+        default=False,
+        description=(
+            "모델 호출 없이 이 계정이 쓸 수 있는 모델 목록을 물을 수 있다(0.16.1). "
+            "서버는 조회 결과를 설치자 설정 목록에 더해 "
+            "`GET /backends/{id}/models`·`…/model-catalog`로 낸다. "
+            "false면 설정 목록만."
+        ),
+    )
 
 
 class CollectorDescriptor(ContractModel):
@@ -371,6 +381,10 @@ class BackendDescriptor(ContractModel):
     )
 
 
+type ModelSource = Literal["config", "discovered"]
+"""모델 항목의 출처(0.16.1). ``config`` = 설치자 설정 목록, ``discovered`` = 백엔드 계정 조회."""
+
+
 class ModelInfo(ContractModel):
     """백엔드가 제공하는 모델 하나(`list_models()`). 모델 목록은 코드에 없다."""
 
@@ -379,6 +393,13 @@ class ModelInfo(ContractModel):
     description: str | None = None
     context_window: int | None = None
     attributes: JsonObject = Field(default_factory=dict)
+    sources: list[ModelSource] = Field(
+        default_factory=list,
+        description=(
+            "이 항목이 나온 곳(0.16.1): `config` 설치자 설정 목록, `discovered` 계정 조회. 둘 다면 "
+            "합친 항목. 빈 목록 = 출처 모름(옛 서버, 또는 백엔드가 직접 준 목록)."
+        ),
+    )
 
 
 class DelegationStrategyDescriptor(ContractModel):

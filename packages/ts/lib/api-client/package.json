@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/api-client",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plain TypeScript client that wraps the server REST and WebSocket contracts",
   "private": true,
   "license": "MIT",
@@ -142,7 +142,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.16.0"
+    "@agent-console/contracts": "^0.16.1"
   },
   "devDependencies": {
     "@agent-console/eslint-config": "^0.1.0",

@@ -1,12 +1,13 @@
-# 변경 기록: @agent-console/sdd-view
+# Changelog: @agent-console/sdd-view
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
-## [미출시]
-- Messages (0.2.0, I.9c): moved the default messages to `src/locales/ko.json` (`defaultMessages` is still the Korean table) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`messages={en}`). Depends on `@agent-console/markdown-doc` `^0.2.0` for `flattenMessageTree`. Added tests for matching keys and placeholders and for no Korean string literals in the source. The public API only grew and the default behavior is the same.
-- `TraceMatrix`: `showGapsToggle`(기본 true) 추가. 앱이 도구줄에 같은 스위치를 두면 false로 끄고 `onlyGaps`만 넘긴다(표 안 `빈 곳만 보기` 체크박스 중복 제거).
-- 7R.6: `DocumentEditor`·`ToneChip`·`DocumentStateChip`·`RulesSourceBadge`와 `toneAttr`·`statusTone`·`formatMessage`·`messageOr`를 `@agent-console/markdown-doc`로 옮기고 같은 이름으로 다시 내보낸다(공개 API 그대로). `editor.*`·`source.*` 문구 키는 markdown-doc의 `defaultMessages`로 갔고 `messages` prop 덮어쓰기는 그대로 통한다. 칩·편집기 CSS는 markdown-doc `styles.css`(클래스 `ac-sdd-chip*`·`ac-sdd-editor*`·`ac-sdd-source` → `ac-md-*`)이고 `styles.css`가 @import한다. 의존에서 text-editor·react-markdown·remark-gfm을 빼고 markdown-doc를 더했다.
-- `TaskTable`: 행 선택(`selectable`), 단계 접힘 덮어쓰기와 기본(모두 끝난 단계는 접힘), 행 아래 인라인 안내 `renderRowNotice`, 행 메뉴 `rowMenuItems`, 손잡이 `TaskTableHandle`. 기존 props는 그대로다(선택·접힘 저장은 호출자 몫).
+## [Unreleased]
+- Messages (0.2.0): moved the default messages to `src/locales/ko.json` (`defaultMessages` is still the Korean table) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`messages={en}`). Depends on `@agent-console/markdown-doc` `^0.2.0` for `flattenMessageTree`. Added tests for matching keys and placeholders and for no Korean string literals in the source. The public API only grew and the default behavior is the same.
+- `TraceMatrix`: added `showGapsToggle` (default true). When the app puts the same switch in its toolbar, it turns this off and passes only `onlyGaps` (removes the duplicate "gaps only" checkbox inside the table).
+- Moved `DocumentEditor`, `ToneChip`, `DocumentStateChip` and `RulesSourceBadge`, plus `toneAttr`, `statusTone`, `formatMessage` and `messageOr`, to `@agent-console/markdown-doc` and re-exported them under the same names (public API unchanged). The `editor.*` and `source.*` message keys moved to the `defaultMessages` of markdown-doc, and overriding through the `messages` prop still works. Chip and editor CSS is in the markdown-doc `styles.css` (classes `ac-sdd-chip*`, `ac-sdd-editor*` and `ac-sdd-source` → `ac-md-*`), which `styles.css` imports with @import. Removed text-editor, react-markdown and remark-gfm from the dependencies and added markdown-doc.
+- `TaskTable`: row selection (`selectable`), overriding phase collapse plus a default (phases where everything is done are collapsed), inline notices under rows (`renderRowNotice`), row menus (`rowMenuItems`) and the handle `TaskTableHandle`. Existing props are unchanged (storing selection and collapse is up to the caller).
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

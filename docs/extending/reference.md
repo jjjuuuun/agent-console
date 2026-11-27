@@ -13,7 +13,8 @@ These tables are built from package declarations and code. The area pages explai
 | Team graph and runs | [edge-type](graph.md#edge-type) | Edge type | entry-point | `agent_console.edge_types` | 11 | package |
 | Team graph and runs | [interaction-kind](graph.md#interaction-kind) | Interaction kind | entry-point | `agent_console.interaction_kinds` | 3 | package |
 | Team graph and runs | [node-type](graph.md#node-type) | Node type | entry-point | `agent_console.node_types` | 5 | package |
-| Execution backends | [backend-session-archive](backends.md#backend-session-archive) | Backend session archive and restore | capability | `session_archive` | — | package, reference |
+| Execution backends | [backend-model-discovery](backends.md#backend-model-discovery) | Backend model discovery | capability | `discover_models` | 2 | package, reference |
+| Execution backends | [backend-session-archive](backends.md#backend-session-archive) | Backend session archive and restore | capability | `session_archive` | 2 | package, reference |
 | Execution backends | [execution-backend](backends.md#execution-backend) | Execution backend | entry-point | `agent_console.backends` | 2 | package |
 | Execution backends | [secret-provider](backends.md#secret-provider) | Secret provider | entry-point | `agent_console.secret_providers` | — | package |
 | Resources | [resource-type](resources.md#resource-type) | Resource type | entry-point | `agent_console.resource_types` | 9 | package, reference |
@@ -58,7 +59,7 @@ These tables are built from package declarations and code. The area pages explai
 | Wiki | [wiki-search-index](wiki.md#wiki-search-index) | Wiki search index | entry-point | `agent_console.wiki_search_indexes` | — | contract-tests, package |
 | Wiki | [wiki-syntax](wiki.md#wiki-syntax) | Wiki syntax | data | `data/default_syntax.yaml` | — | snippet |
 | Wiki | [wiki-write-check](wiki.md#wiki-write-check) | Wiki write check contribution | entry-point | `agent_console.wiki_write_checks` | — | package |
-| Localization | [message-catalog](i18n.md#message-catalog) | Message catalog | entry-point | `agent_console.message_catalogs` | 58 | contract-tests, snippet |
+| Localization | [message-catalog](i18n.md#message-catalog) | Message catalog | entry-point | `agent_console.message_catalogs` | 59 | contract-tests, snippet |
 | Web | [architecture-cell-renderer](web.md#architecture-cell-renderer) | Architecture map cell and edge rendering | props | `@agent-console/arch-view#ArchitectureDiagramProps` | — | package |
 | Web | [config-form-widget](web.md#config-form-widget) | Settings form widget | registry | `@agent-console/web/src/features/delegation/configWidgets.ts#CONFIG_WIDGETS` | — | package |
 | Web | [dashboard-widget](web.md#dashboard-widget) | Dashboard widget | props | `@agent-console/log-view#DashboardGridProps` | — | package |
@@ -86,7 +87,7 @@ These tables are built from package declarations and code. The area pages explai
 | `agent_console.log_classifiers` | `agent_console_logs:LOG_CLASSIFIERS_GROUP` | `claude-code` (agent-console-logs-claude), `hook-probe` (agent-console-hook-probe), `mapped-jsonl` (agent-console-logs), `normalized-v1` (agent-console-logs) |
 | `agent_console.log_sources` | `agent_console_logs:LOG_SOURCES_GROUP` | `claude-code-jsonl` (agent-console-logs-claude), `hook-probe-jsonl` (agent-console-hook-probe), `mapped-jsonl` (agent-console-logs), `normalized-v1` (agent-console-logs) |
 | `agent_console.memory_scope_kinds` | `agent_console_memory:MEMORY_SCOPE_KINDS_GROUP` | — |
-| `agent_console.message_catalogs` | `agent_console_i18n:MESSAGE_CATALOGS_GROUP` | `ac-architecture` (agent-console-architecture), `ac-backend-claude-sdk` (agent-console-backend-claude-sdk), `ac-backend-fake-agent` (agent-console-backend-fake-agent), `ac-conditions` (agent-console-conditions), `ac-contracts` (agent-console-contracts), `ac-delegation-host` (agent-console-delegation-host), `ac-exports` (agent-console-exports), `ac-graph` (agent-console-graph), `ac-hook-probe` (agent-console-hook-probe), `ac-imports` (agent-console-imports), `ac-link-chat-runs` (agent-console-link-chat-runs), `ac-link-definitions-resources` (agent-console-link-definitions-resources), `ac-link-definitions-teams` (agent-console-link-definitions-teams), `ac-link-exports-teams` (agent-console-link-exports-teams), `ac-link-logs-architecture` (agent-console-link-logs-architecture), `ac-link-logs-runs` (agent-console-link-logs-runs), `ac-link-logs-trace` (agent-console-link-logs-trace), `ac-link-logs-usage` (agent-console-link-logs-usage), `ac-link-memory-runs` (agent-console-link-memory-runs), `ac-link-projects-memory` (agent-console-link-projects-memory), `ac-link-projects-records` (agent-console-link-projects-records), `ac-link-projects-runs` (agent-console-link-projects-runs), `ac-link-projects-sdd` (agent-console-link-projects-sdd), `ac-link-projects-wiki` (agent-console-link-projects-wiki), `ac-link-runs-sdd` (agent-console-link-runs-sdd), `ac-link-runs-teams` (agent-console-link-runs-teams), `ac-link-runs-trace` (agent-console-link-runs-trace), `ac-link-runs-usage` (agent-console-link-runs-usage), `ac-link-wiki-runs` (agent-console-link-wiki-runs), `ac-logs` (agent-console-logs), `ac-logs-claude` (agent-console-logs-claude), `ac-memory` (agent-console-memory), `ac-mod-architecture` (agent-console-mod-architecture), `ac-mod-chat` (agent-console-mod-chat), `ac-mod-definitions` (agent-console-mod-definitions), `ac-mod-exports` (agent-console-mod-exports), `ac-mod-i18n` (agent-console-mod-i18n), `ac-mod-imports` (agent-console-mod-imports), `ac-mod-logs` (agent-console-mod-logs), `ac-mod-memory` (agent-console-mod-memory), `ac-mod-projects` (agent-console-mod-projects), `ac-mod-resources` (agent-console-mod-resources), `ac-mod-runs` (agent-console-mod-runs), `ac-mod-sdd` (agent-console-mod-sdd), `ac-mod-usage` (agent-console-mod-usage), `ac-mod-versions` (agent-console-mod-versions), `ac-mod-wiki` (agent-console-mod-wiki), `ac-modkit` (agent-console-modkit), `ac-nodes-core` (agent-console-nodes-core), `ac-projects` (agent-console-projects), `ac-resources` (agent-console-resources), `ac-resources-core` (agent-console-resources-core), `ac-runtime` (agent-console-runtime), `ac-sdd` (agent-console-sdd), `ac-settings` (agent-console-settings), `ac-teams` (agent-console-teams), `ac-usage` (agent-console-usage), `server` (agent-console-server) |
+| `agent_console.message_catalogs` | `agent_console_i18n:MESSAGE_CATALOGS_GROUP` | `ac-architecture` (agent-console-architecture), `ac-backend-claude-sdk` (agent-console-backend-claude-sdk), `ac-backend-fake-agent` (agent-console-backend-fake-agent), `ac-conditions` (agent-console-conditions), `ac-contracts` (agent-console-contracts), `ac-delegation-host` (agent-console-delegation-host), `ac-exports` (agent-console-exports), `ac-graph` (agent-console-graph), `ac-hook-probe` (agent-console-hook-probe), `ac-imports` (agent-console-imports), `ac-link-chat-runs` (agent-console-link-chat-runs), `ac-link-definitions-resources` (agent-console-link-definitions-resources), `ac-link-definitions-teams` (agent-console-link-definitions-teams), `ac-link-exports-teams` (agent-console-link-exports-teams), `ac-link-logs-architecture` (agent-console-link-logs-architecture), `ac-link-logs-runs` (agent-console-link-logs-runs), `ac-link-logs-trace` (agent-console-link-logs-trace), `ac-link-logs-usage` (agent-console-link-logs-usage), `ac-link-memory-runs` (agent-console-link-memory-runs), `ac-link-projects-memory` (agent-console-link-projects-memory), `ac-link-projects-records` (agent-console-link-projects-records), `ac-link-projects-runs` (agent-console-link-projects-runs), `ac-link-projects-sdd` (agent-console-link-projects-sdd), `ac-link-projects-wiki` (agent-console-link-projects-wiki), `ac-link-runs-sdd` (agent-console-link-runs-sdd), `ac-link-runs-teams` (agent-console-link-runs-teams), `ac-link-runs-trace` (agent-console-link-runs-trace), `ac-link-runs-usage` (agent-console-link-runs-usage), `ac-link-wiki-runs` (agent-console-link-wiki-runs), `ac-logs` (agent-console-logs), `ac-logs-claude` (agent-console-logs-claude), `ac-memory` (agent-console-memory), `ac-mod-architecture` (agent-console-mod-architecture), `ac-mod-chat` (agent-console-mod-chat), `ac-mod-definitions` (agent-console-mod-definitions), `ac-mod-exports` (agent-console-mod-exports), `ac-mod-i18n` (agent-console-mod-i18n), `ac-mod-imports` (agent-console-mod-imports), `ac-mod-logs` (agent-console-mod-logs), `ac-mod-memory` (agent-console-mod-memory), `ac-mod-projects` (agent-console-mod-projects), `ac-mod-resources` (agent-console-mod-resources), `ac-mod-runs` (agent-console-mod-runs), `ac-mod-sdd` (agent-console-mod-sdd), `ac-mod-usage` (agent-console-mod-usage), `ac-mod-versions` (agent-console-mod-versions), `ac-mod-wiki` (agent-console-mod-wiki), `ac-modkit` (agent-console-modkit), `ac-nodes-core` (agent-console-nodes-core), `ac-projects` (agent-console-projects), `ac-resources` (agent-console-resources), `ac-resources-core` (agent-console-resources-core), `ac-runtime` (agent-console-runtime), `ac-sdd` (agent-console-sdd), `ac-settings` (agent-console-settings), `ac-store` (agent-console-store), `ac-teams` (agent-console-teams), `ac-usage` (agent-console-usage), `server` (agent-console-server) |
 | `agent_console.node_types` | `agent_console_runtime:NODE_TYPES_GROUP` | `agent` (agent-console-nodes-core), `resource` (agent-console-nodes-core), `team` (agent-console-nodes-core), `user` (agent-console-nodes-core), `wiki-update` (agent-console-link-wiki-runs) |
 | `agent_console.resource_types` | `agent_console_resources:RESOURCE_TYPES_GROUP` | `file` (agent-console-resources-core), `hook` (agent-console-resources-core), `instruction` (agent-console-resources-core), `mcp-server` (agent-console-resources-core), `memory` (agent-console-link-memory-runs), `rule` (agent-console-resources-core), `skill` (agent-console-resources-core), `tool-permission` (agent-console-resources-core), `wiki` (agent-console-link-wiki-runs) |
 | `agent_console.sdd_verification_sources` | `agent_console_mod_sdd:VERIFICATION_SOURCES_GROUP` | — |
@@ -171,36 +172,36 @@ These tables are built from package declarations and code. The area pages explai
 
 | id | Kind | web_roles | Contract submodules | Migration lineages (range) |
 | --- | --- | --- | --- | --- |
-| `link-chat-runs` | link | conversations:runs | chat 1.4.0, runs 1.9.0 | — |
+| `link-chat-runs` | link | conversations:runs | chat 1.4.0, runs 1.10.0 | — |
 | `link-definitions-resources` | link | — | resources 1.1.0 | — |
 | `link-definitions-teams` | link | definitions:teams | definitions 3.0.0 | — |
 | `link-exports-teams` | link | — | exports 1.0.0 | — |
-| `link-logs-architecture` | link | logs:architecture | architecture 1.0.0, logs 2.0.0 | — |
-| `link-logs-runs` | link | logs:runs | logs 2.0.0, runs 1.9.0 | — |
-| `link-logs-trace` | link | logs:trace | logs 2.0.0, runs 1.9.0 | — |
-| `link-logs-usage` | link | — | logs 2.0.0, usage 1.1.0 | — |
-| `link-memory-runs` | link | memory:runs | memory 1.3.0, runs 1.9.0 | — |
+| `link-logs-architecture` | link | logs:architecture | architecture 1.0.0, logs 2.1.0 | — |
+| `link-logs-runs` | link | logs:runs | logs 2.1.0, runs 1.10.0 | — |
+| `link-logs-trace` | link | logs:trace | logs 2.1.0, runs 1.10.0 | — |
+| `link-logs-usage` | link | — | logs 2.1.0, usage 1.1.0 | — |
+| `link-memory-runs` | link | memory:runs | memory 1.3.0, runs 1.10.0 | — |
 | `link-projects-memory` | link | — | — | — |
 | `link-projects-records` | link | — | — | — |
 | `link-projects-runs` | link | — | — | — |
 | `link-projects-sdd` | link | — | — | — |
 | `link-projects-wiki` | link | — | — | — |
-| `link-runs-sdd` | link | — | runs 1.9.0, sdd 1.4.0 | — |
+| `link-runs-sdd` | link | — | runs 1.10.0, sdd 1.4.0 | — |
 | `link-runs-teams` | link | runs:team-rules | definitions 3.0.0 | — |
-| `link-runs-trace` | link | runs:trace | runs 1.9.0 | — |
+| `link-runs-trace` | link | runs:trace | runs 1.10.0 | — |
 | `link-runs-usage` | link | usage:tokens | usage 1.1.0 | — |
-| `link-wiki-runs` | link | wiki:runs | runs 1.9.0, wiki 1.3.0 | — |
+| `link-wiki-runs` | link | wiki:runs | runs 1.10.0, wiki 1.3.0 | — |
 | `mod-architecture` | feature | architecture | architecture 1.0.0 | — |
 | `mod-chat` | feature | conversations | chat 1.4.0 | chat(app/project) |
 | `mod-definitions` | feature | definitions:agent, definitions:graph, settings | definitions 3.0.0 | — |
 | `mod-exports` | feature | exports | exports 1.0.0 | — |
-| `mod-i18n` | feature | i18n | i18n 1.0.0 | — |
+| `mod-i18n` | feature | i18n | i18n 1.1.0 | — |
 | `mod-imports` | feature | imports | imports 1.1.0 | — |
-| `mod-logs` | feature | logs | logs 2.0.0 | logs(app) |
+| `mod-logs` | feature | logs | logs 2.1.0 | logs(app) |
 | `mod-memory` | feature | memory | memory 1.3.0 | memory(app/memory) |
 | `mod-projects` | feature | projects | projects 4.1.0 | — |
 | `mod-resources` | feature | definitions:resource | resources 1.1.0 | — |
-| `mod-runs` | feature | runs | runs 1.9.0 | runs(app/project) |
+| `mod-runs` | feature | runs | runs 1.10.0 | runs(app/project) |
 | `mod-sdd` | feature | sdd | sdd 1.4.0 | — |
 | `mod-usage` | feature | usage | usage 1.1.0 | usage(app) |
 | `mod-versions` | feature | versions | definitions 3.0.0 | — |
@@ -212,17 +213,17 @@ These tables are built from package declarations and code. The area pages explai
 | --- | --- |
 | `architecture` | 1.0.0 |
 | `chat` | 1.4.0 |
-| `common` | 2.1.0 |
+| `common` | 2.2.0 |
 | `definitions` | 3.0.0 |
 | `exports` | 1.0.0 |
-| `i18n` | 1.0.0 |
+| `i18n` | 1.1.0 |
 | `imports` | 1.1.0 |
-| `logs` | 2.0.0 |
+| `logs` | 2.1.0 |
 | `memory` | 1.3.0 |
 | `modules` | 1.7.0 |
 | `projects` | 4.1.0 |
 | `resources` | 1.1.0 |
-| `runs` | 1.9.0 |
+| `runs` | 1.10.0 |
 | `sdd` | 1.4.0 |
 | `usage` | 1.1.0 |
 | `wiki` | 1.3.0 |

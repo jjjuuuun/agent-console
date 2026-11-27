@@ -317,6 +317,11 @@ export interface GraphEditorProps {
    * 라벨끼리 겹침 0은 어떤 값에서도 지킨다. 값은 데이터로 넘긴다(앱이 설정에서 읽어도 된다).
    */
   labelSpacing?: LabelSpacing;
+  /**
+   * 노드 사이 최소 세로 간격(흐름 px). 0보다 크면 같은 세로 줄에서 잰 높이 기준으로 겹친 아래 노드를 내려 간격을 맞춘다(보기만, 데이터는 그대로).
+   * 실행 결과 줄이 붙어 노드가 저장된 높이보다 커지는 보기 전용 화면용. 기본 0(꺼짐).
+   */
+  nodeSeparation?: number;
   /** 방향 어휘 표(생략 = 내장 lr·tb·rl·bt) */
   directions?: DirectionSides;
   /**

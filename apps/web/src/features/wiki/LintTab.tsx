@@ -21,6 +21,7 @@ import { useServerText, useT } from "@agent-console/i18n";
 import { useMaybeT } from "../../i18n/useMaybeT";
 import { useWikiViewMessages } from "./useViewMessages";
 import { useFormat } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const P = WIKI_PARAMS;
 
@@ -93,7 +94,7 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
       await lintQ.refetch();
       await refresh();
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("problem.generic") });
+      toast({ tone: "danger", text: <WikiToast render={(t) => (e instanceof Error && e.message !== "" ? e.message : t("problem.generic"))} /> });
     } finally {
       setChecking(false);
     }
@@ -176,7 +177,7 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
               disabled: issuePage(menuIssue) === null,
               onSelect: () => {
                 void navigator.clipboard?.writeText(issuePage(menuIssue) ?? "");
-                toast({ tone: "success", text: t("tab.lint.copied") });
+                toast({ tone: "success", text: <WikiToast render={(t) => t("tab.lint.copied")} /> });
               },
             },
             ...(menuRule !== null ? [{ id: "rule", label: t("tab.lint.openRule"), onSelect: () => openRule(menuRule) }] : []),

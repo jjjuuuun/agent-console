@@ -1,13 +1,22 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7a: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-graph`, so the web can show graph validation issues (by code) and port labels in English (data only, no API change).
-- 5.2R.94(잔해 정리): 쓰지 않는 직접 의존 `agent-console-registry`를 뺐다(import 0건). 공개 API 변경 없음.
-- 5.2R.5: 검증 문구가 노드를 이름(label → 타입 title)으로 부른다. 노드·연결 id는 `node_id`·`edge_id`·`details`에만.
-- 5R.12: `validate_graph(cycle_edge=)`를 주면 `cycle` 이슈에 "되돌아가는 연결을 사이클 연결 종류로 바꾸기" 제안(`remove_edge_ids` + `add_edges`)과 이름이 든 문구가 붙는다(맞는 종류가 없으면 지금 그대로).
-- 5R.5: 반복 — 공개 술어 `descriptor_cycle_edge`(디스크립터 `cycle`), 순수 함수 `loop_regions(graph, edge_types) -> {edge_id: LoopRegion}`, `effective_max_iterations(edge, descriptor, settings_value)`, 상수 `CYCLE_LIMIT_CONFIG_KEY`(`max_iterations`).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-graph`, so the web app can show graph validation issues (by code) and port
+  labels in English (data only, no API change).
+- Cleanup: removed the unused direct dependency `agent-console-registry` (no imports). No public API changes.
+- Validation messages refer to nodes by name (label, then the type title). Node and edge ids appear only in `node_id`,
+  `edge_id` and `details`.
+- With `validate_graph(cycle_edge=)`, a `cycle` issue carries a suggestion to change the returning edge to the cycle
+  edge type (`remove_edge_ids` plus `add_edges`) and a message with the names (unchanged when no matching type
+  exists).
+- Loops: the public predicate `descriptor_cycle_edge` (descriptor `cycle`), the pure function
+  `loop_regions(graph, edge_types) -> {edge_id: LoopRegion}`,
+  `effective_max_iterations(edge, descriptor, settings_value)` and the constant `CYCLE_LIMIT_CONFIG_KEY`
+  (`max_iterations`).
 
 ## 0.1.0
 
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.

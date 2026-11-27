@@ -86,6 +86,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     common.Fix,
     common.SpaceRef,
     common.LabelDisplay,
+    common.TextTemplate,
     # 정의
     definitions.Agent,
     definitions.Limits,
@@ -158,6 +159,9 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     runs.BackendDescriptor,
     runs.CollectorDescriptor,
     runs.ModelInfo,
+    # 모델 계정 조회(0.16.1, design §1.1-MB)
+    runs.BackendModelCatalog,
+    runs.ModelDiscoveryInfo,
     runs.DelegationStrategyDescriptor,
     resources.ResourceTypeDescriptor,
     runs.InteractionKindDescriptor,

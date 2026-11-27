@@ -25,7 +25,7 @@ const tm: MaybeTranslate = (key) => {
 const t: Translate = Object.assign((key: string) => tm(key) ?? key, { language: "ko" });
 /** 서버 코드 묶음(계약 ko 묶음)을 읽는 서버 문구 조회. */
 const serverCodes = (JSON.parse(readFileSync(join(resolve(__dirname, "../../../../.."), "packages/py/base/ac-contracts/src/agent_console_contracts/locales/ko.json"), "utf8")) as { codes: Record<string, string> }).codes;
-const server: ServerText = { text: (x) => x, issue: (code, _details, fallback) => serverCodes[code] ?? fallback };
+const server: ServerText = { text: (x) => x, render: (value) => value, issue: (code, _details, fallback) => serverCodes[code] ?? fallback };
 
 const err = (status: number, code: string, details: Record<string, unknown> = {}, message = "서버 문장") => new ApiError(status, { code, message, details });
 

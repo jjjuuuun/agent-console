@@ -30,6 +30,7 @@ import type { WikiTabProps } from "./wikiTabs";
 import { useServerText, useT, type Translate } from "@agent-console/i18n";
 import { useMaybeT } from "../../i18n/useMaybeT";
 import { useWikiViewMessages } from "./useViewMessages";
+import { WikiToast } from "./WikiToast";
 
 type Obj = Record<string, unknown>;
 
@@ -147,7 +148,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
     all,
     onOpen: openRule,
     onImport: rulesScreen && ctx.capabilities.rules_library && library.kind !== null && ctx.projectId !== null ? importRule : undefined,
-    onRemoved: (restore) => toast({ tone: "info", text: t("tab.rules.removed"), durationMs: 5000, action: { label: t("tab.rules.undo"), onClick: restore } }),
+    onRemoved: (restore) => toast({ tone: "info", text: <WikiToast render={(t) => t("tab.rules.removed")} />, durationMs: 5000, action: { label: <WikiToast render={(t) => t("tab.rules.undo")} />, onClick: restore } }),
     readOnlyReason: writeBlock,
   };
 
@@ -303,7 +304,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
           ) : (
             <>
               <div className="wiki-toolbar">
-                <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(instructions); toast({ tone: "success", text: t("tab.rules.instructionsCopied") }); }}>{t("tab.rules.instructionsCopy")}</Button>
+                <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(instructions); toast({ tone: "success", text: <WikiToast render={(t) => t("tab.rules.instructionsCopied")} /> }); }}>{t("tab.rules.instructionsCopy")}</Button>
               </div>
               <pre className="ac-pre wiki-instructions" tabIndex={0} aria-label={t("tab.rules.sections.instructions")}>{instructions}</pre>
             </>

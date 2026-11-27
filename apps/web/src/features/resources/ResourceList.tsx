@@ -74,7 +74,7 @@ export function ResourceList(props: ResourceListProps) {
     }),
     [rest],
   );
-  const edits = useDefinitionEdits(store, t.arrange);
+  const edits = useDefinitionEdits(store);
   const view = useListView<ResourceSummary>({
     listId: "resources",
     items: filtered,

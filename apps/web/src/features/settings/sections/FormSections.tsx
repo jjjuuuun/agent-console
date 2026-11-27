@@ -11,6 +11,8 @@ import { agentSchemaForBackend, buildAgentDefaultsUi, useUserSettingsText } from
 import { LayerForm } from "../LayerForm";
 import { UserSettingsForm } from "../UserSettingsForm";
 import { BackendReadinessSection } from "../../backendReadiness";
+import { MODEL_WIDGET, ModelWidget, useModelFieldOptions } from "../../library";
+import { setAt } from "../../../lib/jsonPointer";
 import { useBackends, useDelegationStrategies, useEdgeTypes, useMergeStrategies, useResourceList, useResourceTypes } from "../settingsData";
 import type { SchemaNode } from "../../../lib/schemaTools";
 import { enumValues } from "../../../lib/schemaTools";
@@ -58,10 +60,13 @@ export function CommonSection({ value, onChange, errors, disabled, focusPath }: 
     return def === undefined ? [] : enumValues(def, contractsSchema);
   }, []);
   const attachmentErrors = useMemo(() => attachmentErrorsAt(errors, "/resources"), [errors]);
-  const ui = useMemo(
-    () => buildAgentDefaultsUi(schema, { backends: backends.data ?? [], resources: resources.data ?? [], resourceTypes: types.data ?? [], attachmentModes: modes, layerLabel: m.settings.layerCommon, backendEmptyLabel: m.settings.backendUnset, attachmentErrors }, text),
-    [schema, backends.data, resources.data, types.data, modes, attachmentErrors, text, m],
-  );
+  const modelOptions = useModelFieldOptions(backendId);
+  const ui = useMemo(() => {
+    const base = buildAgentDefaultsUi(schema, { backends: backends.data ?? [], resources: resources.data ?? [], resourceTypes: types.data ?? [], attachmentModes: modes, layerLabel: m.settings.layerCommon, backendEmptyLabel: m.settings.backendUnset, attachmentErrors }, text);
+    const props = (schema["properties"] ?? {}) as Record<string, unknown>;
+    // 모델 칸: 백엔드가 알려 주는 모델 목록(설정 + 계정 조회)에서 고르거나 직접 입력(에이전트 설정 폼과 같은 위젯)
+    return "model" in props ? (setAt(base as Record<string, unknown>, "/model", { "ui:widget": MODEL_WIDGET, "ui:options": modelOptions }) as typeof base) : base;
+  }, [schema, backends.data, resources.data, types.data, modes, attachmentErrors, text, m, modelOptions]);
   const failed = backends.error ?? resources.error ?? types.error;
   return (
     <>
@@ -81,6 +86,7 @@ export function CommonSection({ value, onChange, errors, disabled, focusPath }: 
         editLayerId={COMMON_LAYER_ID}
         {...(errors ? { errors } : {})}
         {...(disabled === undefined ? {} : { disabled })}
+        extraWidgets={{ [MODEL_WIDGET]: ModelWidget }}
         idPrefix="agent-defaults"
       />
     </>

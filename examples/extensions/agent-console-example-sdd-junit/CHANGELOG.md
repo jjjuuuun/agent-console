@@ -1,5 +1,6 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 첫 판(6R.17): 스펙 검증 결과 출처 `example.junit`(X42 예제) — JUnit XML 파일 패턴·요구 id 정규식은 옵션 데이터.
+- First release: an example spec verification source `example.junit`. The JUnit XML file pattern and the requirement id
+  regular expression are option data.

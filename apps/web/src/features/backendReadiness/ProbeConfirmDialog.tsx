@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
 import { useAppMessages } from "../../app/appMessages";
+import { useServerTranslate } from "../../i18n";
 
 export interface ProbeConfirmDialogProps {
   open: boolean;
@@ -14,6 +15,7 @@ export interface ProbeConfirmDialogProps {
 /** [연결 테스트] 확인 다이얼로그. 기본 포커스는 [테스트 실행](Enter), Esc는 취소. */
 export function ProbeConfirmDialog({ open, costNote, onCancel, onConfirm }: ProbeConfirmDialogProps) {
   const m = useAppMessages();
+  const tr = useServerTranslate();
   const t = m.backendReadiness;
   const runRef = useRef<HTMLButtonElement>(null);
   const [remember, setRemember] = useState(false);
@@ -35,7 +37,7 @@ export function ProbeConfirmDialog({ open, costNote, onCancel, onConfirm }: Prob
       }
     >
       <p className="ac-text">{t.probeDialogBody}</p>
-      {costNote ? <p className="app-muted" data-testid="probe-cost-note">{costNote}</p> : null}
+      {costNote ? <p className="app-muted" data-testid="probe-cost-note">{tr(costNote)}</p> : null}
       <label className="ac-choice" htmlFor={checkId}>
         <input id={checkId} type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
         <span>{t.probeDialogRemember}</span>

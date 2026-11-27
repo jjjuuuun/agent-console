@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useT } from "@agent-console/i18n";
 import { useDescribeError, type DescribeErrorFn } from "./errors";
 import type { AppMessages } from "./appMessages";
 import { useAppMessages } from "./appMessages";
@@ -40,3 +41,14 @@ function useShellAndApp(): ToastTextContext {
  * `toast({ text: <ToastText render={({ shell }) => shell.pending.none} /> })`.
  */
 export const ToastText = createToastText(useShellAndApp);
+
+/**
+ * `useT(namespace)` 번역 함수로 글을 만드는 알림 글 요소(모듈 맨 위에서 한 번 만든다).
+ * `const SddToast = createNamespaceToastText("sdd"); toast({ text: <SddToast render={(t) => t("head.copied")} /> });`
+ */
+export function createNamespaceToastText(namespace: string): (props: { render: ToastRender<ReturnType<typeof useT>> }) => ReactElement {
+  function useNamespaceT(): ReturnType<typeof useT> {
+    return useT(namespace);
+  }
+  return createToastText(useNamespaceT);
+}

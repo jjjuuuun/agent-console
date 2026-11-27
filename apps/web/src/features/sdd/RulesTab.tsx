@@ -24,6 +24,7 @@ import { useAutomationControl } from "./useAutomation";
 import { useSddInfo, useSddSpace, useSpecSyntax } from "./useSddApi";
 import { specTemplatesPath } from "./sddPaths";
 import { useT } from "@agent-console/i18n";
+import { SddToast } from "./SddToast";
 
 const P = SDD_PARAMS;
 type Obj = Record<string, unknown>;
@@ -228,7 +229,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
             await space.client.saveSpecAsTemplate(specId, body);
             setSaveTemplate(false);
             const href = specTemplatesPath();
-            toast({ tone: "success", text: t("saveTemplate.done", { name: body.name }), ...(href === undefined ? {} : { action: { label: t("templatesTitle"), onClick: () => void navigate(href) } }) });
+            toast({ tone: "success", text: <SddToast render={(t) => t("saveTemplate.done", { name: body.name })} />, ...(href === undefined ? {} : { action: { label: <SddToast render={(t) => t("templatesTitle")} />, onClick: () => void navigate(href) } }) });
           }}
         />
       ) : null}

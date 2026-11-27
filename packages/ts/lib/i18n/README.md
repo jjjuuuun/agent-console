@@ -35,6 +35,8 @@ const text = i18n.t("greeting", { ns: "app", replace: { label: "팀" } });
 - Missing keys fall back along `language -> primary language (en-US -> en) -> fallbackLanguage -> en`.
 - The server catalog (`applyServerCatalog`) is merged over the app bundle: its `ns` entries override the same keys, `text` (original string -> translation) and `codes` (issue code -> template) are read by `createServerText`/`useServerText`.
 
+Server strings made of values ("20 seconds ...") come with their sentence templates: `render(field, templates)` translates every template and fills the values, or returns `field` unchanged when any template has no translation. Tell the lookups the server's original-string language with `createI18n({ sourceLanguage })` or `setLanguage(i18n, code, { sourceLanguage })`: `text` and `render` then stop at that language instead of reading translations of other languages over the original.
+
 ## Language
 ```ts
 resolveLanguage({ preference, browser: navigator.languages, available, serverDefault }); // saved -> browser -> server default -> "en"
@@ -50,7 +52,7 @@ await setLanguage(i18n, "ko", { fetchCatalog, timeoutMs: 5000 }); // app bundle,
 
 const t = useT("app");                          // t("greeting", { label, count })
 const messages = useLibMessages("graph-editor", defaultMessages); // pass to a library component's `messages` prop
-const { text, issue } = useServerText();        // text("Original server string"), issue(code, details, fallback)
+const { text, issue, render } = useServerText(); // text("Original server string"), issue(code, details, fallback), render(value, parts)
 ```
 `useLibMessages` overlays the current language on your defaults and leaves `{name}` for the library to fill.
 

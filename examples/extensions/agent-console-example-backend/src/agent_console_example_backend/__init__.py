@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from ._backend import (
     BACKEND_ID,
+    MODELS_FILE_MISSING,
     SESSION_MISSING_CODE,
     SESSION_SUFFIX,
     InstallOptions,
@@ -20,6 +21,7 @@ from ._backend import (
 
 __all__ = [
     "BACKEND_ID",
+    "MODELS_FILE_MISSING",
     "SESSION_MISSING_CODE",
     "SESSION_SUFFIX",
     "InstallOptions",

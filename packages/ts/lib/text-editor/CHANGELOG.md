@@ -1,11 +1,15 @@
-# 변경 기록: @agent-console/text-editor
+# Changelog: @agent-console/text-editor
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
-- 비교 보기 접힌 구간: `@codemirror/merge` 6.13이 `role=button`만 달고 tabindex를 주지 않아 탭 정지가 사라지던 문제 수정(role과 tabindex를 따로 확인).
-- `TextDiffMessagesProvider`(`@agent-console/text-editor/messages`)와 `TextDiffMessages.before`·`after` 추가: 앱 루트에서 비교 보기 기본 문구를 한 번에 주입한다.
-- `TextEditorHandle.insertAtCursor(text)` 추가(7R.19, 위키 [링크 넣기]): 선택 범위를 글로 바꾸고 커서를 그 뒤로 옮긴다. 읽기 전용이면 false.
+- Collapsed ranges in the diff view: fixed a lost tab stop because `@codemirror/merge` 6.13 sets only `role=button`
+  without a tabindex (role and tabindex are now checked separately).
+- Added `TextDiffMessagesProvider` (`@agent-console/text-editor/messages`) and `TextDiffMessages.before` and `after`:
+  the default diff view messages are injected once at the app root.
+- Added `TextEditorHandle.insertAtCursor(text)` (for the wiki link insertion): replaces the selection with the text and
+  moves the cursor after it. Returns false when read-only.
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

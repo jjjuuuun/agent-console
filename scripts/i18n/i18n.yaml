@@ -52,8 +52,37 @@ texts:
   # 에이전트에게 가는 본문 기본값(도구 설명·결과 문구·프롬프트 틀)도 여기 있다(design §I18N.4 "번역 안 함").
   # `yaml_snippet`은 모듈 옵션 조회의 복사용 설정 YAML(값 = 설치자 데이터)이다.
   skip_keys: ["$comment", default, const, enum, examples, example, yaml_snippet]
+  # 위 키라도 이 부모 키 바로 안에서는 문자열 값을 모은다(부모 → 키). x-ui `example`은 입력 칸에
+  # 보이는 예시 글자라 웹 schema-form이 화면 언어로 옮긴다(문자열일 때만 — 숫자·객체 예시는 데이터).
+  keep_keys_in:
+    x-ui: [example]
+  # 값이 `이름 → 스키마` 표인 키. 그 안의 키는 속성 이름이라 위 skip_keys로 보지 않는다(`default`라는
+  # 이름의 속성도 스키마다 — 웹 translateSchema와 같다).
+  name_maps: [properties, patternProperties, $defs, definitions, dependentSchemas]
   # 같은 문구가 여러 패키지에 있을 때 뽑기가 고를 패키지(앞이 이김). 없으면 이름 순 첫째.
   prefer_owners: [ac-contracts]
+  # 값이 섞인 칸의 원문 틀 + 값 표 키(계약 `text_templates`: 칸 JSON Pointer → [{template, params}]).
+  # 이 표가 있는 객체는 틀(중첩 params 포함)을 원문으로 보고, 틀이 덮은 칸 값은 dynamic_text로 보지 않는다.
+  templates_key: text_templates
+
+# S1 정적 출처: 서버 응답 밖에서 웹이 서버 묶음으로 번역해 그리는 원문(서버 없이 읽는다).
+static:
+  # 계약 JSON Schema 문서(생성물, `poe contracts`)에서 웹 폼이 그리는 모델과 `$ref`로 닿는 정의.
+  # 모델 이름은 `models`(이름을 변수로 넘기는 곳)와 웹 소스의 `getContractSchema("이름")`에서 찾는다.
+  schemas:
+    - document: packages/ts/lib/contracts/schema/agent-console.schema.json
+      defs: $defs
+      # 이름을 변수로 넘겨 웹 소스에서 찾을 수 없는 모델(지금은 없음 — 키 이름만 읽는 곳은 넣지 않는다).
+      models: []
+      discover:
+        files: ["apps/web/src/**/*.ts", "apps/web/src/**/*.tsx", "packages/ts/lib/*/src/**/*.ts", "packages/ts/lib/*/src/**/*.tsx"]
+        exclude: ["**/*.test.ts", "**/*.test.tsx", "**/*.test-d.ts", "**/testing/**"]
+        pattern: "getContractSchema\\(\\s*[\"'](\\w+)[\"']"
+  # 패키지 데이터 파일 중 화면에 그대로 가는 값(`select` 경로, `*` = 목록 항목). 서버 훑기가 데이터를
+  # 만들어야만 보이는 값(예: 스펙의 작업 문법)을 여기서 바로 본다.
+  data:
+    - files: [packages/py/features/ac-sdd/src/agent_console_sdd/data/default_syntax.yaml]
+      select: ["/*/statuses/*/label"]
 
 # 오류·이슈 객체 모양: 이 두 키가 문자열이면 이슈로 보고 `message`는 S1이 아니라 S2(코드)로 본다.
 issue:
@@ -83,10 +112,15 @@ server:
   # 서버 프로세스 환경(값의 `{tmp}` = 임시 폴더). 실제 ~/.claude를 읽지 않게 빈 폴더를 준다.
   env:
     CLAUDE_CONFIG_DIR: "{tmp}/claude-config"
-  # 모듈 설정(`modules.options`).
+  # 모듈 설정(`modules.options`). 모델 계정 조회는 끈다(크롤이 실제 백엔드 계정을 묻지 않게 —
+  # 아래 skip_paths와 이중 안전장치. 환경에 키·토큰이 있어도 CLI·Models API를 부르지 않는다).
   options:
     link-projects-runs: {require_project: false}
-  # 훑기 전에 만들 데이터(ASCII 이름만 — 사용자 데이터가 원문으로 잡히지 않게).
+    mod-runs: {model_discovery: {enabled: false}}
+  # 씨앗 전에 만들 폴더(`{tmp}` = 임시 폴더). 등록할 프로젝트 폴더다.
+  dirs: ["{tmp}/i18n-project"]
+  # 훑기 전에 만들 데이터(ASCII 이름만 — 사용자 데이터가 원문으로 잡히지 않게). 본문 문자열의 `{tmp}`는
+  # 임시 폴더로 바꾸고, 본문이 문자열이면 text/plain으로 보낸다.
   seeds:
     - method: POST
       path: /api/v1/agents
@@ -102,6 +136,18 @@ server:
         edges:
           - {id: m1, source: {node: you, port: says}, target: {node: a, port: in}, kind: message, config: {}}
           - {id: r1, source: {node: a, port: out}, target: {node: you, port: hears}, kind: reply, config: {}}
+    - {method: POST, path: /api/v1/projects, body: {id: i18n-project, name: i18n-project, folder: "{tmp}/i18n-project"}}
+    - {method: POST, path: /api/v1/resources, body: {id: i18n-resource, type: instruction, name: i18n-resource}}
+    - method: PUT
+      path: /api/v1/resources/i18n-resource/content
+      body: "i18n"
+      if_match: {from: /api/v1/resources/i18n-resource/versions, select: /0/version_hash}
+    - {method: POST, path: /api/v1/sdd/templates, body: {id: i18n-template, name: i18n-template}}
+    - {method: POST, path: /api/v1/sdd/specs, body: {id: i18n-spec, name: i18n-spec}}
+    - {method: POST, path: /api/v1/wiki/rules, body: {id: i18n-rules, name: i18n-rules}}
+    - {method: POST, path: /api/v1/wiki/wikis, body: {id: i18n-wiki, name: i18n-wiki, rules: [i18n-rules]}}
+    - {method: PUT, path: /api/v1/wiki/wikis/i18n-wiki/pages/home, body: {content: "# home\n"}}
+    - {method: POST, path: /api/v1/conversations, body: {graph_id: i18n-graph, title: i18n}}
   # 경로 변수 값: `values`(고정) 또는 `from`(GET 경로) + `select`(`/` 경로, `*` = 목록 항목).
   params:
     agent_id: {values: [i18n-agent]}
@@ -110,10 +156,24 @@ server:
     module_id: {from: /api/v1/modules, select: "/*/id"}
     backend_id: {from: /api/v1/backends, select: "/*/id"}
     profile_id: {from: /api/v1/architecture/profiles, select: "/profiles/*/id"}
+    project_id: {values: [i18n-project]}
+    resource_id: {from: /api/v1/resources, select: "/*/id"}
+    template_id: {from: /api/v1/sdd/templates, select: "/*/id"}
+    spec_id: {values: [i18n-spec]}
+    doc_id: {from: /api/v1/sdd/specs/i18n-spec, select: "/documents/*/id"}
+    rule_id: {values: [i18n-rules]}
+    wiki_id: {values: [i18n-wiki]}
+    page: {values: [home]}
+    conversation_id: {from: /api/v1/conversations, select: "/*/id"}
+  # 질의 변수 값: 경로가 OpenAPI에 이 질의 변수를 선언했으면 값마다 `?이름=값`으로 한 번 더 읽는다
+  # (프로젝트 공간에서만 나오는 문구 — 예: 프로젝트 `.claude` 가져오기 출처).
+  query_params:
+    project: {values: [i18n-project]}
   # 경로 변수 하나가 가질 값 수 상한(곱이 너무 커지지 않게).
   max_param_values: 50
   # 훑지 않을 경로(OpenAPI 경로 틀, fnmatch).
   skip_paths:
     - /api/v1/i18n/{lang}                  # 문구 묶음 자체(원문이 키로 들어 있다)
     - /api/v1/backends/{backend_id}/models # 백엔드가 외부에 물을 수 있다(실호출 금지)
+    - /api/v1/backends/{backend_id}/model-catalog # 계정 모델 조회(CLI·Models API, 실호출 금지)
     - /api/v1/backends/login/*             # 로그인 세션

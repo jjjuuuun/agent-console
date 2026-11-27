@@ -231,7 +231,7 @@ a `plugins.unknown_disabled` warning (or `plugins.disabled_distribution` and sim
 | Usage (`mod-usage`) | `GET /usage?parts=windows,tokens` (omitted = all; parts that were not requested are null; with `windows` only, run history is not read), `GET /usage/sources` |
 | Settings | `GET/PUT /settings` |
 | Versions (all kinds, `mod-versions`) | `{collection}` = `/agents/{id}`, `/graphs/{id}`, `/resources/{id}`, `/settings` (the table is the settings data `modules.options.mod-versions.collections`): `GET {collection}/versions`, `GET …/versions/{hash}` (content = as stored), `GET …/versions/{a}/diff[/{b}]` (DefinitionDiff; b omitted = current; secret positions have `secret:true` and the value `***`; content shows only sha256 in `content_changes`), `GET …/versions/{hash}/files[/{path}]` (404 when there is no content snapshot; `text/plain` for text, otherwise `application/octet-stream`), `POST …/versions/{hash}/restore {message?}` (saves a new version; If-Match is required when the definition exists, 428/412; a deleted definition is restored without it; the same pre-save checks apply → 422; response DefinitionVersion + ETag; default message `restored from <hash>`) |
-| Message catalogs (`mod-i18n`) | `GET /i18n` (`I18nInfo`: languages with `sources`, `complete`, `missing`, plus `default_language` and `fallback_language`), `GET /i18n/{lang}` (`MessageCatalog`; `en-US` matches `en`; `ETag` + `Cache-Control: no-cache`, `If-None-Match` → 304; 404 `i18n.unknown_language`) |
+| Message catalogs (`mod-i18n`) | `GET /i18n` (`I18nInfo`: languages with `sources`, `complete`, `missing`, plus `default_language`, `fallback_language` and `source_language`), `GET /i18n/{lang}` (`MessageCatalog`; `en-US` matches `en`; `ETag` + `Cache-Control: no-cache`, `If-None-Match` → 304; 404 `i18n.unknown_language`) |
 | Projects, logs, memory, specs, wiki, architecture map | `/projects…` (`mod-projects`), `/logs…` (`mod-logs`), `/memory/…` (`mod-memory`), `/sdd/…` (`mod-sdd`), `/wiki/…` (`mod-wiki`), `/architecture/…` (`mod-architecture`). The full route lists are in each module README (see the module tables above) |
 
 - Fixed paths (`/runs/handoffs`, link modules) match before `{id}` paths (feature modules): the host attaches the link
@@ -374,9 +374,11 @@ modules:                       # server modules on and off (read-only in the web
         claude-agent-sdk: {models: [], allow_command_hooks: false, allow_subscription_auth: true}  # subscription by default (at your own responsibility)
         fake-agent: {models: [], echo_hooks: false}
       backend_login: {enabled: true, timeout_s: 300}  # backend sign-in from the app screen (see "Backend sign-in" below)
+      model_discovery: {enabled: true, ttl_s: 3600, failure_ttl_s: 60, timeout_s: 20, disabled_backends: []}  # fills the model field with the models the backend account can use (no model call)
     mod-i18n:
       default_language: en     # language when neither the screen setting nor the browser language decides it
       fallback_language: en    # language for text the chosen language lacks
+      source_language: ko      # language the server source text is written in (null = unknown)
       catalog_dirs: []         # folders with <language>.json catalogs (relative to the settings file folder, applied after package catalogs)
       disabled_catalogs: []    # package catalog ids to leave out
 ```

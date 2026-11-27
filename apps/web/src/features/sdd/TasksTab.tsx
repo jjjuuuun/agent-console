@@ -28,6 +28,7 @@ import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecSyntax, useSpecTasks } from "./useSddApi";
 import { collectFieldValues, readTaskFilter, setList, taskQueryOf } from "./params";
 import { useServerText, useT } from "@agent-console/i18n";
+import { SddToast } from "./SddToast";
 
 const P = SDD_PARAMS;
 
@@ -77,7 +78,7 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
     ctx,
     onTaskChanged: (task, details) => {
       setConflicts((c) => ({ ...c, [task.key]: details }));
-      toast({ tone: "warning", text: t("tasks.statusFail409", { title: task.title ?? task.key }), durationMs: 8000, action: { label: t("tasks.openInDoc"), onClick: () => goTab("documents", { [P.doc]: task.document, [P.line]: String(task.line) }) } });
+      toast({ tone: "warning", text: <SddToast render={(t) => t("tasks.statusFail409", { title: task.title ?? task.key })} />, durationMs: 8000, action: { label: <SddToast render={(t) => t("tasks.openInDoc")} />, onClick: () => goTab("documents", { [P.doc]: task.document, [P.line]: String(task.line) }) } });
       void tasksQ.refetch();
       void refresh();
     },
@@ -117,7 +118,7 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
     } catch (e) {
       if (e instanceof ApiError && e.code === ERROR_CODES.SDD_TASK_CHANGED) {
         setConflicts((c) => ({ ...c, [task.key]: e.details as unknown as SddTaskChangedDetails }));
-        toast({ tone: "warning", text: t("tasks.statusFail409", { title: task.title ?? task.key }), durationMs: 8000, action: { label: t("tasks.openInDoc"), onClick: () => openDocument(task) } });
+        toast({ tone: "warning", text: <SddToast render={(t) => t("tasks.statusFail409", { title: task.title ?? task.key })} />, durationMs: 8000, action: { label: <SddToast render={(t) => t("tasks.openInDoc")} />, onClick: () => openDocument(task) } });
         void tasksQ.refetch();
         void refresh();
       } else if (e instanceof ApiError && e.code === ERROR_CODES.SDD_GATE_BLOCKED) {

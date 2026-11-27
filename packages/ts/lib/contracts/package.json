@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/contracts",
-  "version": "0.16.0",
-  "description": "Agent Console 계약 타입·상수·JSON Schema (Pydantic에서 생성)",
+  "version": "0.16.1",
+  "description": "Agent Console contract types, constants, and JSON Schema (generated from Pydantic)",
   "private": true,
   "license": "MIT",
   "type": "module",

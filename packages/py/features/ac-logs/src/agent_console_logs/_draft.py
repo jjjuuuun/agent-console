@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from agent_console_contracts import TextTemplate
 from agent_console_contracts.logs import LogDocumentRef, LogLane, TokenSample
 
 from ._values import JsonValue
@@ -48,6 +49,9 @@ class LogEventDraft:
         agent: thread 표시 이름·부모(서브에이전트).
         summary: 목록용 짧은 본문(사람이 읽는 평문). None이면 코어가 `detail`(없으면 `raw`)을
             문자열로 만든다. 저장 전 가리기·길이 제한은 코어가 한다.
+        text_templates: 값이 섞인 ``title``·``summary``의 원문 틀 + 값(``/title``·``/summary`` →
+            문장 틀 목록, 계약 ``LogEvent.text_templates``). 코어가 칸과 같이 가리고, 가린·자른 칸
+            값과 맞는 항목만 남긴다.
     """
 
     category: str
@@ -80,3 +84,4 @@ class LogEventDraft:
     usage: TokenSample | None = None
     agent: AgentInfo | None = None
     summary: str | None = None
+    text_templates: Mapping[str, Sequence[TextTemplate]] = field(default_factory=dict)

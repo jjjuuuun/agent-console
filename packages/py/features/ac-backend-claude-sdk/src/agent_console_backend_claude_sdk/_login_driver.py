@@ -19,6 +19,7 @@ import contextlib
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from agent_console_contracts import TextTemplate, render_text_template
 from agent_console_pty_session import (
     ExpectRule,
     ExpectRules,
@@ -59,7 +60,7 @@ class ClaudeCliLoginDriver:
         argv: 로그인 실행 인자(None = 실행 파일을 찾지 못함 → ``cli_missing``).
         status_argv: 확인 실행 인자.
         env: 하위 프로세스 환경 전체.
-        warnings: 진행에 늘 실을 안내.
+        warnings: 진행에 늘 실을 안내(문장 또는 원문 틀 + 값 — 틀은 ``text_templates``로도 싣는다).
         spawner: PTY 어댑터(None = 플랫폼 기본).
     """
 
@@ -70,7 +71,7 @@ class ClaudeCliLoginDriver:
         argv: Sequence[str] | None,
         status_argv: Sequence[str] | None,
         env: Mapping[str, str],
-        warnings: Sequence[str] = (),
+        warnings: Sequence[str | TextTemplate] = (),
         spawner: PtySpawner | None = None,
     ) -> None:
         self._opts = options
@@ -78,7 +79,12 @@ class ClaudeCliLoginDriver:
         self._argv = list(argv) if argv else None
         self._status_argv = list(status_argv) if status_argv else None
         self._env = dict(env)
-        self._warnings = list(warnings)
+        self._warnings = [
+            render_text_template(w) if isinstance(w, TextTemplate) else w for w in warnings
+        ]
+        self._warning_templates = {
+            f"/warnings/{i}": [w] for i, w in enumerate(warnings) if isinstance(w, TextTemplate)
+        }
         self._spawner = spawner
         self._rules = build_expect_rules(options)
         self._session: PtySession | None = None
@@ -107,7 +113,7 @@ class ClaudeCliLoginDriver:
         argv: Sequence[str] | None,
         status_argv: Sequence[str] | None,
         env: Mapping[str, str],
-        warnings: Sequence[str] = (),
+        warnings: Sequence[str | TextTemplate] = (),
         spawner: PtySpawner | None = None,
     ) -> ClaudeCliLoginDriver:
         """로그인 과정을 띄운다(실패해도 예외 대신 ``failed`` 드라이버)."""
@@ -314,6 +320,7 @@ class ClaudeCliLoginDriver:
             code_label=self._t.code_label,
             screen=list(screen),
             warnings=list(self._warnings),
+            text_templates=dict(self._warning_templates),
             reason=self._reason,
             details=dict(self._details),
             fixes=list(self._fixes),

@@ -21,6 +21,10 @@
   ``POST /backends/{id}/logout``. 응답은 ``no-store``,
   입력값은 응답·로그·오류에 나오지 않는다. 로그인 서비스가 꺼져 있으면(``backend_login.enabled``
   거짓) 이 경로가 없고 ``/backends``·``/backends/status``에서 로그인 능력·동작을 뺀다.
+- 백엔드 모델 목록(design §1.1-MB): ``GET /backends/{id}/model-catalog?refresh=``
+  (``BackendModelCatalog`` — 설치자 설정 목록 + 계정 조회, 조회 상태, ``no-store``).
+  ``GET /backends/{id}/models``는 같은 서비스의 합친 목록(모양 그대로 ``list[ModelInfo]``).
+  조회 실패는 오류가 아니다(200 + ``discovery.state = failed`` + 경고 이슈).
 - 디스크립터: ``/node-types``(+ ``POST …/ports``)·``/edge-types``·``/backends``(+ ``/models``)·
   ``/delegation-strategies``·``/interaction-kinds``·``/condition-operators``
 - 관측 탭 이벤트 접두어(5.5R.13): ``GET /observe-event-prefixes``(설치자 옵션
@@ -56,6 +60,7 @@ from agent_console_contracts import (
     BackendLoginSession,
     BackendLoginStartRequest,
     BackendLogoutResult,
+    BackendModelCatalog,
     BackendProbeRequest,
     BackendProbeResult,
     BackendReadiness,
@@ -86,7 +91,12 @@ from agent_console_contracts import (
     RunStatus,
 )
 from agent_console_registry import UnknownExtensionError
-from agent_console_runtime import BackendLoginService, BackendReadinessService, LoginInputError
+from agent_console_runtime import (
+    BackendLoginService,
+    BackendModelCatalogService,
+    BackendReadinessService,
+    LoginInputError,
+)
 from agent_console_store import (
     ProjectAssignStore,
     assign_project,
@@ -168,6 +178,7 @@ def build_router(
     activity_limit: int = 100,
     readiness: Callable[[], BackendReadinessService] | None = None,
     login: Callable[[], BackendLoginService] | None = None,
+    model_catalog: Callable[[], BackendModelCatalogService] | None = None,
     observe_event_prefixes: Sequence[str] = DEFAULT_OBSERVE_EVENT_PREFIXES,
     projects: Callable[[], ProjectAssignStore] | None = None,
     mover: Callable[[], RunMover] | None = None,
@@ -183,6 +194,8 @@ def build_router(
         activity_limit: 에이전트 활동 기본 개수.
         readiness: 백엔드 준비 상태·연결 테스트 서비스. None이면 그 세 경로를 붙이지 않는다.
         login: 백엔드 로그인 서비스. None이면 로그인·로그아웃 경로 6개를 붙이지 않는다.
+        model_catalog: 백엔드 모델 목록 서비스(설정 + 계정 조회). None이면
+            ``…/model-catalog``를 붙이지 않고 ``…/models``는 백엔드 ``list_models()`` 그대로다.
         projects: 프로젝트 넣기·개수 포트(``project_id``를 가진 Run 저장소).
             None이면 두 경로를 붙이지 않는다.
         mover: 앱 DB 옛 기록 옮기기(``POST /runs/move-to-project``). None이면 경로를 붙이지 않는다.
@@ -543,11 +556,44 @@ def build_router(
 
     @router.get("/backends/{backend_id}/models", response_model=list[ModelInfo], responses=errors())
     async def list_models(backend_id: str) -> list[ModelInfo]:
+        """모델 고르기 칸 목록: 설치자 설정 목록 + 계정 조회(지원하는 백엔드, 모델 호출 없음).
+
+        설정 목록이 앞(그 순서), 조회에만 있는 모델은 뒤. `sources`에 출처가 적힌다. 조회가
+        실패하거나 꺼져 있어도 설정 목록은 그대로 온다(상태는 `…/model-catalog`).
+        """
         try:
             backend = service().registries.backends.get(backend_id)
         except UnknownExtensionError:
             raise BackendNotFoundError(backend_id) from None
-        return await backend.list_models()
+        if model_catalog is None:
+            found: list[ModelInfo] = await backend.list_models()
+            return found
+        return await model_catalog().models(backend_id)
+
+    if model_catalog is not None:
+
+        @router.get(
+            "/backends/{backend_id}/model-catalog",
+            response_model=BackendModelCatalog,
+            responses=errors(),
+            summary="실행 백엔드 모델 목록과 계정 조회 상태",
+        )
+        async def get_model_catalog(
+            backend_id: str, response: Response, refresh: bool = False
+        ) -> BackendModelCatalog:
+            """설치자 설정 목록과 계정 조회 결과를 합친 목록, 조회 상태(`discovery`).
+
+            - 조회는 모델을 부르지 않는다(비용 없음). 결과는 서버 메모리에 보관한다
+              (`mod-runs.model_discovery.ttl_s`, 실패는 `failure_ttl_s`).
+            - `refresh=true`면 보관한 결과를 건너뛰고 다시 묻는다(진행 중이면 그 결과를 함께
+              받는다).
+            - 조회 실패·시간 초과·인증 없음도 200이다: 설정 목록 + `discovery.state = failed`(직전
+              성공 목록이 있으면 `stale`) + 경고 이슈 `backend.model_discovery_failed`
+              (`details.backend_id`·`reason`). 꺼져 있으면 `disabled`, 능력이 없으면 `unsupported`.
+            - 등록되지 않은 id는 404 `not_found`.
+            """
+            response.headers["Cache-Control"] = NO_STORE
+            return await model_catalog().catalog(backend_id, refresh=refresh)
 
     @router.get(
         "/delegation-strategies",

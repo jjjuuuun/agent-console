@@ -281,6 +281,9 @@ backends:
 | `observe_collectors` | `{hooks: sdk-hooks, mcp: mcp-calls}` | Old observation keys → collector ids (`observe.collectors` wins over old keys) |
 | `hook_probe_folder` | `hook-probe` | Folder name under the run folder for imitated hook probe records |
 | `login` | `null` | Scripted sign-in (`FakeLoginScript`, "Scripted sign-in" above). `{}` is the default script |
+| `discovered_models` | `null` | Model discovery stand-in (`ModelInfo` list, "Imitating model discovery" below). `null` (and no `discovery_failure`) = no `model_discovery` capability |
+| `discovery_failure` | `null` | A reason code the lookup fails with (for example `auth_missing`, `network`). `unsupported` = "cannot list models with this sign-in" |
+| `discovery_delay_s` | `0` | Seconds to wait before answering the lookup (time limit and in-progress cases) |
 | `echo_hooks` | `false` | Emits `hook.started` and `hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}` for each item in the run bundle's `hooks` slot (commands are not run; works even without `observe` rules). Not emitted when the settings say not to accept `hooks` |
 
 Unknown keys and invalid values raise `ValueError` (location and reason only, no values). Type models: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
@@ -290,6 +293,40 @@ Unknown keys and invalid values raise `ValueError` (location and reason only, no
 With the server administrator setting `session_dir` (relative paths = relative to the app workspace), each run leaves one line in `<folder>/<cwd key>/<session>.jsonl`, and a request
 to continue a session whose file is missing fails with `fake.session_missing` (the case where a real backend cannot find the session record). `session_archive()`
 provides archiving and restore. The default (null) keeps the current behavior (continuation status `not_applicable`).
+
+## Imitating model discovery
+
+With `discovered_models` or `discovery_failure`, the backend declares the optional capability `capabilities.model_discovery` and
+`discover_models()` returns that list or that failure without any model or network call (`discovery_calls` counts the lookups). The server
+merges the list after the configured `models` and shows it in the model field (`GET /api/v1/backends/fake-agent/models` and
+`…/model-catalog`). The model ids are whatever the test or fixture writes — this package has no model names.
+
+For end-to-end tests, put the list in the server settings fixture (the e2e spec picks the ids):
+
+```yaml
+modules:
+  options:
+    mod-runs:
+      backends:
+        fake-agent:
+          discovered_models: [{id: e2e-model-a, title: "E2E model A"}]
+          # discovery_failure: network      # or a failure instead of a list
+          # discovery_delay_s: 2            # slow lookup
+```
+
+```python
+>>> import asyncio
+>>> from agent_console_runtime import BackendCheckContext, SecretResolver
+>>> backend = FakeBackend.from_options(
+...     {"discovered_models": [{"id": "m-found"}]}, secrets=SecretResolver(), environ={}
+... )
+>>> backend.descriptor.capabilities.model_discovery
+True
+>>> result = asyncio.run(backend.discover_models(BackendCheckContext("fake-agent"), 5.0))
+>>> result.ok, [m.id for m in result.models]
+(True, ['m-found'])
+
+```
 
 ## Test helpers
 

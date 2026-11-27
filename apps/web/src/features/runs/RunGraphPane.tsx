@@ -7,6 +7,8 @@ import { useGraphEditorProps } from "../teams";
 import { useRunsMessages } from "./messages";
 
 const NO_OPTION_DEFAULTS: Readonly<Record<string, number>> = {};
+/** 실행 결과 줄로 커진 노드가 서로 겹치지 않게 두는 최소 세로 간격(흐름 px). */
+const RUN_NODE_SEPARATION = 8;
 import type { RunOverlay } from "./runsLib";
 
 export interface RunGraphPaneProps {
@@ -77,6 +79,7 @@ export function RunGraphPane(p: RunGraphPaneProps) {
           nodeBadgesOverride={badges}
           showResources={p.showResources}
           onShowResourcesChange={p.onShowResourcesChange}
+          nodeSeparation={RUN_NODE_SEPARATION}
           showMinimap={p.showMinimap ?? false}
           nowMs={p.nowMs}
           {...(p.resolvePorts ? { resolvePorts: p.resolvePorts } : {})}

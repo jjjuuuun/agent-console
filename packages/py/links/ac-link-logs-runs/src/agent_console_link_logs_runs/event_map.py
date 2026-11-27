@@ -31,7 +31,7 @@ from typing import Any
 
 from ruamel.yaml import YAML
 
-from agent_console_contracts import x_ui
+from agent_console_contracts import TextTemplate, render_text_template, x_ui
 from agent_console_logs import JsonValue, effective_config, json_pointer, text
 
 __all__ = [
@@ -54,6 +54,7 @@ __all__ = [
     "resolve",
     "resolve_documents",
     "resolve_strings",
+    "resolve_text_template",
 ]
 
 DEFAULT_EVENT_MAP_RESOURCE = "data/run_event_map.yaml"
@@ -445,6 +446,116 @@ def resolve(spec: Any, document: JsonValue, names: Mapping[str, str], item: Any 
             return render(default, document, names, item)
         return "" if raw is None else key
     return ""
+
+
+def _param_names(keys: list[str]) -> dict[str, str]:
+    """틀 자리 키(``/a/b``·``./k``·``.``·이름) → 자리표시자 이름(``b``·``k``·``item``·이름).
+
+    마지막 조각이 겹치면 겹친 키는 조각을 ``_``로 이은 이름(``source_node``), 그래도 겹치면 번호를
+    붙인다.
+    """
+
+    def parts(key: str) -> list[str]:
+        if key == ".":
+            return ["item"]
+        if key.startswith(ITEM_POINTER):
+            key = key[len(ITEM_POINTER) :]
+        pieces = [p.replace("~1", "/").replace("~0", "~") for p in key.split("/") if p]
+        cleaned = [re.sub(r"\W", "_", p) or "value" for p in pieces] or ["value"]
+        return [p if p[0].isalpha() or p[0] == "_" else f"v{p}" for p in cleaned]
+
+    unique = list(dict.fromkeys(keys))
+    short = {key: parts(key)[-1] for key in unique}
+    counts: dict[str, int] = {}
+    for name in short.values():
+        counts[name] = counts.get(name, 0) + 1
+    out: dict[str, str] = {}
+    used: set[str] = set()
+    for key in unique:
+        name = short[key]
+        if counts[name] > 1:
+            pieces = parts(key)
+            name = "_".join(pieces[-2:]) if len(pieces) > 1 else name
+        base, n = name, 2
+        while name in used:
+            name, n = f"{base}_{n}", n + 1
+        used.add(name)
+        out[key] = name
+    return out
+
+
+def _literal(text_value: str) -> str:
+    return text_value.replace("{", "{{").replace("}", "}}")
+
+
+def _render_text_template(
+    template: str, document: JsonValue, names: Mapping[str, str], item: Any = _NO_ITEM
+) -> TextTemplate | None:
+    """``render``와 같은 값을 내는 원문 틀 + 값(자리표시자 ``{이름}``, 값은 채운 문자열).
+
+    자리표시자가 없거나 자리 밖 글자에 글자(문자)가 없으면(값만으로 된 틀) None.
+    """
+    matches = list(_PLACEHOLDER.finditer(template))
+    if not matches:
+        return None
+    literal = _PLACEHOLDER.sub("", template)
+    if not any(ch.isalpha() for ch in literal):
+        return None
+    keys = [m.group(1) for m in matches]
+    param_of = _param_names(keys)
+    params: dict[str, str] = {}
+    out: list[str] = []
+    last = 0
+    for match in matches:
+        out.append(_literal(template[last : match.start()]))
+        key = match.group(1)
+        name = param_of[key]
+        out.append("{" + name + "}")
+        if key.startswith("/") or key.startswith(ITEM_POINTER):
+            value = _lookup(key, document, item)
+            params[name] = "" if value is None else text(value)
+        else:
+            params[name] = names.get(key, "")
+        last = match.end()
+    out.append(_literal(template[last:]))
+    # ``render``처럼 앞뒤 공백을 뺀다(틀 글자 쪽만, 값 쪽 공백은 비교에서 걸러진다)
+    return TextTemplate(template="".join(out).strip(), params=dict(params))
+
+
+def resolve_text_template(
+    spec: Any, document: JsonValue, names: Mapping[str, str], item: Any = _NO_ITEM
+) -> TextTemplate | None:
+    """규칙 값(틀 또는 ``{pointer, map, default}``) → ``resolve`` 값의 원문 틀 + 값.
+
+    고른 틀(문자열 틀, 찾은 ``map`` 값, ``default``)을 ``{/포인터}`` 대신 이름 자리표시자로 바꾼다.
+    이름은 포인터 마지막 조각(``{/payload/status}`` → ``{status}``), 틀 이름은 그대로(``{node}``).
+    자리표시자가 없는 고정 문구·값만으로 된 틀이면 None(고정 문구는 원문 키 그대로 번역된다).
+    채운 값이 ``resolve`` 값과 다르면(빈 값으로 앞뒤 공백이 잘린 경우 등) None.
+
+    >>> doc = {"payload": {"status": "completed"}}
+    >>> resolve_text_template("실행 {/payload/status}", doc, {})
+    TextTemplate(template='실행 {status}', params={'status': 'completed'})
+    >>> resolve_text_template("{/payload/status}", doc, {}) is None
+    True
+    """
+    chosen: str | None = None
+    if isinstance(spec, str):
+        chosen = spec
+    elif isinstance(spec, Mapping):
+        pointer = spec.get("pointer")
+        raw = _lookup(pointer, document, item) if isinstance(pointer, str) else None
+        table = spec.get("map")
+        key = _string_form(raw)
+        if isinstance(table, Mapping) and key in table:
+            chosen = str(table[key])
+        elif isinstance(spec.get("default"), str):
+            chosen = spec["default"]
+    if chosen is None:
+        return None
+    built = _render_text_template(chosen, document, names, item)
+    if built is None or render_text_template(built) != resolve(spec, document, names, item):
+        return None
+    return built
 
 
 def _each_items(spec: Mapping[str, Any], document: JsonValue) -> list[Any]:

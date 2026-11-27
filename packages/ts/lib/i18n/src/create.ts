@@ -2,6 +2,7 @@ import type { MessageCatalog } from "@agent-console/contracts/i18n";
 import { createInstance, type i18n as I18nInstance } from "i18next";
 
 import { defaultFormatters } from "./formatters";
+import { chainUntilSource, getSourceLanguage, setSourceLanguage } from "./serverText";
 import { SERVER_CODES_NS, SERVER_TEXT_NS } from "./types";
 import type {
   BundledCatalogs,
@@ -27,6 +28,8 @@ export interface CreateI18nOptions {
   formatters?: FormatterRegistry;
   /** Called for a missing key or placeholder value. Tests pass `throwOnMissing`. */
   onMissing?: MissingHandler;
+  /** The language the server's original strings are written in (`I18nInfo.source_language`); see `setSourceLanguage`. */
+  sourceLanguage?: string | null;
 }
 
 /** A created instance. The extra fields are what `setLanguage` needs. */
@@ -78,6 +81,7 @@ export function createI18n(options: CreateI18nOptions = {}): Console18n {
     );
   }
   if (options.loadBundled) instance.loadBundled = options.loadBundled;
+  setSourceLanguage(instance, options.sourceLanguage);
   return instance;
 }
 
@@ -102,6 +106,18 @@ export interface SetLanguageOptions {
   fetchCatalog?: FetchCatalog;
   /** Give up on the server catalog after this many ms (the app bundle still applies). Default 5000. */
   timeoutMs?: number;
+  /**
+   * The server's original-string language (`I18nInfo.source_language`). `undefined` keeps the current value, `null`
+   * clears it. With it, the server catalogs of the fallback languages before the source language are loaded too.
+   */
+  sourceLanguage?: string | null;
+}
+
+/** The fallback chain i18next would resolve for `language` (language, its base language, then the fallbacks). */
+function chainFor(instance: I18nInstance, language: string): readonly string[] {
+  const utils = instance.services?.languageUtils as { toResolveHierarchy?: (code: string, fallback?: unknown) => string[] } | undefined;
+  const resolved = utils?.toResolveHierarchy?.(language, instance.options?.fallbackLng);
+  return resolved?.length ? resolved : [language];
 }
 
 /** What `setLanguage` did. `server`: `loaded`, `failed` (error or timeout), `missing` (server has none), `skipped` (no fetch given). */
@@ -121,6 +137,7 @@ export async function setLanguage(
   options: SetLanguageOptions = {},
 ): Promise<SetLanguageResult> {
   const { fetchCatalog, timeoutMs = 5000 } = options;
+  if (options.sourceLanguage !== undefined) setSourceLanguage(instance, options.sourceLanguage);
   if (instance.loadBundled && !instance.hasResourceBundle(language, "")) {
     const bundle = await instance.loadBundled(language).catch(() => undefined);
     if (bundle) addBundle(instance, language, bundle, false);
@@ -137,6 +154,23 @@ export async function setLanguage(
       if (catalog) {
         applyServerCatalog(instance, { ...catalog, language });
         server = "loaded";
+        // Fallback languages in front of the source language answer original-string lookups too (design I-18).
+        const others = chainUntilSource(chainFor(instance, language), getSourceLanguage(instance)).filter(
+          (code) => code !== language && !instance.hasResourceBundle(code, SERVER_TEXT_NS),
+        );
+        await Promise.all(
+          others.map(async (code) => {
+            try {
+              const extra = await Promise.race([
+                fetchCatalog(code, controller.signal),
+                new Promise<never>((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("timeout")))),
+              ]);
+              if (extra) applyServerCatalog(instance, { ...extra, language: code });
+            } catch {
+              // A missing fallback catalog only means those strings stay as the server wrote them.
+            }
+          }),
+        );
       } else {
         server = "missing";
       }

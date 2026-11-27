@@ -216,6 +216,18 @@ def _check_slugs(col: Collection, data: ToolData) -> list[Finding]:
                     f"영역 {decl.point.area}가 areas.yaml에 없습니다",
                 )
             )
+    members = {m.name for m in col.members}
+    for decl in col.declarations:
+        listed = decl.point.builtin if isinstance(decl.point.builtin, list) else []
+        for name in listed:
+            if name not in members:
+                out.append(
+                    Finding(
+                        "builtin-unknown",
+                        f"{decl.file} [{decl.slug}]",
+                        f"builtin 배포 {name}가 워크스페이스 멤버가 아닙니다",
+                    )
+                )
     for slug, files in sorted(seen.items()):
         if len(files) > 1:
             out.append(

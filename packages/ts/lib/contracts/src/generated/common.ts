@@ -19,9 +19,10 @@ export type {
   Position,
   RecordSource,
   SpaceRef,
+  TextTemplate,
   UiHints,
   Usage,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "common" as const;
-export const CONTRACT_VERSION = "2.1.0" as const;
+export const CONTRACT_VERSION = "2.2.0" as const;

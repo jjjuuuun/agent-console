@@ -5,6 +5,7 @@ import { ERROR_CODES, type BackendDescriptor, type BackendLoginSession, type Bac
 import { useApi } from "../../app/ApiContext";
 import { raised, useDescribeError, useErrorState, type RaisedError } from "../../app/errors";
 import { useNow } from "../../app/useNow";
+import { useServerTranslate } from "../../i18n";
 import { LoginBusyDialog, LoginConfirmDialog, LoginSessionDialog, LogoutDialog } from "./LoginDialogs";
 import { useLoginMessages } from "./messages";
 import { isTerminalPhase } from "./types";
@@ -45,6 +46,7 @@ function findMethod(backends: readonly BackendDescriptor[], backendId: string, m
 export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: UseBackendLoginOptions): BackendLoginController {
   const describeError = useDescribeError();
   const t = useLoginMessages();
+  const tr = useServerTranslate();
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const [flow, setFlow] = useState<Flow>({ kind: "idle" });
@@ -183,7 +185,10 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
 
   /** 담아 둔 오류를 지금 화면 언어 문구로 바꾼다 */
   const textOf = (e: RaisedError | undefined, fallback: string): string | undefined => (e === undefined ? undefined : describeError(e.raised.error, e.raised.fallback ?? fallback).message);
-  const titleOf = (backendId: string, methodId: string | null) => findMethod(backends, backendId, methodId)?.label || t.titleFallback;
+  const titleOf = (backendId: string, methodId: string | null) => {
+    const label = findMethod(backends, backendId, methodId)?.label;
+    return label ? tr(label) : t.titleFallback;
+  };
 
   let dialogs: ReactNode = null;
   if (flow.kind === "confirm") {
@@ -258,7 +263,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
     dialogs = (
       <LogoutDialog
         open
-        title={`${backends.find((b) => b.id === id)?.title ?? ""} ${t.logoutTitle}`.trim()}
+        title={`${tr(backends.find((b) => b.id === id)?.title ?? "")} ${t.logoutTitle}`.trim()}
         running={flow.running}
         result={flow.result}
         error={textOf(flow.error, t.logoutFailed)}

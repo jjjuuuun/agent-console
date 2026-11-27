@@ -30,6 +30,10 @@
       `<폴더>/<cwd 키>/<세션>.jsonl`을 남기고 이어 쓰는 요청에 파일이 없으면
       ``FAKE_SESSION_MISSING_CODE``로 실패한다. ``FakeBackend.session_archive``(보관·복원),
       ``fake_session_archive``·``fake_session_key``
+    - 계정 모델 조회 흉내(X54, design §1.1-MB, e2e·통합용): 설치자 설정 ``discovered_models``
+      (null = 능력 없음)·``discovery_failure``(사유 코드, ``FAKE_DISCOVERY_UNSUPPORTED`` = 상태
+      unsupported)·``discovery_delay_s``. ``FakeBackend.discover_models``, 호출 수
+      ``FakeBackend.discovery_calls``
     - ``FakeInstallOptions``·``FakeRateLimit``: 설치자 설정 형식(``FakeBackend.from_options`` 훅)
     - ``bundle_summary``·``mask_secret_refs``: 실행 묶음 요약
       (응답에 넣는 옵션 `echo_bundle`·템플릿 변수 `$bundle`)
@@ -44,6 +48,7 @@ from agent_console_backend_fake_agent._backend import (
     DEFAULT_RESOURCE_SLOTS,
     FAKE_BACKEND_ID,
     FAKE_BACKEND_TITLE,
+    FAKE_DISCOVERY_UNSUPPORTED,
     FAKE_READY_STATE,
     HOOK_PROBE_NOTE_CODE,
     UNKNOWN_HOST_TOOL_TEXT,
@@ -96,6 +101,7 @@ __all__ = [
     "EMPTY_BUNDLE",
     "FAKE_BACKEND_ID",
     "FAKE_BACKEND_TITLE",
+    "FAKE_DISCOVERY_UNSUPPORTED",
     "FAKE_LOGIN_METHOD_ID",
     "FAKE_LOGIN_REQUIRED_STATE",
     "FAKE_READY_STATE",

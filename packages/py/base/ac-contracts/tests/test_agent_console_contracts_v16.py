@@ -60,11 +60,16 @@ def _sha(doc: Any) -> str:
 # ---------------------------------------------------------------- 버전
 
 
-def test_contracts_version_is_0_16_0() -> None:
-    assert CONTRACTS_VERSION == "0.16.0"
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_16_0() -> None:
+    """0.16.0에서 정한 버전 이상이다(정확한 지금 값은 0.16.1 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 16, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.16.0"
-    assert CONTRACT_VERSIONS == {
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0160 = {
         "common": "2.1.0",
         "resources": "1.1.0",
         "logs": "2.0.0",
@@ -82,6 +87,9 @@ def test_contracts_version_is_0_16_0() -> None:
         "wiki": "1.3.0",
         "modules": "1.7.0",
     }
+    assert list(CONTRACT_VERSIONS) == list(v0160)
+    for sub, version in v0160.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
     assert constants["CONTRACT_VERSIONS"] == CONTRACT_VERSIONS
     assert list(CONTRACT_VERSIONS) == list(CONTRACT_SUBMODULES)
 

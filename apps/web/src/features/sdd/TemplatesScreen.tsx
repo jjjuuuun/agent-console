@@ -22,6 +22,7 @@ import "./sdd.css";
 import "./templates.css";
 import { useT } from "@agent-console/i18n";
 import { useCollator } from "../../i18n";
+import { SddToast } from "./SddToast";
 
 const P = TEMPLATE_PARAMS;
 const nameOf = (x: SpecTemplateSummary) => (x.name !== undefined && x.name !== "" ? x.name : x.id);
@@ -84,7 +85,7 @@ function TemplatesBody() {
     const made = await space.client.createSpecTemplate(body);
     setCreating(false);
     await invalidate();
-    toast({ tone: "success", text: t("template.toast.created", { name: made.value.name || made.value.id }) });
+    toast({ tone: "success", text: <SddToast render={(t) => t("template.toast.created", { name: made.value.name || made.value.id })} /> });
     apply(made.value.id);
   };
 
@@ -143,7 +144,7 @@ function TemplatesBody() {
               onDeleted={(name) => {
                 qc.removeQueries({ queryKey: ["sdd", space.key, "template", selected.id] });
                 void invalidate();
-                toast({ tone: "success", text: t("template.toast.deleted", { name }) });
+                toast({ tone: "success", text: <SddToast render={(t) => t("template.toast.deleted", { name })} /> });
                 setDirty(false);
                 apply(null);
               }}

@@ -1,16 +1,33 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-exports`, so the web can show the module description and export folder settings in English (data only, no API change).
-- REL.8: `ScopedExportDependencies.for_lookup(lookup, *, scope=None)` — 프로젝트 공간 원본이면 `scope`에 프로젝트 id를 넘긴다(제공자가 그 프로젝트 설정 층의 공통 첨부도 의존에 넣는다). FU.22와 같은 미출시 변경이라 `for_lookup(lookup)`만 가진 제공자는 `scope` 키워드를 더한다.
-- FU.22: 프로젝트 공간에서 내보낼 때도 함께 쓰는 정의를 넣는다. `exports.dependencies` 값이 `for_lookup(lookup)`(새 선택 프로토콜 `ScopedExportDependencies`)을 가지면 그 공간 저장소로 만든 계산을 쓴다(공용으로 넘어가 찾지 않음). 없으면 예전처럼 고른 항목만.
-- FU.19: `LookupExportCatalog.content` — 한 파일 본문 종류(`list_files`가 `ValueError`인 종류)의 본문을 `read_content`로 읽는다. 여러 파일 본문 종류는 None(본문은 `files`). 소비자 프로토콜 `DefinitionLookup`에 `read_content`가 더해졌다(`DefinitionStore`가 만족).
-- 5.7R.33k: 선택 포트 `projects.folders`·`definitions.spaces`. 포트가 있으면 폴더 쓰기 루트 = 등록 프로젝트 폴더(루트 id = 등록 id, 설치자 `roots`는 쓰지 않음), 원본 = 질의 `?project=` 공간(기본)·`source=library`(공용), `project` 없으면 공용. 등록 안 된 id 404 `project.not_found`, `source=project`인데 `project` 없음 422 `project.required`. 프로젝트 공간 원본에는 `exports.dependencies`(라이브러리 기준)를 쓰지 않는다. 포트가 없으면 지금 설정 그대로. `ProjectExports`·`ExportProjectError`·`ExportSource`.
-
-- 4R.18: 옛 최상위 `exports` 읽기 호환 제거. `home` 기본값을 옛 `imports.home`에서 넘기지 않는다(자기 옵션, 생략 시 HOME·USERPROFILE).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-exports`, so the web app can show the module description and export folder
+  settings in English (data only, no API change).
+- `ScopedExportDependencies.for_lookup(lookup, *, scope=None)`: when the source is a project space, the project id is
+  passed as `scope` (the provider also adds the common attachments of that project's settings layer to the
+  dependencies). This is part of the same unreleased change as the item below, so providers that only have
+  `for_lookup(lookup)` add the `scope` keyword.
+- Definitions that are used together are included when exporting from a project space too. When the
+  `exports.dependencies` value has `for_lookup(lookup)` (new optional protocol `ScopedExportDependencies`), the
+  calculation built on that space's store is used (no fallback to the shared library). Without it, only the selected
+  items, as before.
+- `LookupExportCatalog.content`: the content of single-file content kinds (kinds where `list_files` raises
+  `ValueError`) is read with `read_content`. Multi-file content kinds give None (their content is in `files`). The
+  consumer protocol `DefinitionLookup` gained `read_content` (`DefinitionStore` satisfies it).
+- Optional ports `projects.folders` and `definitions.spaces`. With the ports, the folder write roots are the registered
+  project folders (root id = registration id; the server administrator `roots` are not used), and the source is the
+  space of the query `?project=` (default) or `source=library` (shared library); without `project`, the shared
+  library. An unregistered id gives 404 `project.not_found`, and `source=project` without `project` gives 422
+  `project.required`. `exports.dependencies` (based on the library) is not used for project space sources. Without the
+  ports, the current settings apply as is. `ProjectExports`, `ExportProjectError` and `ExportSource`.
+- Removed read compatibility for the old top-level `exports`. The `home` default is no longer taken from the old
+  `imports.home` (it is its own option; when omitted, HOME or USERPROFILE).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- `apps/server`의 `/exporters`·`/exports/*`와 내보내기 서비스 조립(카탈로그 = `definitions.lookup` + `exports.dependencies`)을 옮겼다(3R.10). 설정 `modules.options.mod-exports`(옛 `exports.*`, `home`·`expose_paths` 추가).
+- First release (from the scripts/pkgkit template `module`).
+- Moved `/exporters` and `/exports/*` of `apps/server` and the export service assembly (catalog =
+  `definitions.lookup` plus `exports.dependencies`). Settings `modules.options.mod-exports` (formerly `exports.*`,
+  with `home` and `expose_paths` added).

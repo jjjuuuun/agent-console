@@ -1,5 +1,6 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 처음 만듦: `numbered_id`·`NoFreeId`(겹치면 `-2`·`-3`… 붙이기). 등록 id·정의 id·가져오기 rename·제안 노드 id·백업 이름이 쓰던 사본을 합쳤다.
+- First release: `numbered_id` and `NoFreeId` (append `-2`, `-3`, … on a collision). Merges the copies that
+  registration ids, definition ids, import renames, suggested node ids and backup names used to have.

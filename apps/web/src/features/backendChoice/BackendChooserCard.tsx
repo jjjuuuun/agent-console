@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from "react";
 import type { BackendDescriptor, BackendReadiness } from "@agent-console/contracts";
 import { Badge, Banner, Button } from "@agent-console/ui";
 import { useAppMessages } from "../../app/appMessages";
-import { useServerTranslate } from "../../i18n";
+import { useServerRender, useServerTranslate } from "../../i18n";
 import { FixButtons } from "../../app/fix";
 import { visibleBackends } from "../../app/backendVisibility";
 import { BackendStatusChip, resolveTone } from "../backendReadiness";
@@ -40,6 +40,7 @@ export interface BackendChooserCardProps {
 export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode = "resolve", initialId, onConfirm, busy = false, error, className, explain, busyLabel, readiness, renderSelectedExtra }: BackendChooserCardProps) {
   const m = useAppMessages();
   const tr = useServerTranslate();
+  const render = useServerRender();
   const t = m.backendChooser;
   const options = visibleBackends(allOptions);
   const name = useId();
@@ -74,7 +75,7 @@ export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode 
                 </label>
                 {selected && ready && resolveTone(ready.tone) === "error" ? (
                   <div className="app-backend-warn" data-testid="backend-chooser-warn">
-                    <Banner tone="warning">{m.backendReadiness.chooserWarn} {ready.summary ? tr(ready.summary) : ""}</Banner>
+                    <Banner tone="warning">{m.backendReadiness.chooserWarn} {ready.summary ? render(ready.summary, ready.text_templates?.["/summary"]) : ""}</Banner>
                     <FixButtons fix={{ actions: ready.fixes ?? [] }} />
                   </div>
                 ) : null}

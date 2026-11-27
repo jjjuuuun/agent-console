@@ -4,6 +4,7 @@ import type { RestClient } from "@agent-console/api-client";
 import { visibleBackends } from "../../app/backendVisibility";
 import { useAppMessages } from "../../app/appMessages";
 import { queryKeys, useApiQuery, useWorkspaceSettings } from "../../app/queries";
+import { useServerRender } from "../../i18n";
 import { useRegisterCommands } from "../../shell/commands";
 import { readinessShownBackends, useBackendReadiness } from "../backendReadiness";
 import { BACKEND_CONNECT_TRIGGER_ATTR } from "./BackendConnectButton";
@@ -34,6 +35,7 @@ export interface BackendConnectProviderProps {
 export function BackendConnectProvider({ settingsHref, renderFooter, children }: BackendConnectProviderProps) {
   const m = useBackendConnectMessages();
   const app = useAppMessages();
+  const render = useServerRender();
   const backendsQuery = useApiQuery(queryKeys.descriptors("backends"), loadBackends, { meta: { silentBackgroundError: true } });
   const status = useBackendReadiness();
   const settings = useWorkspaceSettings();
@@ -56,12 +58,13 @@ export function BackendConnectProvider({ settingsHref, renderFooter, children }:
   const summary = useMemo<BackendConnectSummary>(() => {
     const tone = picked.tone;
     const label = tone === "checking" ? m.chipChecking : app.backendReadiness.toneLabel[tone === "unavailable" ? "unknown" : tone] ?? "";
-    const full = picked.readiness?.summary || app.backendReadiness.unknownSummary;
-    const short = picked.readiness?.short_summary || full;
+    const templates = picked.readiness?.text_templates ?? {};
+    const full = picked.readiness?.summary ? render(picked.readiness.summary, templates["/summary"]) : app.backendReadiness.unknownSummary;
+    const short = picked.readiness?.short_summary ? render(picked.readiness.short_summary, templates["/short_summary"]) : full;
     if (tone === "checking") return { tone, summary: m.chipChecking, label, tip: m.tipChecking };
     if (tone === "unavailable") return { tone, summary: label, label, tip: m.tipUnavailable };
-    return { tone, summary: short, label, tip: m.tip(picked.backend?.title ?? "", short) };
-  }, [picked, m, app.backendReadiness]);
+    return { tone, summary: short, label, tip: m.tip(render(picked.backend?.title ?? ""), short) };
+  }, [picked, m, app.backendReadiness, render]);
 
   const [dialog, setDialog] = useState<{ open: boolean; focusBackend: string | undefined }>({ open: false, focusBackend: undefined });
   const refetchStatus = status.refetch;

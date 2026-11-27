@@ -127,3 +127,4 @@
 
 /* 리소스 종류 칩 한 줄(넘치면 +N) */
 .lib-typechips { padding: var(--ac-space-2); }
+.lib-model-status { flex: 1 0 100%; min-width: 0; }

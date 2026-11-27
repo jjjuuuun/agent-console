@@ -6,12 +6,13 @@ import { useProjectsText } from "./projectsText";
 import { useDelayed } from "../../app/useDelayed";
 import { useStorage } from "../../app/StorageContext";
 import { useToast } from "@agent-console/ui";
-import { useFolderHomeMessages } from "./folderHomeMessages";
+import { useFolderHomeMessages, type FolderHomeMessages } from "./folderHomeMessages";
 import { useProjects } from "./ProjectsContext";
 import { ProjectRegion } from "./ProjectRegion";
 import { parseCollapsed, regionViews } from "./projectRegionLib";
 import { useLanguageCode } from "../../i18n";
 import type { RegionProject } from "./ProjectRegion";
+import { FolderHomeToast } from "./ProjectsToast";
 
 
 /** 프로젝트 홈(`/projects/:id`) 주소에서 id를 읽는다. 아니면 null. */
@@ -80,18 +81,18 @@ export function SidebarProjectRegion({ rail }: SidebarProjectRegionProps) {
       }),
     [p.views, m, text, language],
   );
-  const copy = (value: string, done: string) => {
-    const fail = () => toast({ tone: "warning", text: m.menu.copyFailed });
+  const copy = (value: string, done: (f: FolderHomeMessages) => string) => {
+    const fail = () => toast({ tone: "warning", text: <FolderHomeToast render={(f) => f.menu.copyFailed} /> });
     if (navigator.clipboard === undefined) return fail();
-    navigator.clipboard.writeText(value).then(() => toast({ tone: "success", text: done, durationMs: 2000 }), fail);
+    navigator.clipboard.writeText(value).then(() => toast({ tone: "success", text: <FolderHomeToast render={done} />, durationMs: 2000 }), fail);
   };
   const menuItems = (row: RegionProject): MenuItemDef[] => [
     { id: "open", label: m.menu.openHome, onSelect: () => p.openHome(row.id) },
     ...(row.folder === null || row.folder === ""
       ? []
       : [
-          { id: "copy-path", label: m.menu.copyPath, onSelect: () => copy(row.folder ?? "", m.menu.pathCopied) },
-          { id: "copy-cd", label: m.menu.copyCd, title: m.menu.copyCdHelp, onSelect: () => copy(`cd "${row.folder ?? ""}"`, m.menu.cdCopied) },
+          { id: "copy-path", label: m.menu.copyPath, onSelect: () => copy(row.folder ?? "", (f) => f.menu.pathCopied) },
+          { id: "copy-cd", label: m.menu.copyCd, title: m.menu.copyCdHelp, onSelect: () => copy(`cd "${row.folder ?? ""}"`, (f) => f.menu.cdCopied) },
         ]),
     { id: "repath", label: m.menu.repath, onSelect: () => p.requestRepath(row.id) },
     { id: "unregister", label: m.menu.unregister, danger: true, onSelect: () => p.requestUnregister(row.id) },

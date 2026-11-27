@@ -1,67 +1,107 @@
-# 변경 기록
+# Changelog
 
-## 미출시 (0.2.0)
+## Unreleased (0.2.0)
 
-- I.7d: Internal log messages are now in English (`SpaceLocator` default `label` is `record`).
-- P1.19: Added `DefinitionKind.open_role` (default `None`, the store does not read it): the web route role of the screen that opens an item of the kind. The default kinds `graph`, `agent`, and `resource` use `definition:<kind>`. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only, no table changes.
-- P1.17: Added `diff_versions(store, kind, id, from_hash, to_hash=None, *, secret_paths, mask)`, which compares two versions of one definition and returns the contract `DefinitionDiff` (document changes as JSON Pointers, content files by sha256). Also exported `SECRET_MASK`, `SecretPaths`, and the `VersionDiffSource` protocol. The calculation moved here from `ac-mod-versions` `VersionService.diff` so that `ac-mod-sdd` can share it without importing another module. The caller decides which locations are secret.
+- Internal log messages are now in English (the default `label` of `SpaceLocator` is `record`).
+- Added `DefinitionKind.open_role` (default `None`, the store does not read it): the web route role of the screen that
+  opens an item of the kind. The default kinds `graph`, `agent` and `resource` use `definition:<kind>`. The copy
+  dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only, no table changes.
+- Added `diff_versions(store, kind, id, from_hash, to_hash=None, *, secret_paths, mask)`, which compares two versions
+  of one definition and returns the contract `DefinitionDiff` (document changes as JSON Pointers, content files by
+  sha256). Also exported `SECRET_MASK`, `SecretPaths` and the `VersionDiffSource` protocol. The calculation moved here
+  from `ac-mod-versions` `VersionService.diff` so that `ac-mod-sdd` can share it without importing another module. The
+  caller decides which locations are secret.
 - New dependency `agent-console-settings` (document diff). Consumer range: `agent-console-store>=0.2,<0.3`.
-
-- REL.2: 선택 능력 `BatchRecordsSpaces`(`batch()` 블록 — 그 안에서 연 공간을 열린 핸들 상한으로 밀어내지 않는다)와 `RecordsStores.batch()`(포트가 그 능력이면 그 블록, 아니면 빈 블록). 여러 프로젝트를 차례로 읽는 순회용. 더하기만.
-- REL.5: 겹치면 `-n` 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합치고 `numbered_id`·`NoFreeId`를 다시 내보낸다(`agent_console_store`·`agent_console_store.ids`). `unique_id`·기록 DB 백업 이름이 그것을 쓴다(동작 같음). 새 의존 `agent-console-numbered-id`.
-- FU.18: `DefinitionKind.title`(종류 표시 이름, 기본 None, 저장소는 보지 않음). 기본 종류 `graph`·`agent`·`resource`·`settings`가 값을 가진다. 더하기만, 표 변경 없음.
-
-- FU.11: 여러 Run 묶어 읽기 `RunRepository.list_node_runs_many(run_ids)`·`EventRepository.list_many(since, type_prefixes=)`(Run id → 결과, 없는 Run은 키 없음, Run마다 부른 `list_node_runs`·`list`와 같은 결과). SQLite는 Run `RUN_BATCH_SIZE`(200)개마다 질의 한 번(사용량 토큰 집계 N+1 방지). 더하기만, 표 변경 없음.
-
-- FU.5: `slug_id`·`unique_id`·`SLUG_MAX_CHARS`(이름 → 새 정의 id, `ac-sdd`·`mod-wiki` 사본을 옮김, 규칙 그대로).
-  `DefinitionKind.reserved_ids`(그 종류 id로 쓰면 안 되는 말, 저장소는 보지 않음 — FU.6 복사 계획이 읽는다). 표 변경 없음.
-
-- 11/20: `OpenCache[V]`·`CacheShut`(이름 → 열린 값 캐시: 오래 안 쓴 순서·유휴·상한·`shutdown()` 뒤 넣기 거부). 프로젝트 기록·메모리 공간 풀이 같이 쓴다. 더하기만, 표 변경 없음.
-
-- 수정(11/20): `RecordsStores`의 처음 열기 훅(`on_open`, 재시작 복구)이 도는 동안 같은 공간을 여는 다른 스레드는 끝날 때까지 기다린다(상한 `open_wait`, 기본 `DEFAULT_OPEN_WAIT` 30초, 훅 안 같은 스레드 재진입은 기다리지 않음, 먼저 연 쪽 훅이 거짓이면 기다린 쪽이 다시 부름). 시작 직후 로그 수집이 공간을 먼저 열면 첫 요청이 복구 전 상태(`running`)를 읽었다. 닫힌 `RecordsDb`의 `engine`·`read_engine`은 `corrupt` 대신 `folder_missing`(쓰기와 같은 이유). 더하기만, 표 변경 없음.
-
-- 요청 11/08 후속: `SpaceLocator`(기록 id → 그 기록이 있는 공간: 아는 공간 → 등록 공간 id(상한) → 호스트, 찾은 자리 기억), `DEFAULT_LOCATE_LIMIT`·`DEFAULT_LOCATE_REMEMBER`. 대화(`mod-chat`)·실행(`mod-runs`) 위치 찾기가 같이 쓴다. 더하기만, 표 변경 없음.
-
-- 수정(요청 11/07): `migrate.upgrade`·`downgrade`·`upgrade_on`의 alembic `command.*` 호출을 프로세스 안 잠금 하나로 줄 세운다. alembic이 실행 중 모듈 전역 프록시(`context`·`op`)를 바꾸므로 여러 스레드가 동시에(다른 DB라도) 올리면 `KeyError: 'script'`로 실패했다(서버 재시작 때 모듈 시작 훅의 업그레이드와 배경 작업의 프로젝트 기록 DB 열기가 겹쳐 uvicorn 시작 실패 exit 3). 공개 API 변경 없음.
-
-- 6R.19 서버 후속: `RunRepository.page(conversation_id=, agent=, root_run_id=)`(`list`와 같은 뜻), 돌려주는 Run마다 `has_children`(직접 자식 유무, 페이지 행을 한 번에 셈 — 색인 `ix_runs_parent`, N+1 없음)을 채운다. 계약 0.13.2(`Run.has_children`). 더하기만, 표 변경 없음.
-
-- 6R.12: 이벤트 `EventRepository.list(node=)`(`node_path`에 그 노드 id가 있는 이벤트 — 첫 칸은 `node_id` 열 색인, 하위 그래프는 `json_each`), 출처 잇기 커서 `page_across_sources`·`SourcePage`·`encode_source_cursor`·`decode_source_cursor`(`<출처>.<저장소 커서>`, design §6R.18 Q14). 더하기만, 표 변경 없음.
-
-- 6R.6: `RunRepository.page(cursor, limit, project_id, root_only, status, graph_id, labels) -> (items, next_cursor)`(커서 = `created_at`·`id` 내림차순, 불투명), `descendants(root_run_id)`, 루트 Run `labels`를 표 `run_labels`(계보 `runs_0004`)에 투영(`save`가 다시 쓰고 `delete`가 지움, 표가 없으면 `doc`에서 거름), 공개 `InvalidCursor`·`MAX_PAGE_LIMIT`·`encode_cursor`·`decode_cursor`. 더하기만.
-
-- 5.7R.33j2: `RecordsMove`·`MoveSpec`·`MoveDependent`·`run_moves`·`MoveVerifyError`·`MovePartialError`(표 단위 옮기기: 복사 → 확인 → 원본 삭제, 실패 시 대상 롤백). 더하기만, 표 변경 없음.
-
-- 5.7R.33y2: `RecordsStores`(프로젝트 id → 기록 DB 위 저장소 묶음, 처음 열기 훅), `RecordsUnavailable.project_id`·`details()`.
-
-- 6R.5: `DefinitionKind.library`(기본 참, 거짓 = 라이브러리 공간에 두지 않는 종류, X36 확장)와 `DefinitionKind.with_summary_fields(*fields)`. 저장소 동작 변경 없음.
-
-- 5.7R.33x: 공간 고르기 `spaces`(`DEFINITIONS_SPACES_PORT`·`DefinitionSpaces`·`SpaceStores`·`UnknownSpace` 404 `project.not_found`·`SpacesUnavailable` 409 `feature_unavailable`), 기록 DB 위 버전 기록소 `RecordsVersionRepository`(읽기 `read_engine`, 쓰기 `writable_engine`), 선택 프로토콜 `VersionWriteCheck.ensure_writable`(`ObservedVersionRepository`가 안쪽으로 넘김), `StoreError.field_issues()` — `store_error_body`가 `validation_failed`의 `details.issues`를 채운다(기본 빈 목록, 기존 동작 같음).
-
-- 5.7R.33f: `BaseDefinitionStore.kind_info(name) -> DefinitionKind`(등록된 종류 정보, 같은 종류로 프로젝트 사본 공간을 열 때). 더하기만.
-
-- 5.7R.33w2: `open_records_db`·`RecordsDb`·`inspect_records`(프로젝트 기록 DB 열기: 없음·같음·뒤처짐(백업 후 올림)·앞섬(읽기만)·깨짐·읽기 전용),
-  `RecordsHandle`·`RecordsSpaces`·`RECORDS_SPACES_PORT`·`RecordsState`·`RecordsUnavailable`, `is_network_fs`·`can_write_path`,
-  `migrate.upgrade_on`·`script_revisions`, `create_sqlite_engine(journal_mode=None, timeout=)`. 기존 동작·표 변경 없음.
-
-- 5.7R.33w: `DefinitionKind.portable`·`is_portable`(프로젝트 사본 공간에 둘 수 있는 종류, 싱글턴·`settings`는 아님),
-  쓰기 전 검사 훅 `WriteGuard`(`write_guard=`, `FileDefinitionStore`·`InMemoryDefinitionStore`), YAML 도구 공개
-  (`load_yaml_text`·`dump_yaml`·`merge_into`·`wrap_value`·`to_plain`·`atomic_write_bytes`). 기존 동작·표 변경 없음.
-
-- 5.2R.33: `LazyVersionRepository`·`versions_for(database)`(`ac-mod-definitions`에서 옮김). 같은 워크스페이스를 나눠 맡는 저장소 인스턴스(정의·프로젝트 모듈)가 같은 버전 기록소를 쓴다.
-- 5.2R.31: 기본 종류 graph·agent·resource의 `summary_fields`에 범위 필드 `project`(`SCOPE_FIELD`, 공개).
-  값이 있을 때만 요약 `extra`에 실린다. `list_graph_summaries`가 `GraphSummary.project`를 채운다.
+- Optional capability `BatchRecordsSpaces` (a `batch()` block; spaces opened inside it are not evicted by the open
+  handle limit) and `RecordsStores.batch()` (that block when the port has the capability, otherwise an empty block).
+  For walks that read several projects in turn. Additions only.
+- The `-n` collision suffix now uses `numbered_id` from `agent-console-numbered-id`, and `numbered_id` and `NoFreeId`
+  are re-exported (`agent_console_store`, `agent_console_store.ids`). `unique_id` and the record database backup
+  names use it (same behavior). New dependency `agent-console-numbered-id`.
+- `DefinitionKind.title` (display name of the kind, default None, not read by the store). The default kinds `graph`,
+  `agent`, `resource` and `settings` have values. Additions only, no table changes.
+- Batched reads across runs: `RunRepository.list_node_runs_many(run_ids)` and
+  `EventRepository.list_many(since, type_prefixes=)` (run id to result; runs that do not exist have no key; the same
+  results as calling `list_node_runs` or `list` per run). SQLite runs one query per `RUN_BATCH_SIZE` (200) runs
+  (avoids N+1 in usage token totals). Additions only, no table changes.
+- `slug_id`, `unique_id` and `SLUG_MAX_CHARS` (name to a new definition id; the copies in `ac-sdd` and `mod-wiki`
+  moved here with the same rules). `DefinitionKind.reserved_ids` (words that must not be used as ids of that kind,
+  not read by the store; the copy plan reads it). No table changes.
+- `OpenCache[V]` and `CacheShut` (a cache of open values by name: least recently used order, idle time, limit,
+  rejection of inserts after `shutdown()`). Shared by the project record and memory space pools. Additions only, no
+  table changes.
+- Fixed: while the first-open hook of `RecordsStores` (`on_open`, restart recovery) is running, other threads opening
+  the same space wait until it finishes (limit `open_wait`, default `DEFAULT_OPEN_WAIT` 30 seconds; reentry from the
+  same thread inside the hook does not wait; when the first opener's hook returns false, the waiting side calls it
+  again). When log collection opened a space right after startup, the first request read the state before recovery
+  (`running`). `engine` and `read_engine` of a closed `RecordsDb` report `folder_missing` instead of `corrupt` (the
+  same reason as for writes). Additions only, no table changes.
+- `SpaceLocator` (record id to the space that holds it: known spaces, then registered space ids up to a limit, then
+  the host; remembers where it found it), `DEFAULT_LOCATE_LIMIT` and `DEFAULT_LOCATE_REMEMBER`. Locating
+  conversations (`mod-chat`) and runs (`mod-runs`) share it. Additions only, no table changes.
+- Fixed: the alembic `command.*` calls of `migrate.upgrade`, `downgrade` and `upgrade_on` are serialized with one
+  in-process lock. Alembic swaps module-global proxies (`context`, `op`) while running, so several threads upgrading
+  at the same time (even different databases) failed with `KeyError: 'script'` (on server restart, the upgrade in the
+  module startup hook overlapped with a background task opening a project record database, and uvicorn failed to
+  start with exit 3). No public API changes.
+- Server follow-up: `RunRepository.page(conversation_id=, agent=, root_run_id=)` (the same meaning as `list`), and each
+  returned run has `has_children` filled (whether it has direct children, counted for all page rows at once with the
+  index `ix_runs_parent`, no N+1). Contract 0.13.2 (`Run.has_children`). Additions only, no table changes.
+- Events: `EventRepository.list(node=)` (events whose `node_path` contains that node id; the first position uses the
+  `node_id` column index, nested graphs use `json_each`), and cross-source cursors `page_across_sources`,
+  `SourcePage`, `encode_source_cursor` and `decode_source_cursor` (`<source>.<store cursor>`). Additions only, no
+  table changes.
+- `RunRepository.page(cursor, limit, project_id, root_only, status, graph_id, labels) -> (items, next_cursor)` (the
+  cursor is opaque and ordered by `created_at` and `id` descending), `descendants(root_run_id)`, root run `labels`
+  projected into the table `run_labels` (lineage `runs_0004`; `save` rewrites and `delete` removes them; without the
+  table they are filtered from `doc`), and the public `InvalidCursor`, `MAX_PAGE_LIMIT`, `encode_cursor` and
+  `decode_cursor`. Additions only.
+- `RecordsMove`, `MoveSpec`, `MoveDependent`, `run_moves`, `MoveVerifyError` and `MovePartialError` (table-level
+  moves: copy, verify, delete the source, and roll back the target on failure). Additions only, no table changes.
+- `RecordsStores` (project id to a bundle of stores on the record database, with a first-open hook),
+  `RecordsUnavailable.project_id` and `details()`.
+- `DefinitionKind.library` (true by default; false means a kind that is not kept in the library space, for extension
+  kinds) and `DefinitionKind.with_summary_fields(*fields)`. No store behavior changes.
+- Space selection `spaces` (`DEFINITIONS_SPACES_PORT`, `DefinitionSpaces`, `SpaceStores`, `UnknownSpace` 404
+  `project.not_found`, `SpacesUnavailable` 409 `feature_unavailable`), the version store on the record database
+  `RecordsVersionRepository` (reads through `read_engine`, writes through `writable_engine`), the optional protocol
+  `VersionWriteCheck.ensure_writable` (`ObservedVersionRepository` forwards it inward), and `StoreError.field_issues()`:
+  `store_error_body` fills `details.issues` of `validation_failed` (an empty list by default, same as before).
+- `BaseDefinitionStore.kind_info(name) -> DefinitionKind` (information about a registered kind, for opening a project
+  copy space with the same kind). Additions only.
+- `open_records_db`, `RecordsDb` and `inspect_records` (open a project record database: missing, current, behind
+  (back up, then upgrade), ahead (read only), corrupt, read-only), `RecordsHandle`, `RecordsSpaces`,
+  `RECORDS_SPACES_PORT`, `RecordsState`, `RecordsUnavailable`, `is_network_fs` and `can_write_path`,
+  `migrate.upgrade_on` and `script_revisions`, and `create_sqlite_engine(journal_mode=None, timeout=)`. No changes to
+  existing behavior or tables.
+- `DefinitionKind.portable` and `is_portable` (kinds that can live in a project copy space; not singletons or
+  `settings`), the pre-write hook `WriteGuard` (`write_guard=`, `FileDefinitionStore` and
+  `InMemoryDefinitionStore`), and public YAML tools (`load_yaml_text`, `dump_yaml`, `merge_into`, `wrap_value`,
+  `to_plain`, `atomic_write_bytes`). No changes to existing behavior or tables.
+- `LazyVersionRepository` and `versions_for(database)` (moved from `ac-mod-definitions`). Store instances that share
+  one workspace (the definitions and projects modules) use the same version store.
+- The `summary_fields` of the default kinds graph, agent and resource include the scope field `project`
+  (`SCOPE_FIELD`, public). It is put in the summary `extra` only when it has a value. `list_graph_summaries` fills
+  `GraphSummary.project`.
 
 ## 0.1.0
 
-- 5R.4: 실행 기록 계보 `runs`(소유는 `ac-mod-runs`). `RunRepository.list(root_run_id=)`(루트 아래 모든 자손), `InteractionRepository.list(root_run_id=)`(`root_run_id or run_id` 기준), NodeRun 키에 `call` 추가(인메모리·SQLite), `Run.root_run_id`·`parent_node_id`·`NodeRun.call`·`invoked_by`·`Interaction.root_run_id`를 열로 저장(있을 때만). `schema.runs_lineage_metadata`·`runs_lineage_active`, `MODULE_OWNED_TABLES`에 실행 기록 표 4개 추가. legacy 마이그레이션 0001~0003은 불변.
-
-- 3R.15: 대화·채팅 대기열 저장소(`ConversationRepository`·`QueueRepository`·`QueuedItem`·`QueueCounts`, SQLite·인메모리, `SqliteStorage`/`InMemoryStorage`의 `conversations`·`queue`)를 `ac-mod-chat/storage`로 이동(공개 API 제거). 테이블·마이그레이션 0001~0003 불변, `MODULE_OWNED_TABLES`에 `conversations`·`chat_queue` 추가.
-
-- 3R.12: `DefinitionStore.delete(..., expected_version=)`(삭제 If-Match, 다르면 `VersionConflict`).
-
-- 3R.11: `SqliteDatabase`(DB 핸들: legacy + 모듈 계보별 upgrade, 계보마다 버전 테이블), `MigrationBranchLike`, `migrate.upgrade(versions=, version_table=)`. `usage_observations` 저장소(`storage.usage`, `UsageObservationRepository`)와 테이블 정의는 `ac-mod-usage/storage`로 이동(테이블·마이그레이션 0001~0003 불변). `schema.MODULE_OWNED_TABLES`·`include_object`.
-
-- 3R.10: `ObservedVersionRepository`(버전 기록마다 콜백 — 저장 알림 `definitions.saved`용, 저장소 코드·스키마 변경 없음).
-
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- Run history lineage `runs` (owned by `ac-mod-runs`). `RunRepository.list(root_run_id=)` (all descendants under a
+  root), `InteractionRepository.list(root_run_id=)` (based on `root_run_id or run_id`), `call` added to the NodeRun
+  key (in memory and SQLite), and `Run.root_run_id`, `parent_node_id`, `NodeRun.call`, `invoked_by` and
+  `Interaction.root_run_id` stored as columns (only when present). `schema.runs_lineage_metadata` and
+  `runs_lineage_active`, and four run history tables added to `MODULE_OWNED_TABLES`. The legacy migrations 0001 to
+  0003 are unchanged.
+- Moved the conversation and chat queue stores (`ConversationRepository`, `QueueRepository`, `QueuedItem`,
+  `QueueCounts`, SQLite and in memory, `conversations` and `queue` of `SqliteStorage`/`InMemoryStorage`) to
+  `ac-mod-chat/storage` (removed from the public API). Tables and migrations 0001 to 0003 are unchanged, and
+  `conversations` and `chat_queue` were added to `MODULE_OWNED_TABLES`.
+- `DefinitionStore.delete(..., expected_version=)` (If-Match for deletes; `VersionConflict` when different).
+- `SqliteDatabase` (database handle: upgrades for legacy and each module lineage, a version table per lineage),
+  `MigrationBranchLike` and `migrate.upgrade(versions=, version_table=)`. The `usage_observations` store
+  (`storage.usage`, `UsageObservationRepository`) and its table definition moved to `ac-mod-usage/storage` (tables and
+  migrations 0001 to 0003 unchanged). `schema.MODULE_OWNED_TABLES` and `include_object`.
+- `ObservedVersionRepository` (a callback for each version record, used for the save notification
+  `definitions.saved`; no store code or schema changes).
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.

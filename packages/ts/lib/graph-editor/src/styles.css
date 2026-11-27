@@ -479,6 +479,7 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 
 /* ---- 세션 구분 표시 (screen-delegation.md §14, 5.7R.34): 편집기는 앱이 준 칩·띠·표식을 그리기만 한다 ---- */
 .ac-ge-edge-chip[data-stacked="true"] { display: flex; align-items: center; max-width: var(--ac-edge-chip-max-w, 280px); padding-top: 1px; padding-bottom: 1px; }
+.ac-ge-edge-chip { word-break: keep-all; }
 .ac-ge-edge-rows { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ac-ge-edge-row { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; white-space: nowrap; }
 .ac-ge-edge-row1 { max-width: 168px; overflow: hidden; text-overflow: ellipsis; display: block; }

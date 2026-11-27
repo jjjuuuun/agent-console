@@ -1,11 +1,18 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-definitions-resources`, so the web can show the link module description and settings in English (data only, no API change).
-- FU.3: 공간 기준 검사 `DefinitionChecker.space_issues(space, kind, document)`(선택 능력 `SpaceDefinitionCheck`). 첨부 `ref`를 그 공간 저장소의 리소스로만 풀고 라이브러리(`resources.lookup`)로 넘어가 찾지 않는다. 선택 포트 `definitions.spaces`(`DEFINITIONS_SPACES`)를 받고, 없으면 공간 기준 검사는 `SpacesUnavailable`. `DefinitionChecker(space_resources=)` 선택 인자. `LookupResources`가 `LookupError`·`OSError`도 "없음"으로 본다.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-definitions-resources`, so the web app can show the link module description and settings in English (data
+  only, no API change).
+- Space-based check `DefinitionChecker.space_issues(space, kind, document)` (optional capability
+  `SpaceDefinitionCheck`). Attachment `ref` values are resolved only against resources in that space's store, without
+  falling back to the library (`resources.lookup`). It takes the optional port `definitions.spaces`
+  (`DEFINITIONS_SPACES`); without it, space-based checks raise `SpacesUnavailable`. Optional argument
+  `DefinitionChecker(space_resources=)`. `LookupResources` also treats `LookupError` and `OSError` as "not found".
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`).
-- `apps/server`의 저장 전 정의 검사(`DefinitionChecker`: 리소스 종류 검사·첨부 덮어쓰기 검사)를 `definitions.checks`로 옮겼다(3R.12, L8).
+- First release (from the scripts/pkgkit template `link`).
+- Moved the pre-save definition checks of `apps/server` (`DefinitionChecker`: resource type checks and attachment
+  override checks) to `definitions.checks`.

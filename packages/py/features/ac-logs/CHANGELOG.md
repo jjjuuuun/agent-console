@@ -1,43 +1,76 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased (0.2.0)
 
-- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-logs`, so the web can show the default log categories, dashboard fields and the built-in log sources and classifiers in English (data only, no API change).
-- I.6: `open_existing_log_index` error messages are English (`log index file not found: …`, `log index tables are missing: …`); tools print them to the terminal.
-- REL.14: 세션 요약(`list_sessions`, 메모리·SQLite 색인 모두)이 옛 `LogSessionSummary.project`(`LogProjectRef`)를 채우지 않고 `project_id`만 채운다(계약 0.15.0에서 필드 삭제 예정). 로그 보관본 HTML의 프로젝트 칸은 `project_id`(지금과 같은 값). 공개 테스트 키트 `testing`의 세션 검사도 `project_id`만 본다 — 외부 색인 구현은 `project`를 채우지 않아도 된다. 필터 예약 값 `UNGROUPED_PROJECT`(`~ungrouped`)는 그대로.
-
-- FU.5: 경로 글롭을 기반 패키지 `agent-console-path-glob`으로 옮겼다(`glob_match`·규칙 그대로, 새 의존).
-
-- 7R.15: 기본 분류 체계 데이터에 범주 `wiki`(라벨 `위키`만, `order`에는 넣지 않음).
-- 6R.9(M-1): 확장 판정 행 기준 미리 거르기(선택 능력) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck`. SQLite 색인은 `ac_row_ok`로 열 값에 먼저 묻고 모르는 행만 본문을 읽는다(결과 같음). `testing.FieldFilter(row_check=True)` 예제.
-- 6R.9(M-15): SQLite 값 목록 IN이 500개를 넘으면 `json_each` 부분 질의(바인드 변수 1개) — 값 40,000개도 기본 변수 한도(32,766) 아래. `category`·`agent`/`from`/`to` 필터도 같은 경로.
-- 5.7R.33i(깨는 변경): 세션 프로젝트 = 등록 프로젝트 id. `QueryContext.projects`(옛 묶기 규칙)·`ungrouped_label` 대신 `QueryContext.project_for`(cwd → 등록 id), `query_context(project_for=)`. `project_of`는 `project_for`만 본다(`repo_root` 안 봄). 세션 요약에 `project_id`(옛 `project`는 같은 id로 채움, deprecated). 옛 묶기 함수 `resolve_project`·`group_projects`·`project_base`·`DEFAULT_UNGROUPED_LABEL` 삭제(`UNGROUPED_PROJECT` = 어느 등록 프로젝트에도 들지 않음). 옛 설정 `logs.projects.git_worktrees`는 읽지 않는다.
-- 5.7R.33i: `ProjectFolders` = `registered`·`retained`(보관 — 새로 읽지 않고 색인 유지)·`project_for`, `contains(path)`·`with_retained()`. 옛 `current`·`select(scope)` 삭제. 수집기는 범위 밖 단위 정리 판정에 보관 폴더를 범위로 보고, 범위가 있으면 등록 폴더 밖 cwd의 `.git`을 읽지 않는다.
+- `LogEventDraft.text_templates` (`/title` or `/summary` → `TextTemplate` list, contracts 0.16.1
+  `LogEvent.text_templates`, `logs` 2.1.0): source template + values of a title or summary that mixes in values. The core
+  masks the templates with the same `redact` as the field and keeps only entries whose filled text equals the stored
+  (masked, cut) field; the event carries them in `LogEvent.text_templates` (memory and SQLite indexes, no table change —
+  the field is in the event body). Requires `agent-console-contracts>=0.16.1,<0.17`. Consumer range:
+  `agent-console-logs>=0.2,<0.3`.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs` `ac-logs`, so
+  the web app can show the default log categories, dashboard fields and the built-in log sources and classifiers in
+  English (data only, no API change).
+- `open_existing_log_index` error messages are in English (`log index file not found: …`,
+  `log index tables are missing: …`); tools print them to the terminal.
+- Session summaries (`list_sessions`, in both the memory and SQLite indexes) no longer fill the old
+  `LogSessionSummary.project` (`LogProjectRef`) and fill only `project_id` (the field is to be removed in contract
+  0.15.0). The project field of the log archive HTML is `project_id` (the same value as now). The session checks in
+  the public test kit `testing` look only at `project_id`, so external index implementations do not have to fill
+  `project`. The reserved filter value `UNGROUPED_PROJECT` (`~ungrouped`) is unchanged.
+- Moved path globs to the base package `agent-console-path-glob` (`glob_match` and its rules unchanged, new
+  dependency).
+- The default classification data has the category `wiki` (only a label, not added to `order`).
+- Optional row-level prefilter for extension filters: `RowPredicate`, `RowCheckedPredicate`, `row_check_of`,
+  `EVENT_ROW_FIELDS`, `EventRow` and `RowCheck`. The SQLite index asks the column values first through `ac_row_ok`
+  and reads the body only for rows it cannot decide (same results). Example: `testing.FieldFilter(row_check=True)`.
+- When a SQLite value list for IN has more than 500 values, a `json_each` subquery is used (one bind variable), so
+  even 40,000 values stay under the default variable limit (32,766). The `category` and `agent`/`from`/`to` filters
+  use the same path.
+- Breaking change: the session project is the registered project id. `QueryContext.projects` (the old grouping rules)
+  and `ungrouped_label` are replaced by `QueryContext.project_for` (cwd to registration id) and
+  `query_context(project_for=)`. `project_of` looks only at `project_for` (not `repo_root`). Session summaries have
+  `project_id` (the old `project` is filled with the same id and deprecated). Removed the old grouping functions
+  `resolve_project`, `group_projects`, `project_base` and `DEFAULT_UNGROUPED_LABEL` (`UNGROUPED_PROJECT` means the
+  session belongs to no registered project). The old setting `logs.projects.git_worktrees` is not read.
+- `ProjectFolders` = `registered`, `retained` (kept: not read again, but the index is kept) and `project_for`, with
+  `contains(path)` and `with_retained()`. Removed the old `current` and `select(scope)`. When the collector decides
+  whether to clean up units outside the scope, retained folders count as in scope, and when a scope is set it does not
+  read `.git` for a cwd outside the registered folders.
 
 ## 0.1.0
 
-- 5.5R.10: `parse_log_filter`가 확장 필터(X28)의 빈 값(`name=`)을 값 `""` 하나로 남긴다(이름 없는 묶음 `arch_group=`). 기본 필드의 빈 값은 그대로 버린다.
-- 처음 만듦(4R.4): X5·X6 프로토콜·레지스트리, `JsonlFileSource`, `LogIngestor`, `LogIndex` 프로토콜,
-  질의 의미(`query`), `testing.MemoryLogIndex`·계약 테스트 묶음, 기본 플러그인 `normalized-v1`·`mapped-jsonl`,
-  기본 분류 체계 `default_taxonomy.yaml`.
-- 4R.7 보완(4R.4 QA 제안): `JsonlFileSource` 회전 감지(앞부분 지문 `state.jsonl_head` + 내용 세대
-  `state.jsonl_generation` → `RawRecord.generation`·`identity_for(generation=)`, 기본 0이면 identity 그대로),
-  줄어든 파일을 다시 읽을 때 `read_bytes` 과소 계산 수정, 파일 심볼릭 링크 정책(루트 밖 링크 건너뜀·같은 실제 파일
-  한 번). 기존 공개 API는 그대로이고 키워드 인자·필드만 기본값과 함께 더했다.
-- 4R.10: 레지스트리 이름 상수 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION`을 패키지 최상위에서 내보낸다
-  (호스트 플러그인 로더가 묶음의 같은 이름 확장을 쓰도록).
-- 4R.10 수정: `LogRegistries(sources=, classifiers=)`에 빈 레지스트리를 주면 거짓 값이라 새 레지스트리로
-  바꿔 버리던 문제를 고쳤다(`is not None`으로 가름). 호스트 묶음의 빈 확장에 로드하는 경로가 이것에 기댄다.
-- 4R.14: 오프라인 보관본 `build_archive`(`LogArchive` v1, 필터 범위·이벤트 수·바이트 한도·내보내기 가림)·
-  `filter_to_params`·`render_archive`(스크립트 없는 HTML, CSP로 스크립트·외부 자원 차단)·`escape_html`.
-- 4R.12 추가: `LogEventDraft.summary`(선택, 기본 None). 분류기가 주면 그 평문을 목록 요약으로 쓰고(가리기·길이
-  제한은 같게), 없으면 이전처럼 detail(없으면 raw)을 문자열로 만든다.
-- 4R.14 후속: 외톨이 서로게이트(U+D800~DFFF, 깨진 UTF-16 원문)를 `build_record`가 모든 문자열 필드(본문·원문 안,
-  태그·상관·토큰 표본·줄 정보 포함)에서 U+FFFD로 바꾼다(SQLite 쓰기·직렬화 실패로 수집이 멈추지 않게).
-  `build_archive`·`render_archive`(`escape_html`)도 같은 방어를 둔다. 공개 함수 `scrub_surrogates`.
-- 5R.19: 세션 제목 순위 규칙 데이터(`SessionTitleRule`·`QueryContext.session_title_rules`·`data/default_session_title_rules.yaml`,
-  `query_context(session_title_rules=)`, `pick_session_title`), 기본 분류 체계 숨김 범주 `meta`, 짝 질의 색인 사용 실행 계획 테스트.
-- 5.5R.6: 색인 `(session, seq)`·`(thread, seq)`·`(run_id, seq)`(옛 `run_id` 단독 색인 대체; `open_log_index`가 기존 파일의
-  색인을 맞춘다, 서버는 `mod-logs` 리비전 `logs_0002`), 짝 없는 이벤트는 `duration_ms` 복사를 건너뜀,
-  규모 측정 도구 `testing.build_scale_index`·`CountingPredicate`·`read_all_pages`·`time_best`·`perf_strict`.
-- 5.7R.6(M-3): 색인 비우기 `purge_index`·`reset_index`(범위 `PurgeScope`, 결과 `PurgeResult`, 선택 능력 `PurgeableLogIndex` — `LogIndex` 프로토콜은 그대로), `MemoryLogIndex.purge`·`SqliteLogIndex.purge`, 있는 색인만 여는 `sqlite.open_existing_log_index`, 계약 묶음 `testing.PurgeContractTests`.
+- `parse_log_filter` keeps an empty value (`name=`) of an extension filter as the single value `""` (an unnamed
+  group, `arch_group=`). Empty values of built-in fields are still dropped.
+- First release: log source and classifier protocols and registries, `JsonlFileSource`, `LogIngestor`, the
+  `LogIndex` protocol, query semantics (`query`), `testing.MemoryLogIndex` and a contract test suite, the built-in
+  plugins `normalized-v1` and `mapped-jsonl`, and the default classification `default_taxonomy.yaml`.
+- `JsonlFileSource` detects rotation (a head fingerprint `state.jsonl_head` plus a content generation
+  `state.jsonl_generation`, giving `RawRecord.generation` and `identity_for(generation=)`; with the default 0 the
+  identity is unchanged), fixes an undercount of `read_bytes` when rereading a shrunk file, and has a file symbolic
+  link policy (links outside the root are skipped, the same real file is read once). The existing public API is
+  unchanged; only keyword arguments and fields with defaults were added.
+- The registry name constants `LOG_SOURCES_EXTENSION` and `LOG_CLASSIFIERS_EXTENSION` are exported from the package
+  top level (so the host plugin loader uses the extensions with the same names in the bundle).
+- Fixed `LogRegistries(sources=, classifiers=)` replacing an empty registry with a new one because it is falsy (it
+  now checks `is not None`). Loading into empty extensions of the host bundle relies on this.
+- Offline archive: `build_archive` (`LogArchive` v1, filter scope, event count and byte limits, export masking),
+  `filter_to_params`, `render_archive` (HTML without scripts; a CSP blocks scripts and external resources) and
+  `escape_html`.
+- `LogEventDraft.summary` (optional, default None). When a classifier provides it, that plain text is the list
+  summary (with the same masking and length limit); otherwise detail (or raw) is turned into a string as before.
+- Lone surrogates (U+D800 to U+DFFF, broken UTF-16 originals) are replaced with U+FFFD by `build_record` in every
+  string field (inside body and original, including tags, correlations, token samples and line information), so
+  collection does not stop on SQLite write or serialization failures. `build_archive` and `render_archive`
+  (`escape_html`) have the same protection. Public function `scrub_surrogates`.
+- Session title ranking rule data (`SessionTitleRule`, `QueryContext.session_title_rules`,
+  `data/default_session_title_rules.yaml`, `query_context(session_title_rules=)`, `pick_session_title`), the hidden
+  category `meta` in the default classification, and query plan tests for paired queries using the index.
+- Indexes `(session, seq)`, `(thread, seq)` and `(run_id, seq)` (replacing the old index on `run_id` alone;
+  `open_log_index` updates the indexes of an existing file, and the server uses the `mod-logs` revision `logs_0002`).
+  Unpaired events skip copying `duration_ms`. Scale measurement tools `testing.build_scale_index`,
+  `CountingPredicate`, `read_all_pages`, `time_best` and `perf_strict`.
+- Index purging: `purge_index` and `reset_index` (scope `PurgeScope`, result `PurgeResult`, optional capability
+  `PurgeableLogIndex`; the `LogIndex` protocol is unchanged), `MemoryLogIndex.purge` and `SqliteLogIndex.purge`,
+  `sqlite.open_existing_log_index` that opens only an existing index, and the contract suite
+  `testing.PurgeContractTests`.

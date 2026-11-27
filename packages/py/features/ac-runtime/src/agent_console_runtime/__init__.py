@@ -49,6 +49,11 @@
       (``status``)·``ProbeCapableBackend``(``probe``) + ``BackendCheckContext``,
       ``BackendReadinessService``(시간 상한·동시 probe 합치기·가림), ``supports_status``·
       ``supports_probe``, 오류 ``UnknownBackendError``·``ProbeUnsupportedError``
+    - 백엔드 모델 계정 조회(X54, design §1.1-MB): 선택 능력 ``ModelDiscoveryCapableBackend``
+      (``discover_models`` → ``ModelDiscoveryResult``), ``supports_model_discovery``,
+      사유 상수 ``ModelDiscoveryReasons``, 순수 함수 ``merge_models``(설정 + 조회 합치기),
+      ``BackendModelCatalogService``(캐시·실패 캐시·동시 조회 합치기·``refresh``·``invalidate``·
+      ``stale``·길이 자르기 ``ModelListLimits``·가림·로그 규칙), 문구 ``ModelCatalogTexts``
     - 백엔드 계정 로그인·로그아웃(ux-overhaul §15.9, F14): 선택 능력 ``LoginCapableBackend``
       (``start_login`` → ``LoginDriver``)·``LogoutCapableBackend``(``logout``) +
       ``BackendLoginContext``·``LoginProgress``, ``BackendLoginService``(세션 하나·시간 상한·
@@ -57,6 +62,9 @@
       ``LoginSessionNotFoundError``·``LoginInputError``. 능력이 꺼진 이유 알림(선택)
       ``LoginRefusalAware``·``login_refusal_of``.
       테스트용 ``agent_console_runtime.testing_login``
+    - 응답 글자 칸의 원문 틀 + 값(design §I18N.13): ``LoginProgress.text_templates``(드라이버 →
+      서비스), ``matching_text_templates``(칸 값과 맞는 틀만), ``compact_number``(옛 ``{x:g}``
+      출력과 같은 값)
     - 세션 기록 보관·복원(X38, design §PI.4.6.4): 선택 능력 ``SessionArchiveCapable``
       (``session_archive()`` → ``SessionArchive``: ``files``·``status``·``restore``) +
       ``ArchiveFile``·``SessionKey``, 백엔드 id로 찾기 ``BackendSessionArchives``·
@@ -192,6 +200,21 @@ from agent_console_runtime._login import (
     supports_login,
     supports_logout,
 )
+from agent_console_runtime._models import (
+    DEFAULT_MODEL_DISCOVERY_TIMEOUT_S,
+    DEFAULT_MODEL_FAILURE_TTL_S,
+    DEFAULT_MODEL_TTL_S,
+    SOURCE_CONFIG,
+    SOURCE_DISCOVERED,
+    BackendModelCatalogService,
+    ModelCatalogTexts,
+    ModelDiscoveryCapableBackend,
+    ModelDiscoveryReasons,
+    ModelDiscoveryResult,
+    ModelListLimits,
+    merge_models,
+    supports_model_discovery,
+)
 from agent_console_runtime._process import (
     DEFAULT_GRACE_SECONDS,
     aterminate_process_group,
@@ -278,6 +301,7 @@ from agent_console_runtime._session_archive import (
     session_files_in,
 )
 from agent_console_runtime._sessions import session_refs
+from agent_console_runtime._text_templates import compact_number, matching_text_templates
 from agent_console_runtime._usage import preview, sum_usage
 from agent_console_runtime._validation import (
     GraphValidationError,
@@ -302,6 +326,9 @@ __all__ = [
     "DEFAULT_LOGIN_TIMEOUT_S",
     "DEFAULT_LOGOUT_TIMEOUT_S",
     "DEFAULT_MIN_REDACT_CHARS",
+    "DEFAULT_MODEL_DISCOVERY_TIMEOUT_S",
+    "DEFAULT_MODEL_FAILURE_TTL_S",
+    "DEFAULT_MODEL_TTL_S",
     "DEFAULT_PROBE_TIMEOUT_MAX_S",
     "DEFAULT_STATUS_TIMEOUT_S",
     "DELEGATION_STRATEGIES_EXTENSION",
@@ -320,6 +347,8 @@ __all__ = [
     "SECRET_PROVIDERS_GROUP",
     "SECRET_REF_PREFIX",
     "SESSION_ARCHIVE_HOOK",
+    "SOURCE_CONFIG",
+    "SOURCE_DISCOVERED",
     "TERMINAL_PHASES",
     "UNKNOWN_STATE",
     "Activation",
@@ -331,6 +360,7 @@ __all__ = [
     "BackendHostContext",
     "BackendLoginContext",
     "BackendLoginService",
+    "BackendModelCatalogService",
     "BackendReadinessService",
     "BackendSessionArchives",
     "Blocked",
@@ -390,6 +420,11 @@ __all__ = [
     "LogoutCapableBackend",
     "LogoutUnsupportedError",
     "MissingServiceError",
+    "ModelCatalogTexts",
+    "ModelDiscoveryCapableBackend",
+    "ModelDiscoveryReasons",
+    "ModelDiscoveryResult",
+    "ModelListLimits",
     "NoEntryError",
     "NodeContext",
     "NodeResult",
@@ -448,6 +483,7 @@ __all__ = [
     "as_secret_provider",
     "aterminate_process_group",
     "call_host_tool",
+    "compact_number",
     "copy_files",
     "descriptor_version",
     "duplicate_host_tool_names",
@@ -459,7 +495,9 @@ __all__ = [
     "load_registry_plugins",
     "login_refusal_of",
     "mask_values",
+    "matching_text_templates",
     "merge_contributions",
+    "merge_models",
     "node_actor",
     "node_display_name",
     "node_type_descriptors",
@@ -479,6 +517,7 @@ __all__ = [
     "sum_usage",
     "supports_login",
     "supports_logout",
+    "supports_model_discovery",
     "supports_probe",
     "supports_status",
     "terminate_process_group",

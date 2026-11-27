@@ -1,5 +1,6 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 첫 판(7R.16): 위키 쓰기 검사 `example.front-matter-keys`(X50 예제) — 필요한 머리말 키·경로 글롭·심각도·동작·문구는 옵션 데이터.
+- First release: an example wiki write check `example.front-matter-keys`. The required front matter keys, path globs,
+  severity, action and message are option data.

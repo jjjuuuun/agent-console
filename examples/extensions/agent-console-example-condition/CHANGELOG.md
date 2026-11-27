@@ -1,5 +1,5 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 첫 판(5R.15): 조건 연산자 `example.word_count_at_least`(X22 예제).
+- First release: an example condition operator `example.word_count_at_least`.

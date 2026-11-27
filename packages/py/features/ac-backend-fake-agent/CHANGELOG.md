@@ -1,13 +1,31 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased (0.2.0)
 
-- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-backend-fake-agent`, so the web can show the fake backend description and option schema in English (data only, no API change).
-- 계약 0.13.1: `FAKE_SESSION_MISSING_CODE`가 계약 문서 상수 `ErrorCodes.FAKE_SESSION_MISSING`을 쓴다(값 같음).
-- 5.2R.83(F14): 대본 로그인. 설치자 설정 `login`(`FakeLoginScript`, 기본 null = 능력 없음)을 주면 `capabilities.login/logout`·`login_methods`·`start_login`(`FakeScriptedLoginDriver`: 코드 `success_code`면 성공, 그 밖 `fail_reason`)·`logout`. 상태 점검은 메모리 로그인 여부(`login_required` / `always_ready`)와 `actions`. PTY·네트워크 없음.
-- 5.2R.34: 응답 틀 변수 `$cwd`(요청 작업 폴더, 없으면 빈 문자열).
-- 5R.10: `capabilities.host_tools = true`. 규칙 `host_tool_calls: [{tool, input, when?, append}]`(`FakeHostToolCall`·`FakeHostToolWhen`)로 플랫폼 도구를 부르고 `$host_N`·`$host_N_status`와 응답 끝에 결과를 붙인다.
+- Model discovery stand-in. Administrator settings `discovered_models` (`null` = no capability), `discovery_failure`
+  (a reason code; `unsupported` = state `unsupported`, constant `FAKE_DISCOVERY_UNSUPPORTED`) and
+  `discovery_delay_s`, the method `FakeBackend.discover_models` and the counter `FakeBackend.discovery_calls`.
+  `capabilities.model_discovery` is true only when one of the first two is set. Requires
+  `agent-console-runtime>=0.2,<0.3` and `agent-console-contracts>=0.16.1,<0.17`. Consumer range:
+  `agent-console-backend-fake-agent>=0.2,<0.3`.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-backend-fake-agent`, so the web app can show the fake backend description and option schema in English (data
+  only, no API change).
+- Follow-up: 10 more English entries in `locales/en.json` (option schema examples and the default rule shown by
+  `GET /backends`; data only).
+- Contract 0.13.1: `FAKE_SESSION_MISSING_CODE` uses the contract constant `ErrorCodes.FAKE_SESSION_MISSING` (same
+  value).
+- Scripted sign-in. When the server administrator setting `login` (`FakeLoginScript`, default null = no capability)
+  is given, the backend provides `capabilities.login/logout`, `login_methods`, `start_login`
+  (`FakeScriptedLoginDriver`: the code `success_code` succeeds, anything else gives `fail_reason`) and `logout`. The
+  readiness check reports whether the in-memory sign-in is done (`login_required` / `always_ready`) and `actions`. No
+  PTY or network.
+- Reply template variable `$cwd` (the run folder of the request, or an empty string when there is none).
+- `capabilities.host_tools = true`. The rule `host_tool_calls: [{tool, input, when?, append}]` (`FakeHostToolCall`,
+  `FakeHostToolWhen`) calls platform tools, fills `$host_N` and `$host_N_status` and appends the results to the end of
+  the reply.
 
 ## 0.1.0
 
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior change.

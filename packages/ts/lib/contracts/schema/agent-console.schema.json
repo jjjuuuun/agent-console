@@ -6,14 +6,14 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.16.0",
+    "CONTRACTS_VERSION": "0.16.1",
     "CONTRACT_VERSIONS": {
-      "common": "2.1.0",
+      "common": "2.2.0",
       "resources": "1.1.0",
-      "logs": "2.0.0",
-      "i18n": "1.0.0",
+      "logs": "2.1.0",
+      "i18n": "1.1.0",
       "definitions": "3.0.0",
-      "runs": "1.9.0",
+      "runs": "1.10.0",
       "usage": "1.1.0",
       "projects": "4.1.0",
       "chat": "1.4.0",
@@ -331,6 +331,7 @@
       "TEAM_CHILD_NO_ENTRY": "team.child_no_entry",
       "DELEGATION_DEPTH_EXCEEDED": "delegation.depth_exceeded",
       "BACKEND_UNRESOLVED": "backend.unresolved",
+      "BACKEND_MODEL_DISCOVERY_FAILED": "backend.model_discovery_failed",
       "PROJECT_UNKNOWN": "project.unknown",
       "PROJECT_REFERENCES_UNAVAILABLE": "project.references_unavailable",
       "MEMORY_DENIED": "memory.denied",
@@ -825,6 +826,7 @@
       "Position",
       "RecordSource",
       "SpaceRef",
+      "TextTemplate",
       "UiHints",
       "Usage"
     ],
@@ -969,6 +971,7 @@
       "BackendLoginSession",
       "BackendLoginStartRequest",
       "BackendLogoutResult",
+      "BackendModelCatalog",
       "BackendProbeRequest",
       "BackendProbeResult",
       "BackendReadiness",
@@ -1017,7 +1020,10 @@
       "LoopExhaustedPayload",
       "LoopIterationEvent",
       "LoopIterationPayload",
+      "ModelDiscoveryInfo",
+      "ModelDiscoveryState",
       "ModelInfo",
+      "ModelSource",
       "NodeRun",
       "NodeRunStatus",
       "NodeStatusEvent",
@@ -4142,7 +4148,7 @@
     },
     "ArchitectureDrill": {
       "additionalProperties": true,
-      "description": "칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. \"\n\"묶음 값으로 같은 그림을 다시 그립니다.",
+      "description": "칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. 묶음 값으로 같은 그림을 다시 그립니다.",
       "properties": {
         "filter": {
           "description": "하위 구조도에서 더할 걸러내기 이름입니다(예: thread, scope).",
@@ -6088,6 +6094,11 @@
           "default": false,
           "description": "앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`(백엔드가 이유를 알리면 그 코드, 예: `backend.subscription_auth_disabled`).",
           "type": "boolean"
+        },
+        "model_discovery": {
+          "default": false,
+          "description": "모델 호출 없이 이 계정이 쓸 수 있는 모델 목록을 물을 수 있다(0.16.1). 서버는 조회 결과를 설치자 설정 목록에 더해 `GET /backends/{id}/models`·`…/model-catalog`로 낸다. false면 설정 목록만.",
+          "type": "boolean"
         }
       },
       "title": "BackendCapabilities",
@@ -6314,6 +6325,16 @@
           ],
           "default": null,
           "description": "끝난 시각. 진행 중이면 null."
+        },
+        "text_templates": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TextTemplate"
+            },
+            "type": "array"
+          },
+          "description": "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.",
+          "type": "object"
         }
       },
       "required": [
@@ -6396,6 +6417,16 @@
         "finished_at": {
           "description": "끝난 시각(epoch 초).",
           "type": "number"
+        },
+        "text_templates": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TextTemplate"
+            },
+            "type": "array"
+          },
+          "description": "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.",
+          "type": "object"
         }
       },
       "required": [
@@ -6404,6 +6435,32 @@
         "finished_at"
       ],
       "title": "BackendLogoutResult",
+      "type": "object"
+    },
+    "BackendModelCatalog": {
+      "description": "실행 백엔드 하나의 모델 목록(설정 + 계정 조회)과 조회 상태.",
+      "properties": {
+        "backend_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "models": {
+          "description": "합친 모델 목록. 설치자 설정 목록이 앞(그 순서), 조회에만 있는 모델은 뒤(백엔드가 준 순서). 같은 id는 한 항목이고 `sources`에 둘 다 적힌다.",
+          "items": {
+            "$ref": "#/$defs/ModelInfo"
+          },
+          "type": "array"
+        },
+        "discovery": {
+          "$ref": "#/$defs/ModelDiscoveryInfo",
+          "description": "계정 조회 상태."
+        }
+      },
+      "required": [
+        "backend_id",
+        "discovery"
+      ],
+      "title": "BackendModelCatalog",
       "type": "object"
     },
     "BackendProbeRequest": {
@@ -6481,6 +6538,16 @@
         "finished_at": {
           "description": "끝난 시각(epoch 초).",
           "type": "number"
+        },
+        "text_templates": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TextTemplate"
+            },
+            "type": "array"
+          },
+          "description": "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.",
+          "type": "object"
         }
       },
       "required": [
@@ -6546,6 +6613,16 @@
             "$ref": "#/$defs/ReadinessAction"
           },
           "type": "array"
+        },
+        "text_templates": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TextTemplate"
+            },
+            "type": "array"
+          },
+          "description": "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버.",
+          "type": "object"
         }
       },
       "required": [
@@ -11911,6 +11988,18 @@
           "description": "고른 언어 묶음에 없는 문구를 찾을 대체 언어(설정 `mod-i18n.fallback_language`). `LanguageInfo.complete`의 기준이다.",
           "minLength": 1,
           "type": "string"
+        },
+        "source_language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "서버 원문 문구의 언어(설정 `mod-i18n.source_language`, 1.1.0). 화면은 원문 키 조회를 이 언어에서 멈춘다(그 언어 묶음까지 본다). null = 모름(옛 서버) — 대체 언어 사슬 전체를 본다."
         }
       },
       "required": [
@@ -13976,6 +14065,16 @@
         "raw": {
           "default": null,
           "description": "원문(상세에서만, 크기 제한·비밀 가림 적용)."
+        },
+        "text_templates": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TextTemplate"
+            },
+            "type": "array"
+          },
+          "description": "값이 섞인 `title`·`summary`의 원문 틀 + 값(2.1.0): 칸 JSON Pointer(`/title` 등) → 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값, 칸과 같은 가림). 빈 표 = 틀 없음(출처가 주지 않았거나 옛 색인).",
+          "type": "object"
         }
       },
       "required": [
@@ -17730,6 +17829,61 @@
       ],
       "type": "string"
     },
+    "ModelDiscoveryInfo": {
+      "description": "백엔드 계정 모델 조회 상태.",
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/ModelDiscoveryState",
+          "description": "조회 상태. 화면은 이 값으로 안내를 고른다."
+        },
+        "fetched_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "목록에 쓴 조회가 끝난 시각(epoch 초). null = 조회한 적 없음."
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 결과를 다시 조회하지 않고 쓰는 마지막 시각(epoch 초). null = 정하지 않음."
+        },
+        "issues": {
+          "description": "조회 문제(예: `backend.model_discovery_failed` 경고, `details.backend_id`·`reason`). 비면 문제 없음.",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "ModelDiscoveryInfo",
+      "type": "object"
+    },
+    "ModelDiscoveryState": {
+      "enum": [
+        "ok",
+        "stale",
+        "failed",
+        "disabled",
+        "unsupported"
+      ],
+      "type": "string"
+    },
     "ModelInfo": {
       "description": "백엔드가 제공하는 모델 하나(`list_models()`). 모델 목록은 코드에 없다.",
       "properties": {
@@ -17773,6 +17927,13 @@
         "attributes": {
           "additionalProperties": true,
           "type": "object"
+        },
+        "sources": {
+          "description": "이 항목이 나온 곳(0.16.1): `config` 설치자 설정 목록, `discovered` 계정 조회. 둘 다면 합친 항목. 빈 목록 = 출처 모름(옛 서버, 또는 백엔드가 직접 준 목록).",
+          "items": {
+            "$ref": "#/$defs/ModelSource"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -17780,6 +17941,13 @@
       ],
       "title": "ModelInfo",
       "type": "object"
+    },
+    "ModelSource": {
+      "enum": [
+        "config",
+        "discovered"
+      ],
+      "type": "string"
     },
     "ModuleInfo": {
       "description": "`GET /modules` 항목: 설치된 모듈(기능·연동) 하나와 그 상태.\n\n웹은 이 목록과 라우트 `requires`(데이터)로 화면을 조립한다.\n목록·종류·역할 이름은 고정하지 않는다.",
@@ -25263,6 +25431,46 @@
         "name"
       ],
       "title": "TemplateVariable",
+      "type": "object"
+    },
+    "TextTemplate": {
+      "description": "값이 섞인 서버 문장 하나의 원문 틀과 값(2.2.0).\n\n틀은 서버 원문(문구 데이터 그대로)이라 화면 번역의 원문 키다. 자리표시자는 `{name}`만 쓴다.\n값은 JSON 스칼라 또는 중첩 틀(번역할 고정 낱말)이다. 서버 채우기는 `render_text_template`.\n문자열 값은 그 칸과 같은 비밀 가림을 거친다.",
+      "properties": {
+        "template": {
+          "description": "원문 틀(`{name}` 자리표시자). 화면 번역의 원문 키다.",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "$ref": "#/$defs/TextTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "자리표시자 이름 → 값(JSON 스칼라 또는 중첩 틀). 중첩 틀은 먼저 채운다. 없는 이름은 `{name}` 그대로 남는다.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "template"
+      ],
+      "title": "TextTemplate",
       "type": "object"
     },
     "TokenRollupRow": {

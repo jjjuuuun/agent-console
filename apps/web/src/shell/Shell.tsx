@@ -1,3 +1,4 @@
+import type { BackendDescriptor } from "@agent-console/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Button, Dialog, nextTheme, splitKeySequence, useEffectiveShortcuts, useTheme, type KeyPlatform, type ShortcutDef, useToast, formatKeyCombo } from "@agent-console/ui";
@@ -22,6 +23,7 @@ import { GlobalBanners } from "./GlobalBanners";
 import { HelpDialog } from "./HelpDialog";
 import { StartGuideDialog } from "../features/start";
 import { BackendConnectButton, BackendConnectProvider, SETTINGS_BACKEND_READINESS_HASH } from "../features/backendConnect";
+import { ModelCatalogDialogLine } from "../features/modelCatalog";
 import { UsageIndicator, INDICATOR_HOSTS } from "../features/usage";
 import { createBrowserPorts, NotificationsProvider, type NotificationPorts } from "../features/notifications";
 import { isViewingTarget, targetPath, type TargetRoutes } from "../features/notifications/routing";
@@ -55,6 +57,16 @@ export interface ShellProps {
   notificationPorts?: NotificationPorts;
 }
 
+/** 꺼진 화면으로 가는 단축키의 알림 글: 그릴 때 현재 언어로 만든다(떠 있는 동안 언어를 바꿔도 따라간다). */
+function OffRouteToast({ titleKey }: { titleKey: string }) {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
+  return <>{m.nav.disabledToast(lookupMessage(titleKey))}</>;
+}
+
+/** 연결 모달 카드 아래 모델 줄. */
+const renderModelFooter = (backend: BackendDescriptor) => <ModelCatalogDialogLine backend={backend} />;
+
 /**
  * 앱 셸: 사이드바(라우트 설정 데이터) + 전역 배너 + 본문(`Outlet`) + 빠른 이동 + 도움말 + 전역 단축키.
  * 상단바·하단 도크는 없다. 화면별 로직은 모르며 `Outlet`에 라우트가 끼워진다.
@@ -82,8 +94,6 @@ export function Shell({ routes, groups = DEFAULT_ROUTE_GROUPS, platform, notific
 }
 
 function ShellInner({ routes, groups, platform, ports }: { routes: readonly RouteDef[]; groups: readonly RouteGroupDef[]; platform: KeyPlatform; ports: NotificationPorts }) {
-  const m = useShellMessages();
-  const lookupMessage = useLookupMessage();
   const navigate = useNavigate();
   // 서버 모듈이 꺼서 쓸 수 없는 화면: 사이드바·빠른 이동에서 빼고, `g` 키는 이동 대신 안내만 한다.
   const { met: openRoutes, unmet: offRoutes } = useRequiresPartition(routes);
@@ -136,14 +146,14 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
     () => [
       { id: "palette.open", scope: "global", keys: "Mod+K", titleKey: "shortcuts.paletteOpen", modifierRequired: true, run: () => setPaletteOpen(true) },
       ...gotoShortcuts(navigable, (route) => void navigate(route.path)),
-      ...gotoShortcuts(offRoutes, (route) => toast({ tone: "info", text: m.nav.disabledToast(lookupMessage(route.titleKey)), durationMs: 3000 })),
+      ...gotoShortcuts(offRoutes, (route) => toast({ tone: "info", text: <OffRouteToast titleKey={route.titleKey} />, durationMs: 3000 })),
       { id: "pending.jump", scope: "global", keys: "Alt+J", titleKey: "shortcuts.pendingJump", modifierRequired: true, run: jumpToPending },
       { id: "sidebar.toggle", scope: "global", keys: "Mod+Shift+B", titleKey: "shortcuts.sidebarToggle", modifierRequired: true, run: sidebar.toggle },
       { id: "help.open", scope: "global", keys: "?", titleKey: "shortcuts.helpOpen", run: () => setHelpOpen(true) },
       // 프로젝트 전환기 단축키(키는 데이터). 프로젝트 기능이 꺼져 있으면 아무 일도 하지 않는다.
       ...(projects.enabled ? PROJECT_SHORTCUT_DEFS.map((d): ShortcutDef => ({ ...d, scope: "global", modifierRequired: true, run: openSwitcher })) : []),
     ],
-    [navigable, offRoutes, navigate, toast, jumpToPending, sidebar.toggle, openSwitcher, projects.enabled, m.nav, lookupMessage],
+    [navigable, offRoutes, navigate, toast, jumpToPending, sidebar.toggle, openSwitcher, projects.enabled],
   );
 
   const commands = useMemo<CommandDef[]>(
@@ -303,7 +313,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
   );
 
   return (
-    <BackendConnectProvider settingsHref={settingsRoute === undefined ? undefined : `${settingsRoute.path}${SETTINGS_BACKEND_READINESS_HASH}`}>
+    <BackendConnectProvider settingsHref={settingsRoute === undefined ? undefined : `${settingsRoute.path}${SETTINGS_BACKEND_READINESS_HASH}`} renderFooter={renderModelFooter}>
     <div className="app-shell" data-collapsed={sidebar.collapsed ? "true" : "false"} data-drawer={sidebar.drawer ? "true" : "false"}>
       <a
         className="app-skip"

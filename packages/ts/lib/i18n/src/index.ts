@@ -9,8 +9,8 @@ export { createParticleFormatters, koreanParticles, particleFor } from "./partic
 export type { ParticleRule } from "./particles";
 export { I18nProvider, overlayMessages, useLibMessages, useServerText, useT } from "./react";
 export type { Translate } from "./react";
-export { createServerText } from "./serverText";
-export type { ServerText } from "./serverText";
+export { chainUntilSource, createServerText, fillTemplate, getSourceLanguage, setSourceLanguage } from "./serverText";
+export type { ServerText, TextParamValue, TextTemplateLike } from "./serverText";
 export { SERVER_CODES_NS, SERVER_TEXT_NS } from "./types";
 export type {
   BundledCatalogs,

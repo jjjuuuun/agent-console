@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { ApiError } from "@agent-console/api-client";
 import type { Fix } from "@agent-console/contracts";
+import { useServerText } from "@agent-console/i18n";
+import { useOptionalI18n } from "../i18n/AppI18n";
 import { useAppMessages } from "./appMessages";
 
 export interface ErrorView {
@@ -13,8 +15,11 @@ export interface ErrorView {
   fix?: Fix;
 }
 
-/** 서버 오류 코드(`project.config_readonly` 등)를 화면 언어의 문장으로 바꾸는 함수. 모르는 코드는 `undefined`. */
-export type ErrorCodeText = (code: string) => string | undefined;
+/**
+ * 서버 오류 코드(`project.config_readonly` 등)를 화면 언어의 문장으로 바꾸는 함수. 모르는 코드는 `undefined`.
+ * 오류의 details·원문 문장은 서버 오류 묶음(`codes`)의 틀을 채울 때 쓴다.
+ */
+export type ErrorCodeText = (code: string, details?: Record<string, unknown>, message?: string) => string | undefined;
 
 /**
  * 어떤 오류든 화면용 문장으로. 알 수 없는 오류는 `fallback`. 토큰 등 비밀은 다루지 않는다.
@@ -22,7 +27,7 @@ export type ErrorCodeText = (code: string) => string | undefined;
  */
 export function describeError(error: unknown, fallback: string, codeText?: ErrorCodeText): ErrorView {
   if (error instanceof ApiError) {
-    const byCode = codeText?.(error.code);
+    const byCode = codeText?.(error.code, error.details, error.message);
     return { message: byCode ?? (error.message !== "" ? error.message : fallback), code: error.code, status: error.status, ...(error.fix === undefined ? {} : { fix: error.fix }) };
   }
   if (error instanceof Error && error.message !== "") return { message: error.message };
@@ -32,10 +37,25 @@ export function describeError(error: unknown, fallback: string, codeText?: Error
 /** `describeError`와 같은 모양의 함수(화면 언어 문구가 들어간 것을 훅 밖 도우미에 넘길 때). */
 export type DescribeErrorFn = (error: unknown, fallback: string) => ErrorView;
 
-/** 현재 화면 언어의 코드별 문구가 들어간 `describeError`(컴포넌트 안에서 부른다). */
+/**
+ * 현재 화면 언어의 코드별 문구가 들어간 `describeError`(컴포넌트 안에서 부른다).
+ * 찾는 순서(design §I18N.13 I-17): 앱 `errorByCode`(화면 문맥 문구) → 서버 오류 묶음 `issue(code, details, message)` → 서버 원문 문장.
+ */
 export function useDescribeError(): DescribeErrorFn {
   const { errorByCode } = useAppMessages();
-  return useCallback((error, fallback) => describeError(error, fallback, errorByCode), [errorByCode]);
+  const server = useServerText();
+  const inProvider = useOptionalI18n() !== null;
+  const codeText = useCallback<ErrorCodeText>(
+    (code, details, message) => {
+      const app = errorByCode(code);
+      if (app !== undefined) return app;
+      if (!inProvider) return undefined;
+      const fromServer = server.issue(code, details, message ?? "");
+      return fromServer === "" || fromServer === message ? undefined : fromServer;
+    },
+    [errorByCode, server, inProvider],
+  );
+  return useCallback((error, fallback) => describeError(error, fallback, codeText), [codeText]);
 }
 
 const NO_TEXTS: Readonly<Record<string, string>> = {};

@@ -157,7 +157,13 @@
     "사용자 노드 설정": "User node settings",
     "묻기·승인": "Questions and approvals",
     "메시지": "Message",
-    "나": "Me"
+    "나": "Me",
+    "내용을 확인하고 승인하거나 고쳐 주세요.": "Check the content, then approve it or edit it.",
+    "보안 관련 변경이 있을 때 맡깁니다.": "Hand off when there are security-related changes.",
+    "사용자 질문:\n{message}": "User question:\n{message}",
+    "초안 검토": "Draft review",
+    "최종 검토자": "Final reviewer",
+    "확인 받기": "Get confirmation"
   },
   "codes": {
     "agent.backend_failed": "The execution backend ended with a failure.",

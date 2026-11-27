@@ -56,6 +56,11 @@ public_lint_globs:
   - packages/**/README.md
   - apps/*/README.md
   - apps/web/src/**/README.md
+  # 패키지·앱·예제 변경 기록과 저장소 도구 README(공개본에 들어간다)
+  - packages/**/CHANGELOG.md
+  - apps/*/CHANGELOG.md
+  - examples/**/CHANGELOG.md
+  - scripts/**/README.md
   # 루트 README(공개본 첫 화면)와 같이 공개하는 루트 문서. 영어 기본 + 한국어 사본(*.ko.md)
   - README.md
   - README.ko.md

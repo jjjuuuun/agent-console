@@ -129,6 +129,8 @@ export type { HandleBox, PreviewEdge, PreviewNode, RouteEdgeInput, RouteInput, R
 export type { AStarRouter, EdgeRouter, RouteCosts, RouteEdgeRequest, RouteObstacle, RouteOptions, RoutedEdge, RouterStats } from "./logic/route";
 export { inheritedEdgeShape } from "./logic/convert";
 export { LABEL_SPACING_DEFAULTS, flowGap, portObstacles, resolveLabelSpacing, spreadLabelLayout, spreadLabels } from "./logic/labelSpread";
+export { separateNodesVertically } from "./logic/separateNodes";
+export type { NodeRect } from "./logic/separateNodes";
 export type { LabelLayout, LabelSpacing, ObstacleRect, PortBox, SpreadInput } from "./logic/labelSpread";
 export {
   EDGE_LAYOUT_KEY_ORDER,

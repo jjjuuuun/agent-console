@@ -20,12 +20,11 @@ import { ApiError } from "@agent-console/api-client";
 import { DEFAULT_ROUTES, isDefinitionPath } from "../../shell/routeConfig";
 import { useModules, useRequires } from "../../modules";
 import { useToast } from "@agent-console/ui";
-import { useFolderHomeMessages } from "./folderHomeMessages";
-import { useProjectMessages } from "./messages";
 import { UnregisterDialog } from "./UnregisterDialog";
 import { regionProjects } from "./projectRegionLib";
 import { useLanguageCode } from "../../i18n";
 import { ProjectFolderHost, type FolderRequest } from "./ProjectFolderHost";
+import { FolderHomeToast, ProjectToast } from "./ProjectsToast";
 
 /** 프로젝트 홈 주소(라우트 `/projects/:id`). 현재 프로젝트 질의는 주소에 `?prj=`로 이어 붙는다. */
 export function projectHomePath(id: string): string {
@@ -113,8 +112,6 @@ function asProjectStorage(storage: SafeStorage) {
  */
 export function ProjectsProvider({ children }: { children: ReactNode }) {
   const language = useLanguageCode();
-  const folderHomeMessages = useFolderHomeMessages();
-  const projectMessages = useProjectMessages();
   const phase = useRequires(PROJECT_REQUIRES).phase;
   // 모듈 목록을 못 받은 서버(구버전 등)에서는 켜져 있는지 알 수 없으므로 프로젝트 UI를 만들지 않는다(다른 기능의 fail-open과 달리 이 UI는 덧붙는 것이다).
   const listKnown = useModules().state.phase === "ready";
@@ -204,9 +201,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     await refresh();
     toast({
       tone: "success",
-      text: folderHomeMessages.unregister.done(name),
+      text: <FolderHomeToast render={(f) => f.unregister.done(name)} />,
       action: {
-        label: folderHomeMessages.unregister.undo,
+        label: <FolderHomeToast render={(f) => f.unregister.undo} />,
         onClick: () => void rest.updateProject(id, { archived: false }).then(() => refresh()),
       },
     });
@@ -217,9 +214,10 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       if (!enabled || !knownIds.includes(id)) return;
       setCurrent(id);
-      toast({ tone: "info", text: projectMessages.switcher.adoptedToast(names.get(id) ?? id) });
+      const adopted = names.get(id) ?? id;
+      toast({ tone: "info", text: <ProjectToast render={(pm) => pm.switcher.adoptedToast(adopted)} /> });
     },
-    [enabled, knownIds, setCurrent, toast, names, projectMessages],
+    [enabled, knownIds, setCurrent, toast, names],
   );
 
   const value = useMemo<ProjectsValue>(

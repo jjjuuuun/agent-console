@@ -11,7 +11,6 @@ import { Banner, Button, ConfirmDialog, PageHeader, Tabs, useToast, type TabItem
 import { ToneChip } from "@agent-console/sdd-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
-import { useDescribeError } from "../../app/errors";
 import { useReportUnsaved } from "../../definition/unsaved";
 import { usePageTitle } from "../../shell/titles";
 import { ProjectChip } from "../projects";
@@ -31,6 +30,7 @@ import { useSddContext } from "./useSddContext";
 import "./sdd.css";
 import { useServerText, useT } from "@agent-console/i18n";
 import { useMaybeT } from "../../i18n/useMaybeT";
+import { SddToast } from "./SddToast";
 
 const P = SDD_PARAMS;
 
@@ -49,7 +49,6 @@ export interface SpecDetailScreenProps {
 }
 
 export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScreenProps) {
-  const describeError = useDescribeError();
   const t = useT("sdd");
   const tm = useMaybeT("sdd");
   const { id = "" } = useParams();
@@ -154,7 +153,7 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
   const writeBlock = ctx.readOnly ? ctx.readOnlyReason : undefined;
   const copyPath = () => {
     void navigator.clipboard?.writeText(directory);
-    toast({ tone: "success", text: t("head.copied") });
+    toast({ tone: "success", text: <SddToast render={(t) => t("head.copied")} /> });
   };
   const rename = async (name: string) => {
     const saved = await space.client.putSpec(view.spec.id, { ...view.spec, name }, versionHash);
@@ -171,7 +170,7 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
       void navigate(specsPath());
     } catch (e) {
       setDialog(null);
-      toast({ tone: "danger", text: describeError(e, t("problem.generic")).message });
+      toast({ tone: "danger", text: <SddToast render={(t, d) => d(e, t("problem.generic")).message} /> });
     }
   };
 

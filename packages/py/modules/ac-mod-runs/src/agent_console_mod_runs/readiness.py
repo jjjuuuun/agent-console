@@ -1,4 +1,4 @@
-"""실행 백엔드 준비 상태·연결 테스트·로그인 조립(ux-overhaul §15.8·§15.9).
+"""실행 백엔드 준비 상태·연결 테스트·로그인·모델 목록 조립(ux-overhaul §15.8·§15.9, §1.1-MB).
 
 모듈은 백엔드 id·상태 이름을 모른다. 엔진 패키지의 ``BackendReadinessService``에 레지스트리·비밀
 존재 확인·가림 함수를 넣을 뿐이다.
@@ -12,12 +12,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_runtime import (
     REDACTED,
     BackendLoginService,
+    BackendModelCatalogService,
     BackendReadinessService,
     Registries,
     SecretResolver,
@@ -99,6 +100,35 @@ def build_readiness_service(
     )
 
 
+def build_model_catalog_service(
+    registries: Registries,
+    secrets: SecretResolver,
+    environ: Mapping[str, str],
+    *,
+    rules: Callable[[], SecretRulesReader | None] = lambda: None,
+    enabled: bool = True,
+    disabled_backends: Collection[str] = (),
+    ttl_s: float,
+    failure_ttl_s: float,
+    timeout_s: float,
+    min_chars: int = 4,
+) -> BackendModelCatalogService:
+    """레지스트리의 백엔드(호출마다 다시 읽음)로 모델 목록 서비스를 만든다(design §1.1-MB).
+
+    가림·비밀 존재 확인은 준비 상태와 같은 함수다. 조회는 목록을 처음 요청할 때 한다.
+    """
+    return BackendModelCatalogService(
+        lambda: {entry.key: entry.item for entry in registries.backends.list()},
+        enabled=enabled,
+        disabled_backends=disabled_backends,
+        ttl_s=ttl_s,
+        failure_ttl_s=failure_ttl_s,
+        timeout_s=timeout_s,
+        redact=build_check_redactor(secrets, environ, rules, min_chars=min_chars),
+        has_secret=secrets.has,
+    )
+
+
 def build_login_service(
     registries: Registries,
     secrets: SecretResolver,
@@ -111,11 +141,13 @@ def build_login_service(
     retain_s: float,
     screen_max_lines: int,
     min_chars: int = 4,
+    on_account_change: Callable[[str], None] | None = None,
 ) -> BackendLoginService:
     """레지스트리의 백엔드(호출마다 다시 읽음)로 로그인 서비스를 만든다(ux-overhaul §15.9).
 
     가림은 준비 상태와 같은 함수(환경 비밀 값·비밀 해석기·의심 규칙)에
-    서비스의 입력값 가림을 더한다.
+    서비스의 입력값 가림을 더한다. ``on_account_change``는 로그인 세션이 끝나거나 로그아웃이
+    돌아온 뒤 백엔드 id로 부른다(예: 모델 목록 캐시 비우기).
     """
     return BackendLoginService(
         lambda: {entry.key: entry.item for entry in registries.backends.list()},
@@ -127,7 +159,13 @@ def build_login_service(
         heartbeat_s=heartbeat_s,
         retain_s=retain_s,
         screen_max_lines=screen_max_lines,
+        on_account_change=on_account_change,
     )
 
 
-__all__ = ["build_check_redactor", "build_login_service", "build_readiness_service"]
+__all__ = [
+    "build_check_redactor",
+    "build_login_service",
+    "build_model_catalog_service",
+    "build_readiness_service",
+]

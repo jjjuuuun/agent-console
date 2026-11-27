@@ -16,6 +16,10 @@ from agent_console_i18n import normalize_language
 DEFAULT_LANGUAGE = "en"
 """Default of ``default_language`` and ``fallback_language`` (design §I18N.8)."""
 
+DEFAULT_SOURCE_LANGUAGE = "ko"
+"""Default of ``source_language``: the language the server source text is written in (design §I18N.2
+I-7, §I18N.13 I-18)."""
+
 
 class I18nModuleSettings(BaseModel):
     """화면 문구 묶음을 어디서 모으고 어떤 언어를 기본으로 볼지(설치자 값)."""
@@ -46,6 +50,19 @@ class I18nModuleSettings(BaseModel):
             tier="advanced",
             example="en",
             when="일부만 번역한 언어의 빈 곳을 영어가 아닌 다른 언어로 채우고 싶을 때 바꾸세요.",
+        ),
+    )
+    source_language: str | None = Field(
+        title="서버 원문 언어",
+        default=DEFAULT_SOURCE_LANGUAGE,
+        description=(
+            "서버 원문 문구를 쓴 언어 코드. 이 언어 화면은 원문을 그대로 보이고, 원문의 번역은 "
+            "이 언어까지만 찾는다. 비우면 모름."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example="ko",
+            when="서버 원문 문구를 다른 언어로 바꾼 패키지를 쓸 때만 바꾸세요.",
         ),
     )
     catalog_dirs: list[Path] = Field(
@@ -83,5 +100,10 @@ class I18nModuleSettings(BaseModel):
     def _language(cls, value: str) -> str:
         return normalize_language(value)
 
+    @field_validator("source_language")
+    @classmethod
+    def _source_language(cls, value: str | None) -> str | None:
+        return None if value is None or not value.strip() else normalize_language(value)
 
-__all__ = ["DEFAULT_LANGUAGE", "I18nModuleSettings"]
+
+__all__ = ["DEFAULT_LANGUAGE", "DEFAULT_SOURCE_LANGUAGE", "I18nModuleSettings"]

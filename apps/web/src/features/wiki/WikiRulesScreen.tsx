@@ -22,6 +22,7 @@ import { wikiRulesPath } from "./wikiPaths";
 import "./wiki.css";
 import { useT } from "@agent-console/i18n";
 import { useCollator } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const nameOf = (x: WikiRulesListItem) => (x.name !== undefined && x.name !== "" ? x.name : x.id);
 const idOf = (x: WikiRulesListItem) => x.id;
@@ -89,7 +90,7 @@ function WikiRulesBody() {
     const made = await space.client.createWikiRules({ ...body });
     setCreating(false);
     await invalidate();
-    toast({ tone: "success", text: t("rules.toast.created", { name: made.value.rules.name || made.value.rules.id }) });
+    toast({ tone: "success", text: <WikiToast render={(t) => t("rules.toast.created", { name: made.value.rules.name || made.value.rules.id })} /> });
     apply(made.value.rules.id);
   };
 
@@ -141,7 +142,7 @@ function WikiRulesBody() {
               onDeleted={(name) => {
                 qc.removeQueries({ queryKey: wikiRulesKeys.one(space.key, selected.id) });
                 void invalidate();
-                toast({ tone: "success", text: t("rules.toast.deleted", { name }) });
+                toast({ tone: "success", text: <WikiToast render={(t) => t("rules.toast.deleted", { name })} /> });
                 dirtyRef.current = false;
                 setDirty(false);
                 apply(null);

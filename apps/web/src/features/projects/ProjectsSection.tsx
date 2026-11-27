@@ -5,7 +5,7 @@ import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, ProjectV
 import { statusInfo } from "@agent-console/projects";
 import { useProjectsText } from "./projectsText";
 import { Button, EmptyState, useToast } from "@agent-console/ui";
-import { useDescribeError, useErrorState, raisedAs } from "../../app/errors";
+import { useErrorState, raisedAs } from "../../app/errors";
 import { useLookupMessage } from "../../app/shellMessages";
 import { queryKeys } from "../../app/queries";
 import { useApi } from "../../app/ApiContext";
@@ -20,6 +20,7 @@ import { projectHomePath, useProjects } from "./ProjectsContext";
 import { regionProjects } from "./projectRegionLib";
 import { useCopyDialog } from "./useCopyDialog";
 import { useLanguageCode, useCollator } from "../../i18n";
+import { ScopeToast } from "./ProjectsToast";
 
 const dismissedKey = (feature: string) => `ac.legacy.dismissed.${feature}`;
 
@@ -75,7 +76,6 @@ type Dialog =
 function ProjectsSectionBody() {
   const language = useLanguageCode();
   const collator = useCollator();
-  const describeError = useDescribeError();
   const text = useProjectsText();
   const scopeMessages = useScopeMessages();
   const t = scopeMessages.settings;
@@ -189,7 +189,7 @@ function ProjectsSectionBody() {
     rest
       .updateProject(id, { archived: false })
       .then(() => p.refresh())
-      .catch((e: unknown) => toast({ tone: "danger", text: describeError(e, t.reregisterBlocked).message }))
+      .catch((e: unknown) => toast({ tone: "danger", text: <ScopeToast render={({ scope }, d) => d(e, scope.settings.reregisterBlocked).message} /> }))
       .finally(() => setReregistering(null));
   };
 
@@ -203,7 +203,7 @@ function ProjectsSectionBody() {
       : feature.assign(rest, { to: projectId, from_null: true }).then((r) => assignSummary(r, requested));
     run
       .then(async (s) => {
-        toast({ tone: "success", text: s.skipped > 0 ? t.assignPartial(s.total, s.ok, s.skipped) : t.assignDone(featureLabel(feature, lookupMessage), s.ok, name) });
+        toast({ tone: "success", text: <ScopeToast render={({ scope, lookup }) => (s.skipped > 0 ? scope.settings.assignPartial(s.total, s.ok, s.skipped) : scope.settings.assignDone(featureLabel(feature, lookup), s.ok, name))} /> });
         closeDialog();
         await refreshAll();
       })
@@ -235,7 +235,7 @@ function ProjectsSectionBody() {
       return;
     }
     const chats = results[0]?.moved ?? 0;
-    toast({ tone: "success", text: `${t.moveDone(chats, merged.moved - chats)}${merged.skipped > 0 ? ` ${t.moveSkipped(merged.skipped)}` : ""}` });
+    toast({ tone: "success", text: <ScopeToast render={({ scope }) => `${scope.settings.moveDone(chats, merged.moved - chats)}${merged.skipped > 0 ? ` ${scope.settings.moveSkipped(merged.skipped)}` : ""}`} /> });
     closeDialog();
   };
 
@@ -252,7 +252,7 @@ function ProjectsSectionBody() {
       const items = (plan.items ?? []).filter((it) => it.reason === "requested").map((it) => ({ kind: it.kind, id: it.id }));
       copy.open({ direction: "move", project: id, start: "plan", items, onApplied: () => void queryClient.invalidateQueries({ queryKey: ["list", "project-legacy"] }) });
     } catch (e: unknown) {
-      toast({ tone: "danger", text: describeError(e, t.loadFailed).message });
+      toast({ tone: "danger", text: <ScopeToast render={({ scope }, d) => d(e, scope.settings.loadFailed).message} /> });
     }
   };
 

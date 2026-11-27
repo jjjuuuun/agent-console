@@ -4,9 +4,9 @@ import type { ProjectView } from "@agent-console/contracts/projects";
 import { statusInfo, type ProjectsText } from "@agent-console/projects";
 import { useProjectsText } from "./projectsText";
 import { useApi } from "../../app/ApiContext";
-import { useFolderHomeMessages } from "./folderHomeMessages";
 import { ProjectFolderDialog, type FolderSubmit, type RepathTarget } from "./ProjectFolderDialog";
 import { useFolderApi } from "./useFolderApi";
+import { FolderHomeToast } from "./ProjectsToast";
 
 /** 열려 있는 폴더 대화상자 요청. */
 export type FolderRequest =
@@ -41,7 +41,6 @@ export function repathTarget(view: ProjectView, text: ProjectsText): RepathTarge
  * 대화상자는 요청이 있을 때만 마운트되어 열 때마다 새로 시작한다.
  */
 export function ProjectFolderHost({ request, projects, refresh, openHome, onClose }: ProjectFolderHostProps) {
-  const m = useFolderHomeMessages();
   const text = useProjectsText();
   const { rest } = useApi();
   const toast = useToast();
@@ -53,7 +52,7 @@ export function ProjectFolderHost({ request, projects, refresh, openHome, onClos
     if (v.kind === "repath" && request.mode === "repath") {
       const { value } = await rest.updateProject(request.view.project.id, { folder: v.folder }, request.view.version_hash ?? undefined);
       await refresh();
-      toast({ tone: "success", text: m.dialog.repathDone });
+      toast({ tone: "success", text: <FolderHomeToast render={(f) => f.dialog.repathDone} /> });
       onClose();
       openHome(value.project.id);
       return;
@@ -61,7 +60,7 @@ export function ProjectFolderHost({ request, projects, refresh, openHome, onClos
     if (v.kind === "reregister") {
       const { value } = await rest.updateProject(v.projectId, { archived: false });
       await refresh();
-      toast({ tone: "success", text: m.dialog.reregistered(value.project.name) });
+      toast({ tone: "success", text: <FolderHomeToast render={(f) => f.dialog.reregistered(value.project.name)} /> });
       onClose();
       openHome(value.project.id);
       return;
@@ -74,9 +73,10 @@ export function ProjectFolderHost({ request, projects, refresh, openHome, onClos
         ...(v.description === undefined ? {} : { description: v.description }),
       });
       await refresh();
+      const name = value.project.name;
       toast({
         tone: v.manifestInvalid ? "warning" : "success",
-        text: v.manifestInvalid ? m.dialog.addedInvalid(value.project.name) : v.adopted !== null ? m.dialog.addedAdopted(value.project.name, v.adopted) : m.dialog.added(value.project.name),
+        text: <FolderHomeToast render={(f) => (v.manifestInvalid ? f.dialog.addedInvalid(name) : v.adopted !== null ? f.dialog.addedAdopted(name, v.adopted) : f.dialog.added(name))} />,
       });
       onClose();
       if (request.mode === "add") request.onAdded?.(value);

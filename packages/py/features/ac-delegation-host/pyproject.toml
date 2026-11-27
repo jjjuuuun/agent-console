@@ -8,7 +8,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-contracts>=0.16,<0.17",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-runtime>=0.2,<0.3",
     "pydantic>=2.9",
 ]
 
@@ -26,8 +26,8 @@ dev = [
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
-    "agent-console-backend-fake-agent>=0.1,<0.2",
-    "agent-console-backend-claude-sdk>=0.1,<0.2",
+    "agent-console-backend-fake-agent>=0.2,<0.3",
+    "agent-console-backend-claude-sdk>=0.2,<0.3",
 ]
 
 [build-system]

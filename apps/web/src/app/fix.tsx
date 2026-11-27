@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router";
 import type { Fix, FixAction } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
+import { useServerTranslate } from "../i18n/useServerTranslate";
 import { useRequiresPartition } from "../modules/ModulesContext";
 import { DEFAULT_ROUTES, routeServing, type RouteDef } from "../shell/routeConfig";
 
@@ -59,6 +60,7 @@ export function FixButtons({ fix, onNavigate, size = "sm" }: FixButtonsProps) {
 function FixButtonRow({ fix, onNavigate, size }: { fix: Fix; onNavigate?: () => void; size: "sm" | "md" }) {
   const navigate = useNavigate();
   const actions = useResolvedFix(fix);
+  const tr = useServerTranslate();
   if (actions.length === 0) return null;
   return (
     <div className="app-fix-actions">
@@ -72,7 +74,7 @@ function FixButtonRow({ fix, onNavigate, size }: { fix: Fix; onNavigate?: () => 
             void navigate(a.to);
           }}
         >
-          {a.label}
+          {tr(a.label)}
         </Button>
       ))}
     </div>

@@ -11,7 +11,7 @@ import time
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, cast, runtime_checkable
 
 from claude_agent_sdk import (
     ClaudeAgentOptions,
@@ -39,6 +39,7 @@ from agent_console_contracts import (
     LogWarningPayload,
     ModelInfo,
     ResourceBundle,
+    TextTemplate,
     Usage,
 )
 from agent_console_runtime import (
@@ -52,6 +53,8 @@ from agent_console_runtime import (
     InteractivePort,
     LoginDriver,
     LoginRefusedError,
+    ModelDiscoveryReasons,
+    ModelDiscoveryResult,
     SecretNotFoundError,
     SecretResolver,
     SessionArchive,
@@ -99,6 +102,15 @@ from ._host_tools import (
 from ._interact import InteractionKindMap, PermissionBridge
 from ._login import ClaudeSdkLoginOptions
 from ._login_support import ClaudeLoginSupport, PtySupport
+from ._models import (
+    METHOD_MODELS_API,
+    METHOD_SDK_INIT,
+    ClaudeSdkModelDiscoveryOptions,
+    HttpClientFactory,
+    default_http_client,
+    list_models_api,
+    models_from_server_info,
+)
 from ._options import (
     CLAUDE_SDK_BACKEND_ID,
     MANAGED_SDK_FIELDS,
@@ -128,6 +140,7 @@ from ._readiness import (
     find_claude_cli,
     probe_fixes,
     probe_message,
+    probe_message_template,
 )
 from ._redact import DEFAULT_MAX_RAW_CHARS, RawSanitizer
 from ._session_archive import claude_session_archive
@@ -156,7 +169,16 @@ class ClaudeSdkInstallOptions(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    models: list[ModelInfo] = Field(default_factory=list, description="`list_models()` 목록.")
+    models: list[ModelInfo] = Field(
+        default_factory=list,
+        description="`list_models()` 목록(설치자가 고른 순서·이름). "
+        "계정 조회 결과가 뒤에 더해진다.",
+    )
+    model_discovery: ClaudeSdkModelDiscoveryOptions = Field(
+        default_factory=ClaudeSdkModelDiscoveryOptions,
+        description="계정 모델 조회(모델 호출 없음) 방법과 Models API 주소·헤더 값. "
+        "켜고 끄기·주기는 mod-runs 설정 model_discovery.",
+    )
     env_policy: EnvPolicy | None = Field(
         default=None, description="하위 프로세스 환경 상속 정책. 비우면 기본 허용 목록."
     )
@@ -287,6 +309,13 @@ class SdkClient(Protocol):
     async def disconnect(self) -> None: ...
 
 
+@runtime_checkable
+class ServerInfoClient(Protocol):
+    """계정 모델 조회가 쓰는 부분(`ClaudeSDKClient.get_server_info`, 초기화 응답 원본)."""
+
+    async def get_server_info(self) -> dict[str, Any] | None: ...
+
+
 type ClientFactory = Callable[[ClaudeAgentOptions], SdkClient]
 """`ClaudeAgentOptions` → 클라이언트. 기본은 `ClaudeSDKClient`."""
 
@@ -400,6 +429,8 @@ class ClaudeSdkBackend:
         pty_support: PtySupport | None = None,
         auth_dir: ClaudeSdkAuthDirOptions | Mapping[str, Any] | None = None,
         workspace: Path | str | None = None,
+        model_discovery: ClaudeSdkModelDiscoveryOptions | Mapping[str, Any] | None = None,
+        http_client_factory: HttpClientFactory = default_http_client,
     ) -> None:
         self._client_factory = client_factory
         self._creds_options = ClaudeSdkAuthDirOptions.model_validate(auth_dir or {})
@@ -410,6 +441,8 @@ class ClaudeSdkBackend:
             environ=environ if environ is not None else os.environ,
         )
         self._readiness = ClaudeSdkReadinessOptions.model_validate(readiness or {})
+        self._model_discovery = ClaudeSdkModelDiscoveryOptions.model_validate(model_discovery or {})
+        self._http_client_factory = http_client_factory
         self._cli_locator = cli_locator
         self._path_exists = path_exists
         self._tool_server_factory = tool_server_factory
@@ -464,6 +497,7 @@ class ClaudeSdkBackend:
                 host_tools=True,
                 status=True,
                 probe=True,
+                model_discovery=True,
                 login=self._login.enabled,
                 logout=self._login.enabled,
                 resource_slots=list(self._slots),
@@ -527,6 +561,7 @@ class ClaudeSdkBackend:
             login=parsed.login,
             auth_dir=parsed.auth_dir,
             workspace=host.workspace_dir if host is not None else None,
+            model_discovery=parsed.model_discovery,
         )
         backend.collector_reports = list(reports)
         return backend
@@ -758,11 +793,13 @@ class ClaudeSdkBackend:
         a, _cli = self._assess(ctx)
         detail = a.detail
         note = self._login.unavailable_note
+        extra: list[TextTemplate] = []
         if note and a.state in (
             ReadinessStates.SUBSCRIPTION_UNVERIFIED,
             ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED,
         ):
             detail = f"{detail} {note}".strip()
+            extra.append(TextTemplate(template=note))
         return BackendReadiness(
             backend_id=ctx.backend_id,
             state=a.state,
@@ -774,6 +811,7 @@ class ClaudeSdkBackend:
             checked_at=ctx.clock(),
             checks=a.checks,
             actions=self._login.actions(a.state, token_auth=bool(self._readiness.auth.oauth_token)),
+            text_templates=a.text_templates(extra),
         )
 
     async def start_login(self, ctx: BackendLoginContext, method_id: str) -> LoginDriver:
@@ -818,19 +856,24 @@ class ClaudeSdkBackend:
         details = dict(outcome.details)
         if not outcome.ok:
             details["category"] = PROBE_CATEGORIES.get(outcome.reason or "", "other")
+        templates: dict[str, list[TextTemplate]] = {}
+        if assessment.probe_block is not None:
+            message = assessment.probe_block_message
+        else:
+            template = probe_message_template(outcome.reason, texts, timeout_s)
+            message = probe_message(outcome.reason, texts, timeout_s)
+            if template.params:
+                templates["/message"] = [template]
         return BackendProbeResult(
             backend_id=ctx.backend_id,
             ok=outcome.ok,
             latency_ms=latency,
             reason=outcome.reason,
-            message=(
-                assessment.probe_block_message
-                if assessment.probe_block is not None
-                else probe_message(outcome.reason, texts, timeout_s)
-            ),
+            message=message,
             details=details,
             fixes=probe_fixes(outcome.reason, texts),
             finished_at=ctx.clock(),
+            text_templates=templates,
         )
 
     def _probe_options(self, cli: str, cwd: str) -> ClaudeAgentOptions:
@@ -891,8 +934,110 @@ class ClaudeSdkBackend:
             return classify_probe_messages(messages)
 
     async def list_models(self) -> list[ModelInfo]:
-        """생성 시 받은 모델 목록(복사본)."""
+        """생성 시 받은 모델 목록(복사본, 설치자 설정). 계정 조회는 ``discover_models``."""
         return list(self._models)
+
+    # ------------------------------------------------------------ 계정 모델 조회(X54)
+
+    async def discover_models(
+        self, ctx: BackendCheckContext, timeout_s: float
+    ) -> ModelDiscoveryResult:
+        """선택 능력(X54): 이 계정이 쓸 수 있는 모델을 **모델 호출 없이** 묻는다.
+
+        방법(설치자 설정 ``model_discovery.method``, 기본 ``auto``): 점검 인증
+        (``readiness.auth``)이 API 키면 Models API(``models_api``), 구독이면 Claude Code CLI
+        초기화 응답(``sdk_init`` — ``connect()``·``get_server_info()``·``disconnect()``만, 연결
+        테스트와 같은 자격 폴더·임시 작업 폴더·세션 기록 끔 인자). ``query()``는 부르지 않는다.
+
+        구독 방식이 꺼져 있으면 ``subscription_disabled``, 키·로그인이 없으면 ``auth_missing``으로
+        CLI·HTTP를 부르지 않고 끝낸다. 응답에 ``models``가 없으면 ``unsupported``
+        (``cli_no_models``). 응답 글·예외 문장·비밀 값은 결과에 넣지 않는다.
+        """
+        method: str = self._model_discovery.method
+        if method == "auto":
+            method = (
+                METHOD_MODELS_API if self._readiness.auth.mode == "api_key" else METHOD_SDK_INIT
+            )
+        if method == METHOD_MODELS_API:
+            return await self._discover_models_api(timeout_s)
+        return await self._discover_sdk_init(ctx, timeout_s)
+
+    async def _discover_models_api(self, timeout_s: float) -> ModelDiscoveryResult:
+        try:
+            key = self._lookup(api_key_ref(self._readiness.auth))
+        except SecretNotFoundError:
+            key = ""
+        if not key:
+            return ModelDiscoveryResult(
+                ok=False, method=METHOD_MODELS_API, reason=ModelDiscoveryReasons.AUTH_MISSING
+            )
+        parent = self._environ if self._environ is not None else os.environ
+        return await list_models_api(
+            api_key=key,
+            options=self._model_discovery,
+            environ=parent,
+            timeout_s=timeout_s,
+            client_factory=self._http_client_factory,
+        )
+
+    async def _discover_sdk_init(
+        self, ctx: BackendCheckContext, timeout_s: float
+    ) -> ModelDiscoveryResult:
+        def failed(reason: str, **details: Any) -> ModelDiscoveryResult:
+            return ModelDiscoveryResult(
+                ok=False, method=METHOD_SDK_INIT, reason=reason, details=details
+            )
+
+        if self._readiness.auth.mode == "subscription" and not self._allow_subscription_auth:
+            return failed(ModelDiscoveryReasons.SUBSCRIPTION_DISABLED)
+        assessment, cli = self._assess(ctx)
+        if (
+            assessment.probe_block == ProbeReasonCodes.AUTH_MISSING
+            or assessment.state == ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED
+        ):
+            return failed(ModelDiscoveryReasons.AUTH_MISSING)
+        if cli is None:
+            return failed(ModelDiscoveryReasons.CLI_MISSING)
+        if not self._prepare_auth_dir():
+            return failed(ModelDiscoveryReasons.ERROR, error="auth_dir")
+        budget = max(0.05, timeout_s - min(PROBE_DISCONNECT_SECONDS, timeout_s * 0.1))
+        with tempfile.TemporaryDirectory(prefix="ac-models-") as cwd:
+            try:
+                options = dataclasses.replace(self._probe_options(cli, cwd), model=None)
+            except (SecretNotFoundError, AuthMissingError):
+                return failed(ModelDiscoveryReasons.AUTH_MISSING)
+            client = self._client_factory(options)
+            try:
+                async with asyncio.timeout(budget):
+                    await client.connect()
+                    if not isinstance(client, ServerInfoClient):
+                        return failed(ModelDiscoveryReasons.ERROR, error="no_server_info")
+                    info = await client.get_server_info()
+            except TimeoutError:
+                return failed(ModelDiscoveryReasons.TIMEOUT)
+            except Exception as exc:  # 문장은 버리고 형식 이름만(비밀이 섞일 수 있음)
+                outcome = classify_probe_error(exc)
+                return failed(outcome.reason or ModelDiscoveryReasons.ERROR, **outcome.details)
+            finally:
+                with contextlib.suppress(Exception):
+                    await asyncio.wait_for(client.disconnect(), PROBE_DISCONNECT_SECONDS)
+        try:
+            parsed = models_from_server_info(info)
+        except ValueError:
+            return failed(ModelDiscoveryReasons.INVALID_RESPONSE)
+        if parsed is None:
+            return ModelDiscoveryResult(
+                ok=False,
+                unsupported=True,
+                method=METHOD_SDK_INIT,
+                reason=ModelDiscoveryReasons.CLI_NO_MODELS,
+            )
+        return ModelDiscoveryResult(
+            ok=True,
+            models=parsed.models,
+            method=METHOD_SDK_INIT,
+            details={"skipped": parsed.skipped},
+        )
 
     # ------------------------------------------------------------ 실행
 

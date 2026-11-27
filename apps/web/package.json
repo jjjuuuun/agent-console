@@ -73,13 +73,13 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-console/api-client": "^0.2.0",
+    "@agent-console/api-client": "^0.2.1",
     "@agent-console/arch-view": "^0.2.1",
     "@agent-console/chat": "^0.2.1",
-    "@agent-console/contracts": "^0.16.0",
+    "@agent-console/contracts": "^0.16.1",
     "@agent-console/folder-picker": "^0.2.0",
     "@agent-console/graph-editor": "^0.2.2",
-    "@agent-console/i18n": "^0.1.0",
+    "@agent-console/i18n": "^0.2.0",
     "@agent-console/list-arrange": "^0.1.1",
     "@agent-console/log-view": "^0.2.1",
     "@agent-console/markdown-doc": "^0.2.0",

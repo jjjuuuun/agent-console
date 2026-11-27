@@ -130,6 +130,21 @@ The module does not know backend ids or status names; it only passes the registr
 (the rules of the `secrets.rules` port, or the ac-secret-rules default rules without it), resolved `secret://` values, and suspected value patterns
 (`readiness.build_check_redactor`). The server log keeps only the backend id, ok, reason, and duration.
 
+## Backend model lists
+
+| Route | Response | Notes |
+| --- | --- | --- |
+| `GET /backends/{id}/models` | `ModelInfo[]` | The model field list: the administrator list `backends.<id>.models` first (its order), then models the account lookup found (`sources` says which). Same shape as before |
+| `GET /backends/{id}/model-catalog?refresh=` | `BackendModelCatalog` | The same list plus `discovery{state, fetched_at, expires_at, issues}`. `refresh=true` skips the cache. `Cache-Control: no-store` |
+
+The lookup is the optional backend capability `model_discovery` (no model call); the module only passes the registry to the ac-runtime
+`BackendModelCatalogService` with the same masking and secret check as the readiness routes. The first lookup happens on the first
+request (not at startup), results stay in memory (`model_discovery.ttl_s`, failures `failure_ttl_s`), parallel requests share one
+lookup, and a finished sign-in session or sign-out of that backend clears its cache. A failed lookup is still 200: the
+configured list, `discovery.state = failed` (or `stale` with the last good list) and the warning issue
+`backend.model_discovery_failed` (`details.backend_id`, `reason`). Off = `disabled`, no capability = `unsupported`, unknown id = 404.
+The routes work without the sign-in service and the readiness routes.
+
 ## Backend account sign-in
 
 Starts and completes the sign-in to an execution backend account (for example a Claude subscription) from the app screen. The module does not know backend ids or sign-in methods;
@@ -167,6 +182,10 @@ backend id, method id, phase, reason, and duration. The shutdown hook cancels th
 | `backend_login.heartbeat_s` | 30 | Cancel when polling stops for this long (seconds) |
 | `backend_login.retain_s` | 60 | How long a finished session can still be read (seconds) |
 | `backend_login.screen_max_lines` | 40 | Maximum lines of the response `screen` |
+| `model_discovery.enabled` | true | Account model lookup for the model field (off = configured lists only, state `disabled`) |
+| `model_discovery.ttl_s` / `failure_ttl_s` | 3600 / 60 | Seconds a fetched list / a failure is reused before asking again (0 = every request) |
+| `model_discovery.timeout_s` | 20 | Maximum wait for one lookup (seconds) |
+| `model_discovery.disabled_backends` | [] | Backend ids that are never looked up |
 | `resume_origin` | `resume` | The `origin` of resume runs that no handler took |
 | `activity_limit` | 100 | Default number of agent activity items |
 | `observe_event_prefixes` | null | Event type prefixes that the *Observe* tab of the run detail collects (`GET /observe-event-prefixes`). null = the package default data (`data/observe_event_prefixes.json`, `hook.` and `mcp.`); a list = that list (spaces, empty values, and duplicates cleaned up); `[]` = observe tab off (runs and event storage do not use this value, so they keep working) |

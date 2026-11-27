@@ -1,19 +1,33 @@
-# 변경 기록
+# Changelog
 
 ## Unreleased
 
-- I.6: Terminal text is now English: the help of every command (`--help`, `serve`, `statusline`, `logs purge`), option errors, and the `logs purge`·`statusline` output lines (for example `Deleted: events 1 · token samples 0 · cursors 1 · agents 0`). Options, exit codes, and behavior are unchanged.
+- Terminal text is now English: the help of every command (`--help`, `serve`, `statusline`, `logs purge`), option
+  errors, and the `logs purge` and `statusline` output lines (for example
+  `Deleted: events 1 · token samples 0 · cursors 1 · agents 0`). Options, exit codes and behavior are unchanged.
 
 ## 1.0.0
 
-- REL.20: 표시 버전 1.0.0. `agent-console --version`(출력 `agent-console <버전>`, 버전은 설치 메타데이터 `agent-console-cli`에서 읽는다)과 공개 함수 `cli_version()`을 더했다. 의존 범위 `agent-console-server>=1.0,<2`.
-- 5.2R.104: 프리셋 기능 삭제로 `serve --apply-preset`이 없어졌다(옵션을 선언하던 모듈 `mod-presets`가 없음). 도움말·테스트에서 뺐다.
-- 5.2R.92: `serve`는 인자를 서버 `agent_console_server.main`에 그대로 넘긴다(옵션 정의는 서버 한 곳). 모듈이 `SettingsCompat.flags`로 선언한 옵션이 `agent-console serve`에도 나온다(전에는 `--apply-preset`만 하드코딩). 옵션·의미·종료 코드는 그대로다. 내부 함수 `_server.serve_overrides`·`run_server`·`merge_origins`(→ 서버 `merge_origins`)와 상수 `APPLY_PRESET_FLAG`를 지웠다. 설명을 "실행 명령"으로 고쳤다. 테스트 dev 의존에 `agent-console-modkit`(예제 모듈 선언용).
-- 5.2R.27: `statusline`이 `--label`이 없으면 데이터의 짧은 창 이름(`5h`·`7d`, `agent_console_usage.default_window_labels`)을 쓴다.
+- Display version 1.0.0. Added `agent-console --version` (prints `agent-console <version>`; the version is read from
+  the installed metadata of `agent-console-cli`) and the public function `cli_version()`. Dependency range
+  `agent-console-server>=1.0,<2`.
+- With the presets feature removed, `serve --apply-preset` is gone (the module that declared the option,
+  `mod-presets`, no longer exists). Removed it from the help and tests.
+- `serve` passes its arguments as is to the server's `agent_console_server.main` (options are defined in one place, the
+  server). Options that modules declare with `SettingsCompat.flags` also appear in `agent-console serve` (previously
+  only `--apply-preset` was hardcoded). Options, meanings and exit codes are unchanged. Removed the internal functions
+  `_server.serve_overrides`, `run_server` and `merge_origins` (now the server's `merge_origins`) and the constant
+  `APPLY_PRESET_FLAG`. The description now calls it the command for running Agent Console. Test dev dependency
+  `agent-console-modkit` (for declaring example modules).
+- Without `--label`, `statusline` uses the short window names from data (`5h`, `7d`,
+  `agent_console_usage.default_window_labels`).
 
 ## 0.1.0
 
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
-- `serve --enable-module ID --disable-module ID`(여러 번, 설정 `modules`보다 우선, 3R.9).
-- 3R.10: `serve --apply-preset`가 `modules.options.mod-presets.apply_on_start`로 들어간다(옛 `presets.*` 대신).
-- 5.7R.6(M-3): `agent-console logs purge`(로그 색인 비우기, dry-run 기본·`--yes`로 지움·범위 없으면 `--all` 필요). 의존 `agent-console-logs` 추가(명령 안 지연 import), 위치는 `--index` 또는 서버 설정(`_server.server_log_index_path`).
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.
+- `serve --enable-module ID --disable-module ID` (repeatable, takes priority over the setting `modules`).
+- `serve --apply-preset` goes into `modules.options.mod-presets.apply_on_start` (instead of the old `presets.*`).
+- `agent-console logs purge` (purges the log index; dry run by default, `--yes` deletes, and `--all` is required
+  without a scope). Added the dependency `agent-console-logs` (imported lazily inside the command); the location is
+  `--index` or the server settings (`_server.server_log_index_path`).

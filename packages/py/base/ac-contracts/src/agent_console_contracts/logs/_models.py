@@ -10,6 +10,7 @@ from typing import Any, Final
 from pydantic import Field
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
+from agent_console_contracts.common import TextTemplate
 
 from ._settings import LogTaxonomy
 
@@ -74,6 +75,14 @@ class LogEvent(ContractModel):
     )
     detail: Any = Field(default=None, description="표시용 본문(상세에서만, 크기 제한 적용).")
     raw: Any = Field(default=None, description="원문(상세에서만, 크기 제한·비밀 가림 적용).")
+    text_templates: dict[str, list[TextTemplate]] = Field(
+        default_factory=dict,
+        description=(
+            "값이 섞인 `title`·`summary`의 원문 틀 + 값(2.1.0): 칸 JSON Pointer(`/title` 등) "
+            "→ 문장 틀 목록(채워 공백 하나로 이은 것이 칸 값, 칸과 같은 가림). 빈 표 = 틀 "
+            "없음(출처가 주지 않았거나 옛 색인)."
+        ),
+    )
 
 
 class LogEvidenceLink(ContractModel):

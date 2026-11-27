@@ -14,6 +14,7 @@ import { ROUTE_ROLES, routePath } from "../library";
 import { ListSkeleton } from "./parts";
 import { sddKeys, useBulkActions, useSddSpace } from "./useSddApi";
 import { useT } from "@agent-console/i18n";
+import { SddToast } from "./SddToast";
 
 export interface BulkStartDialogProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
       const ok = items.filter((i) => i.status === KNOWN_TASK_ACTION_STATUSES.STARTED).length;
       if (items.length > 0 && ok === items.length) {
         onClose();
-        toast({ tone: "success", text: t("bulk.allStarted", { count: ok }), durationMs: 8000, action: { label: t("bulk.openRuns"), onClick: () => void navigate(routePath(ROUTE_ROLES.runs)) } });
+        toast({ tone: "success", text: <SddToast render={(t) => t("bulk.allStarted", { count: ok })} />, durationMs: 8000, action: { label: <SddToast render={(t) => t("bulk.openRuns")} />, onClick: () => void navigate(routePath(ROUTE_ROLES.runs)) } });
       } else {
         setResults(items);
       }

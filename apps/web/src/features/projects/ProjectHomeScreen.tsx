@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
 import { projectAbilities, statusInfo } from "@agent-console/projects";
 import { useServerText } from "@agent-console/i18n";
+import { useServerRender } from "../../i18n";
 import { useProjectsText } from "./projectsText";
 import { ApiError } from "@agent-console/api-client";
 import { useApi } from "../../app/ApiContext";
@@ -15,7 +16,7 @@ import { useLookupMessage } from "../../app/shellMessages";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { useBackendReadiness } from "../backendReadiness";
 import { DeleteDialog, ROUTE_ROLES, routePath, useRoutesOn } from "../library";
-import { useFolderHomeMessages } from "./folderHomeMessages";
+import { useFolderHomeMessages, type FolderHomeMessages } from "./folderHomeMessages";
 import { ManifestResetDialog } from "./ManifestResetDialog";
 import { MenuPopover } from "./MenuPopover";
 import { ProjectConfigCard } from "./ProjectConfigCard";
@@ -28,6 +29,7 @@ import { SETTINGS_PROJECTS_HASH } from "./sectionId";
 import { NEW_PARAM } from "./newParam";
 import { useCopyDialog } from "./useCopyDialog";
 import { useProjectActivity, useProjectConfig, type ConfigRow } from "./useProjectHomeData";
+import { FolderHomeToast } from "./ProjectsToast";
 
 const STATUS_ICON: Readonly<Record<string, string>> = {
   folder_missing: "folder-off",
@@ -51,6 +53,7 @@ async function copyText(value: string): Promise<boolean> {
 /** 앱 로그인 상태 한 줄(앱 단위, 읽기 전용): 로그인을 제공하는 백엔드의 정적 점검 결과를 톤·요약으로 그린다. 로그인 개념이 없으면 줄이 없다. */
 function LoginLine() {
   const m = useFolderHomeMessages();
+  const render = useServerRender();
   const { rest } = useApi();
   const backends = useQuery({ queryKey: ["descriptors", "backends"], queryFn: () => rest.listBackends(), staleTime: 60_000, retry: false, meta: { silentBackgroundError: true } });
   const { readiness, isPending } = useBackendReadiness();
@@ -60,7 +63,7 @@ function LoginLine() {
   const r = readiness[login.id];
   const key = isPending || r === undefined ? "checking" : r.tone === "ok" ? "signed_in" : r.tone === "unknown" ? "unavailable" : "signed_out";
   return (
-    <Link className="prj-sum-item" data-state={key} to={`${settingsPath}#backends`} title={r?.summary}>
+    <Link className="prj-sum-item" data-state={key} to={`${settingsPath}#backends`} title={r?.summary ? render(r.summary, r.text_templates?.["/summary"]) : undefined}>
       <span className="prj-sum-mark" aria-hidden="true">{key === "signed_in" ? "✓" : key === "signed_out" ? "⚠" : "·"}</span>
       {m.home.login[key]}
     </Link>
@@ -193,11 +196,11 @@ export function ProjectHomeScreen() {
       await rest.deleteCopyItem(id, row.kind, row.id, ...(row.version === undefined ? [] : [{ ifMatch: row.version }]));
       await queryClient.invalidateQueries({ queryKey: ["list"] });
       await queryClient.invalidateQueries({ queryKey: ["list", "copy-item-references"] });
-      toast({ tone: "success", text: m.home.configDeleted(row.name) });
+      toast({ tone: "success", text: <FolderHomeToast render={(f) => f.home.configDeleted(row.name)} /> });
     } catch (e) {
       const view = describeError(e, m.home.configDeleteFailed);
       if (view.status === 412) await queryClient.invalidateQueries({ queryKey: ["list"] });
-      toast({ tone: "danger", text: view.status === 412 ? m.home.configDeleteConflict : view.message });
+      toast({ tone: "danger", text: <FolderHomeToast render={(f) => (view.status === 412 ? f.home.configDeleteConflict : view.message)} /> });
     }
   };
 
@@ -207,8 +210,8 @@ export function ProjectHomeScreen() {
   const startRunPath = runsPath === undefined ? undefined : `${runsPath}&${NEW_PARAM}=1`;
   const shortcuts = DEFAULT_ROUTES.filter((r) => r.projectShortcut === true && routeOn(r.serves ?? r.id));
 
-  const copy = async (value: string, done: string) => {
-    toast(await copyText(value) ? { tone: "success", text: done, durationMs: 2000 } : { tone: "warning", text: m.menu.copyFailed });
+  const copy = async (value: string, done: (f: FolderHomeMessages) => string) => {
+    toast(await copyText(value) ? { tone: "success", text: <FolderHomeToast render={done} />, durationMs: 2000 } : { tone: "warning", text: <FolderHomeToast render={(f) => f.menu.copyFailed} /> });
   };
 
   const recheck = async () => {
@@ -219,10 +222,10 @@ export function ProjectHomeScreen() {
       const was = view;
       if (was.status !== "ready" && next.status === "ready") {
         setNote(null);
-        toast({ tone: "success", text: m.problem.found });
+        toast({ tone: "success", text: <FolderHomeToast render={(f) => f.problem.found} /> });
       } else if (was.config_writable === false && next.config_writable !== false) {
         setNote(null);
-        toast({ tone: "success", text: m.problem.writableAgain });
+        toast({ tone: "success", text: <FolderHomeToast render={(f) => f.problem.writableAgain} /> });
       } else setNote(hhmm(new Date()));
     } finally {
       setBusy(null);
@@ -243,7 +246,7 @@ export function ProjectHomeScreen() {
         return;
       case "copyManifestPath": {
         const path = manifestPath(view);
-        if (path !== null) void copy(path, m.problem.copied);
+        if (path !== null) void copy(path, (f) => f.problem.copied);
         return;
       }
       case "recreateManifest":
@@ -251,12 +254,12 @@ export function ProjectHomeScreen() {
         return;
       case "copyRecordsPath": {
         const path = view.records_issue?.details?.["path"];
-        if (typeof path === "string") void copy(path, m.problem.copied);
+        if (typeof path === "string") void copy(path, (f) => f.problem.copied);
         return;
       }
       case "copyBackupPath": {
         const path = view.records_issue?.details?.["backup_path"];
-        if (typeof path === "string") void copy(path, m.problem.copied);
+        if (typeof path === "string") void copy(path, (f) => f.problem.copied);
         return;
       }
       case "appendGitignore":
@@ -264,9 +267,9 @@ export function ProjectHomeScreen() {
         rest.appendProjectGitignore(id).then(
           async () => {
             await p.refresh();
-            toast({ tone: "success", text: m.problem.gitignoreAppended });
+            toast({ tone: "success", text: <FolderHomeToast render={(f) => f.problem.gitignoreAppended} /> });
           },
-          () => toast({ tone: "danger", text: m.problem.gitignoreFailed }),
+          () => toast({ tone: "danger", text: <FolderHomeToast render={(f) => f.problem.gitignoreFailed} /> }),
         ).finally(() => setBusy(null));
         return;
       case "reregister":
@@ -279,12 +282,12 @@ export function ProjectHomeScreen() {
     try {
       const result = await rest.resetProjectManifest(id, { name: v.name, ...(v.description === undefined ? {} : { description: v.description }) });
       await p.refresh();
-      toast({ tone: "success", text: m.problem.manifestRecreated(result.backup_path), durationMs: 10_000, action: { label: m.home.copyPath, onClick: () => void copy(result.backup_path, m.problem.copied) } });
+      toast({ tone: "success", text: <FolderHomeToast render={(f) => f.problem.manifestRecreated(result.backup_path)} />, durationMs: 10_000, action: { label: <FolderHomeToast render={(f) => f.home.copyPath} />, onClick: () => void copy(result.backup_path, (f) => f.problem.copied) } });
     } catch (e) {
       // 이미 정상이면 서버가 409: 새로 고치고 안내만 한다
       if (e instanceof ApiError && e.status === 409) {
         await p.refresh();
-        toast({ tone: "info", text: m.problem.manifestRecreateNotNeeded });
+        toast({ tone: "info", text: <FolderHomeToast render={(f) => f.problem.manifestRecreateNotNeeded} /> });
         return;
       }
       throw e;
@@ -293,8 +296,8 @@ export function ProjectHomeScreen() {
 
   const headerMenu: MenuItemDef[] = [
     ...(folder === "" ? [] : [
-      { id: "copy-path", label: m.menu.copyPath, onSelect: () => void copy(folder, m.menu.pathCopied) },
-      { id: "copy-cd", label: m.menu.copyCd, title: m.menu.copyCdHelp, onSelect: () => void copy(`cd "${folder}"`, m.menu.cdCopied) },
+      { id: "copy-path", label: m.menu.copyPath, onSelect: () => void copy(folder, (f) => f.menu.pathCopied) },
+      { id: "copy-cd", label: m.menu.copyCd, title: m.menu.copyCdHelp, onSelect: () => void copy(`cd "${folder}"`, (f) => f.menu.cdCopied) },
     ]),
     { id: "settings", label: m.home.settingsEntry, onSelect: () => void navigate(`${routePath(ROUTE_ROLES.settings)}${SETTINGS_PROJECTS_HASH}`) },
     ...(archived ? [] : [
@@ -362,7 +365,7 @@ export function ProjectHomeScreen() {
       ) : (
         <p className="prj-path">
           <span className="ac-mono-wrap prj-path-text" data-testid="project-path">{folder}</span>
-          <IconButton size="sm" label={m.home.copyPath} icon={<Icon name="copy" size={14} />} onClick={() => void copy(folder, m.menu.pathCopied)} />
+          <IconButton size="sm" label={m.home.copyPath} icon={<Icon name="copy" size={14} />} onClick={() => void copy(folder, (f) => f.menu.pathCopied)} />
         </p>
       )}
       <p className="prj-id-note app-muted">{m.home.pathNote(view.project.id)}</p>

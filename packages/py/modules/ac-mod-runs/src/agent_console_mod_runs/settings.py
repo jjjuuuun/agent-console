@@ -114,6 +114,58 @@ class BackendLoginOptions(BaseModel):
     )
 
 
+class ModelDiscoveryOptions(BaseModel):
+    """실행 백엔드 계정 모델 조회(모델 칸 목록 자동 채우기)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(
+        default=True,
+        title="모델 목록 자동 조회",
+        description=(
+            "실행 백엔드가 지원하면 이 계정이 쓸 수 있는 모델 목록을 가져와 설정한 목록 뒤에 "
+            "더한다(모델 호출 없음). 끄면 설정한 목록과 직접 입력만 쓴다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced", when="이 PC에서 계정 조회(CLI 실행·네트워크)를 하지 않게 할 때 끕니다."
+        ),
+    )
+    ttl_s: float = Field(
+        default=3600.0,
+        ge=0,
+        title="목록 보관 시간",
+        description="가져온 목록을 다시 묻지 않고 쓰는 시간. 0이면 요청마다 다시 묻는다.",
+        json_schema_extra=x_ui(tier="advanced", unit="초"),
+    )
+    failure_ttl_s: float = Field(
+        default=60.0,
+        ge=0,
+        title="실패 뒤 다시 묻기 전 시간",
+        description="가져오기에 실패한 뒤 이 시간 동안은 다시 묻지 않는다.",
+        json_schema_extra=x_ui(tier="advanced", unit="초"),
+    )
+    timeout_s: float = Field(
+        default=20.0,
+        gt=0,
+        le=600,
+        title="가져오기 최대 대기",
+        description="목록 가져오기 한 번을 기다리는 최대 시간. 넘으면 실패로 본다.",
+        json_schema_extra=x_ui(
+            tier="advanced",
+            unit="초",
+            when="느린 네트워크에서 목록 가져오기가 자꾸 시간 초과로 끝날 때 늘립니다.",
+        ),
+    )
+    disabled_backends: list[str] = Field(
+        default_factory=list,
+        title="조회하지 않을 실행 백엔드",
+        description="이 목록의 실행 백엔드 id는 계정 모델 목록을 묻지 않는다(설정한 목록만).",
+        json_schema_extra=x_ui(
+            tier="advanced", when="실행 백엔드 하나만 조회를 끄고 싶을 때 그 id를 넣습니다."
+        ),
+    )
+
+
 DEFAULT_UNSCOPED_PROJECT_MESSAGE = (
     "프로젝트·실행 연동이 꺼져 있어 프로젝트에서 실행을 시작하지 않았습니다. "
     "연동을 켜면 프로젝트 폴더와 그 구성으로 실행합니다."
@@ -219,6 +271,15 @@ class RunsModuleSettings(BaseModel):
             unit="초",
             when="느린 네트워크에서 연결 테스트가 자꾸 시간 초과로 끝날 때 늘립니다.",
         ),
+    )
+    model_discovery: ModelDiscoveryOptions = Field(
+        default_factory=ModelDiscoveryOptions,
+        title="모델 목록 자동 조회",
+        description=(
+            "모델 고르기 칸에 실행 백엔드 계정이 쓸 수 있는 모델을 자동으로 채우는 기능의 켜고 "
+            "끄기·보관 시간·대기 시간."
+        ),
+        json_schema_extra=x_ui(tier="advanced"),
     )
     backend_login: BackendLoginOptions = Field(
         default_factory=BackendLoginOptions,
@@ -340,6 +401,7 @@ __all__ = [
     "DEFAULT_UNSCOPED_PROJECT_MESSAGE",
     "SETTINGS_COMPAT",
     "BackendLoginOptions",
+    "ModelDiscoveryOptions",
     "RunsModuleSettings",
     "RuntimeOptions",
     "UnscopedProjectRuns",

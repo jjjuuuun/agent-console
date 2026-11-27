@@ -1,53 +1,114 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased (0.2.0)
 
-- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-runs`, so the web can show the module description and settings and the `runs.storage_memory`, `team.rules_unavailable` issues in English (data only, no API change). Log lines are now English.
-- REL.33: `GET /runs/{id}`(`?project=` 포함) 스냅숏이 이 앱에서 도는 Run의 끝난 상태를 `run.<상태>` 이벤트까지 저장된 뒤에만 보인다(`RunService.live_view` — 엔진은 최종 Run을 먼저 저장하므로 그 사이에는 손잡이의 직전 상태·종료 시각·오류·합계, 나머지는 저장본). 전에는 끝난 상태와 끝 이벤트가 빠진 `last_seq`·이벤트 목록이 함께 보일 수 있었다. 계약·표 변경 없음.
-- REL.3: 등록이 풀린 프로젝트(`RecordsStores`의 `UnknownSpace`)를 읽을 수 없는 자리로 다룬다 — `run_id` 자리 읽기는 건너뛰고(REST 404 `not_found`, `?project=` 조회는 404 `project.not_found`), 쓰기는 대기 파일로(이유 `not_found`), 재시작 복구는 다음 열기로. 전에는 `runs.reader`·`runs.events`·WS 재생·실행 중 쓰기에서 예외가 그대로 나갔다.
-- FU.11: `runs.reader.list_node_runs_many`·`runs.events.list_many`(저장소 묶어 읽기) — Run의 자리(호스트·이 프로세스가 아는 공간)마다 묶어 한 번씩 읽는다. 읽을 수 없는 자리(`RecordsUnavailable`)의 Run은 뺀다. 표 변경 없음.
-- 5.7R.33t1: 맡는 범위 없는 프로젝트 실행 막기(K33-10). `runs.scopes` 선택 메서드 `accepts_project`(`RunProjectScoper`), 선택 포트 `projects.lookup`이 있는데 맡는 공급자가 없으면 실행 시작·대화 턴·이어 가기·프로젝트 기준 검증(`definitions_for`·`load_graph(project_id=)`·`check_project`)을 409 `feature_unavailable`(`details = {module, port: "runs.scopes", project_id}`)로 막고 Run을 만들지 않는다. 막는 동안 `server.warnings`에 같은 코드·`details.port`의 경고. 새 설정 `unscoped_project_runs`(`policy` reject·allow, `message`), 새 공개 이름 `RunProjectScoper`·`UnscopedProjectRuns`·`unscoped_project_policy`·`unscoped_project_warning`·`UNSCOPED_PROJECT_PORT`, `RunService(unscoped_project=)`·`accepts_project`·`has_project_scope`·`unscoped_project_error`. `graph_of_run`은 막지 않는다. 계약·표 변경 없음.
-- 5.7R.33p: `GET /runs/project-counts?source=app` — 앱(호스트) DB의 루트 Run만 센다(프로젝트 기록 DB는 읽지 않는다). 생략하면 지금처럼 앱 DB + 보관하지 않은 등록 프로젝트 기록 DB. 다른 값은 422. 계약 변경 없음.
-- 요청 11/08 후속: `GET /runs/{id}/locate`(`RunLocation`, 계약 0.14.8) — Run id → 그 Run이 있는 기록 공간(이 프로세스가 아는 공간 + 선택 포트 `projects.lookup`의 등록 프로젝트 기록 DB를 상한 `locate_max_projects`(기본 200)까지 읽기만, 앱 기록 = null, 실행 중이면 손잡이의 `project_id`). 없으면 404, 여러 곳이면 409 `run.ambiguous`(`RunAmbiguousError`). 찾은 공간은 `run_id` 자리로 기억한다(`SpaceRecorder.locate`, `agent_console_store.SpaceLocator` - 대화와 같은 정책). WS `run:<id>`도 모르는 Run이면 `RunService.locate`로 찾는다(작업 스레드에서). 새 모듈 설정 `locate_max_projects`, 새 공개 이름 `PROJECTS_LOOKUP`·`RunAmbiguousError`. 표 변경 없음.
-- 요청 11/07 후속: `check_project(..., graph=)` — 저장본 대신 초안 그래프를 같은 출처·범위로 검사.
-- 요청 11/07: `RunService.check_project(graph_id, project_id)` — 그 프로젝트에서 실행할 때와 같은 정의 출처(`definitions_for`)·실행 범위(`scope`)로 검증(공간 팀 구성 목록 검증 요약이 쓴다).
-- 6R.19 서버 후속: `GET /runs/page`에 `agent_id`·`conversation_id`·`root`(옛 `GET /runs`와 같은 뜻), 행마다 `has_children`(계약 0.13.2 `Run.has_children`). 커서·출처 잇기 규칙 그대로.
-- 계약 0.13.1: `MOVE_BUSY`가 계약 문서 상수 `KnownIssueCodes.RUN_MOVE_BUSY`를 쓴다(값 같음).
-- 6R.16: `RunService.host_id(project_id)`(이 앱이 그 공간 Run에 적는 `host_id`, 공간 없음·기록 공간 없음 = None) — 자동 진행이 실행 기록에서 자기 앱 Run만 고른다.
-
-- 6R.12: `GET /runs/page`(`RunPage`, `cursor`·`limit`·`project`·`root_only`·`status`(여러 번)·`graph_id`·`label=<키>=<값>`(여러 번 AND)·`source`), 기록 공간이 있으면 폴더 기록 끝 → 앱 DB 옛 기록 `source=app`으로 잇는 커서(Q14), `POST /runs` `labels`(루트 Run, `RunService.start_graph`·`start_run(labels=)`), `GET /runs/{id}/events?node=`, 옛 `GET /runs` OpenAPI deprecated, 400 `bad_request`(`InvalidCursor`·`RunQueryError`). `runs.reader`에 `page`·`descendants`(공간 자리 따라감).
-
-- 6R.6: 계보 `runs` `runs_0004`(`run_labels(run_id, key, value)` + 색인 `ix_run_labels_kv`(`key`, `value`, `run_id`), 올릴 때 루트 Run `doc.labels`로 채우고 되돌리면 표만 지움). 옛 기록 옮기기가 라벨 행을 함께 옮김(확인 테스트 추가). 라우트 변경 없음(6R.12).
-
-- 5.7R.33j2: `POST /runs/move-to-project`(앱 DB 옛 Run → 프로젝트 기록 DB, `RunMover`), 포트 `runs.move_hook`(`ConversationRunMove`, 대화 옮기기에 거는 Run 훅). 표 변경 없음.
-- 5.7R.33y2: 선택 포트 `records.spaces` — `project_id`가 있는 Run(자식 포함)을 그 프로젝트 기록 DB에(`SpaceRecorder`, `host_id` 기록), 시작 전 확인 409 `project.records_unavailable`·404 `project.not_found`, 공간을 처음 열 때 자기 `host_id` Run만 복구(`recover_space`), 실행 중 기록 DB를 잃으면 대기 줄 + 취소, `?project=`·`?source=app`, `POST /runs/{id}/mark-interrupted`, 설정 `records_space_prefix`.
-- 5.7R.33w2: 계보 `runs` 서술자 `scopes=("app","project")`(프로젝트 기록 DB에도 올라감).
-
-- 5.5R.13(B-10): 관측 탭 이벤트 type 접두어를 웹 상수(`OBSERVE_PREFIXES`)에서 데이터로 옮겼다. 패키지 기본 데이터
-  `data/observe_event_prefixes.json`(`hook.`·`mcp.`), 설치자 옵션 `observe_event_prefixes`(null = 기본, 목록 = 교체,
-  `[]` = 끔), 경로 `GET /observe-event-prefixes`(`list[str]`, 계약 변경 없음), 공개 API
-  `DEFAULT_OBSERVE_EVENT_PREFIXES`·`load_observe_event_prefixes`·`observe_event_prefixes_of`,
-  `build_router(observe_event_prefixes=)`.
-
-- 5.2R.80(F14): 백엔드 계정 로그인 경로 6개(`POST /backends/{id}/login`·`GET /backends/login/current`·
-  `GET|DELETE /backends/login/{sid}`·`POST /backends/login/{sid}/input`·`POST /backends/{id}/logout`), 설정
-  `backend_login`(`enabled` 기본 켬·`timeout_s`·`timeout_max_s`·`heartbeat_s`·`retain_s`·`screen_max_lines`),
-  `readiness.build_login_service`, 오류 맵(로그인 409·404·422·413), 종료 훅에서 진행 중 세션 취소. 입력 본문은 직접
-  검사해 기본 검증 오류가 값을 되돌려 보내지 않게 했다.
-
-- 5.2R.43: `plugins.bind_redactor(registries, redact)` — 비밀 해석기를 만든 뒤 판정 근거를 만드는 노드·엣지 종류(`RedactorConsumer`)에 `secrets.redact`를 준다.
-- 5.2R.34: 선택 포트 `runs.scopes`(`RunScoper`·`RunScope`) — 시작마다 요청 `project_id`로 이 Run의 노드 서비스·경고를
-  정한다(검사·준비 전). 준비 결과 선택 속성 `run_context`(키별 덮어쓰기) → `run.started` payload, 자식 Run 준비에도 전달.
-- 5.2R.5: 준비자 선택 메서드 `annotate_issues`(`RunIssueAnnotator`). 차단 응답 문구 = 머리 + 첫 오류 이슈, `fix` = 첫 버튼. 자식 Run 이어 가기 409에 [맨 위 실행 열기](역할 `runs`).
-- 5R.13: `GET /condition-operators`, `GET /runs?root=`, `GET /runs/{id}`의 `children`(직접 자식, 만든 순), `GET /interactions?root=`. 플러그인 로더에 조건 연산자 그룹(`condition_operators`)과 `bind_condition_operators`(연산자를 쓰는 노드·엣지 종류에 묶음 레지스트리를 줌). 자식 Run 준비자 `RunService.prepare_child`(같은 `runs.preparers` 검사·준비)를 엔진에 꽂는다. `InteractionService.list(root_run_id=)`. 의존 `agent-console-conditions` 추가.
-
-- 5R.5: 준비 결과 선택 속성 `flow_settings`(`RunPreparation.flow_settings`, None이 아닌 마지막 값)를 `GraphRuntime.start(flow_settings=)`로 넘긴다. 이 속성이 없는 옛 준비자도 그대로 동작한다.
-
-- 5R.4: 마이그레이션 계보 `runs`(`runs_0001` 빈 기준점, `runs_0002` 계보 새 열·색인, 버전 테이블 `alembic_version_runs`). `storage.py`는 `storage/` 패키지(`BRANCH`)가 됐다. 모듈 서술자 `migrations=(BRANCH,)`.
-
-- 4R.18: 옛 최상위 `runtime`·`backends`·`working_directory` 읽기 호환 제거. 환경변수 `WORKING_DIRECTORY`·`MAX_CONCURRENCY`는 그대로.
+- Model list assembly. The administrator option `model_discovery {enabled, ttl_s, failure_ttl_s, timeout_s,
+  disabled_backends}` builds `BackendModelCatalogService` (the same masking and secret check as readiness,
+  `build_model_catalog_service`). New route `GET /backends/{id}/model-catalog?refresh=` (`BackendModelCatalog`,
+  `Cache-Control: no-store`; failures are 200 with `discovery.state = failed` and a warning issue; an unknown backend
+  is 404). `GET /backends/{id}/models` keeps its shape and now returns the same merged list (configured first,
+  `sources` filled). A finished sign-in session or a sign-out clears that backend's cache
+  (`build_login_service(on_account_change=)`); without the sign-in service the routes still work. Shutdown stops
+  lookups in progress. `build_router(model_catalog=)`. Requires `agent-console-runtime>=0.2,<0.3` and
+  `agent-console-contracts>=0.16.1,<0.17`. Consumer range: `agent-console-mod-runs>=0.2,<0.3`.
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-mod-runs`, so the web app can show the module description and settings and the
+  `runs.storage_memory` and `team.rules_unavailable` issues in English (data only, no API change). Log lines are now
+  in English.
+- The `GET /runs/{id}` snapshot (including `?project=`) shows the finished status of a run in this app only after the
+  events up to `run.<status>` are stored (`RunService.live_view`: the engine stores the final run first, so in between
+  the snapshot shows the handle's previous status, end time, error and totals, and the stored copy for the rest).
+  Previously the finished status could appear together with a `last_seq` and event list that lacked the final event.
+  No contract or table change.
+- A project whose registration was removed (`UnknownSpace` of `RecordsStores`) is treated as an unreadable place:
+  reads in the `run_id` place are skipped (REST 404 `not_found`; `?project=` queries give 404 `project.not_found`),
+  writes go to the pending file (reason `not_found`), and restart recovery waits for the next open. Previously
+  exceptions escaped from `runs.reader`, `runs.events`, WS replay and writes during a run.
+- `runs.reader.list_node_runs_many` and `runs.events.list_many` (batched store reads): reads once per place of the run
+  (the host or a space this process knows). Runs in unreadable places (`RecordsUnavailable`) are left out. No table
+  change.
+- Blocks project runs that no provider covers. The optional method `accepts_project` of `runs.scopes`
+  (`RunProjectScoper`): when the optional port `projects.lookup` is present but no provider covers the project,
+  starting a run, a chat turn, resuming and project-based validation (`definitions_for`, `load_graph(project_id=)`,
+  `check_project`) are refused with 409 `feature_unavailable` (`details = {module, port: "runs.scopes", project_id}`)
+  and no run is created. While this blocks, `server.warnings` has a warning with the same code and `details.port`. New
+  setting `unscoped_project_runs` (`policy` reject or allow, `message`), new public names `RunProjectScoper`,
+  `UnscopedProjectRuns`, `unscoped_project_policy`, `unscoped_project_warning` and `UNSCOPED_PROJECT_PORT`, and
+  `RunService(unscoped_project=)`, `accepts_project`, `has_project_scope` and `unscoped_project_error`. `graph_of_run`
+  is not blocked. No contract or table change.
+- `GET /runs/project-counts?source=app`: counts only root runs in the app (host) database (project record databases
+  are not read). Omitted means the app database plus the record databases of registered projects that are not
+  archived, as now. Other values give 422. No contract change.
+- `GET /runs/{id}/locate` (`RunLocation`, contract 0.14.8): from a run id to the record space that holds the run (the
+  spaces this process knows plus, read-only, the record databases of registered projects from the optional port
+  `projects.lookup`, up to the limit `locate_max_projects` (default 200); app records = null; for a running run, the
+  handle's `project_id`). 404 when not found, 409 `run.ambiguous` (`RunAmbiguousError`) when in several places. The
+  found space is remembered as the `run_id` place (`SpaceRecorder.locate`, `agent_console_store.SpaceLocator`: the
+  same policy as conversations). WS `run:<id>` also finds an unknown run through `RunService.locate` (in a worker
+  thread). New module setting `locate_max_projects`, new public names `PROJECTS_LOOKUP` and `RunAmbiguousError`. No
+  table change.
+- `check_project(..., graph=)`: checks a draft graph instead of the stored copy, with the same sources and scope.
+- `RunService.check_project(graph_id, project_id)`: validates with the same definition sources (`definitions_for`)
+  and run scope (`scope`) as a run in that project (used by the validation summary of a space's team list).
+- `GET /runs/page` gained `agent_id`, `conversation_id` and `root` (the same meaning as the old `GET /runs`), and
+  `has_children` on every row (contract 0.13.2 `Run.has_children`). Cursor and source chaining rules are unchanged.
+- Contract 0.13.1: `MOVE_BUSY` uses the contract constant `KnownIssueCodes.RUN_MOVE_BUSY` (same value).
+- `RunService.host_id(project_id)` (the `host_id` this app writes on runs of that space; None when there is no space
+  or no record space): auto-advance picks only runs of its own app from the run history.
+- `GET /runs/page` (`RunPage`; `cursor`, `limit`, `project`, `root_only`, `status` (repeatable), `graph_id`,
+  `label=<key>=<value>` (repeatable, AND) and `source`). When a record space exists, the cursor continues from the end
+  of the folder records to the old app database records (`source=app`). `POST /runs` `labels` (root run,
+  `RunService.start_graph` and `start_run(labels=)`), `GET /runs/{id}/events?node=`, the old `GET /runs` marked
+  deprecated in OpenAPI, and 400 `bad_request` (`InvalidCursor`, `RunQueryError`). `runs.reader` gained `page` and
+  `descendants` (following the space place).
+- Lineage `runs` `runs_0004` (`run_labels(run_id, key, value)` plus the index `ix_run_labels_kv` (`key`, `value`,
+  `run_id`); upgrading fills it from the root run's `doc.labels`, downgrading only drops the table). Moving old records
+  also moves label rows (with a test). No route change at this point.
+- `POST /runs/move-to-project` (old runs in the app database → the project record database, `RunMover`), and the port
+  `runs.move_hook` (`ConversationRunMove`, the run hook attached to moving conversations). No table change.
+- Optional port `records.spaces`: runs with a `project_id` (including children) are written to that project's record
+  database (`SpaceRecorder`, recording `host_id`), checked before start (409 `project.records_unavailable`, 404
+  `project.not_found`); when a space is first opened only runs with this app's `host_id` are recovered
+  (`recover_space`); losing the record database during a run gives a pending line plus cancellation. `?project=`,
+  `?source=app`, `POST /runs/{id}/mark-interrupted` and the setting `records_space_prefix`.
+- The `runs` lineage descriptor has `scopes=("app","project")` (it is also applied to project record databases).
+- Moved the event type prefixes of the observe tab from a web constant (`OBSERVE_PREFIXES`) to data. Package default
+  data `data/observe_event_prefixes.json` (`hook.`, `mcp.`), the server administrator option
+  `observe_event_prefixes` (null = default, a list = replace, `[]` = off), the route `GET /observe-event-prefixes`
+  (`list[str]`, no contract change), the public API `DEFAULT_OBSERVE_EVENT_PREFIXES`, `load_observe_event_prefixes`
+  and `observe_event_prefixes_of`, and `build_router(observe_event_prefixes=)`.
+- Six backend account sign-in routes (`POST /backends/{id}/login`, `GET /backends/login/current`,
+  `GET|DELETE /backends/login/{sid}`, `POST /backends/login/{sid}/input` and `POST /backends/{id}/logout`), the
+  setting `backend_login` (`enabled` on by default, `timeout_s`, `timeout_max_s`, `heartbeat_s`, `retain_s` and
+  `screen_max_lines`), `readiness.build_login_service`, an error map (sign-in 409, 404, 422 and 413), and cancellation
+  of sessions in progress in the stop hook. The input body is checked directly so that default validation errors do
+  not echo the value back.
+- `plugins.bind_redactor(registries, redact)`: after the secret resolver is built, gives `secrets.redact` to node and
+  edge types that build decision evidence (`RedactorConsumer`).
+- Optional port `runs.scopes` (`RunScoper`, `RunScope`): on every start, the request `project_id` decides the node
+  services and warnings of this run (before checks and preparation). The optional preparation attribute
+  `run_context` (overridden per key) → the `run.started` payload, also passed to child run preparation.
+- Optional preparer method `annotate_issues` (`RunIssueAnnotator`). The blocking response text = a heading + the
+  first error issue, and `fix` = the first button. The 409 for resuming a child run has an [Open top-level run] action
+  (role `runs`).
+- `GET /condition-operators`, `GET /runs?root=`, `children` of `GET /runs/{id}` (direct children, in creation order)
+  and `GET /interactions?root=`. The plugin loader gained the condition operator group (`condition_operators`) and
+  `bind_condition_operators` (gives the bundled registry to node and edge types that use operators). The child run
+  preparer `RunService.prepare_child` (the same `runs.preparers` checks and preparation) is plugged into the engine.
+  `InteractionService.list(root_run_id=)`. Added the dependency `agent-console-conditions`.
+- The optional preparation attribute `flow_settings` (`RunPreparation.flow_settings`, the last value that is not
+  None) is passed to `GraphRuntime.start(flow_settings=)`. Older preparers without this attribute still work.
+- Migration lineage `runs` (`runs_0001` an empty base, `runs_0002` the lineage's new columns and indexes, version
+  table `alembic_version_runs`). `storage.py` became the `storage/` package (`BRANCH`). Module descriptor
+  `migrations=(BRANCH,)`.
+- Removed read compatibility for the old top-level `runtime`, `backends` and `working_directory`. The environment
+  variables `WORKING_DIRECTORY` and `MAX_CONCURRENCY` are unchanged.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- `apps/server`의 실행 조립(엔진·Run·이벤트·상호작용·이어 가기·디스크립터·에이전트 활동 경로, WS `run:`·`interactions`, 재시작 복구, 백엔드 설정 적용)을 옮겼다(3R.13). 팀 규칙·노드 서비스·대화 이어 가기는 `runs.preparers`·`runs.services`·`runs.resume_handlers`로 받는다. 설정 `runtime`·`backends`·`working_directory`(옛 최상위 키)·`run_files_dir`·`min_redact_chars`·`resume_origin`·`activity_limit`.
+- First release (from the scripts/pkgkit template `module`).
+- Moved the run assembly from `apps/server` (engine, runs, events, interactions, resume, descriptors and agent
+  activity routes, WS `run:` and `interactions`, restart recovery, applying backend settings). Team rules, node
+  services and chat resume come in through `runs.preparers`, `runs.services` and `runs.resume_handlers`. Settings
+  `runtime`, `backends`, `working_directory` (old top-level keys), `run_files_dir`, `min_redact_chars`,
+  `resume_origin` and `activity_limit`.

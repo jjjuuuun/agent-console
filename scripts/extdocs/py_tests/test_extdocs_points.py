@@ -71,7 +71,7 @@ def test_internal_group_with_reason_passes(tmp_path: Path) -> None:
 
 def test_internal_port_without_reason_fails(tmp_path: Path) -> None:
     repo = Repo(tmp_path)
-    tool = notes_tool(repo).replace(', reason = "노트 모듈 안에서만 쓴다"', "")
+    tool = notes_tool(repo).replace(', reason = "Used only inside the notes module"', "")
     build_notes(repo, tool=tool)
     found = run(repo)
     assert "schema-invalid" in errors(found)
@@ -80,7 +80,8 @@ def test_internal_port_without_reason_fails(tmp_path: Path) -> None:
 def test_undeclared_port_fails(tmp_path: Path) -> None:
     repo = Repo(tmp_path)
     tool = notes_tool(repo).replace(
-        'internal-ports = [{ port = "notes.store", reason = "노트 모듈 안에서만 쓴다" }]', ""
+        'internal-ports = [{ port = "notes.store", reason = "Used only inside the notes module" }]',
+        "",
     )
     build_notes(repo, tool=tool)
     found = run(repo)
@@ -180,7 +181,7 @@ def test_unknown_area_and_duplicate_slug_fail(tmp_path: Path) -> None:
     build_notes(
         repo,
         tool=notes_tool(repo).replace(
-            'area = "memory"\nsummary = "노트 종류', 'area = "nope"\nsummary = "노트 종류'
+            'area = "memory"\nsummary = "Adds one', 'area = "nope"\nsummary = "Adds one'
         ),
     )
     repo.package(
@@ -285,3 +286,23 @@ def test_real_repo_descriptor_scan_is_fast() -> None:
     assert facts.modules.modules, "서버 모듈을 하나도 읽지 못했다"
     assert facts.modules.seconds <= float(data.s("descriptor_time_limit_seconds"))
     assert not [f for f in findings if f.code in ("descriptor-load-failed", "descriptor-slow")]
+
+
+def test_builtin_distribution_list_must_name_members(tmp_path: Path) -> None:
+    repo = Repo(tmp_path)
+    build_notes(repo)
+    point = (
+        "[tool.agent-console.extension-points.custom-capability]\n"
+        'title = "t"\narea = "web"\nsummary = "s"\n'
+        'registration = { kind = "capability", name = "do_it" }\n'
+        'example = { kind = "snippet" }\n'
+    )
+    repo.package("ac-cap", "agent-console-cap", tool=point + 'builtin = ["agent-console-cap"]\n')
+    assert errors(run(repo)) == []
+    repo.package(
+        "ac-cap2",
+        "agent-console-cap2",
+        tool=point.replace("custom-capability", "other-capability")
+        + 'builtin = ["agent-console-nowhere"]\n',
+    )
+    assert errors(run(repo)) == ["builtin-unknown"]

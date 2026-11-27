@@ -6,10 +6,10 @@ import { useMemo, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryVersionDiff, MemoryVersionList, type VersionCompareTarget } from "@agent-console/memory-view";
-import { useDescribeError } from "../../app/errors";
 import { useStorage } from "../../app/StorageContext";
 import { useToast } from "@agent-console/ui";
 import { useViewMessages } from "./format";
+import { MemoryToast } from "./MemoryToast";
 import { MEMORY_STORAGE } from "./memoryConfig";
 import { useInvalidateMemory, useMemoryVersion, useMemoryVersions } from "./useMemoryApi";
 import type { MemoryContext } from "./useMemoryContext";
@@ -29,7 +29,6 @@ export interface HistoryDialogProps {
 }
 
 export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose, onRestored }: HistoryDialogProps) {
-  const describeError = useDescribeError();
   const t = useT("memory");
   const viewMessages = useViewMessages();
   const rest = useMemoryRest();
@@ -62,10 +61,10 @@ export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose
     try {
       const out = await rest.restoreMemoryEntry(entry.id, v);
       await invalidate();
-      toast({ tone: "success", text: t("history.restored") });
+      toast({ tone: "success", text: <MemoryToast render={({ t }) => t("history.restored")} /> });
       onRestored(out);
     } catch (e) {
-      toast({ tone: "danger", text: `${t("history.failed")}: ${describeError(e, t("history.failed")).message}` });
+      toast({ tone: "danger", text: <MemoryToast render={({ t }, d) => `${t("history.failed")}: ${d(e, t("history.failed")).message}`} /> });
     } finally {
       setBusy(false);
       setConfirm(null);

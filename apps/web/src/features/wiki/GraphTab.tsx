@@ -22,6 +22,7 @@ import { classifyWikiError } from "./wikiErrors";
 import { useT } from "@agent-console/i18n";
 import { useWikiViewMessages } from "./useViewMessages";
 import { useLanguageCode } from "../../i18n";
+import { WikiToast } from "./WikiToast";
 
 const GAP_TOKEN = "--ac-wiki-graph-gap";
 
@@ -106,7 +107,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const openNode = (node: Pick<GraphNodeData, "path" | "broken" | "scheme">) => {
     if (node.broken) {
       // 끊긴 대상: 만들기 대화상자(§6.5). 읽기 전용이면 이유를 알린다(조용히 끝내지 않는다).
-      if (ctx.readOnly) toast({ tone: "info", text: ctx.readOnlyReason ?? t("tab.graph.createBlocked") });
+      if (ctx.readOnly) toast({ tone: "info", text: <WikiToast render={(t) => ctx.readOnlyReason ?? t("tab.graph.createBlocked")} /> });
       else openNewPage({ path: node.path });
       return;
     }
@@ -115,7 +116,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
       const target = (q.data?.nodes ?? []).find((n) => n.path === node.path)?.scheme_target;
       const href = target === undefined || target === null ? undefined : schemeTargetHref(target, target.id_from, routeOn);
       if (href !== undefined) void navigate(href);
-      else toast({ tone: "info", text: target === undefined || target === null ? t("tab.graph.schemeNoTarget") : t("tab.graph.schemeOff") });
+      else toast({ tone: "info", text: <WikiToast render={(t) => (target === undefined || target === null ? t("tab.graph.schemeNoTarget") : t("tab.graph.schemeOff"))} /> });
       return;
     }
     goTab("page", { [P.path]: node.path });

@@ -1,15 +1,20 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
-- 4R.22: 가림 멱등(이미 가린 자리는 다시 가리지 않음).
-- 5R.19: 가림 경계 한계 수정. 대입 값 패턴이 닫는 괄호 뒤에 값 글자가 이어지면 값으로 이어 보고, 가림 문자열이 있는
-  텍스트는 그 자리를 값 글자로 채운 사본도 훑어 가린 자리에 붙은 조각을 한 덩어리로 가린다. 공개 API 변화 없음.
-- 5.5R.32: 앞에 글자가 붙은 접두 토큰(`xxxsk-…`·`keyAKIA…`)도 가린다. 기본 값 패턴에 경계 없는 접두 토큰 규칙을
-  더했고(몸통에 숫자·대문자가 있고 구분자 없는 16자 이상 구간이 있을 때만), 기존 단어 경계 규칙은 그대로다. 공개 API 변화 없음.
-- 5.7R.33y2: 약한 키 이름(`weak_key_names`, 기본 `key`)과 약한 이름 값 모양(`weak_value_patterns`)을 데이터로 더했다.
-  구조 판정(`find_suspected`)에서 걸린 키 이름이 모두 약한 이름이면(`input_key`·`sort_key`) 값이 비밀 모양일 때만
-  의심한다(연결 config의 `input_key`가 평문 비밀로 잡혀 프로젝트 공간 저장이 422가 되던 결함). `api_key`·`secret_key`·
-  `sk-…` 값은 그대로 잡힌다. `with_extra(key_names=)`로 더한 이름은 약한 이름에서 빠진다. 생성자 인자 두 개와 기본 데이터
-  상수 두 개가 공개 API에 늘었다.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.
+- Masking is idempotent (spots that are already masked are not masked again).
+- Fixed masking boundary limits. When value characters follow the closing bracket of an assignment value pattern, they
+  are treated as part of the value. Text that already contains the mask string is also scanned as a copy with that
+  spot filled with value characters, so fragments attached to a masked spot are masked as one piece. No public API
+  changes.
+- Prefix tokens with characters in front (`xxxsk-…`, `keyAKIA…`) are masked too. The default value patterns gained a
+  prefix token rule without a word boundary (only when the body has digits or uppercase letters and a run of 16 or
+  more characters without separators). The existing word boundary rules are unchanged. No public API changes.
+- Added weak key names (`weak_key_names`, default `key`) and weak value shapes (`weak_value_patterns`) as data. In
+  structural detection (`find_suspected`), when every matched key name is weak (`input_key`, `sort_key`), the value is
+  suspected only when it looks like a secret (this fixes a defect where `input_key` in an edge config was flagged as a
+  plain-text secret and saving to a project space failed with 422). `api_key`, `secret_key` and `sk-…` values are
+  still caught. Names added with `with_extra(key_names=)` are removed from the weak names. The public API gained two
+  constructor arguments and two default data constants.

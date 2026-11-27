@@ -26,12 +26,22 @@ export const createBackendConnectMessages = (t: Translate) => ({
     none: t("models.none"),
     stale: (count: number, when: string) => t("models.stale", { count, when }),
     failed: t("models.failed"),
+    /** 로그인하지 않아(사유 auth_missing) 가져오지 않은 상태: 오류가 아니라 중립 안내 */
+    signIn: t("models.signIn"),
+    /** 이 사유 코드는 오류가 아니라 로그인 안내로 보인다(`ModelDiscoveryReasons.AUTH_MISSING`) */
+    signInReason: "auth_missing",
     disabled: t("models.disabled"),
     unsupported: t("models.unsupported"),
     refresh: t("models.refresh"),
     check: t("models.check"),
     fetched: (count: number) => t("models.fetched", { count }),
     moreActions: t("models.moreActions"),
+    /** 조회 실패 사유 코드(`discovery.issues[].details.reason`)의 짧은 문구. 모르는 코드는 undefined */
+    reason: (code: string): string | undefined => {
+      const key = `models.reasons.${code}`;
+      const text = t(key);
+      return text === key ? undefined : text;
+    },
   },
   source: { config: t("source.config"), configTip: t("source.configTip"), discovered: t("source.discovered"), discoveredTip: t("source.discoveredTip") },
 });

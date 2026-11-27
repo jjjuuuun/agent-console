@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."agent_console.host_database"]
 sqlite = "agent_console_store.database:SqliteDatabase.open"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-store = "agent_console_store"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

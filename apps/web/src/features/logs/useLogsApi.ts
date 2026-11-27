@@ -9,7 +9,7 @@ import type { LogClassifierDescriptor, LogDashboard, LogEventDetail, LogEventPag
 import { toTaxonomyView, type LogTaxonomyView } from "@agent-console/log-view";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
-import { useServerTranslate } from "../../i18n";
+import { useServerRender, useServerTranslate } from "../../i18n";
 import { localizeClassifier, localizeDashboard, localizeEvent, localizeEventPage, localizeSource, localizeTaxonomy, localizeTimeline } from "./localizeLogData";
 import { LOGS_LIMITS } from "./logsConfig";
 import { paramsKey } from "./logsLib";
@@ -77,7 +77,8 @@ export function useLogSessions(params: LogQueryParams, enabled = true) {
 export function useLogTimeline(session: string, params: LogQueryParams, enabled = true) {
   const key = paramsKey(params);
   const tr = useServerTranslate();
-  const select = useCallback((timeline: LogTimeline) => localizeTimeline(timeline, tr), [tr]);
+  const render = useServerRender();
+  const select = useCallback((timeline: LogTimeline) => localizeTimeline(timeline, tr, render), [tr, render]);
   return useApiQuery(logKeys.timeline(session, key), (rest) => rest.getLogTimeline(session, params), { select, enabled, placeholderData: keepPreviousData, retry: (n, e) => n < 1 && !(e instanceof ApiError && e.status < 500) });
 }
 
@@ -87,7 +88,8 @@ export function useLogTrace(session: string, enabled: boolean) {
 
 export function useLogEventDetail(uid: string | null) {
   const tr = useServerTranslate();
-  const select = useCallback((detail: LogEventDetail) => ({ ...detail, event: localizeEvent(detail.event, tr), ...(detail.related ? { related: detail.related.map((e) => localizeEvent(e, tr)) } : {}) }), [tr]);
+  const render = useServerRender();
+  const select = useCallback((detail: LogEventDetail) => ({ ...detail, event: localizeEvent(detail.event, tr, render), ...(detail.related ? { related: detail.related.map((e) => localizeEvent(e, tr, render)) } : {}) }), [tr, render]);
   return useApiQuery(logKeys.event(uid ?? ""), (rest: RestClient) => rest.getLogEvent(uid ?? ""), { select, enabled: uid !== null && uid !== "", staleTime: LOGS_LIMITS.detailStaleMs });
 }
 
@@ -118,7 +120,8 @@ export function useAnyEvents(enabled: boolean): boolean | undefined {
 /** 이벤트 쪽 목록의 서버 고정 문구를 화면 언어로 옮기는 `select`(언어가 바뀔 때만 새로 만든다). */
 function useEventPagesSelect() {
   const tr = useServerTranslate();
-  return useCallback((data: InfiniteData<LogEventPage, string | undefined>) => ({ ...data, pages: data.pages.map((p) => localizeEventPage(p, tr)) }), [tr]);
+  const render = useServerRender();
+  return useCallback((data: InfiniteData<LogEventPage, string | undefined>) => ({ ...data, pages: data.pages.map((p) => localizeEventPage(p, tr, render)) }), [tr, render]);
 }
 
 /** 키셋 페이지 이벤트 목록(첫 페이지 `limit`개). `fetchNextPage`는 한 번에 하나만 진행된다. */

@@ -8,7 +8,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-backend-claude-sdk>=0.1,<0.2",
+    "agent-console-backend-claude-sdk>=0.2,<0.3",
     "claude-agent-sdk>=0.2.166",
     "pydantic>=2.9",
 ]
@@ -26,7 +26,7 @@ points = ["collector"]
 [dependency-groups]
 dev = [
     "agent-console-contracts>=0.16,<0.17",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-runtime>=0.2,<0.3",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "mypy>=1.11",

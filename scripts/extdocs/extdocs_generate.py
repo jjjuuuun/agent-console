@@ -96,8 +96,14 @@ class Generator:
         return reg.path or reg.export or reg.name or reg.group or reg.port or ""
 
     def builtins(self, decl: Declared) -> list[str]:
-        """기본 구현(등록 이름 → 배포). ``builtin = "none"``이면 비운다."""
+        """기본 구현(등록 이름 → 배포). ``builtin = "none"``이면 비운다.
+
+        ``builtin``이 배포 이름 목록이면 그 배포들(``폴더 이름 (배포)``, 선언 순서).
+        """
         mode = decl.point.builtin
+        if isinstance(mode, list):
+            folders = {m.name: m.dir.name for m in self.col.members}
+            return [f"{folders.get(name, name)} ({name})" for name in mode]
         if mode == "none":
             return []
         group = self.facts.declared_groups.get(decl.slug)

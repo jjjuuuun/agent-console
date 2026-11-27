@@ -9,7 +9,8 @@
 
 검사(design §I18N.10):
 
-- S1: 조립 서버(fake, 빈 작업 공간 + ``i18n.yaml`` 씨앗)의 OpenAPI GET 응답에 나온 원문 문구가
+- S1: 조립 서버(fake, 빈 작업 공간 + ``i18n.yaml`` 씨앗)의 OpenAPI GET 응답과 정적 출처
+  (``static`` — 웹이 그리는 계약 스키마 모델·패키지 데이터 값, 서버 없이 읽음)에 나온 원문 문구가
   원문 언어가 아닌 묶음 ``text``에 있는지.
 - S2: 소스의 오류·이슈 코드(``*Codes`` 클래스·``code=``·이슈 사전)와 응답에서 본 코드가 모든 언어
   묶음 ``codes``에 있는지.
@@ -53,6 +54,7 @@ from i18n_common import (
 )
 from i18n_crawl import CrawlResult, crawl_server
 from i18n_scan import SourceScan, scan_packages
+from i18n_static import StaticResult, collect_static
 
 from agent_console_i18n import (
     CODES,
@@ -74,6 +76,7 @@ class Analysis:
     packages: list[Package]
     scan: SourceScan
     crawl: CrawlResult | None
+    static: StaticResult = field(default_factory=StaticResult)
     findings: list[Finding] = field(default_factory=list)
     codes: dict[str, tuple[str | None, str]] = field(default_factory=dict)
     """찾은 코드 → (맡을 패키지, 위치)."""
@@ -114,7 +117,8 @@ def analyze(
     packages = discover_packages(repo, config.targets)
     scan = scan_packages(packages, config)
     crawl = crawl_fn(config) if crawl_fn is not None else None
-    result = Analysis(config, packages, scan, crawl, languages=langs)
+    static = collect_static(repo, config)
+    result = Analysis(config, packages, scan, crawl, static, languages=langs)
     out = result.findings
 
     # ---- 묶음 읽기·등록
@@ -154,8 +158,13 @@ def analyze(
 
     # ---- S1 원문 문구
     text_langs = [lang for lang in langs if lang != config.source_language]
-    if crawl is not None:
-        for text, routes in crawl.texts.items():
+    seen_texts: dict[str, list[str]] = {}
+    for source in ([crawl] if crawl is not None else []) + [static.result]:
+        for text, routes in source.texts.items():
+            where_list = seen_texts.setdefault(text, [])
+            where_list.extend(r for r in routes if r not in where_list)
+    if seen_texts:
+        for text, routes in seen_texts.items():
             where = routes[0]
             states = {lang: index.state(lang, TEXT, text) for lang in text_langs}
             missing_langs = [lang for lang, (state, _) in states.items() if state == "missing"]
@@ -353,6 +362,14 @@ def report(
             p(f"  seed failed: {failure}")
     else:
         p("S1 server crawl: skipped (--no-server)")
+    static = analysis.static
+    if static.models or static.files or static.unknown_models:
+        p(
+            f"S1 static sources: {len(static.models)} schema models, {len(static.files)} data "
+            f"files, {len(static.result.texts)} source-language strings"
+        )
+        if static.unknown_models and not quiet:
+            p(f"  models not in the schema document: {', '.join(static.unknown_models)}")
     if analysis.scan.errors:
         p(f"source scan: {len(analysis.scan.errors)} unreadable files")
         if not quiet:

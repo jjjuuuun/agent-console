@@ -62,7 +62,23 @@
     "수집 예약 지연": "Collection delay",
     "문서의 문서 경로(틀 또는 읽어 바꾸는 규칙). 비면 그 문서를 뺀다.": "Path of the document (a template or a rule that reads and maps a value). If empty, the document is left out.",
     "문서의 문서 종류(틀 또는 읽어 바꾸는 규칙). 비면 기본값.": "Kind of the document (a template or a rule that reads and maps a value). If empty, the default is used.",
-    "문서의 관계(틀 또는 읽어 바꾸는 규칙). 비면 기본값.": "Relation to the document (a template or a rule that reads and maps a value). If empty, the default is used."
+    "문서의 관계(틀 또는 읽어 바꾸는 규칙). 비면 기본값.": "Relation to the document (a template or a rule that reads and maps a value). If empty, the default is used.",
+    "실행 {status}": "Run {status}",
+    "실행 실패 {message}": "Run failed {message}",
+    "자식 실행 시작 {node_id} → {graph_id}": "Child run started {node_id} → {graph_id}",
+    "자식 실행 {node_id} {status}": "Child run {node_id} {status}",
+    "{node} 실패 {message}": "{node} failed {message}",
+    "반복 {iteration}회차 ({edge_id})": "Iteration {iteration} ({edge_id})",
+    "반복 한도 {iteration}/{max_iterations} ({edge_id})": "Loop limit {iteration}/{max_iterations} ({edge_id})",
+    "세션 시작 {session_id}": "Session start {session_id}",
+    "{name} 호출": "{name} call",
+    "위임 {name}": "Delegate {name}",
+    "위임 끝 {name} {status}": "Delegation ended {name} {status}",
+    "사용 한도 {window} {status}": "Usage limit {window} {status}",
+    "메모리 {op} {kind}:{key}": "Memory {op} {kind}:{key}",
+    "위키 {op} {wiki}": "Wiki {op} {wiki}",
+    "위키 {op} {wiki}/{path}": "Wiki {op} {wiki}/{path}",
+    "hook 시작 {event} {name}": "hook start {event} {name}"
   },
   "codes": {
     "logs.invalid_query": "The log query isn't valid"

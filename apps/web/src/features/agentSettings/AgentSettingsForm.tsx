@@ -1,13 +1,10 @@
 import { useMemo } from "react";
 import { contractsSchema, getContractSchema } from "@agent-console/contracts";
 import type { FormError, ProvenanceLayer, UiSchema } from "@agent-console/schema-form";
-import { useAppMessages } from "../../app/appMessages";
-import { useApiQuery } from "../../app/queries";
 import { setAt } from "../../lib/jsonPointer";
 import { enumValues, pickProperties, type SchemaNode } from "../../lib/schemaTools";
 import { LayerForm, useBackends, useResourceList, useResourceTypes, agentSchemaForBackend, buildAgentDefaultsUi, useUserSettingsText } from "../settings";
-import { useLibraryMessages } from "./messages";
-import { MODEL_WIDGET, ModelWidget, type ModelOptions } from "./ModelWidget";
+import { MODEL_WIDGET, ModelWidget, useLibraryMessages, useModelFieldOptions } from "../library";
 import { TAGS_FIELD, TagsField, type TagsOptions } from "./TagsField";
 
 const EXTRA_WIDGETS = { [MODEL_WIDGET]: ModelWidget };
@@ -49,24 +46,18 @@ export function attachmentModes(): string[] {
 /** 첨부 방식 선택지(모듈 로드 시 한 번 읽는다). */
 export const ATTACHMENT_MODES: readonly string[] = attachmentModes();
 
-/** 백엔드가 알려 주는 모델 목록. 백엔드를 아직 못 정했으면 질의하지 않는다. */
-export function useBackendModels(backendId: string | null) {
-  return useApiQuery(["descriptors", "backend-models", backendId ?? ""], (rest) => rest.listBackendModels(backendId ?? ""), { enabled: backendId !== null && backendId !== "" });
-}
-
 /**
  * 에이전트 설정(`AgentSettings`) 한 층의 출처 표시 폼. 에이전트 화면·팀 구성의 노드 설정·팀 설정이 같은 폼을 쓴다.
  * 필드는 스키마에서 오고, 모델·백엔드·도구 위젯만 서버 데이터(백엔드 목록·모델 목록)로 채운다.
  */
 export function AgentSettingsForm(props: AgentSettingsFormProps) {
-  const m = useAppMessages();
   const text = useUserSettingsText();
   const t = useLibraryMessages();
   const { value, onChange, layers, editLayerId, backendId, hideKeys = NO_KEYS, ...rest } = props;
   const backends = useBackends();
   const resources = useResourceList();
   const types = useResourceTypes();
-  const models = useBackendModels(backendId);
+  const modelOptions = useModelFieldOptions(backendId);
   const modes = ATTACHMENT_MODES;
 
   const schema = useMemo(() => {
@@ -85,7 +76,7 @@ export function AgentSettingsForm(props: AgentSettingsFormProps) {
     }, text) as Record<string, unknown>;
     const props = (schema["properties"] ?? {}) as Record<string, unknown>;
     if ("model" in props) {
-      const options: ModelOptions = { models: models.data ?? [], failed: models.isError, emptyLabel: m.settings.unset, customLabel: t.agentForm.customModel, failedNote: t.agentForm.modelsFailed };
+      const options = modelOptions;
       out = setAt(out, "/model", { "ui:widget": MODEL_WIDGET, "ui:options": options }) as Record<string, unknown>;
     }
     const tags: TagsOptions = { addLabel: t.agentForm.addTag, removeLabel: t.agentForm.removeTag };
@@ -93,7 +84,7 @@ export function AgentSettingsForm(props: AgentSettingsFormProps) {
       if (key in props) out = setAt(out, `/${key}`, { "ui:field": TAGS_FIELD, "ui:options": tags }) as Record<string, unknown>;
     }
     return out as UiSchema;
-  }, [schema, backends.data, resources.data, types.data, modes, models.data, models.isError, layers, editLayerId, t, text, m]);
+  }, [schema, backends.data, resources.data, types.data, modes, modelOptions, layers, editLayerId, t, text]);
 
   // 숨긴 키는 폼 값에서도 빼서 다시 합칠 때 잃지 않게 한다.
   const shown = useMemo(() => Object.fromEntries(Object.entries(value).filter(([k]) => !hideKeys.includes(k))), [value, hideKeys]);

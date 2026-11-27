@@ -35,7 +35,19 @@
     "check": "Check connection…",
     "fetched_one": "Fetched {count} model.",
     "fetched_other": "Fetched {count} models.",
-    "moreActions": "More"
+    "moreActions": "More",
+    "reasons": {
+      "auth_missing": "Not signed in or no key",
+      "auth_failed": "Authentication was rejected",
+      "subscription_disabled": "Subscription sign-in is turned off",
+      "network": "Couldn't connect",
+      "timeout": "Timed out",
+      "invalid_response": "Unexpected response",
+      "cli_missing": "Command not found",
+      "cli_no_models": "No model list in the response",
+      "error": "Unknown error"
+    },
+    "signIn": "Sign in to fetch this account's models."
   },
   "source": {
     "config": "Config",

@@ -1,27 +1,43 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-logs-claude`, so the web can show the Claude Code log source and classifier settings in English (data only, no API change).
-- 5.7R.33i: 범위 = 등록 프로젝트 전체 하나. 설정 `project_scope`는 `deprecated`(읽지 않음, 기본값 없음). 하위 폴더 세션 포함: 폴더 키가 등록 키와 같거나 `키 + 바꿈 글자`로 시작하면 후보로 보고 파일 앞부분의 세션 cwd(새 설정 `cwd_pointer` 기본 `/cwd`, `cwd_peek_bytes` 기본 262144)가 등록 폴더 안인지로 확정한다(키는 손실 변환). cwd 없는 파일은 키가 정확히 같을 때만, 파일이 사라졌으면 키로만 판정(색인 유지). 두 루트에 같은 규칙.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-logs-claude`, so the web app can show the Claude Code log source and classifier settings in English (data only,
+  no API change).
+- The scope is the whole registered project. The setting `project_scope` is `deprecated` (not read, no default).
+  Sessions in subfolders are included: a folder key that equals the registered key or starts with the key plus the
+  replacement character is a candidate, and it is confirmed when the session cwd near the start of the file (new
+  settings `cwd_pointer`, default `/cwd`, and `cwd_peek_bytes`, default 262144) is inside the registered folder (the
+  key is a lossy conversion). Files without a cwd match only when the key is exactly equal, and files that have
+  disappeared are decided by key alone (the index is kept). The same rule applies to both roots.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `feature`).
-- 4R.6: X5 `claude-code-jsonl`(세션·서브에이전트·메타 파일 발견, 기본 꺼짐)과 X6 `claude-code`(행 단위
-  무상태 분류기)를 entry point로 등록. 도구 이름 특수 처리·범주·태그·hook 등 행 대응은 설정 스키마 기본값(데이터).
-- 4R.12 추가: 목록 요약을 평문으로(설정 `summaries`·행 규칙 `summary` = detail 기준 포인터, 기본값은 스키마 데이터).
-  `summary_text` 공개. 원문은 detail·raw 그대로.
-- 4R.12 추가: 분류 전에 행·맥락을 `scrub_surrogates`로 정리(외톨이 서로게이트 → U+FFFD). 모델 검증 실패로 진단
-  이벤트가 되던 행·서브에이전트 메타가 정상 이벤트가 된다.
-- 4R.6·4R.12 QA 후속: 기본 `row_rules`에 `custom-title`·`ai-title`(태그 `session_title`)·`agent-name`·`permission-mode`·
-  `mode`(범주 `control`)·`queue-operation`·`last-prompt`·`file-history-*` 추가. 요약 항목에 틀(`{/포인터}`,
-  `{/포인터|keys}`, 자리 표시가 비면 건너뜀)을 더하고 hook·MCP·file-history 기본 요약을 평문으로. 설정
-  `session_title_from_input`(기본 true) 추가.
-- 4R.6·4R.12 QA 후속 2차: `attachment` 하위 종류별 요약 규칙(total_tokens_reminder·deferred_tools_record·date·
-  edited_text_file 등), 비밀 후보 첨부(credential* 등)는 요약에 종류만, 모르는 첨부 요약 = 종류 이름. `atis-latch` 규칙.
-  도구 결과·호출 요약 대체 항목(블록 수·결과 없음·도구 이름). 요약 틀 `{/포인터|count}` 추가.
-- 5R.19: 순위 태그 `session_title.renamed`(custom-title)·`session_title.generated`(ai-title), 타임라인 소음 행
-  (`ai-title`·`queue-operation`·`atis-latch`·`file-history-*`·`cost-state`·`api-request*`)을 숨김 범주 `meta`로(규칙 데이터).
-- 5.5R.34: 행 규칙 `store_raw`(기본 `true`)·`keep` — `false`면 detail·raw에 원문 대신 `keep` 값 + `omitted`(크기·sha256). 기본 규칙 `api-request-blob`(요청 본문)은 원문을 저장하지 않는다(사용자 `extra_row_rules`로 다시 켬). `omitted_row`·`OMITTED_KEY` 공개. README: 설정 변경은 바꾼 뒤 수집하는 행부터, 옛 색인은 색인을 새로 만들어야 바뀐다.
-- 5.7R.6(M-3): README "분류 기본값이 바뀌면 purge 후 재스캔" 안내(옛 `api-request-blob` 원문 지우는 법, K55-2).
+- First release (from the scripts/pkgkit template `feature`).
+- Registered the log source `claude-code-jsonl` (finds session, subagent and meta files; off by default) and the
+  classifier `claude-code` (stateless, row by row) as entry points. Special tool name handling, categories, tags,
+  hooks and other row mappings are settings schema defaults (data).
+- List summaries are plain text (setting `summaries` and the row rule `summary` = a pointer into detail; defaults are
+  schema data). `summary_text` is public. The original stays in detail and raw.
+- Rows and context are cleaned with `scrub_surrogates` before classification (lone surrogates become U+FFFD). Rows
+  and subagent metadata that used to become diagnostic events because of model validation failures become normal
+  events.
+- Follow-up: the default `row_rules` gained `custom-title`, `ai-title` (tag `session_title`), `agent-name`,
+  `permission-mode`, `mode` (category `control`), `queue-operation`, `last-prompt` and `file-history-*`. Summary items
+  can use templates (`{/pointer}`, `{/pointer|keys}`; skipped when a placeholder is empty), and the default hook, MCP
+  and file-history summaries are plain text. Added the setting `session_title_from_input` (default true).
+- Second follow-up: summary rules per `attachment` subtype (total_tokens_reminder, deferred_tools_record, date,
+  edited_text_file and others). Attachments that may hold secrets (credential* and similar) show only their kind in
+  the summary, and unknown attachments are summarized by kind name. Added the `atis-latch` rule. Fallback items for
+  tool result and call summaries (block count, no result, tool name). Added the summary template `{/pointer|count}`.
+- Ranking tags `session_title.renamed` (custom-title) and `session_title.generated` (ai-title). Timeline noise rows
+  (`ai-title`, `queue-operation`, `atis-latch`, `file-history-*`, `cost-state`, `api-request*`) go to the hidden
+  category `meta` (rule data).
+- Row rules `store_raw` (default `true`) and `keep`: with `false`, detail and raw hold the `keep` value plus `omitted`
+  (size and sha256) instead of the original. The default rule `api-request-blob` (request bodies) does not store the
+  original (turn it back on with the user setting `extra_row_rules`). `omitted_row` and `OMITTED_KEY` are public. The
+  README explains that settings changes apply to rows collected after the change, and old index entries change only
+  when the index is rebuilt.
+- The README explains how to purge and rescan when the classification defaults change (and how to remove old
+  `api-request-blob` originals).

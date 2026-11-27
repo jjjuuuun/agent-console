@@ -1,4 +1,9 @@
 {
+  "text": {
+    "프로젝트 .claude/": "Project .claude/",
+    "작업 폴더의 Claude Code 설정과 .mcp.json(원본은 읽기만 합니다)": "Claude Code settings and .mcp.json in the project folder (the originals are only read)",
+    "본문 수정": "Edited content"
+  },
   "codes": {
     "import.fields_ignored": "Some items weren't carried over into the settings.",
     "import.hook_unsupported": "hook handlers that aren't commands aren't imported.",

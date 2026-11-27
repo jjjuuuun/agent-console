@@ -118,8 +118,7 @@ class ArchitectureZone(DefinitionModel):
 
 
 class ArchitectureDrill(DefinitionModel):
-    """칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. "
-    "묶음 값으로 같은 그림을 다시 그립니다."""
+    """칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. 묶음 값으로 같은 그림을 다시 그립니다."""  # noqa: E501
 
     # filter = 로그 질의 필터 이름(예: thread, scope). value의 {group}은 묶음 값으로 바꾼다.
     # 모르는 필터 이름은 프로필 검사가 이슈로 알린다.

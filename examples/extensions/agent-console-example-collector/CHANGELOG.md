@@ -1,5 +1,5 @@
-# 변경 기록
+# Changelog
 
 ## 0.1.0
 
-- 첫 버전(4R.15): 도구 호출 수 관측 수집기 `example.tool_count`(X7).
+- First release: an observation collector `example.tool_count` that counts tool calls.

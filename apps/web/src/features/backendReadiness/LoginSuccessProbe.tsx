@@ -1,6 +1,7 @@
 import type { BackendDescriptor } from "@agent-console/contracts";
 import { useAppMessages } from "../../app/appMessages";
 import { useNow } from "../../app/useNow";
+import { useServerTranslate } from "../../i18n";
 import { BackendProbeButton } from "./BackendProbeButton";
 import { useBackendProbe } from "./hooks";
 import { ProbeResultBlock } from "./ProbeResultBlock";
@@ -11,6 +12,7 @@ import { ProbeResultBlock } from "./ProbeResultBlock";
  */
 export function LoginSuccessProbe({ backend }: { backend: BackendDescriptor }) {
   const m = useAppMessages();
+  const tr = useServerTranslate();
   const t = m.backendReadiness;
   const probe = useBackendProbe(backend);
   const nowMs = useNow(true, 30_000);
@@ -20,7 +22,7 @@ export function LoginSuccessProbe({ backend }: { backend: BackendDescriptor }) {
     <>
       <div className="app-login-probe-row">
         <BackendProbeButton descriptor={backend} probe={probe} />
-        <span className="app-muted" data-testid="login-probe-note">{note}</span>
+        <span className="app-muted" data-testid="login-probe-note">{tr(note)}</span>
       </div>
       <div aria-live="polite" className="app-login-probe-result">
         <ProbeResultBlock probe={probe} nowMs={nowMs} />

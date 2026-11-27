@@ -23,6 +23,7 @@ import { DefinitionVersionsTab, useVersionLabels } from "../versions";
 import { ResourceEditorForm } from "./ResourceEditorForm";
 import { ResourceUsagesTab, useResourceUsages } from "./UsagesTab";
 import { useResourceMessages } from "./messages";
+import { ResourceToast } from "./ResourceToast";
 import { loadResource, mediaTypeOf, resourceTabIds, saveResource, type ResourceDoc, type ResourceTabId } from "./resourceLogic";
 
 export interface ResourceDetailProps {
@@ -88,7 +89,7 @@ export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
   const save = () => {
     void editor.save().then((ok) => {
       if (ok) {
-        toast({ tone: "success", text: t.detail.saved });
+        toast({ tone: "success", text: <ResourceToast render={(r) => r.detail.saved} /> });
         void invalidateLists();
       }
     });

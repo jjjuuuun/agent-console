@@ -1,44 +1,54 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-nodes-core`, so the web can show the node, edge, interaction and delegation descriptors and the node error codes in English (data only, no API change). The `input_key` description of the user message edge is a fixed string. Internal log messages are now in English.
-- FU.5: `merge_access_layers(items, *, entries_key, entry_key, default_ops)`와 키 상수 `ACCESS_CONFIG_FIELD`·`ACCESS_TOOLS_FIELD`·
-  `ACCESS_OPS_FIELD` — 도구 공급자(메모리·위키 연동)가 칸의 접근 설정 첨부를 같은 규칙으로 합친다(두 연동의 사본을 옮김).
-
-- FU.4: `resolve_paths(values, base)`·`path_placeholders(base)`·`WORKSPACE_PLACEHOLDER` — agent 노드가
-  `limits.directories`의 틀(`{workspace}`)·상대 경로를 `WORKING_DIRECTORY` 기준 실제 경로로 풀어 `AgentRequest.limits`
-  (와 `agent.limits`)에 넘긴다(전에는 틀 그대로 백엔드 `add_dirs`·도구 검사로 갔다). 기준이 없으면 그대로.
-- FU.4: `resolve_working_directory(value, base)` — 상대 `working_directory`를 노드 서비스 `WORKING_DIRECTORY`
-  기준으로 잇는다(절대·`~`·드라이브는 그대로). agent 노드의 `AgentRequest.cwd`가 이 규칙을 쓴다(전에는 상대
-  경로를 그대로 넘겨 백엔드가 서버 프로세스 작업 폴더 기준으로 읽었다).
-- 5.2R.94(잔해 정리): `__init__` docstring·README의 2R.20 노드 삭제 이력 문장을 이 기록으로 옮겼다. 코드 변경 없음.
-- 5.2R.43: `WhenEdge(redact=)`·`use_redactor(redact)`(`ac-conditions.RedactorConsumer`) — 판정 근거를 자르기 전에 가린다. `sdk-subagents` 디스크립터 `shares_session=True` 명시.
-- 5.2R.34: 서비스 키 `SCOPE_LAYERS`(`nodes_core.scope_layers`) — agent 노드 유효 설정에 공통 바로 아래 범위 층(예: 프로젝트
-  층)을 끼운다.
-- 5.2R.5: 서비스 키 `ERROR_FIXES`(`ErrorFixer`) — 에이전트 노드 실패에 해결 버튼을 붙인다. 에이전트 노드 선택 훅 `display_name`(묶인 정의 이름). 디스크립터 설명에서 설계 번호를 뺐다.
-- 5R.13: `WhenEdge.use_operators(provider)`(`ac-conditions.OperatorConsumer`) — 실행 모듈이 호스트의 조건 연산자 레지스트리를 준다.
-
-- 5R.11: 노드 타입 `team`(`team.TeamNode`, 중첩 팀 — `binds{graph, team_ref}`, role `team`, `ui_hints.shape
-  stacked`, config `TeamNodeConfig{team_ref, version, input_key, reply, reply_separator, settings}`). `ctx.run_child`로
-  자식 Run 실행, 답변 고르기 `pick_replies`, 대화 세션 경로 키 `session_path_key`·`child_sessions`, 서비스 키
-  `TEAM_LOOKUP`, 오류 코드 `team.lookup_unavailable`·`team.team_not_found`·`team.invalid_settings`·
-  `team.child_failed`, 대기 이유 `TEAM_CHILD_WAITING`. `handoff`·`loop`·`when`·`on_error`·`message`·`reply`
-  연결의 `connects`에 역할 `team`을 더했다.
-
-- 5R.9: 연결 종류 `delegate`(`edges.DelegateEdge`, none + invocation `host`, config `DelegateEdgeConfig{strategy,
-  result}`, `HOST_STRATEGY`). `sdk-subagents`를 `composable=true`로 바꾸고 `contribute`(하위 에이전트 + 답변 sink
-  감싸기)를 더했다. agent 노드 config `delegation`(방식 id → 방식 config)과 혼합 위임(방식별 묶음 → 모두
-  composable이면 `contribute` 합쳐 백엔드 한 번, 아니면 `agent.mixed_strategies`). 테스트 전용 dev 의존
-  `agent-console-delegation-host`.
-
-- 5R.8: 연결 종류 `when`(`conditional.WhenEdge`, config `conditions`, 판정 근거·경고, 저장 전 검사
-  `validate_edge` → `ac-conditions.condition_issues`), `on_error`(`conditional.OnErrorEdge`, `handles_failure`).
-  `condition_subject`, `CONDITION_FALSE`. agent 노드가 백엔드 `AgentResult.structured`를 `NodeResult.structured`로
-  넘긴다. 새 의존 `agent-console-conditions`.
-- 5R.5: 연결 종류 `loop`(`loops.LoopEdge`, flow + 디스크립터 `cycle{max_iterations: 3}`, config `LoopEdgeConfig.max_iterations`), `DEFAULT_LOOP_MAX_ITERATIONS`. agent 노드가 같은 노드 직전 반복 회차 세션(`ctx.previous_session_id`)을 이어 쓰고, 이어 쓸 때 남아 있던 입력(`Incoming.carried`)을 프롬프트에서 뺀다.
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-nodes-core`, so the web app can show the node, edge, interaction and delegation
+  descriptors and the node error codes in English (data only, no API change). The `input_key` description of the user
+  message edge is a fixed string. Internal log messages are now in English.
+- `merge_access_layers(items, *, entries_key, entry_key, default_ops)` and the key constants `ACCESS_CONFIG_FIELD`,
+  `ACCESS_TOOLS_FIELD` and `ACCESS_OPS_FIELD`: tool providers (the memory and wiki link modules) merge the access
+  settings attached to a field with the same rules (the copies in both link modules moved here).
+- `resolve_paths(values, base)`, `path_placeholders(base)` and `WORKSPACE_PLACEHOLDER`: the agent node resolves
+  templates (`{workspace}`) and relative paths in `limits.directories` to real paths based on `WORKING_DIRECTORY` and
+  passes them to `AgentRequest.limits` (and `agent.limits`). Previously the templates went as is to the backend
+  `add_dirs` and tool checks. Without a base, values are unchanged.
+- `resolve_working_directory(value, base)`: joins a relative `working_directory` onto the node service
+  `WORKING_DIRECTORY` (absolute paths, `~` and drives are unchanged). The agent node's `AgentRequest.cwd` uses this
+  rule (previously a relative path was passed as is, and the backend resolved it against the server process's current
+  directory).
+- Cleanup: moved the history of removed nodes from the `__init__` docstring and README into this changelog. No code
+  changes.
+- `WhenEdge(redact=)` and `use_redactor(redact)` (`ac-conditions.RedactorConsumer`): the evaluation evidence is masked
+  before it is truncated. The `sdk-subagents` descriptor states `shares_session=True` explicitly.
+- Service key `SCOPE_LAYERS` (`nodes_core.scope_layers`): inserts scope layers (for example, a project layer) right
+  below Common in the agent node's effective settings.
+- Service key `ERROR_FIXES` (`ErrorFixer`): adds fix buttons to agent node failures. Optional agent node hook
+  `display_name` (the name of the bound definition). Removed design numbers from descriptor descriptions.
+- `WhenEdge.use_operators(provider)` (`ac-conditions.OperatorConsumer`): the runs module passes the host's condition
+  operator registry.
+- Node type `team` (`team.TeamNode`, nested team: `binds{graph, team_ref}`, role `team`, `ui_hints.shape stacked`,
+  config `TeamNodeConfig{team_ref, version, input_key, reply, reply_separator, settings}`). Child runs through
+  `ctx.run_child`, reply selection `pick_replies`, conversation session path keys `session_path_key` and
+  `child_sessions`, the service key `TEAM_LOOKUP`, the error codes `team.lookup_unavailable`, `team.team_not_found`,
+  `team.invalid_settings` and `team.child_failed`, and the wait reason `TEAM_CHILD_WAITING`. Added the role `team` to
+  `connects` of the `handoff`, `loop`, `when`, `on_error`, `message` and `reply` edges.
+- Edge type `delegate` (`edges.DelegateEdge`, none plus invocation `host`, config
+  `DelegateEdgeConfig{strategy, result}`, `HOST_STRATEGY`). `sdk-subagents` is now `composable=true` and gained
+  `contribute` (subagents plus a wrapped reply sink). Agent node config `delegation` (strategy id to strategy config)
+  and mixed delegation (grouped by strategy; when all are composable, `contribute` is merged into one backend call,
+  otherwise `agent.mixed_strategies`). Test-only dev dependency `agent-console-delegation-host`.
+- Edge types `when` (`conditional.WhenEdge`, config `conditions`, evaluation evidence and warnings, pre-save check
+  `validate_edge` through `ac-conditions.condition_issues`) and `on_error` (`conditional.OnErrorEdge`,
+  `handles_failure`). `condition_subject`, `CONDITION_FALSE`. The agent node passes the backend's
+  `AgentResult.structured` on as `NodeResult.structured`. New dependency `agent-console-conditions`.
+- Edge type `loop` (`loops.LoopEdge`, flow plus the descriptor `cycle{max_iterations: 3}`, config
+  `LoopEdgeConfig.max_iterations`), `DEFAULT_LOOP_MAX_ITERATIONS`. The agent node continues the session of the same
+  node's previous iteration (`ctx.previous_session_id`), and when continuing it leaves the carried input
+  (`Incoming.carried`) out of the prompt.
 
 ## 0.1.0
 
-- 2R.20(이전 이력): 1R에서 보류했던 `input`·`output`·`router` 노드를 지웠다.
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- Earlier history: removed the `input`, `output` and `router` nodes that had been put on hold.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.

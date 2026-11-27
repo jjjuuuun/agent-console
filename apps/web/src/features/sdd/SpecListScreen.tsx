@@ -21,7 +21,6 @@ import { SDD_PARAMS, SDD_ROLE, SDD_STORAGE, SPEC_SORT } from "./sddConfig";
 import { SpecExportDialog } from "./SpecExportDialog";
 import { SpecImportDialog } from "./SpecImportDialog";
 import { SpecRenameDialog } from "./SpecRenameDialog";
-import { useDescribeError } from "../../app/errors";
 import { useSddViewMessages } from "./useViewMessages";
 import { useInvalidateSdd, useSddLive, useSddSpace, useSpecList, useSpecTemplates } from "./useSddApi";
 import { useSddContext } from "./useSddContext";
@@ -31,6 +30,7 @@ import "./sdd.css";
 import { useServerText, useT } from "@agent-console/i18n";
 import { useMaybeT } from "../../i18n/useMaybeT";
 import { useFormat } from "../../i18n";
+import { SddToast } from "./SddToast";
 
 type Dlg =
   | { kind: "new"; name: string }
@@ -66,7 +66,6 @@ export function filterSpecs(specs: readonly SpecSummary[], q: string, states: Re
 export function SpecListScreen() {
   const fmt = useFormat();
   const language = useLanguageCode();
-  const describeError = useDescribeError();
   const t = useT("sdd");
   const viewMessages = useSddViewMessages();
   const tm = useMaybeT("sdd");
@@ -124,7 +123,7 @@ export function SpecListScreen() {
 
   const copyPath = (spec: SpecSummary) => {
     void navigator.clipboard?.writeText(spec.directory ?? "");
-    toast({ tone: "success", text: t("head.copied") });
+    toast({ tone: "success", text: <SddToast render={(t) => t("head.copied")} /> });
   };
   const rowMenu = (spec: SpecSummary) => {
     const name = spec.name && spec.name !== "" ? spec.name : spec.id;
@@ -158,7 +157,7 @@ export function SpecListScreen() {
       await invalidate();
     } catch (e) {
       setDialog(null);
-      toast({ tone: "danger", text: describeError(e, t("problem.generic")).message });
+      toast({ tone: "danger", text: <SddToast render={(t, d) => d(e, t("problem.generic")).message} /> });
     }
   };
 
@@ -280,7 +279,7 @@ export function SpecListScreen() {
           onSubmit={async (body) => {
             const created = await space.client.importSpec(body);
             setDialog(null);
-            toast({ tone: "success", text: t("import.done", { count: body.files.length }) });
+            toast({ tone: "success", text: <SddToast render={(t) => t("import.done", { count: body.files.length })} /> });
             goTo(created.value.spec.id);
           }}
         />

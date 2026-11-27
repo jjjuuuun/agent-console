@@ -77,6 +77,7 @@ import { TeamSharedBar } from "./TeamSharedBar";
 import { EdgeTroubleChip } from "./EdgeTroubleChip";
 import { useEdgeTrouble } from "./useEdgeTrouble";
 import { useAutoRoutes } from "./useAutoRoutes";
+import { separateNodesVertically } from "../logic/separateNodes";
 import { EdgeLabelSpreadContext, EdgeRouteContext } from "./routeContext";
 import type { EdgeLabelSpread } from "./routeContext";
 import { portObstacles, resolveLabelSpacing, spreadLabelLayout, type LabelLayout, type ObstacleRect } from "../logic/labelSpread";
@@ -220,6 +221,8 @@ const VIEW_TOOLBAR_INSET = 80;
 
 /** 첫 맞춤 뒤 캔버스 크기가 바뀌어도(옆 패널이 자리 잡는 동안) 다시 맞추는 시간(ms). 이후 크기 변화는 사용자 시점을 건드리지 않는다. */
 const REFIT_WINDOW_MS = 3000;
+/** 글꼴이 준비된 뒤 노드 크기가 다시 측정되기를 기다리는 시간(ms). */
+const FONT_REFIT_DELAY_MS = 60;
 
 /** 줌이 이 값보다 낮으면 연결 칩은 아이콘만 보인다(글자는 연결의 접근성 이름에 남는다). */
 const LOW_ZOOM = 0.6;
@@ -530,14 +533,20 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
 
   // React Flow는 노드 크기 측정 결과를 노드 객체에 요구한다(제어형이므로 직접 보관).
   const [measured, setMeasured] = useState<ReadonlyMap<string, { width: number; height: number }>>(new Map());
-  const flowNodes = useMemo(
-    () =>
-      model.nodes.map((n) => {
-        const dim = measured.get(n.id);
-        return dim === undefined ? n : { ...n, measured: dim };
-      }),
-    [model.nodes, measured],
-  );
+  const separation = props.nodeSeparation ?? 0;
+  const flowNodes = useMemo(() => {
+    const sized = model.nodes.map((n) => {
+      const dim = measured.get(n.id);
+      return dim === undefined ? n : { ...n, measured: dim };
+    });
+    if (separation <= 0) return sized;
+    // 보기 전용: 실행 결과 줄로 커진 노드가 아래 노드와 겹치지 않게 잰 높이 기준으로 내린다
+    const shift = separateNodesVertically(
+      sized.map((n) => ({ id: n.id, x: n.position.x, y: n.position.y, width: n.measured?.width ?? n.initialWidth ?? 0, height: n.measured?.height ?? n.initialHeight ?? 0 })),
+      separation,
+    );
+    return shift.size === 0 ? sized : sized.map((n) => (shift.has(n.id) ? { ...n, position: { x: n.position.x, y: n.position.y + (shift.get(n.id) ?? 0) } } : n));
+  }, [model.nodes, measured, separation]);
 
   /** 노드 방향 순환(lr → tb → rl → bt → 상속). `R` 키와 툴바 버튼이 쓴다 */
   const rotateDirection = useCallback(
@@ -1123,12 +1132,42 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
       void fitReadable(flow, flowStore.getState(), 0, insetRef.current).then(() => {
         lastFit.current = flow.getViewport();
         lastFitSize.current = canvasSize;
+        // 맞춤이 끝난 줌으로 라벨 배치를 한 번 더 확정한다(간격이 화면 px 기준이라 줌에 따라 달라진다)
+        scheduleSpread();
       });
     };
     const timers = FIRST_FIT_RETRY_MS.map((ms) => setTimeout(attempt, ms));
     return () => timers.forEach(clearTimeout);
     // 크기가 처음 확정되는 때(sized)와 노드가 처음 생기는 때, 측정이 끝나는 때, 캔버스 크기가 바뀔 때만
-  }, [sized, hasNodes, nodesMeasured, canvasSize, flow, flowStore]);
+  }, [sized, hasNodes, nodesMeasured, canvasSize, flow, flowStore, scheduleSpread]);
+  // 글꼴이 늦게 들어오면 노드·라벨 크기가 달라지므로(같은 팀이 테마·캐시에 따라 첫 줌이 다르게 잡히던 문제), 글꼴이 준비된 뒤
+  // 사용자가 보기를 움직이지 않았고 마지막 맞춤 그대로이면 한 번 더 맞추고 라벨 배치도 다시 확정한다. 글꼴 API가 없으면 아무것도 하지 않는다.
+  useEffect(() => {
+    if (!sized || !hasNodes || typeof document === "undefined" || document.fonts === undefined) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    void document.fonts.ready.then(() => {
+      if (!alive) return;
+      // 노드가 새 글꼴로 다시 측정될 시간을 한 틱 준다
+      timer = setTimeout(() => {
+        if (!alive || userMoved.current) return;
+        const v = flow.getViewport();
+        const last = lastFit.current;
+        if (last !== null && (v.x !== last.x || v.y !== last.y || v.zoom !== last.zoom)) {
+          scheduleSpread();
+          return;
+        }
+        void fitReadable(flow, flowStore.getState(), 0, insetRef.current).then(() => {
+          lastFit.current = flow.getViewport();
+          scheduleSpread();
+        });
+      }, FONT_REFIT_DELAY_MS);
+    });
+    return () => {
+      alive = false;
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [sized, hasNodes, flow, flowStore, scheduleSpread]);
 
   // ---- 외부 포커스 요청(이슈 행 클릭 등) ----
   const focusReq = props.focusRequest;

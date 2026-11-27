@@ -38,10 +38,9 @@ const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.status =
  * 목록의 가벼운 편집(폴더 이동·라벨) 공용 훅. 저장 경로는 `store`로 받아 종류를 모른다.
  * 항상 최신 문서를 읽고 → 일부만 바꾸고 → 그 `ETag`로 저장하므로 다른 필드는 보존된다.
  * 412·428(버전 충돌)이면 안내 토스트에 [다시 시도]를 붙인다(다시 시도는 최신 문서를 새로 읽는다).
- * 토스트 문구는 공용 `arrange` 묶음을 그릴 때 읽으므로 떠 있는 토스트도 언어를 따른다. 둘째 인자 `_messages`는 옛 호출을 위해 받기만 하고 쓰지 않는다.
+ * 토스트 문구는 공용 `arrange` 묶음을 그릴 때 읽으므로 떠 있는 토스트도 언어를 따른다.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 옛 호출(둘째 인자)을 깨지 않으려고 받기만 한다
-export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, _messages?: Pick<ArrangeMessages, "move" | "labels" | "conflict" | "retry">): DefinitionEdits {
+export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>): DefinitionEdits {
   const toast = useToast();
   const invalidate = useInvalidateLists();
   const { load, save } = store;

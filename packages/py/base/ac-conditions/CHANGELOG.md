@@ -1,17 +1,23 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7a: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-conditions`, so the web can show the built-in operator names and condition issues (by code) in English (data only, no API change).
-- FU.6: 기본 연산자 `any_item`(11번째) — 목록 항목 중 하나라도 `{항목 안 경로: [허용 값…]}`이 모두 맞으면 참(값 스키마 객체·키는 JSON Pointer).
-  디스크립터는 데이터 파일, `compile_expected` 빠른 경로 포함. 기본 구조도 Instructions 칸이 규칙과 함께 붙은 skill을 세는 데 쓴다.
-
-- 5.2R.43: 선택 능력 `RedactorConsumer.use_redactor(redact)`·타입 `Redactor`(판정 근거를 만드는 확장이 앱의 가림 함수를 받는다).
-- 5R.13: 선택 능력 `OperatorConsumer.use_operators(provider)`·`OperatorProvider`(연산자를 쓰는 확장이 앱의 연산자 레지스트리를 받는다).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-conditions`, so the web app can show the built-in operator names and condition
+  issues (by code) in English (data only, no API change).
+- Built-in operator `any_item` (the eleventh): true when at least one list item matches every
+  `{path inside the item: [allowed values…]}` entry (the value schema is an object and keys are JSON Pointers). The
+  descriptor is a data file and includes the `compile_expected` fast path. The default architecture map uses it to
+  count skills attached to the Instructions field together with rules.
+- Optional capability `RedactorConsumer.use_redactor(redact)` and type `Redactor` (an extension that builds the
+  evaluation evidence receives the app's masking function).
+- Optional capability `OperatorConsumer.use_operators(provider)` and `OperatorProvider` (an extension that uses
+  operators receives the app's operator registry).
 
 ## 0.1.0
 
-- 처음 만듦(5R.8, design §5R.3 X22·§5R.5): `ConditionOperator` 프로토콜·`ValueChecker` 선택 능력,
-  레지스트리 로더(entry point `agent_console.condition_operators`, `LoadReport`), `evaluate_conditions`
-  (근거 = 계약 `ConditionOutcome`, `actual`은 가린 뒤 자름), `condition_issues`(모르는 연산자 warning,
-  값 스키마·연산자 검사 error, 빈 조건 warning), 기본 연산자 10개(디스크립터는 데이터 파일).
+- First release: the `ConditionOperator` protocol and the optional `ValueChecker` capability, a registry loader (entry
+  point `agent_console.condition_operators`, `LoadReport`), `evaluate_conditions` (the evidence is the contract
+  `ConditionOutcome`, and `actual` is masked, then truncated), `condition_issues` (unknown operator is a warning,
+  value schema and operator check failures are errors, an empty condition is a warning), and ten built-in operators
+  (descriptors are data files).

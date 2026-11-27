@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import type { BackendLoginSession, BackendLogoutResult, LoginMethodInfo } from "@agent-console/contracts";
 import { Banner, Button, Dialog, Spinner, StatusChip } from "@agent-console/ui";
 import { FixButtons } from "../../app/fix";
+import { useServerRender, useServerTranslate } from "../../i18n";
 import "./backendLogin.css";
 import { useLoginMessages } from "./messages";
 import { formatRemaining, isOpenableUrl, isTerminalPhase } from "./types";
@@ -22,6 +23,7 @@ export interface LoginConfirmDialogProps {
 /** ① 시작 확인: notice와 쓰기 범위가 늘 보인다(숨기기 없음). 기본 포커스는 [로그인 시작]. */
 export function LoginConfirmDialog({ open, title, method, starting, error, onCancel, onStart }: LoginConfirmDialogProps) {
   const t = useLoginMessages();
+  const tr = useServerTranslate();
   const startRef = useRef<HTMLButtonElement>(null);
   const writes = method?.writes ?? [];
   return (
@@ -40,10 +42,10 @@ export function LoginConfirmDialog({ open, title, method, starting, error, onCan
         </>
       }
     >
-      {method?.description ? <p className="ac-text">{method.description}</p> : null}
+      {method?.description ? <p className="ac-text">{tr(method.description)}</p> : null}
       {method?.notice ? (
         <Banner tone="warning">
-          <span data-testid="login-notice">{method.notice}</span>
+          <span data-testid="login-notice">{tr(method.notice)}</span>
         </Banner>
       ) : null}
       {writes.length > 0 ? (
@@ -51,7 +53,7 @@ export function LoginConfirmDialog({ open, title, method, starting, error, onCan
           <h3 className="app-block-title">{t.writesHeading}</h3>
           <ul data-testid="login-writes">
             {writes.map((w) => (
-              <li key={w}>{w}</li>
+              <li key={w}>{tr(w)}</li>
             ))}
           </ul>
         </section>
@@ -151,6 +153,8 @@ function stepStates(session: BackendLoginSession): ("done" | "active" | "todo")[
 /** ② 진행·결과 대화상자. 단계 3개, 열기/복사, 코드 칸, 접힌 CLI 화면, 취소, 성공·실패·시간 초과. */
 export function LoginSessionDialog({ open, title, session, nowMs, sending, sendError, method, successExtra, onSendText, onSendKey, onCancel, onClose, onRetry }: LoginSessionDialogProps) {
   const t = useLoginMessages();
+  const tr = useServerTranslate();
+  const render = useServerRender();
   const terminal = isTerminalPhase(session.phase);
   const states = stepStates(session);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -168,6 +172,8 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
   const detailRows = Object.entries(session.details ?? {});
   const screen = session.screen ?? [];
   const keys = session.accepts_keys ?? [];
+  const templates = session.text_templates ?? {};
+  const message = render(session.message ?? "", templates["/message"]);
   return (
     <Dialog
       open={open}
@@ -187,10 +193,10 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
       }
     >
       {!terminal ? <p className="app-muted" data-testid="login-remaining">{t.remaining(formatRemaining(session.expires_at, nowMs))}</p> : null}
-      {method?.notice ? <p className="app-muted">{method.notice}</p> : null}
+      {method?.notice ? <p className="app-muted">{tr(method.notice)}</p> : null}
       {(session.warnings ?? []).length > 0 ? (
         <Banner tone="warning">
-          <ul>{(session.warnings ?? []).map((w) => <li key={w}>{w}</li>)}</ul>
+          <ul>{(session.warnings ?? []).map((w) => <li key={w}>{tr(w)}</li>)}</ul>
         </Banner>
       ) : null}
       <div aria-live="polite" data-testid="login-message">
@@ -198,14 +204,14 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
           <p className="ac-text">{t.cancelled}</p>
         ) : session.phase === "succeeded" ? (
           <Banner tone="success" data-testid="login-result">
-            <strong>{session.message || t.succeeded}</strong>
+            <strong>{message || t.succeeded}</strong>
           </Banner>
         ) : failed ? (
           <Banner tone="danger" data-testid="login-result">
-            <strong>{session.message || (session.phase === "expired" ? t.expiredTitle : t.failedTitle)}</strong>
+            <strong>{message || (session.phase === "expired" ? t.expiredTitle : t.failedTitle)}</strong>
           </Banner>
-        ) : session.message ? (
-          <p className="ac-text"><strong>{session.message}</strong></p>
+        ) : message ? (
+          <p className="ac-text"><strong>{message}</strong></p>
         ) : null}
       </div>
       {session.phase !== "cancelled" && !failed ? (
@@ -225,7 +231,7 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
                 </div>
               ) : null}
               {i === 1 && !terminal && needsCode ? (
-                <SecretSendForm label={session.code_label || t.codeLabelFallback} submitLabel={t.codeSend} sending={sending} onSend={onSendText} inputRef={codeRef} />
+                <SecretSendForm label={session.code_label ? tr(session.code_label) : t.codeLabelFallback} submitLabel={t.codeSend} sending={sending} onSend={onSendText} inputRef={codeRef} />
               ) : null}
             </li>
           ))}
@@ -269,6 +275,7 @@ export interface LogoutDialogProps {
 /** 로그아웃 확인 → 결과. 터미널의 Claude Code도 로그아웃된다는 사실을 알린다. */
 export function LogoutDialog({ open, title, running, result, error, onCancel, onConfirm, onClose }: LogoutDialogProps) {
   const t = useLoginMessages();
+  const render = useServerRender();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const done = result !== null;
   return (
@@ -291,7 +298,7 @@ export function LogoutDialog({ open, title, running, result, error, onCancel, on
     >
       {done ? (
         <div aria-live="polite">
-          <p className="ac-text">{result.message || (result.ok ? t.logoutDone : t.logoutFailed)}</p>
+          <p className="ac-text">{render(result.message ?? "", result.text_templates?.["/message"]) || (result.ok ? t.logoutDone : t.logoutFailed)}</p>
           {!result.ok ? <FixButtons fix={{ actions: result.fixes ?? [] }} /> : null}
         </div>
       ) : (

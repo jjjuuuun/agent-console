@@ -1,43 +1,50 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-projects-runs`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
-- FU.4: 경로 지킴의 틀 표를 `ac-nodes-core.path_placeholders`로 바꿨다 — 실행(agent 노드 `resolve_paths`)과
-  같은 표·같은 기준(프로젝트 폴더)이라 검사한 경로와 백엔드가 받는 `limits.directories`가 같다.
-- FU.4: `scope_run`이 프로젝트 실행에 노드 서비스 `WORKING_DIRECTORY` = 프로젝트 폴더를 넣는다(상대
-  `working_directory`가 경로 지킴과 같은 기준 — 폴더 기준으로 풀린다, 자식·손자 Run도 물려받음). 중첩 팀 실행의
-  작업 폴더·자격 경로 비전달 통합 테스트.
-- 5.7R.33t1: `ProjectScope.accepts_project(project_id)`(`mod-runs` `RunProjectScoper`) — 프로젝트 읽기가 있으면
-  참. 이 연동이 꺼진 조립(프로젝트 기능은 켜짐)에서는 `mod-runs`가 `project_id`를 붙인 실행·대화 턴을 409
-  `feature_unavailable`(`details.port = "runs.scopes"`)로 막는다(K33-10). 계약 변경 없음.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-projects-runs`, so the web app can show the link module description and settings in English (data only, no
+  API change). Log lines are now in English.
+- The template table of the path guard now uses `ac-nodes-core.path_placeholders`: it is the same table and the same
+  base (the project folder) as the run (agent node `resolve_paths`), so the checked paths equal the
+  `limits.directories` the backend receives.
+- `scope_run` sets the node service `WORKING_DIRECTORY` to the project folder for project runs (a relative
+  `working_directory` uses the same base as the path guard and resolves against the folder; child and grandchild runs
+  inherit it). Integration tests for nested team runs that the run folder and credential paths are not passed on.
+- `ProjectScope.accepts_project(project_id)` (`mod-runs` `RunProjectScoper`): true when project reads are available.
+  In an assembly where this link module is off (and the projects feature is on), `mod-runs` blocks runs and
+  conversation turns with a `project_id` with 409 `feature_unavailable` (`details.port = "runs.scopes"`). No contract
+  changes.
 
 ## 0.3.0
 
-- **깨는 변경**(5.7R.33v 후속 ⑤): 설정 `require_project` 기본값을 참으로 바꿨다. 프로젝트 모듈이 켜진 조립에서
-  `project_id` 없이 `POST /runs`(대화 턴 포함)를 부르면 422 `project.required`다. 웹은 33v부터 항상
-  `project_id`를 보낸다. 전 동작은 `modules.options.link-projects-runs.require_project: false`. 라이브러리
-  `ProjectScope(require_project=)` 생성자 기본은 그대로 거짓이다.
+- **Breaking change**: the default of the setting `require_project` is now true. In an assembly with the projects
+  module on, calling `POST /runs` (including conversation turns) without a `project_id` returns 422
+  `project.required`. The web app always sends `project_id`. For the previous behavior, set
+  `modules.options.link-projects-runs.require_project: false`. The default of the library constructor
+  `ProjectScope(require_project=)` stays false.
 
 ## 0.2.0
 
-- 실행 사전 점검(5.7R.33g, design §PI.4.5·§PI.5·§PI.16 ②). `ProjectScope.run_definitions`(X26 선택
-  메서드): Run의 정의 조회 출처 = 그 프로젝트 공간(`definitions.spaces`), 없는 프로젝트 404
-  `project.not_found`, 상태 409 `project.folder_missing`·`project.manifest_invalid`, 공간에 없는 실행
-  대상 422 `project.not_imported`(`in_library` — `definitions.lookup`). 라이브러리로 넘어가 찾지 않는다.
-- `scope_run` 결과의 거부 `errors`: 프로젝트 없이 시작 422 `project.required`(설정 `require_project`,
-  지금 기본 끔 — 웹이 `project_id`를 보내게 되면 켬), 기록 DB를 쓸 수 없음 409 `project.records_unavailable`(`ProjectView.records_writable`·
-  `config_writable`, 이유는 `records_issue.details` 그대로), 유효 설정의 `x-path` 값이 폴더 밖 422
-  `project.outside_folder`(층 이름·노드 id, 앱 workspace·상태 폴더는 허용, `{workspace}` = 폴더).
-- 새 모듈 `preflight`(오류 본문 만들기·`outside_paths_of_graph`, 문구 데이터 `PreflightTexts`). 포트
-  `definitions.spaces`·`definitions.lookup`(선택), 프로토콜 `ProjectViews`.
-- 깨는 변경: 등록되지 않은 프로젝트의 실행이 404로 거부된다(전에는 층 없이 실행·`project.unknown`
-  경고). `require_project`를 켜면 `project_id` 없는 실행도 거부된다.
+- Pre-run checks. `ProjectScope.run_definitions` (an optional run scope method): the definition lookup source of a run
+  is that project's space (`definitions.spaces`); a project that does not exist gives 404 `project.not_found`; state
+  problems give 409 `project.folder_missing` or `project.manifest_invalid`; a run target that is not in the space
+  gives 422 `project.not_imported` (`in_library`, through `definitions.lookup`). It does not fall back to the library.
+- Rejection `errors` in the `scope_run` result: starting without a project gives 422 `project.required` (setting
+  `require_project`, off by default for now and to be turned on once the web app sends `project_id`); a record database
+  that cannot be written gives 409 `project.records_unavailable` (`ProjectView.records_writable` and
+  `config_writable`, with the reason from `records_issue.details` as is); an `x-path` value of the effective settings
+  outside the folder gives 422 `project.outside_folder` (layer name and node id; the app workspace and state folder
+  are allowed, and `{workspace}` = the folder).
+- New module `preflight` (building error bodies, `outside_paths_of_graph`, message data `PreflightTexts`). Ports
+  `definitions.spaces` and `definitions.lookup` (optional), protocol `ProjectViews`.
+- Breaking change: runs for an unregistered project are rejected with 404 (previously they ran without a layer and
+  warned `project.unknown`). With `require_project` on, runs without a `project_id` are rejected too.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`, 5.2R.34).
-- `ProjectScope`: 프로젝트 id → 프로젝트 층(`project_layer_value`), 없는 프로젝트 = `project.unknown`
-  경고. 포트 `runs.scopes`(실행 범위 → 노드 서비스 `SCOPE_LAYERS`)·`settings.scope_layers`(유효
-  설정 `?project=`) 제공, `projects.lookup` 필수.
-- 설정 `layer_id`·`layer_label`·`unknown_message`. 단독 실행용 `testing.memory_projects_module`.
+- First release (from the scripts/pkgkit template `link`).
+- `ProjectScope`: project id to the project layer (`project_layer_value`); a project that does not exist gives a
+  `project.unknown` warning. Provides the ports `runs.scopes` (run scope to the node service `SCOPE_LAYERS`) and
+  `settings.scope_layers` (effective settings `?project=`), and requires `projects.lookup`.
+- Settings `layer_id`, `layer_label` and `unknown_message`. `testing.memory_projects_module` for standalone runs.

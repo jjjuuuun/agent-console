@@ -1,18 +1,20 @@
 [project]
 name = "agent-console-backend-claude-sdk"
-version = "0.1.0"
-description = "Agent Console — Claude Agent SDK 실행 백엔드 어댑터"
+version = "0.2.0"
+description = "Agent Console — Claude Agent SDK execution backend adapter"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-claude-format>=0.1,<0.2",
-    "agent-console-contracts>=0.16,<0.17",
+    "agent-console-contracts>=0.16.1,<0.17",
     "agent-console-registry>=0.1,<0.2",
-    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-runtime>=0.2,<0.3",
     "agent-console-secret-rules>=0.1,<0.2",
     "claude-agent-sdk>=0.2.166",
+    # 계정 모델 조회(X54)의 Models API 호출(비동기·시간 상한, 테스트는 httpx.MockTransport).
+    "httpx>=0.27",
     "pydantic>=2.9",
 ]
 
@@ -38,7 +40,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
-    "agent-console-backend-fake-agent>=0.1,<0.2",
+    "agent-console-backend-fake-agent>=0.2,<0.3",
     "agent-console-hook-probe>=0.1,<0.2",
     "agent-console-pty-session>=0.1,<0.2",
     "agent-console-trace>=0.1,<0.2",

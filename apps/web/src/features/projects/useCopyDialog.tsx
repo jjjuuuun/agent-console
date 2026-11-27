@@ -10,6 +10,7 @@ import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { CopyPlanDialog, type CopyDirection, type CopyOutcome } from "./CopyPlanDialog";
 import { useProjects } from "./ProjectsContext";
 import { useSpaceItems, type SpaceItem } from "./useSpaceItems";
+import { ProjectsTextToast } from "./ProjectsToast";
 
 
 /** 복사 대화상자를 여는 요청. 공용이 아닌 쪽 공간은 항상 프로젝트 하나(`project`)다. */
@@ -78,11 +79,12 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
       const total = o.summary.ok;
       const first = o.first === null ? undefined : o.summary.rows.find((r) => r.kind === o.first?.kind && (r.newId ?? r.id) === o.first.id);
       const label = first === undefined ? name : (first.newId ?? first.id);
+      const message: { key: string; params: Record<string, string | number> } = total > 1 ? { key: "copy.result.toast_many", params: { name: label, n: total - 1 } } : { key: "copy.result.toast_one", params: { name: label } };
       toast({
         tone: "success",
-        text: total > 1 ? text({ key: "copy.result.toast_many", params: { name: label, n: total - 1 } }) : text({ key: "copy.result.toast_one", params: { name: label } }),
+        text: <ProjectsTextToast render={(tx) => tx(message)} />,
         durationMs: 8000,
-        ...(request.direction === "save" ? {} : { action: { label: text("copy.result.open"), onClick: () => p.openHome(request.project) } }),
+        ...(request.direction === "save" ? {} : { action: { label: <ProjectsTextToast render={(tx) => tx("copy.result.open")} />, onClick: () => p.openHome(request.project) } }),
       });
     }
     request.onApplied?.(o);

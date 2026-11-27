@@ -1,41 +1,63 @@
-# 변경 기록
+# Changelog
 
-## 미출시 (0.2.0)
+## Unreleased (0.2.0)
 
-- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-teams`, so the web can show the effective settings layer names and the `team.*`, `interaction.*`, `review.*` and `settings.*` issues in English (data only, no API change).
-- P1.16 — BREAKING CHANGE: The common layer no longer reads the legacy top-level `WorkspaceSettings.default_backend`. Put the value in `agent_defaults.backend`.
-  공통 층(`agent_layers`·`layers_for`·`node_settings`·`resolve_backends` 등)은 `agent_defaults`만 읽는다. 옛 키만 있으면
-  공통 층 backend가 비어 실행 전 점검이 `backend.unresolved`를 낸다. 함수 인자 `default_backend`(마지막 대체값)는 그대로다.
-- 소비자 범위: `agent-console-teams>=0.2,<0.3`.
-
-- REL.8: `graph_dependencies`·`agent_dependencies`에 선택 인자 `scope_layers`(공통 바로 아래 범위 층, `layers_for`와 같은 값). 층 값의 `resources[]` 첨부를 공통 층 첨부 다음에 `shared`로 넣는다. 기본 `()` = 기존과 같다.
-- REL.5: 제안의 새 노드·엣지 id 번호 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합쳤다(동작 같음). 새 의존 `agent-console-numbered-id`.
-- 6R.20k(계약 0.13.2): 세션 집계 `session_summary(plan, strategies) -> GraphSessionSummary | None`(screen-delegation §14.4.4, 웹 `sessionView.sessionSummary`와 같은 규칙)·`edge_sessions(plan, strategies)`. 세션 값은 디스크립터의 열린 문자열이고 값별로 센다(값 이름·방식 id를 비교하지 않음). 세션 값이 있는 연결이 없으면 None.
-- 5.2R.94(잔해 정리): **공개 API 삭제** — `TeamIssueCodes.DELEGATION_TOO_DEEP`(옛 별칭)을 뺐다.
-  `TeamIssueCodes.DELEGATION_DEPTH_EXCEEDED`를 쓴다(값 `delegation.depth_exceeded`는 같다).
-- 5.2R.43: 위임 방식 디스크립터 `shares_session` 반영. `session_grant`는 false 방식(예: `host`) 대상의 상호작용 종류·대기 한도를 위임자 세션에 더하지 않는다. 새 공개 함수 `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`, `session_owner(plan, node_id, strategies=None)`(자기 세션 대상에서 멈춤), `prepare_run(..., strategies=None)`(주면 엔진 대기 grant = 세션 grant). 백엔드 `validate_settings` 훅은 자기 세션 대상도 자기 grant로 검사한다. 테스트 키트 `s_far`는 `shares_session=False`.
-- 5.2R.34: `team_settings(graph, workspace, *, scope_layers=())`(팀 구성 수준 유효 값),
-  `resolve_backends(scope_layers=)`, `Layer` 다시 내보내기.
-- 5.2R.5: `TeamPlan.label_of`는 label → 묶인 정의 id → 노드 타입 title, `node_display_name`과 검증 문구는 label → 에이전트 정의 이름 → 그 순서(노드 id는 마지막 대체값).
-- 5.2R.31: `layers_for`·`agent_layers`·`node_settings`·`effective_settings`에 선택 인자 `scope_layers`
-  (공통 바로 아래에 그대로 끼우는 일반 층, 예: 프로젝트 층). 기본 `()` = 기존과 같다. 패키지는 프로젝트를 모른다.
-
-- 5R.15: `graph_dependencies`가 중첩 팀 노드의 자식 팀 구성을 넣는다(`DefinitionDependency(kind = team_kind,
-  node_id, version)`, 새 필드 `version`). 내보내기·프리셋 적용 순서용.
-
-- 5R.11: 중첩 팀 규칙 `_rules_teams.check_nested_teams`(`team.recursive`·`team.nesting_exceeded`·
-  `team.team_not_found`·`team.child_no_entry`), `validate_team(teams=)`, `TeamLookup`·`find_team`·
-  `with_team_settings`·`merge_overrides`, `TeamPlan.team_refs`·`team_versions`, `TeamConventions.team_kind`·
-  `node_version_key`, `TeamIssueCodes.TEAM_*`. 테스트 도구 `Kit`에 중첩 팀 노드(`nest`)·`graph(graph_id=)`.
-
-- 5R.9: `RunPreparation.delegation_settings`(유효 설정 `delegation`: 기본값 → 공통 → 팀 구성,
-  `GraphRuntime.start(delegation_settings=)` — 실행 중 위임 깊이 한도)와 `delegation_settings()`.
-
-- 5R.12: 검증 규칙 갱신(design §5R.8). 그래프 검사에 `cycle_edge=descriptor_cycle_edge`(사이클 연결이 닫은 흐름 사이클·검토 반려 되돌리기 허용), `flow.max_iterations_invalid`·`flow.loop_invoked_only`, 혼합 위임 `composable` 판정과 `team.mixed_strategies` 제안(연결 종류 바꾸기), 위임 깊이 코드 값을 `delegation.depth_exceeded`로(`details.path`), 사이클 연결만 들어오는 노드는 `team.unreachable`. `validate_team(edge_checks=)` 주입, `flow_settings()`, `SuggestionBuilder.replace_kind`, `make_issue(path=)`. `testing.Kit`에 사이클 연결 종류·합쳐 실행할 수 있는 원격 위임 방식 추가(`inner`도 composable).
-- 5R.5: `RunPreparation.flow_settings`(유효 설정 `flow`: 기본값 → 공통 → 팀 구성, `GraphRuntime.start(flow_settings=)`용).
+- Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
+  `agent_console.message_catalogs` `ac-teams`, so the web app can show the effective settings layer names and the
+  `team.*`, `interaction.*`, `review.*` and `settings.*` issues in English (data only, no API change).
+- BREAKING CHANGE: The common layer no longer reads the legacy top-level `WorkspaceSettings.default_backend`. Put the
+  value in `agent_defaults.backend`.
+  The common layer (`agent_layers`, `layers_for`, `node_settings`, `resolve_backends` and others) reads only
+  `agent_defaults`. When only the old key is present, the common layer backend is empty and the pre-run check reports
+  `backend.unresolved`. The function argument `default_backend` (the last fallback) is unchanged.
+- Consumer range: `agent-console-teams>=0.2,<0.3`.
+- `graph_dependencies` and `agent_dependencies` take the optional argument `scope_layers` (scope layers right below
+  Common, the same value as `layers_for`). The `resources[]` attachments of the layer values are added as `shared`
+  after the common layer attachments. The default `()` behaves as before.
+- Numbering of new node and edge ids in suggestions now uses `numbered_id` from `agent-console-numbered-id` (same
+  behavior). New dependency `agent-console-numbered-id`.
+- Session summary (contract 0.13.2): `session_summary(plan, strategies) -> GraphSessionSummary | None` (the same rule
+  as the web `sessionView.sessionSummary`) and `edge_sessions(plan, strategies)`. Session values are open strings from
+  the descriptors and are counted per value (value names and strategy ids are not compared). None when no edge has a
+  session value.
+- Cleanup: **public API removal**: removed `TeamIssueCodes.DELEGATION_TOO_DEEP` (an old alias). Use
+  `TeamIssueCodes.DELEGATION_DEPTH_EXCEEDED` (the value `delegation.depth_exceeded` is the same).
+- The delegation strategy descriptor `shares_session` is honored. `session_grant` does not add the interaction kinds
+  and wait limits of delegates of a non-sharing strategy (for example `host`) to the delegator's session. New public
+  functions `shares_session(link, strategies)` and `runs_in_own_session(plan, node_id, strategies)`,
+  `session_owner(plan, node_id, strategies=None)` (stops at delegates with their own session) and
+  `prepare_run(..., strategies=None)` (when given, the engine wait grant equals the session grant). The backend
+  `validate_settings` hook also checks delegates with their own session against their own grant. The test kit
+  `s_far` has `shares_session=False`.
+- `team_settings(graph, workspace, *, scope_layers=())` (effective values at the team level),
+  `resolve_backends(scope_layers=)`, and a re-export of `Layer`.
+- `TeamPlan.label_of` uses label, then the bound definition id, then the node type title. `node_display_name` and
+  validation messages use label, then the agent definition name, then that order (the node id is the last fallback).
+- `layers_for`, `agent_layers`, `node_settings` and `effective_settings` take the optional argument `scope_layers`
+  (generic layers inserted as is right below Common, for example a project layer). The default `()` behaves as before.
+  The package does not know about projects.
+- `graph_dependencies` includes the child team of nested team nodes
+  (`DefinitionDependency(kind = team_kind, node_id, version)`, new field `version`), for export ordering.
+- Nested team rules `_rules_teams.check_nested_teams` (`team.recursive`, `team.nesting_exceeded`,
+  `team.team_not_found`, `team.child_no_entry`), `validate_team(teams=)`, `TeamLookup`, `find_team`,
+  `with_team_settings`, `merge_overrides`, `TeamPlan.team_refs` and `team_versions`, `TeamConventions.team_kind` and
+  `node_version_key`, and `TeamIssueCodes.TEAM_*`. The test tool `Kit` gained nested team nodes (`nest`) and
+  `graph(graph_id=)`.
+- `RunPreparation.delegation_settings` (the effective setting `delegation`: defaults, then Common, then the team, for
+  `GraphRuntime.start(delegation_settings=)`, the delegation depth limit during a run) and `delegation_settings()`.
+- Updated validation rules. Graph checks use `cycle_edge=descriptor_cycle_edge` (flow cycles closed by a cycle edge
+  and review rejection returns are allowed), `flow.max_iterations_invalid` and `flow.loop_invoked_only`, the
+  `composable` decision for mixed delegation with a `team.mixed_strategies` suggestion (change the edge type), the
+  delegation depth code value is `delegation.depth_exceeded` (`details.path`), and nodes reached only by cycle edges
+  report `team.unreachable`. Injected `validate_team(edge_checks=)`, `flow_settings()`,
+  `SuggestionBuilder.replace_kind` and `make_issue(path=)`. `testing.Kit` gained a cycle edge type and a remote
+  delegation strategy that can be combined (`inner` is composable too).
+- `RunPreparation.flow_settings` (the effective setting `flow`: defaults, then Common, then the team, for
+  `GraphRuntime.start(flow_settings=)`).
 
 ## 0.1.0
 
-- 3R.12: `TeamCatalog`·`catalog_from_registries`(플러그인 레지스트리 묶음 → 노드·엣지·위임 방식·백엔드 디스크립터, `plan`·`try_plan`). 연동 모듈이 같은 읽기를 공유한다.
-
-- 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
+- `TeamCatalog` and `catalog_from_registries` (from a bundle of plugin registries to node, edge, delegation strategy
+  and backend descriptors, with `plan` and `try_plan`). Link modules share the same reads.
+- Set up as a standalone project: internal dependencies are declared by name and version range, with per-package
+  pytest, mypy and ruff settings, a `dev` dependency group, LICENSE and CHANGELOG. No behavior changes.

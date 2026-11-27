@@ -7,6 +7,11 @@
 비밀 값 규칙: 이 모델들에는 값을 담을 필드가 없다. 점검 항목은 "있음/없음"과 출처 이름(환경변수
 이름, ``secret://`` 참조 이름)만 담는다. 글자 필드(``summary``·``detail``·``message``·``note``·
 ``details``)는 서버가 비밀 가림을 거친 뒤 낸다.
+
+``text_templates``(1.10.0, design §I18N.13 I-15): 값이 섞인 글자 칸의 원문 틀 + 값. 키 = 이
+응답 안 칸의 JSON Pointer(예: ``/detail``·``/checks/2/note``·``/message``), 값 = 그 칸을 만든
+문장 틀 목록(차례로 ``render_text_template``로 채워 공백 하나로 이은 것이 칸 값). 고정 문구
+칸·옛 서버는 항목이 없다.
 """
 
 from typing import Literal
@@ -14,7 +19,7 @@ from typing import Literal
 from pydantic import Field
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
-from agent_console_contracts.common import FixAction
+from agent_console_contracts.common import FixAction, TextTemplate
 
 type ReadinessTone = Literal["ok", "warn", "error", "unknown"]
 """준비 상태 톤(화면 색·아이콘 표의 키). ``ok`` 쓸 수 있음, ``warn`` 쓸 수 있으나 주의,
@@ -80,6 +85,13 @@ class BackendReadiness(ContractModel):
         default_factory=list,
         description="상태에 맞는 동작 버튼(로그인·로그아웃 등). 비면 없음.",
     )
+    text_templates: dict[str, list[TextTemplate]] = Field(
+        default_factory=dict,
+        description=(
+            "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 "
+            "하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버."
+        ),
+    )
 
 
 class BackendProbeRequest(ContractModel):
@@ -114,6 +126,13 @@ class BackendProbeResult(ContractModel):
     )
     fixes: list[FixAction] = Field(default_factory=list, description="해결 버튼. 비면 없음.")
     finished_at: float = Field(description="끝난 시각(epoch 초).")
+    text_templates: dict[str, list[TextTemplate]] = Field(
+        default_factory=dict,
+        description=(
+            "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 "
+            "하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버."
+        ),
+    )
 
 
 __all__ = [

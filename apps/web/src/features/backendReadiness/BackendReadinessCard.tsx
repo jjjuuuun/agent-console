@@ -8,7 +8,7 @@ import { BackendProbeButton } from "./BackendProbeButton";
 import type { ProbeView } from "./hooks";
 import { ProbeResultBlock } from "./ProbeResultBlock";
 import { PROBE_PASS_FRESH_MS, READINESS_TONES, resolveTone } from "./tones";
-import { useFormat } from "../../i18n";
+import { useFormat, useServerRender } from "../../i18n";
 
 export interface BackendReadinessCardProps {
   descriptor: BackendDescriptor;
@@ -32,12 +32,14 @@ export interface BackendReadinessCardProps {
  */
 export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, rechecking = false, nowMs, onAction, titleExtra, footer }: BackendReadinessCardProps) {
   const fmt = useFormat();
+  const render = useServerRender();
   const m = useAppMessages();
   const t = m.backendReadiness;
   const titleId = useId();
   const tone = resolveTone(readiness?.tone);
   const view = READINESS_TONES[tone];
-  const summary = readiness?.summary || t.unknownSummary;
+  const templates = readiness?.text_templates ?? {};
+  const summary = readiness?.summary ? render(readiness.summary, templates["/summary"]) : t.unknownSummary;
   const canProbe = descriptor.capabilities?.probe === true;
   const passed = probe.result?.ok === true && probe.finishedAtMs !== null;
   const passedFresh = passed && probe.finishedAtMs !== null && nowMs - probe.finishedAtMs < PROBE_PASS_FRESH_MS;
@@ -46,10 +48,10 @@ export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, 
     <section className="app-readiness" data-tone={tone} aria-labelledby={titleId} data-testid={`backend-readiness-${descriptor.id}`}>
       <header className="app-readiness-head">
         {titleExtra === undefined || titleExtra === null ? (
-          <h3 id={titleId} className="app-block-title">{descriptor.title}</h3>
+          <h3 id={titleId} className="app-block-title">{render(descriptor.title)}</h3>
         ) : (
           <span className="app-readiness-title">
-            <h3 id={titleId} className="app-block-title">{descriptor.title}</h3>
+            <h3 id={titleId} className="app-block-title">{render(descriptor.title)}</h3>
             {titleExtra}
           </span>
         )}
@@ -76,8 +78,8 @@ export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, 
           </>
         )}
       </p>
-      {readiness?.detail ? <p className="app-muted">{readiness.detail}</p> : null}
-      {descriptor.cost_note ? <p className="app-muted">{descriptor.cost_note}</p> : null}
+      {readiness?.detail ? <p className="app-muted">{render(readiness.detail, templates["/detail"])}</p> : null}
+      {descriptor.cost_note ? <p className="app-muted">{render(descriptor.cost_note)}</p> : null}
       {!canProbe ? <p className="app-muted">{t.probeUnsupported}</p> : null}
       <p className="app-muted app-readiness-checked">
         {t.checkedAt(fmt.relative(readiness?.checked_at ?? null, nowMs))}
@@ -94,10 +96,10 @@ export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, 
         <details className="app-details">
           <summary>{t.checks}</summary>
           <ul className="app-readiness-details">
-            {(readiness?.checks ?? []).map((c) => (
+            {(readiness?.checks ?? []).map((c, i) => (
               <li key={c.id}>
-                {c.ok ? "✓" : "✗"} {c.title}
-                {c.note ? <span className="app-muted"> — {c.note}</span> : null}
+                {c.ok ? "✓" : "✗"} {render(c.title, templates[`/checks/${i}/title`])}
+                {c.note ? <span className="app-muted"> — {render(c.note, templates[`/checks/${i}/note`])}</span> : null}
               </li>
             ))}
           </ul>

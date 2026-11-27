@@ -634,7 +634,8 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.8"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.14.0"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ runs: "1.9.0", chat: "1.4.0" });
+    expect(ver(CONTRACT_VERSIONS.runs)).toBeGreaterThanOrEqual(ver("1.9.0"));
+    expect(CONTRACT_VERSIONS).toMatchObject({ chat: "1.4.0" });
     expect(ERROR_CODES.RUN_AMBIGUOUS).toBe("run.ambiguous");
     expectTypeOf<RunLocation["project_id"]>().toEqualTypeOf<string | null | undefined>();
   });
@@ -643,7 +644,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.9"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.3.0"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ runs: "1.9.0" });
+    expect(ver(CONTRACT_VERSIONS.runs)).toBeGreaterThanOrEqual(ver("1.9.0"));
     expect(ver(CONTRACT_VERSIONS.memory)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
     expect(ver(sdd.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.3.0"));
@@ -773,9 +774,10 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.4.0"));
   });
   it("0.16.0(P1.19): default_backend 삭제, 하위 모듈 i18n 1.0.0, UiPreferences.language, i18n.* 코드", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.16.0");
-    expect(packageJson.version).toBe("0.16.0");
-    expect(CONTRACT_VERSIONS).toEqual({
+    // 정확한 지금 값은 0.16.1 테스트(test/textTemplates.test.ts·modelCatalog.test.ts)가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.16.0"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    const v0160: Record<string, string> = {
       common: "2.1.0",
       resources: "1.1.0",
       logs: "2.0.0",
@@ -792,13 +794,17 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
       sdd: "1.4.0",
       wiki: "1.3.0",
       modules: "1.7.0",
-    });
+    };
+    expect(Object.keys(CONTRACT_VERSIONS)).toEqual(Object.keys(v0160));
+    for (const [sub, version] of Object.entries(v0160)) {
+      expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0"), sub).toBeGreaterThanOrEqual(ver(version));
+    }
     // 지운 필드
     const settingsProps = (contractsSchema.$defs["WorkspaceSettings"] as { properties: Record<string, unknown> }).properties;
     expect(settingsProps).not.toHaveProperty("default_backend");
     // i18n 하위 경로
     expect(i18n.CONTRACT_MODULE).toBe("i18n");
-    expect(i18n.CONTRACT_VERSION).toBe("1.0.0");
+    expect(ver(i18n.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.0.0"));
     expect(pkg.exports["./i18n"]).toBeDefined();
     expect(modulesOf["i18n"]).toEqual(["I18nInfo", "LanguageInfo", "MessageCatalog"]);
     const lang: LanguageInfo = { code: "en", sources: ["zz-pkg"], complete: false };

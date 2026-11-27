@@ -19,6 +19,7 @@
     "backend.login_session_not_found": "로그인 세션이 없거나 시간이 지났습니다. 로그인을 다시 시작하세요",
     "backend.login_unsupported": "이 실행 백엔드는 앱 화면 로그인을 지원하지 않습니다",
     "backend.logout_unsupported": "이 실행 백엔드는 앱 화면 로그아웃을 지원하지 않습니다",
+    "backend.model_discovery_failed": "실행 백엔드 '{backend_id}'의 모델 목록을 가져오지 못했습니다({reason}). 설정한 목록과 직접 입력은 그대로 쓸 수 있습니다",
     "backend.probe_unsupported": "이 실행 백엔드는 연결 테스트를 지원하지 않습니다",
     "backend.unresolved": "실행 백엔드가 정해지지 않은 노드가 있어 실행하지 않았습니다",
     "bad_request": "요청 값이 잘못되었습니다",

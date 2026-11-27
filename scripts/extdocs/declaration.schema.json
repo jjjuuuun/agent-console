@@ -91,11 +91,17 @@
               "type": "string"
             },
             {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "기본 구현 목록을 모으는 방법(entry-points·providers·none)",
+          "description": "기본 구현 목록을 모으는 방법(entry-points·providers·none) 또는 구현하는 워크스페이스 배포 이름 목록(등록 그룹·포트가 없는 선택 능력 등)",
           "title": "Builtin"
         },
         "design_id": {

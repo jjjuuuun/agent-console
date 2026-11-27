@@ -239,8 +239,21 @@ def test_no_catalogs_is_an_empty_list() -> None:
             "languages": [],
             "default_language": "en",
             "fallback_language": "en",
+            "source_language": "ko",
         }
         assert client.get(f"{API}/i18n/en").status_code == 404
+
+
+def test_source_language_setting_reaches_info() -> None:
+    """I-18: the server source language (default ``ko``) is in ``GET /i18n``; null = unknown."""
+    assert I18nModuleSettings().source_language == "ko"
+    for given, expected in (("EN", "en"), (None, None), ("", None)):
+        options = {"source_language": given}
+        with _client(registries=ExtensionRegistries(), options=options) as client:
+            info = I18nInfo.model_validate(client.get(f"{API}/i18n").json())
+            assert info.source_language == expected
+    with pytest.raises(ValueError, match="language tag"):
+        I18nModuleSettings.model_validate({"source_language": "not a language"})
 
 
 def test_without_a_bundle_reads_installed_entry_points() -> None:

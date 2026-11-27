@@ -1,14 +1,28 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-runs-usage`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
-- REL.2: 토큰 집계(`IncrementalTokenRollups(batch=)`)와 이벤트 조회(`MergedEventQuery(batch=)`) 한 번을 `RecordsStores.batch` 블록 안에서 돈다(새 공개 이름 `Batch`). 프로젝트 12개·상한 8에서 집계 한 번 열기 12, 다음 집계 다시 열기 4(전에는 12). 목록과 공간 사이에 지워진 프로젝트(`UnknownSpace`)는 그것만 건너뛴다(전에는 뒤 프로젝트까지 빠졌다). 개발 의존 `agent-console-link-projects-records`(실제 풀 테스트).
-- FU.11: "이 프로젝트" 토큰 집계(`rollups(project_id=)`)가 앱 기록에서 그 `project_id`의 최근 `limit`개를 저장소 조건으로 바로 읽는다(색인 `ix_runs_project_created`). 전에는 앱 기록 최근 `limit`개를 먼저 읽고 걸러서, 다른 실행이 많으면 옛 프로젝트 Run이 빠졌다. `runs.reader`에 선택 메서드 `for_project(None)`(앱 기록만, `mod-runs`)이 있으면 그것으로 읽는다(기록 공간이 있는 조립에서 `list(project_id=)`는 프로젝트 기록 DB를 읽으므로). 받는 모양 `AppRunSource`(+`project_id`), 선택 능력 `AppScopedRuns`.
-- FU.11: 다시 읽을 Run을 출처마다 묶어 읽는다(선택 메서드 `list_many`·`list_node_runs_many`가 있으면 이벤트·NodeRun 각각 묶음 질의, 없으면 Run마다). 처음 집계 = 출처마다 목록·이벤트·NodeRun 질의 하나씩(전에는 Run마다 3번). 선택 능력 `BatchEvents`·`BatchNodeRuns`.
-- 5R.13: 토큰 집계는 루트 Run만 센다(`ac-usage.counts_toward_usage`, 자식 Run 이중 집계 방지).
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-runs-usage`, so the web app can show the link module description and settings in English (data only, no
+  API change). Log lines are now in English.
+- One token rollup (`IncrementalTokenRollups(batch=)`) and one event query (`MergedEventQuery(batch=)`) each run inside
+  a `RecordsStores.batch` block (new public name `Batch`). With 12 projects and a limit of 8, one rollup opens 12
+  spaces and the next rollup reopens 4 (previously 12). Projects deleted between listing and opening the space
+  (`UnknownSpace`) are skipped on their own (previously the following projects were dropped too). Development
+  dependency `agent-console-link-projects-records` (tests with the real pool).
+- The "This project" token totals (`rollups(project_id=)`) read the latest `limit` runs of that `project_id` from the
+  app records directly with a store condition (index `ix_runs_project_created`). Previously the latest `limit` runs of
+  the app records were read first and then filtered, so older project runs were missed when there were many other
+  runs. When `runs.reader` has the optional method `for_project(None)` (app records only, `mod-runs`), it is used
+  (in assemblies with record spaces, `list(project_id=)` reads the project record database). Accepted shape
+  `AppRunSource` (plus `project_id`), optional capability `AppScopedRuns`.
+- Runs to reread are read in batches per source (with the optional methods `list_many` and `list_node_runs_many`,
+  events and NodeRuns each use a batched query; otherwise per run). The first rollup runs one list, event and NodeRun
+  query per source (previously three per run). Optional capabilities `BatchEvents` and `BatchNodeRuns`.
+- Token totals count only root runs (`ac-usage.counts_toward_usage`, avoiding double counting of child runs).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`).
-- `usage.event_query`·`usage.token_rollups`를 `apps/server`에서 옮기고 토큰 집계를 증분 캐시(Run별 이벤트 seq 워터마크, `runs.event` 구독)로 바꿨다(3R.13, design §3R.5).
+- First release (from the scripts/pkgkit template `link`).
+- Moved `usage.event_query` and `usage.token_rollups` out of `apps/server` and changed token totals to an incremental
+  cache (an event seq watermark per run, subscribed to `runs.event`).

@@ -122,7 +122,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     }),
     [rest],
   );
-  const edits = useDefinitionEdits(store, t.arrange);
+  const edits = useDefinitionEdits(store);
   const chat = useStartChat((id) => void navigate(`${routePath(ROUTE_ROLES.conversations)}/${encodeURIComponent(id)}`));
 
   const filtered = useMemo(() => {

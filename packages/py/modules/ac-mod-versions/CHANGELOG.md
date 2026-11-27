@@ -1,14 +1,27 @@
-# 변경 기록
+# Changelog
 
-## 미출시
+## Unreleased
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-mod-versions`, so the web can show the module description and settings in English (data only, no API change). Log lines are now English.
-- P1.17: `VersionService.diff` now calls the shared `agent_console_store.diff_versions` (same result; the calculation moved to `ac-store` so the document template version routes in `ac-mod-sdd` can use it too). `SECRET_MASK` is re-exported from `ac-store`. Dropped the direct `agent-console-settings` dependency. Consumer range: `agent-console-store>=0.2,<0.3`.
-- FU.3: 공간(`?project=`) 되돌리기·비교의 저장 전 검사는 검사의 선택 메서드 `space_issues`(`SpaceDefinitionCheck`)를 부른다(없으면 `issues`). `VersionService(space=)` 선택 인자.
-- 5.7R.33x: 선택 포트 `definitions.spaces`. 모든 버전 경로가 `?project=<공간>`을 받아 그 공간 저장소의 버전 기록(목록·하나·비교·본문 파일·되돌리기)을 쓴다. 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`. `definitions.saved` 항목에 `space`가 있으면 그 공간에 보존 개수를 적용한다(`VersionService(spaces=)`). **깨는 변경**: `build_router(service, …)`의 `service`가 공간 이름 하나를 받는다.
-- 4R.18: 옛 최상위 `versions` 읽기 호환 제거(`settings.removed_key` 오류로 새 위치 안내).
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-mod-versions`, so the web app can show the module description and settings in English (data only, no API
+  change). Log lines are now in English.
+- `VersionService.diff` now calls the shared `agent_console_store.diff_versions` (same result; the calculation moved
+  to `ac-store` so the document template version routes in `ac-mod-sdd` can use it too). `SECRET_MASK` is re-exported
+  from `ac-store`. Dropped the direct `agent-console-settings` dependency. Consumer range:
+  `agent-console-store>=0.2,<0.3`.
+- Pre-save checks for reverts and comparisons in a space (`?project=`) call the optional check method `space_issues`
+  (`SpaceDefinitionCheck`), falling back to `issues`. Optional argument `VersionService(space=)`.
+- Optional port `definitions.spaces`. Every version route takes `?project=<space>` and uses the version history of that
+  space's store (list, single version, comparison, content files, revert). Without the port they give 409
+  `feature_unavailable`, and an unknown space gives 404 `project.not_found`. When a `definitions.saved` item has a
+  `space`, the retention count is applied to that space (`VersionService(spaces=)`). **Breaking change**: the
+  `service` of `build_router(service, …)` takes a space name.
+- Removed read compatibility for the old top-level `versions` (a `settings.removed_key` error points to the new
+  location).
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `module`).
-- `apps/server`의 버전 경로(목록·비교·되돌리기)를 옮겼다(3R.10). 컬렉션 표는 설정 데이터(`collections`). `max_per_definition` 연결(D3·E-16): 저장 알림 `definitions.saved`마다·시작 때 보존 개수 적용. 설정 `modules.options.mod-versions`(옛 `versions.*`).
+- First release (from the scripts/pkgkit template `module`).
+- Moved the version routes of `apps/server` (list, comparison, revert). The collection table is settings data
+  (`collections`). `max_per_definition` is wired up: the retention count is applied on every save notification
+  `definitions.saved` and at startup. Settings `modules.options.mod-versions` (formerly `versions.*`).

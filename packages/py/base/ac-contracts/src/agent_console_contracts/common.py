@@ -4,6 +4,7 @@
 `definitions`에 있다.
 """
 
+import string
 from collections.abc import Mapping, Sequence
 from typing import Annotated, Any, ClassVar, Final, Literal
 
@@ -245,6 +246,118 @@ class ErrorResponse(ContractModel):
     """REST 오류 응답 본문. 모든 4xx/5xx가 이 형식 하나를 쓴다."""
 
     error: ErrorInfo
+
+
+# ---------------------------------------------------------------- 원문 틀 + 값(2.2.0, 0.16.1)
+
+
+class TextTemplate(ContractModel):
+    """값이 섞인 서버 문장 하나의 원문 틀과 값(2.2.0).
+
+    틀은 서버 원문(문구 데이터 그대로)이라 화면 번역의 원문 키다. 자리표시자는 `{name}`만 쓴다.
+    값은 JSON 스칼라 또는 중첩 틀(번역할 고정 낱말)이다. 서버 채우기는 `render_text_template`.
+    문자열 값은 그 칸과 같은 비밀 가림을 거친다.
+    """
+
+    template: str = Field(description="원문 틀(`{name}` 자리표시자). 화면 번역의 원문 키다.")
+    params: dict[str, "str | int | float | bool | TextTemplate | None"] = Field(
+        default_factory=dict,
+        description=(
+            "자리표시자 이름 → 값(JSON 스칼라 또는 중첩 틀). 중첩 틀은 먼저 채운다. 없는 이름은 "
+            "`{name}` 그대로 남는다."
+        ),
+    )
+
+
+TextParam = str | int | float | bool | TextTemplate | None
+"""`TextTemplate.params` 값: JSON 스칼라 또는 중첩 `TextTemplate`."""
+
+TextTemplates = dict[str, list[TextTemplate]]
+"""응답 칸 `text_templates`: 이 응답 안 글자 칸의 JSON Pointer(예: `/detail`, `/checks/2/note`)
+→ 그 칸을 만든 문장 틀 목록. 차례로 채워 공백 하나로 이은 것이 칸 값이다. 고정 문구 칸은
+항목이 없다."""
+
+
+class _KeepField:
+    """없는 이름 자리표시자를 원문 그대로 남기는 표지."""
+
+
+def _plain_param(value: object) -> object:
+    if isinstance(value, TextTemplate):
+        return render_text_template(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def _field_text(name: str, conversion: str | None, spec: str) -> str:
+    return (
+        "{" + name + (f"!{conversion}" if conversion else "") + (f":{spec}" if spec else "") + "}"
+    )
+
+
+def render_text_template(template: TextTemplate) -> str:
+    """틀을 값으로 채운 문장(design §I18N.13 I-16, 순수 함수, 표준 라이브러리만).
+
+    규칙(웹 `ServerText.render`와 같은 결과):
+
+    - 중첩 `TextTemplate` 값을 먼저 채운다.
+    - 정수인 실수는 정수로(`20.0` → `20`, `1.5`는 그대로). 참·거짓은 `true`·`false`, null은 빈
+      문자열.
+    - 없는 이름(점·대괄호 접근, 위치 인자 포함)은 `{name}` 그대로 남긴다.
+    - 그 밖에는 Python `str.format` 규칙(`{{`·`}}`, 형식 지정자 `{seconds:g}`). 형식 지정자가 값과
+      맞지 않으면 그 자리표시자를 원문 그대로 남긴다. 중괄호 짝이 맞지 않는 틀은 틀 그대로 낸다.
+
+    >>> render_text_template(TextTemplate(template="{seconds}초", params={"seconds": 20.0}))
+    '20초'
+    >>> inner = TextTemplate(template="있음")
+    >>> render_text_template(
+    ...     TextTemplate(template="비밀 '{name}': {state}", params={"name": "k", "state": inner})
+    ... )
+    "비밀 'k': 있음"
+    >>> render_text_template(TextTemplate(template="{missing} 그대로"))
+    '{missing} 그대로'
+    """
+    values = {name: _plain_param(value) for name, value in template.params.items()}
+    try:
+        parts = list(string.Formatter().parse(template.template))
+    except ValueError:
+        return template.template
+    out: list[str] = []
+    for literal, name, spec, conversion in parts:
+        out.append(literal)
+        if name is None:
+            continue
+        found = values.get(name, _KeepField) if name.isidentifier() else _KeepField
+        if found is _KeepField:
+            out.append(_field_text(name, conversion, spec or ""))
+            continue
+        try:
+            shown: object = found
+            if conversion == "r":
+                shown = repr(found)
+            elif conversion == "a":
+                shown = ascii(found)
+            elif conversion == "s":
+                shown = str(found)
+            out.append(format(shown, spec or ""))
+        except (ValueError, TypeError):
+            out.append(_field_text(name, conversion, spec or ""))
+    return "".join(out)
+
+
+def render_text_parts(parts: Sequence[TextTemplate]) -> str:
+    """문장 틀 여러 개를 채워 공백 하나로 이은 칸 값(`text_templates` 한 항목의 값).
+
+    >>> parts = [TextTemplate(template="가"), TextTemplate(template="{n}개", params={"n": 2})]
+    >>> render_text_parts(parts)
+    '가 2개'
+    """
+    return " ".join(render_text_template(part) for part in parts)
 
 
 class Usage(ContractModel):
@@ -492,11 +605,16 @@ __all__ = [
     "Position",
     "RecordSource",
     "SpaceRef",
+    "TextParam",
+    "TextTemplate",
+    "TextTemplates",
     "UiHints",
     "Usage",
     "XPathKind",
     "XUiKeys",
     "XUiTier",
+    "render_text_parts",
+    "render_text_template",
     "x_path",
     "x_ui",
 ]

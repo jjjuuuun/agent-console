@@ -1,27 +1,45 @@
-# 변경 기록
+# Changelog
 
-## 미출시 (0.2.0)
+## Unreleased (0.2.0)
 
-- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-runs-teams`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
-- P1.16 — BREAKING CHANGE: `TeamRules` no longer reads the legacy `WorkspaceSettings.default_backend`. It does not fill the node service `DEFAULT_BACKEND` from settings and does not pass it as the fallback to validation or preflight. Put the value in `agent_defaults.backend`.
-  노드 서비스 키 `DEFAULT_BACKEND`(`ac-nodes-core`)와 `resolve_backends`·`validate_team`의 인자 `default_backend`는
-  남는다(호스트가 주입하는 확장 지점). README 최소 사용 예는 `agent_defaults.backend`를 본다.
-- 소비자 범위: `agent-console-link-runs-teams>=0.2,<0.3`(의존 `agent-console-teams>=0.2,<0.3`).
-
-- FU.3: `?project=` 검증의 저장 전 검사는 검사의 선택 메서드 `space_issues`(`SpaceDefinitionCheck`, 그 공간 기준 — 첨부 리소스를 그 공간에서만 찾는 등)를 부른다. 없으면 `issues`. `definition_check_issues(space=)`·`with_definition_checks(space=)` 선택 인자.
-- FU.4: `TeamRules.run_working_directory`가 상대 경로를 `WORKING_DIRECTORY` 기준으로 잇는다
-  (`resolve_working_directory`, 노드와 같은 규칙).
-- 요청 11/07 후속: `POST /graphs/{id}/validate`가 선택 `?project=`를 받는다(그 프로젝트 실행 기준, `ProjectRunChecker.check_project(graph_id, project_id, graph=)`·`load_graph(project_id=)`). 없으면 409 `feature_unavailable`(`build_router(project_unavailable=)`).
-- 요청 11/07: 공간(`?project=`) 팀 구성 목록 검증 요약 `ValidationSummaries.space_summaries`(공간별 지문 캐시). `runs.starter`의 선택 메서드 `ProjectRunChecker.check_project`가 있을 때만 계산한다.
-- 5.2R.106 후속: 설치자 옵션 스키마 `RunsTeamsLinkSettings`(`issue_fixes_file` — 해결 버튼 표 교체, 빈 표 파일 = 끄기)와 `issue_fixes_of`. 모듈이 `TeamRules(issue_fixes=)`에 넘긴다.
-- 5.2R.43: 준비(`prepare`)가 위임 방식 디스크립터를 `prepare_run(strategies=)`로 넘겨 엔진 대기 grant가 세션 단위(`shares_session` 반영)다.
-- 5.2R.34: 노드 서비스 `SCOPE_LAYERS`를 사전 점검·준비에 반영. 준비 결과 `TeamRunPreparation.run_context`에 Run 유효 작업
-  폴더(`RUN_CONTEXT_CWD` = `cwd`, `TeamRules(cwd_key=)`), `run_working_directory`.
-- 5.2R.5: 해결 버튼 표 `IssueFixes`(데이터 `data/issue_fixes.json`, `DEFAULT_ISSUE_FIXES`·`load_issue_fixes`). `TeamRules.annotate_issues`(검증 이슈에 `fix`), `TeamRules.error_fix`(노드 서비스 `ERROR_FIXES`), 인자 `issue_fixes`.
-- 5R.11: 노드 서비스 `TEAM_LOOKUP`(팀 구성 읽기 = `runs.starter.load_graph(id, version_hash)`)과 팀 규칙의 중첩
-  검사(`TeamRules(graphs=)`·`find_team`). 단독 실행 동반 모듈 `LocalChecker.load_graph`가 버전 해시를 따른다.
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-link-runs-teams`, so the web app can show the link module description and settings in English (data only, no
+  API change). Log lines are now in English.
+- BREAKING CHANGE: `TeamRules` no longer reads the legacy `WorkspaceSettings.default_backend`. It does not fill the
+  node service `DEFAULT_BACKEND` from settings and does not pass it as the fallback to validation or preflight. Put the
+  value in `agent_defaults.backend`.
+  The node service key `DEFAULT_BACKEND` (`ac-nodes-core`) and the `default_backend` argument of `resolve_backends`
+  and `validate_team` remain (an extension point the host injects). The minimal README example reads
+  `agent_defaults.backend`.
+- Consumer range: `agent-console-link-runs-teams>=0.2,<0.3` (depends on `agent-console-teams>=0.2,<0.3`).
+- Pre-save checks for `?project=` validation call the optional check method `space_issues` (`SpaceDefinitionCheck`,
+  based on that space, for example looking up attached resources only in that space). Without it, `issues`. Optional
+  arguments `definition_check_issues(space=)` and `with_definition_checks(space=)`.
+- `TeamRules.run_working_directory` joins relative paths onto `WORKING_DIRECTORY` (`resolve_working_directory`, the
+  same rule as nodes).
+- `POST /graphs/{id}/validate` takes an optional `?project=` (based on runs in that project,
+  `ProjectRunChecker.check_project(graph_id, project_id, graph=)` and `load_graph(project_id=)`). Without it, 409
+  `feature_unavailable` (`build_router(project_unavailable=)`).
+- Validation summaries for the team list of a space (`?project=`): `ValidationSummaries.space_summaries` (a
+  fingerprint cache per space). Computed only when `runs.starter` has the optional method
+  `ProjectRunChecker.check_project`.
+- Server administrator option schema `RunsTeamsLinkSettings` (`issue_fixes_file` replaces the fix button table; an
+  empty table file turns it off) and `issue_fixes_of`. The module passes it to `TeamRules(issue_fixes=)`.
+- Preparation (`prepare`) passes the delegation strategy descriptors to `prepare_run(strategies=)`, so the engine wait
+  grant is per session (honoring `shares_session`).
+- The node service `SCOPE_LAYERS` is applied to pre-run checks and preparation. The preparation result
+  `TeamRunPreparation.run_context` has the effective run folder of the run (`RUN_CONTEXT_CWD` = `cwd`,
+  `TeamRules(cwd_key=)`), and `run_working_directory`.
+- Fix button table `IssueFixes` (data `data/issue_fixes.json`, `DEFAULT_ISSUE_FIXES`, `load_issue_fixes`).
+  `TeamRules.annotate_issues` (adds `fix` to validation issues), `TeamRules.error_fix` (node service `ERROR_FIXES`),
+  and the argument `issue_fixes`.
+- Node service `TEAM_LOOKUP` (reading a team = `runs.starter.load_graph(id, version_hash)`) and nested checks in the
+  team rules (`TeamRules(graphs=)`, `find_team`). The companion module for standalone runs, `LocalChecker.load_graph`,
+  follows the version hash.
 
 ## 0.1.0
 
-- 처음 만듦(scripts/pkgkit 템플릿 `link`).
-- 팀 규칙 검사·실행 준비(`runs.preparers`)·노드 서비스(`runs.services`)·목록 검증 요약(`graphs.validation`, 워크스페이스 지문 캐시)·`POST /graphs/{id}/validate`를 `apps/server`에서 옮겼다(3R.13).
+- First release (from the scripts/pkgkit template `link`).
+- Moved team rule checks, run preparation (`runs.preparers`), node services (`runs.services`), list validation
+  summaries (`graphs.validation`, a workspace fingerprint cache) and `POST /graphs/{id}/validate` out of
+  `apps/server`.

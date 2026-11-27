@@ -49,7 +49,7 @@ importers:
   apps/web:
     dependencies:
       '@agent-console/api-client':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/api-client
       '@agent-console/arch-view':
         specifier: ^0.2.1
@@ -58,7 +58,7 @@ importers:
         specifier: ^0.2.1
         version: link:../../packages/ts/lib/chat
       '@agent-console/contracts':
-        specifier: ^0.16.0
+        specifier: ^0.16.1
         version: link:../../packages/ts/lib/contracts
       '@agent-console/folder-picker':
         specifier: ^0.2.0
@@ -67,7 +67,7 @@ importers:
         specifier: ^0.2.2
         version: link:../../packages/ts/lib/graph-editor
       '@agent-console/i18n':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/i18n
       '@agent-console/list-arrange':
         specifier: ^0.1.1
@@ -245,7 +245,7 @@ importers:
   packages/ts/lib/api-client:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.16.0
+        specifier: ^0.16.1
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':

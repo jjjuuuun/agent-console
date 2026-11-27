@@ -1,6 +1,7 @@
-# 변경 기록: @agent-console/tsconfig
+# Changelog: @agent-console/tsconfig
 
-형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A change that breaks the version
+range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [0.1.0]
-- 처음 만듦.
+- First release.

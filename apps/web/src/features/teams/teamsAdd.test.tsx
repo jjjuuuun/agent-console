@@ -18,6 +18,7 @@ function editorRest(overrides: Record<string, unknown> = {}, withDefaultBackend 
     listDelegationStrategies: vi.fn(async () => []),
     listRuns: vi.fn(async () => []),
     listBackendModels: vi.fn(async () => []),
+    getBackendModelCatalog: vi.fn(async () => ({ backend_id: "b", models: [], discovery: null })),
     listConversations: vi.fn(async () => []),
     listGraphs: vi.fn(async () => [{ id: "tm1", name: "임의 팀", labels: [], version_hash: "h1", saved_at: 1, node_count: 2, edge_count: 1, entry_labels: ["일꾼"] }]),
     getGraph: vi.fn(async () => ({ graph: sampleGraph(), version_hash: "h1", saved_at: 1 })),

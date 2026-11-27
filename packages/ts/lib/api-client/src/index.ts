@@ -38,6 +38,7 @@ export type {
 export type { TokenSource } from "./token";
 export { definitionBase, encodePath, filenameFromDisposition, ISSUES_HEADER, parseIssuesHeader, SPACE_PARAM, withQueryParam, withSpace } from "./io";
 export type { BlobResponse, ProjectCountsParams, RestIo } from "./io";
+export type { BackendModelCatalogResult, ModelCatalogOptions } from "./clients/catalog";
 export { createRestIo } from "./transport";
 export type { ExportArchive, ExportScope } from "./clients/exports";
 export type { ImportScope } from "./clients/imports";

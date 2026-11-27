@@ -1,73 +1,73 @@
 # pkgkit
 
-패키지 이식성 도구 모음(design §3R.2). Python 도구(.py)는 backend-lead가 이 파일에 절을 더한다.
+Package portability tools. The Python tools (.py) are described in their own section below.
 
-## TS 도구 (.mjs, 3R.4)
+## TS tools (.mjs)
 
-패키지 하나를 저장소 밖으로 복사해도 설치·빌드·테스트가 되도록 만들고 검사한다. Node ^22.23.4 || ^24.22.1 || >=26.12.1(CVE-2026-111497 패치 버전), 외부 의존 없음(순수 함수는 `lib/`, 입출력은 각 CLI).
+They make sure a single package still installs, builds and tests after it is copied out of the repository, and check that it does. Node ^22.23.4 || ^24.22.1 || >=26.12.1 (the versions with the CVE-2026-111497 fix), no external dependencies (pure functions in `lib/`, input and output in each CLI).
 
-| 파일 | 하는 일 |
+| File | What it does |
 | --- | --- |
-| `pkg-lint.mjs` | `workspace:`·상대 `extends`·패키지 밖 경로/import·`exports` 규칙(development→src, default→dist)·스크립트·필수 파일·선언하지 않은 의존·다른 패키지 내부 직접 참조·README `ts readme` 블록 ↔ `test/readme.test.ts` 구간 일치 |
-| `pack-all.mjs` | `pnpm -r --if-present build` 뒤 `pnpm -r pack --pack-destination dist/npm` |
-| `portability.mjs` | 대상은 pnpm 워크스페이스 멤버에서 앱(`agentConsole.kind: "app"`)을 뺀 전부(`examples/web/` 예제 포함, `--under`로 좁힘). 필요한 tarball이 없으면 `pack:all`을 먼저 돌린다(`--pack`이면 늘) → 패키지를 임시 폴더로 복사 → 사내 의존을 `dist/npm` tarball(`file:` + `overrides`)로 바꿈 → `npm install` → build·typecheck·test → 결과 표 |
-| `new-package.mjs` | 템플릿으로 새 패키지 생성. 루트 파일은 고치지 않는다 |
-| `lib/*.mjs` | 순수 함수: `lint-rules`·`readme-sync`·`plans`·`scaffold`·`template`·`workspace` (`fsutil`만 파일을 읽는다) |
-| `templates/ts/` | `common/` + `lib/` 또는 `config/` 층. 파일은 `.tmpl`, 자리표시자는 `{{키}}`, `package.patch.json`은 package.json에 합쳐진다 |
+| `pkg-lint.mjs` | `workspace:`, relative `extends`, paths and imports outside the package, `exports` rules (development→src, default→dist), scripts, required files, undeclared dependencies, direct references into another package's internals, and the README `ts readme` block matching its range in `test/readme.test.ts` |
+| `pack-all.mjs` | `pnpm -r pack --pack-destination dist/npm` after `pnpm -r --if-present build` |
+| `portability.mjs` | The targets are every pnpm workspace member except apps (`agentConsole.kind: "app"`), including the `examples/web/` examples (narrow them with `--under`). When a needed tarball is missing it runs `pack:all` first (always with `--pack`), then copies the package to a temporary folder, replaces internal dependencies with the `dist/npm` tarballs (`file:` plus `overrides`), runs `npm install`, then build, typecheck and test, and prints a result table |
+| `new-package.mjs` | Creates a new package from the templates. Root files are not changed |
+| `lib/*.mjs` | Pure functions: `lint-rules`, `readme-sync`, `plans`, `scaffold`, `template` and `workspace` (only `fsutil` reads files) |
+| `templates/ts/` | `common/` plus a `lib/` or `config/` layer. Files are `.tmpl`, placeholders are `{{key}}`, and `package.patch.json` is merged into package.json |
 
-사용(저장소 루트에서; 루트 `package.json`에 `pnpm pkg-lint`·`pnpm pack:all`·`pnpm portability`·`pnpm new-package`로 등록돼 있다. `pkg-lint`는 `pnpm check`에 포함, `pack:all`은 `./packages/**`만 빌드·pack하고 루트·앱은 제외한다):
+Usage (from the repository root; the root `package.json` registers them as `pnpm pkg-lint`, `pnpm pack:all`, `pnpm portability` and `pnpm new-package`. `pkg-lint` is part of `pnpm check`, and `pack:all` builds and packs only `./packages/**`, leaving out the root and apps):
 
 ```sh
 node scripts/pkgkit/pkg-lint.mjs [--package NAME] [--json]
 node scripts/pkgkit/pack-all.mjs [--dry-run]
-node scripts/pkgkit/portability.mjs [--package NAME] [--under PREFIX] [--pack] [--keep]   # tarball이 없으면 pack-all을 먼저
+node scripts/pkgkit/portability.mjs [--package NAME] [--under PREFIX] [--pack] [--keep]   # runs pack-all first when tarballs are missing
 node scripts/pkgkit/new-package.mjs --kind lib|config [--dom] [--scope @scope] NAME
 ```
 
-`portability`는 복사본에서 단계를 돌릴 때 `AGENT_CONSOLE_SKIP_PERF=1`을 설정한다(`lib/plans.mjs`의 `PORTABILITY_ENV`). 시간 단언이 있는 테스트는 이 값이면 시간 비교만 건너뛰고 정확성 단언은 유지한다. 직접 돌릴 때도 같은 변수를 쓸 수 있다.
+`portability` sets `AGENT_CONSOLE_SKIP_PERF=1` when it runs the steps in the copy (`PORTABILITY_ENV` in `lib/plans.mjs`). Tests with timing assertions skip only the timing comparison under this value and keep their correctness assertions. You can use the same variable when running tests yourself.
 
-README 규칙: README의 ` ```ts readme ` 코드 블록은 `test/readme.test.ts`의 `// readme:start` ~ `// readme:end` 구간과 같아야 한다(공통 들여쓰기·줄 끝 공백 무시). 테스트가 패키지 이름으로 import할 수 있게 템플릿의 `vitest.config.ts`가 이름을 소스로 alias한다.
+README rule: the ` ```ts readme ` code block in the README must match the range between `// readme:start` and `// readme:end` in `test/readme.test.ts` (common indentation and trailing spaces are ignored). The template's `vitest.config.ts` aliases the package name to its source so the test can import it by package name.
 
-공통 옵션:
-- `--prefix P`(반복 가능): 사내 패키지 이름 접두사. 기본은 루트 package.json 이름의 scope, 없으면 워크스페이스 패키지들의 scope, 그래도 없으면 `@agent-console/`. `--scope @acme`로 만든 패키지는 `--prefix @acme`(또는 기본 추정)로 검사한다.
-- `--under PREFIX`: 패키지를 찾을 폴더 접두사(기본 `packages/ts/`). 폴더가 없으면 읽을 수 있는 오류로 끝난다(종료 코드 2).
-- 종류(`lib`|`config`)는 package.json의 `"agentConsole": {"kind": "..."}` 표식으로 정한다(`new-package`가 쓴다). 표식이 없을 때만 경로에 `config` 단계가 있는지로 추정한다.
+Common options:
+- `--prefix P` (repeatable): the name prefix of internal packages. The default is the scope of the root package.json name, otherwise the scope of the workspace packages, otherwise `@agent-console/`. Packages created with `--scope @acme` are checked with `--prefix @acme` (or the default guess).
+- `--under PREFIX`: the folder prefix to look for packages in (default `packages/ts/`). When the folder does not exist, it ends with a readable error (exit code 2).
+- The kind (`lib`|`config`) is decided by the `"agentConsole": {"kind": "..."}` marker in package.json (written by `new-package`). Only without the marker is it guessed from a `config` segment in the path.
 
-`dist`는 번들러 소비자 전제다(`moduleResolution: Bundler`, 확장자 없는 상대 import). Node가 `dist`를 직접 실행해야 하는 패키지가 생기면 그 패키지만 NodeNext로 바꾼다(에이전트 결정 E-20).
+`dist` assumes bundler consumers (`moduleResolution: Bundler`, extensionless relative imports). If a package ever needs Node to run its `dist` directly, switch only that package to NodeNext.
 
-`pkg-lint` 규칙(rule id):
-| id | 내용 |
+`pkg-lint` rules (rule id):
+| id | Meaning |
 | --- | --- |
-| `required-file` | 종류별 필수 파일 누락 |
-| `package-json` | JSON 오류, name·semver version·`private: true`·license·`type: module` |
-| `workspace-protocol` | `workspace:`·`link:`·패키지 밖 `file:` 의존, overrides의 같은 문법 |
-| `inhouse-range` | 사내 의존은 `^x.y.z`·`~x.y.z`·`>=a <b` 범위만 |
-| `scripts` / `external-path` | 필수 스크립트(lib: build·typecheck·lint·test, config: lint·test), 스크립트·tsconfig의 패키지 밖 경로 |
-| `tsconfig`, `tsconfig-extends` | tsconfig 파싱, 패키지 밖을 가리키는 상대 `extends` |
-| `exports` | `main`/`types`가 src를 가리킴, development→src·default→dist·types→dist 규칙, `files`에 dist |
-| `escaping-import` / `deep-import` | 패키지 밖 상대 import / 다른 사내 패키지의 `src`·`dist`·`test(s)` 직접 import |
-| `undeclared-dep` | 소스가 import하지만 package.json에 없는 의존(`@types/*` 선언 인정) |
-| `readme-sync` | README `ts readme` 블록 ↔ `test/readme.test.ts` 구간 불일치 |
+| `required-file` | A required file for the kind is missing |
+| `package-json` | JSON errors, name, semver version, `private: true`, license, `type: module` |
+| `workspace-protocol` | `workspace:`, `link:` and `file:` dependencies outside the package, and the same syntax in overrides |
+| `inhouse-range` | Internal dependencies use only `^x.y.z`, `~x.y.z` or `>=a <b` ranges |
+| `scripts` / `external-path` | Required scripts (lib: build, typecheck, lint, test; config: lint, test), and paths outside the package in scripts and tsconfig |
+| `tsconfig`, `tsconfig-extends` | tsconfig parsing, and relative `extends` pointing outside the package |
+| `exports` | `main`/`types` point to src, the development→src, default→dist and types→dist rules, and dist in `files` |
+| `escaping-import` / `deep-import` | Relative imports outside the package / direct imports of another internal package's `src`, `dist` or `test(s)` |
+| `undeclared-dep` | Dependencies the source imports but package.json does not list (`@types/*` declarations count) |
+| `readme-sync` | The README `ts readme` block does not match its range in `test/readme.test.ts` |
 
-테스트: `pnpm exec vitest run scripts/pkgkit`
+Tests: `pnpm exec vitest run scripts/pkgkit`
 
-## Python 도구 (.py, 3R.2)
+## Python tools (.py)
 
-표준 라이브러리만 쓴다(Python 3.12+, `tomllib`). 도구가 아는 값(접두사·경로·사내 의존 범위·규칙 켜고 끄기)은 전부 `pkgkit_py.toml`에 있고, 종류(kind) 목록은 `templates/python/kinds/` 폴더가 정한다. 모든 명령은 `--root`(기본 현재 폴더)·`--config`를 받는다. 오류는 종료 코드 2, 위반·실패는 1.
+They use only the standard library (Python 3.12+, `tomllib`). Every value the tools know (prefixes, paths, internal dependency ranges, rule switches) is in `pkgkit_py.toml`, and the list of kinds is defined by the `templates/python/kinds/` folder. Every command takes `--root` (default: the current folder) and `--config`. Errors exit with code 2, violations and failures with 1.
 
-| 파일 | 하는 일 |
+| File | What it does |
 | --- | --- |
-| `pkg_lint.py` | 정적 검사. 규칙: `layout`(종류 폴더 밖), `workspace-source`(패키지 `[tool.uv.sources]`), `outside-path`(pyproject 값의 패키지 밖 상대 경로), `root-lookup`(`Path(__file__).parents[N]`·`.parent` 사슬이 패키지 뿌리 위로), `foreign-tests-import`(다른 패키지 `tests/` 모듈·`*.tests` import), `required-files`(공통 + 종류별), `tool-config`(pytest·mypy·ruff 표와 dev 그룹 ↔ 템플릿), `internal-dep-range`(사내 의존 범위 누락), `readme-doctest`(README "Minimal usage" 절 안에 doctest `>>>`가 0건이거나 절이 없으면 위반, 3R.6에서 켬, 4R.18부터 그 절만 센다. 절 제목 후보는 `pkgkit_py.toml` `[pkg_lint] readme_doctest_headings`(첫 후보가 안내 이름, 뒤에 별칭을 더할 수 있다. 기본은 "Minimal usage" 하나)), 저장소 규칙 `template-root-drift`(템플릿 ↔ 루트 도구 설정), `root-source`(루트 `[tool.uv.sources]`가 사내 워크스페이스 프로젝트를 빠짐없이 `workspace = true`로 잇는지, 없는 패키지 항목), `importlinter-drift` |
-| `importlinter_sync.py` | `importlinter.rules.toml`(그룹 `@all`·`@packages`·`@app`·`@<kind>`, 빼기 `!이름`·`!@그룹`, 사용자 `[groups]`) → 루트 `pyproject.toml`의 `[tool.importlinter]` 영역(표식 줄 사이). `--check`는 의미 차이만 보고, `--init`은 지금 계약을 규칙 파일로 옮긴다 |
-| `wheels.py` | `uv build --all-packages --wheel -o dist/wheelhouse`(얇은 래퍼, `--clean`·`--package`·`--dry-run`) |
-| `mypy_conftests.py` | `poe typecheck` 둘째 단계. 패키지 `tests/`에는 `__init__.py`가 없어 모든 `conftest.py`가 같은 모듈 이름이 되므로 루트 `[tool.mypy] exclude`가 집계 실행에서 빼고, 이 스크립트가 `[tool.mypy] files` 아래 `conftest.py`를 파일마다 루트 설정으로 검사한다(4R.22). 패키지 단독 mypy에는 영향 없음 |
-| `portability.py` | 패키지 폴더를 `$TMPDIR`로 복사 → `uv venv` → `uv sync`(복사본에만 휠 모음 flat 인덱스를 덧붙여 사내 패키지는 휠 모음에서) → `ruff check`·`ruff format --check`·`mypy`·`pytest`(README doctest 포함) → `module`·`link` 종류면 `python -m <import> --check` → 결과 표. `UV_PROJECT_ENVIRONMENT`·`VIRTUAL_ENV`·`PYTHONPATH`·`MYPY_CACHE_DIR`는 넘기지 않는다(mypy 캐시는 임시 복사본 안에 생기고 세션과 함께 지워진다, 5.2R.94b). `--wheels`는 휠 모음을 다시 만들고 기본으로 세션 임시 `UV_CACHE_DIR`을 쓴다(같은 버전으로 다시 만든 사내 휠을 uv 캐시가 옛 내용으로 재사용하지 않게, `--reuse-uv-cache`로 끔, `--uv-cache-dir`로 위치 지정). `--wheels` 없이 돌릴 때 휠이 패키지 소스(`pyproject.toml`·`README.md`·`src/`)보다 오래되었으면 경고한다(4R.18). `--package`는 `[examples] roots`의 확장 예제(워크스페이스 멤버가 아님)도 고른다. `--package` 없이 돌릴 때 예제를 넣을지는 `[examples] portability_default`(기본 넣음)가 정하고 `--examples`·`--no-examples`가 덮는다(예제는 `run-check` 없음) |
-| `examples_check.py` | `poe examples`. `pkgkit_py.toml` `[examples] roots` glob(기본 `examples/extensions/*`)에서 `pyproject.toml`이 있는 폴더를 모두 예제로 찾아, 폴더마다 `[examples] steps`(기본 `mypy`·`pytest -q`)를 그 폴더에서 돌린다(설치 없이 폴더 자기 설정). 예제 목록을 손으로 적지 않는다. glob에 걸렸는데 `pyproject.toml`이 없는 폴더는 실패(종료 코드 1)로 알린다. 단계가 실패해도 나머지를 돌리고 끝에 결과 표 |
-| `new_package.py` | `--kind {base,feature,kit,module,link} NAME`으로 `packages/py/<종류 폴더>/NAME` 생성, workspace `members`에 없으면 추가, 루트 `[tool.uv.sources]`에 `<배포 이름> = { workspace = true }` 추가, 규칙 파일이 있으면 import-linter 갱신 |
-| `pkgkit_common.py`·`pkgkit_template.py` | 순수 함수: 설정·패키지 찾기·이름 규칙·TOML 쓰기 / 템플릿 렌더링. `with_range`는 범위 없는 사내 의존에 설정 범위를 붙이고 extra(예: `agent-console-modkit[host]`)는 유지한다 |
-| `templates/python/` | `common.toml`(공통 필수 파일·dev 도구) + `common/**.tmpl` + `kinds/<kind>/kind.toml`(폴더·의존·필수 파일·단독 실행·entry point) + `kinds/<kind>/files/**.tmpl` |
+| `pkg_lint.py` | Static checks. Rules: `layout` (outside the kind folder), `workspace-source` (package `[tool.uv.sources]`), `outside-path` (relative paths outside the package in pyproject values), `root-lookup` (`Path(__file__).parents[N]` or `.parent` chains above the package root), `foreign-tests-import` (imports of another package's `tests/` modules or `*.tests`), `required-files` (common plus per kind), `tool-config` (pytest, mypy and ruff tables and the dev group against the template), `internal-dep-range` (missing internal dependency ranges), `readme-doctest` (a violation when the README "Minimal usage" section has no doctest `>>>` or the section is missing; only that section is counted. The candidate section headings are `[pkg_lint] readme_doctest_headings` in `pkgkit_py.toml`: the first candidate is the name shown in messages, and aliases can follow. The default is only "Minimal usage"), and the repository rules `template-root-drift` (template against the root tool settings), `root-source` (whether the root `[tool.uv.sources]` links every internal workspace project with `workspace = true`, and entries for packages that do not exist) and `importlinter-drift` |
+| `importlinter_sync.py` | From `importlinter.rules.toml` (groups `@all`, `@packages`, `@app` and `@<kind>`, exclusions `!name` and `!@group`, user `[groups]`) to the `[tool.importlinter]` region of the root `pyproject.toml` (between marker lines). `--check` reports only semantic differences, and `--init` moves the current contracts into the rules file |
+| `wheels.py` | `uv build --all-packages --wheel -o dist/wheelhouse` (a thin wrapper with `--clean`, `--package` and `--dry-run`) |
+| `mypy_conftests.py` | The second step of `poe typecheck`. Package `tests/` folders have no `__init__.py`, so every `conftest.py` has the same module name; the root `[tool.mypy] exclude` leaves them out of the combined run, and this script checks each `conftest.py` under `[tool.mypy] files` one file at a time with the root settings. No effect on standalone package mypy runs |
+| `portability.py` | Copies the package folder to `$TMPDIR`, runs `uv venv`, then `uv sync` (a flat index of the wheelhouse is added only to the copy, so internal packages come from the wheelhouse), then `ruff check`, `ruff format --check`, `mypy` and `pytest` (including README doctests), then `python -m <import> --check` for the `module` and `link` kinds, and prints a result table. `UV_PROJECT_ENVIRONMENT`, `VIRTUAL_ENV`, `PYTHONPATH` and `MYPY_CACHE_DIR` are not passed through (the mypy cache is created inside the temporary copy and removed with the session). `--wheels` rebuilds the wheelhouse and by default uses a temporary `UV_CACHE_DIR` for the session (so the uv cache does not reuse old contents for internal wheels rebuilt with the same version; turn it off with `--reuse-uv-cache`, or set the location with `--uv-cache-dir`). Without `--wheels`, it warns when a wheel is older than the package source (`pyproject.toml`, `README.md`, `src/`). `--package` also selects extension examples from `[examples] roots` (they are not workspace members). Without `--package`, whether examples are included is decided by `[examples] portability_default` (included by default) and overridden by `--examples` and `--no-examples` (examples have no `run-check`) |
+| `examples_check.py` | `poe examples`. Finds every folder with a `pyproject.toml` under the `[examples] roots` globs of `pkgkit_py.toml` (default `examples/extensions/*`) as an example, and runs the `[examples] steps` (default `mypy` and `pytest -q`) in each folder (without installing, using the folder's own settings). The example list is not written by hand. A folder matched by the glob without a `pyproject.toml` is reported as a failure (exit code 1). When a step fails, the rest still run and a result table is printed at the end |
+| `new_package.py` | `--kind {base,feature,kit,module,link} NAME` creates `packages/py/<kind folder>/NAME`, adds it to the workspace `members` if missing, adds `<distribution name> = { workspace = true }` to the root `[tool.uv.sources]`, and updates import-linter when the rules file exists |
+| `pkgkit_common.py`, `pkgkit_template.py` | Pure functions: settings, finding packages, naming rules and TOML writing / template rendering. `with_range` adds the configured range to internal dependencies without one and keeps extras (for example `agent-console-modkit[host]`) |
+| `templates/python/` | `common.toml` (common required files and dev tools) plus `common/**.tmpl` plus `kinds/<kind>/kind.toml` (folder, dependencies, required files, standalone run, entry points) plus `kinds/<kind>/files/**.tmpl` |
 
-루트 `pyproject.toml`의 poe 작업으로 등록돼 있다(3R.3): `uv run poe pkg-lint`(`poe check`에 포함) · `poe importlinter-sync` · `poe wheels` · `poe portability` · `poe new-package` · `poe examples`(`poe check`에 포함) · `poe pkgkit-test`. 인자는 poe 뒤에 그대로 붙인다(예: `uv run poe portability --package ac-chat`). 직접 실행:
+They are registered as poe tasks in the root `pyproject.toml`: `uv run poe pkg-lint` (part of `poe check`), `poe importlinter-sync`, `poe wheels`, `poe portability`, `poe new-package`, `poe examples` (part of `poe check`) and `poe pkgkit-test`. Arguments go after the poe task as is (for example `uv run poe portability --package ac-chat`). Direct runs:
 
 ```sh
 python scripts/pkgkit/pkg_lint.py [--package NAME] [--path DIR] [--rule ID] [--json] [--list-rules]
@@ -78,8 +78,8 @@ python scripts/pkgkit/portability.py [--package NAME] [--[no-]examples] [--wheel
 python scripts/pkgkit/new_package.py --kind KIND NAME [--dep D] [--dev-dep D] [--id MODULE_ID] [--dry-run]
 ```
 
-README doctest는 예상 출력 뒤에 빈 줄을 둔다(없으면 닫는 ```` ``` ```` 줄을 출력으로 읽는다).
+README doctests need a blank line after the expected output (otherwise the closing ```` ``` ```` line is read as output).
 
-사내 의존 범위 `"from-package"`(`pkgkit_py.toml` `[python.internal_ranges]`)는 워크스페이스에 그 패키지가 있어야 풀린다. 저장소 밖에서 `new_package.py`·`pkg_lint.py`를 쓰면(그 패키지가 워크스페이스에 없으면) `"from-package"` 대신 범위를 직접 적는다(예: `agent-console-contracts = ">=0.5,<0.6"`).
+The internal dependency range `"from-package"` (`[python.internal_ranges]` in `pkgkit_py.toml`) resolves only when that package is in the workspace. When you use `new_package.py` or `pkg_lint.py` outside the repository (where that package is not in the workspace), write the range directly instead of `"from-package"` (for example `agent-console-contracts = ">=0.5,<0.6"`).
 
-테스트: `uv run pytest scripts/pkgkit`(이 폴더의 `pytest.ini`를 쓴다) · `uv run mypy scripts/pkgkit` · `uv run ruff check scripts/pkgkit`
+Tests: `uv run pytest scripts/pkgkit` (uses this folder's `pytest.ini`) · `uv run mypy scripts/pkgkit` · `uv run ruff check scripts/pkgkit`

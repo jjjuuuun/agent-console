@@ -4,7 +4,8 @@
 
 - First release: `GET /i18n` (`I18nInfo`) and `GET /i18n/{lang}` (`MessageCatalog` with `ETag`, 304 on
   `If-None-Match`, 404 `i18n.unknown_language`).
-- Settings `modules.options.mod-i18n`: `default_language`, `fallback_language` (both `en`), `catalog_dirs`,
+- Settings `modules.options.mod-i18n`: `default_language`, `fallback_language` (both `en`), `source_language`
+  (`ko`, the language of the server source text, sent as `I18nInfo.source_language`; null or empty = unknown), `catalog_dirs`,
   `disabled_catalogs`.
 - Host plugin loader `i18n`: registers `agent_console.message_catalogs` entry points so `plugins.enabled` and
   `plugins.disabled` apply to catalog ids.

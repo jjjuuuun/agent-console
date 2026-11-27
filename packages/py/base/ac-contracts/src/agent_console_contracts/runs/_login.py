@@ -9,6 +9,10 @@
 
 비밀 값 규칙: 응답에는 토큰·코드를 담을 필드가 없다. 붙여 넣은 코드는 ``BackendLoginInput.text``로만
 들어오고(쓰기 전용) 서버가 세션 가림 목록에 넣어 ``screen``·``message``·``details``에서 가린다.
+
+``text_templates``(1.10.0, design §I18N.13 I-15): 값이 섞인 글자 칸(``/message``·
+``/warnings/0`` 등)의 원문 틀 + 값. 값도 칸과 같은 가림을 거친다. 고정 문구 칸·옛 서버는 항목이
+없다.
 """
 
 from typing import Literal, Self
@@ -16,7 +20,7 @@ from typing import Literal, Self
 from pydantic import Field, model_validator
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
-from agent_console_contracts.common import FixAction
+from agent_console_contracts.common import FixAction, TextTemplate
 
 type BackendLoginPhase = Literal[
     "starting", "waiting_user", "verifying", "succeeded", "failed", "cancelled", "expired"
@@ -90,6 +94,13 @@ class BackendLoginSession(ContractModel):
     started_at: float = Field(description="시작 시각(epoch 초).")
     expires_at: float = Field(description="시간 상한에 닿는 시각(epoch 초).")
     finished_at: float | None = Field(default=None, description="끝난 시각. 진행 중이면 null.")
+    text_templates: dict[str, list[TextTemplate]] = Field(
+        default_factory=dict,
+        description=(
+            "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 "
+            "하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버."
+        ),
+    )
 
 
 class BackendLoginInput(ContractModel):
@@ -126,6 +137,13 @@ class BackendLogoutResult(ContractModel):
     message: str = Field(default="", description="결과 문장(사용자 언어).")
     fixes: list[FixAction] = Field(default_factory=list, description="해결 버튼. 비면 없음.")
     finished_at: float = Field(description="끝난 시각(epoch 초).")
+    text_templates: dict[str, list[TextTemplate]] = Field(
+        default_factory=dict,
+        description=(
+            "값이 섞인 글자 칸의 원문 틀 + 값(1.10.0): 칸 JSON Pointer → 문장 틀 목록(채워 공백 "
+            "하나로 이은 것이 칸 값). 빈 표 = 고정 문구만 또는 옛 서버."
+        ),
+    )
 
 
 __all__ = [

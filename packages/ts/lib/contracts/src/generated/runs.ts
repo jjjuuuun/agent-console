@@ -31,6 +31,7 @@ export type {
   BackendLoginSession,
   BackendLoginStartRequest,
   BackendLogoutResult,
+  BackendModelCatalog,
   BackendProbeRequest,
   BackendProbeResult,
   BackendReadiness,
@@ -79,7 +80,10 @@ export type {
   LoopExhaustedPayload,
   LoopIterationEvent,
   LoopIterationPayload,
+  ModelDiscoveryInfo,
+  ModelDiscoveryState,
   ModelInfo,
+  ModelSource,
   NodeRun,
   NodeRunStatus,
   NodeStatusEvent,
@@ -120,4 +124,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "runs" as const;
-export const CONTRACT_VERSION = "1.9.0" as const;
+export const CONTRACT_VERSION = "1.10.0" as const;

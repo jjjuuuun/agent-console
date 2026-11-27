@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import textwrap
 import uuid
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -14,16 +13,15 @@ REPO_ROOT = TOOL_DIR.parents[1]
 
 
 LANGUAGE_RULE = "korean-prose"
-"""영어 문서의 한글 규칙 id(``public_lint.yaml``). 한국어로 쓴 임시 문서 픽스처는 이 규칙을 끈다."""
+"""영어 문서의 한글 규칙 id(``public_lint.yaml``)."""
 
 
 def tool_data(**overrides: object) -> ToolData:
     """저장소 데이터 파일 + 설정 덮어쓰기(기본: 계약 표 끔 — 임시 저장소에는 계약이 없다).
 
-    공개 가능 린트 규칙 중 :data:`LANGUAGE_RULE`은 뺀다(픽스처 글이 한국어라 다른 규칙의 결과만
-    보려고). 그 규칙은 :func:`language_rule`로 따로 시험한다.
+    공개 가능 린트 규칙은 저장소 ``public_lint.yaml`` 그대로다(:data:`LANGUAGE_RULE` 포함). 그래서
+    임시 저장소의 문서 픽스처는 공개 문서와 같은 조건(영어)으로 검사된다.
     """
-    lint_off: Sequence[str] = (LANGUAGE_RULE,)
     data = load_data()
     settings = dict(data.settings)
     settings["facts"] = {}
@@ -32,10 +30,19 @@ def tool_data(**overrides: object) -> ToolData:
         settings=settings,
         areas=data.areas,
         readme_sections=data.readme_sections,
-        lint_rules=tuple(r for r in data.lint_rules if r.id not in set(lint_off)),
+        lint_rules=data.lint_rules,
         registration_templates=data.registration_templates,
         text=data.text,
     )
+
+
+def other_lint_rules() -> tuple[LintRule, ...]:
+    """:data:`LANGUAGE_RULE`을 뺀 저장소 공개 가능 린트 규칙.
+
+    규칙 하나씩 시험하는 한국어 예문(내부 경로·작업 번호 등)에서 그 규칙의 결과만 보려고 쓴다.
+    한글 규칙은 :func:`language_rule`로 따로 시험한다.
+    """
+    return tuple(r for r in load_data().lint_rules if r.id != LANGUAGE_RULE)
 
 
 def language_rule() -> LintRule:

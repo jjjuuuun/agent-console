@@ -18,6 +18,7 @@ import { ROUTE_ROLES, routePath } from "../library";
 import { sddKeys, useSddSpace } from "./useSddApi";
 import type { SddContext } from "./useSddContext";
 import { useT } from "@agent-console/i18n";
+import { SddToast } from "./SddToast";
 
 /** 화면에 한 번에 하나만 둔다(새 것이 이전 것을 대체). */
 export type RunNotice =
@@ -82,11 +83,12 @@ export function useTaskRunner({ specId, ctx, onTaskChanged }: TaskRunnerOptions)
       const result: TaskActionResult = await space.client.runTaskAction(specId, task.key, action.integration, action.id);
       if (result.status === KNOWN_TASK_ACTION_STATUSES.STARTED) {
         const runId = result.run_id ?? undefined;
+        const title = task.title ?? task.key;
         toast({
           tone: "success",
-          text: t("run.started", { title: task.title ?? task.key }),
+          text: <SddToast render={(t) => t("run.started", { title })} />,
           durationMs: 8000,
-          ...(runId === undefined ? {} : { action: { label: t("run.open"), onClick: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) } }),
+          ...(runId === undefined ? {} : { action: { label: <SddToast render={(t) => t("run.open")} />, onClick: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) } }),
         });
         void refresh();
       } else if (result.status === KNOWN_TASK_ACTION_STATUSES.BLOCKED && result.issue != null) {

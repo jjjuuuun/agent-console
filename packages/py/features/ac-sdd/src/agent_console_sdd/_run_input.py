@@ -105,10 +105,11 @@ def run_input_variables(
         name = document_variable(doc.id)
         if name not in seen:
             seen.add(name)
+            # 고정 문구(화면 번역 키) — 문서 id는 변수 이름에, 파일 이름은 예시에 있다.
             out.append(
                 TemplateVariable(
                     name=name,
-                    description=f"문서 '{doc.title}'의 파일 이름입니다(스펙 폴더 기준).",
+                    description="변수 이름에 적힌 문서의 파일 이름입니다(스펙 폴더 기준).",
                     example=doc.file,
                 )
             )

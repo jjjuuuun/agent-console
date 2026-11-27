@@ -33,6 +33,7 @@ Agent Console은 내 컴퓨터에서 Python 서버와 React 웹 앱으로 돌아
   내보냅니다. 모든 정의의 버전을 남겨 되돌릴 수 있습니다.
 - **모듈식 서버**: 백엔드 기능(채팅, 실행, 사용량, 로그, 정의, 가져오기·내보내기 …)은 각각 서버 모듈이고 따로 켜고 끕니다.
   웹은 켜진 모듈만 보여 줍니다.
+- **화면 언어**: 영어·한국어 화면. 문구 묶음 파일로 언어를 더하거나 문구를 바꿉니다.
 
 ## 스크린샷
 
@@ -102,12 +103,13 @@ pnpm app -- --disable-module mod-exports  # `--` 뒤는 `agent-console serve` �
 2. **팀을 만듭니다.** 그래프에 에이전트 노드를 놓고 연결합니다. 에이전트 하나만 있는 팀도 됩니다.
 3. **채팅**에서 팀을 골라 일을 맡깁니다. 실행 기록, 사용량, 로그는 각자 화면이 있습니다.
 
-**실제 Claude 모델 쓰기.** *설정 › 에이전트 기본값*에서 백엔드를 `claude-agent-sdk`로 바꿉니다. 모델 id는 코드에 들어 있지
-않으므로 쓸 모델을 `modules.options.mod-runs.backends.claude-agent-sdk.models`에 적습니다. 기본 인증은 Claude 구독
-로그인입니다. 로그인은 앱 화면의 백엔드 상태 카드에서 하고, 자격은 앱 전용 폴더(`<workspace>/.state/claude`)에 두며, 앱은
-토큰을 받거나 저장하지 않습니다. Anthropic 문서는 Agent SDK 기반 앱에 API 키 사용을 안내하므로, 구독 자격을 쓰기 전에 약관을
-직접 확인하세요. API 키를 쓰려면 키를 환경변수에 두고 설정에서는 `secret://anthropic_api_key`로 참조합니다. 자세한 순서는
-[USAGE.md](USAGE.md)에 있습니다.
+**실제 Claude 모델 쓰기.** *설정 › 에이전트 기본값*에서 백엔드를 `claude-agent-sdk`로 바꿉니다. 기본 인증은 Claude 구독
+로그인입니다. 로그인은 **백엔드 연결** 대화상자(사이드바 맨 아래 플러그 아이콘)나 같은 설정 화면의 백엔드 상태 카드에서 합니다.
+자격은 앱 전용 폴더(`<workspace>/.state/claude`)에 두며, 앱은 토큰을 받거나 저장하지 않습니다. 로그인하면 모델 칸에 이 계정에서
+쓸 수 있는 모델이 나옵니다(모델을 호출하지 않습니다). 모델 id는 코드에 들어 있지 않으며, 이름을 바꾸거나 목록을 직접 정하려면
+`modules.options.mod-runs.backends.claude-agent-sdk.models`에 적습니다. Anthropic 문서는 Agent SDK 기반 앱에 API 키 사용을
+안내하므로, 구독 자격을 쓰기 전에 약관을 직접 확인하세요. API 키를 쓰려면 키를 환경변수에 두고 설정에서는
+`secret://anthropic_api_key`로 참조합니다. 자세한 순서는 [USAGE.ko.md](USAGE.ko.md)에 있습니다.
 
 **Claude Code를 이미 쓰고 있다면** 프로젝트 폴더를 등록하고 그 `.claude/`의 에이전트와 설정을 가져옵니다. 원본 파일은 읽기만
 합니다. `~/.claude` 아래 전역 구성은 가져오지 않습니다.
@@ -120,6 +122,7 @@ pnpm app -- --disable-module mod-exports  # `--` 뒤는 `agent-console serve` �
 | 작업 공간 | 기본 `.agent-console/`(설정 `workspace` 또는 `--workspace`). 정의(에이전트, 팀, 리소스, `settings.yaml`)를 YAML로 둡니다. 실행 상태(SQLite DB, 앱 로그인 자격, 사용량 브리지 파일)는 `<workspace>/.state/` 아래에 둡니다 |
 | 프로젝트 폴더 | 화면에서 만들거나 등록합니다. 앱은 등록한 폴더와 자기 작업 공간 안에서만 동작합니다. 프로젝트마다 구성 사본을 `<folder>/.agent-console/`에 둡니다. 프로젝트를 지우면 등록만 해제되고 폴더 내용은 지우지 않습니다 |
 | 기능 모듈 | `modules.enabled`·`modules.disabled` 또는 `--enable-module`·`--disable-module`. 모듈 설정은 `modules.options.<모듈 id>` 아래에 둡니다. 모듈 목록과 상태는 `GET /api/v1/modules` |
+| 화면 언어 | *설정 › 화면 › 언어*(영어·한국어, 기본은 브라우저 언어를 따름). 코드를 고치지 않고 문구를 바꾸거나 언어를 더하려면 `<언어>.json` 문구 묶음을 폴더에 두고 그 폴더를 `modules.options.mod-i18n.catalog_dirs`에 적습니다. 사용 안내의 [화면 언어](USAGE.ko.md#화면-언어) 참고 |
 
 설정 파일의 상대 경로는 그 파일이 있는 폴더 기준입니다. 모르는 키나 지운 키가 있으면 서버는 시작하지 않고 무엇을 고쳐야 하는지
 알려 줍니다. 전체 키는 [apps/server/README.md](apps/server/README.md)에 있습니다.
@@ -132,8 +135,8 @@ pnpm app -- --disable-module mod-exports  # `--` 뒤는 `agent-console serve` �
 `plugins.disabled`로 하나씩 끌 수 있습니다.
 
 확장 지점에는 노드 종류, 연결 종류, 조건 연산자, 실행 백엔드, 위임 방식, 상호작용 종류, 로그 출처와 분류기, 사용량 출처,
-가져오기 출처, 내보내기 형식, 리소스 종류, 비밀 값 공급자, 메모리 범위, 위키 검사, 서버 모듈 전체가 있습니다. 웹 쪽에는 설정 폼
-위젯과 대시보드 위젯이 있습니다.
+가져오기 출처, 내보내기 형식, 리소스 종류, 비밀 값 공급자, 메모리 범위, 위키 검사, 문구 묶음(다른 언어의 화면 문구), 서버 모듈
+전체가 있습니다. 백엔드는 계정의 모델 목록을 알려 주는 능력도 더할 수 있습니다. 웹 쪽에는 설정 폼 위젯과 대시보드 위젯이 있습니다.
 
 - [확장 가이드](docs/extending/README.md): 바꾸려는 것에 맞는 확장 지점 고르기, 플러그인 만들기·테스트·배포
 - [예제 플러그인](examples/extensions/README.md): 확장 지점마다 작은 패키지 하나, 각각 설치·제거 명령 포함
@@ -144,20 +147,22 @@ uv pip install -e examples/extensions/agent-console-example-condition   # 설치
 
 ## 문서
 
-- [USAGE.md](USAGE.md): 사용 안내
+- [USAGE.ko.md](USAGE.ko.md): 사용 안내([영어](USAGE.md))
 - [CHANGELOG.md](CHANGELOG.md): 릴리스 노트(영어)
-- [docs/extending/](docs/extending/README.md): 확장 가이드
-- [apps/server/README.md](apps/server/README.md): 서버 설정, REST, WebSocket
-- [apps/cli/README.md](apps/cli/README.md): `agent-console` 명령(`serve`, `statusline`, `logs purge`)
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): Claude Code로 이 프로젝트를 개발한 방식
-- `packages/`와 `apps/` 아래 패키지마다 API와 설정을 적은 README가 있습니다
+- [docs/extending/](docs/extending/README.md): 확장 가이드(영어)
+- [apps/server/README.md](apps/server/README.md): 서버 설정, REST, WebSocket(영어)
+- [apps/cli/README.md](apps/cli/README.md): `agent-console` 명령(`serve`, `statusline`, `logs purge`)(영어)
+- [docs/DEVELOPMENT.ko.md](docs/DEVELOPMENT.ko.md): Claude Code로 이 프로젝트를 개발한 방식([영어](docs/DEVELOPMENT.md))
+- `packages/`와 `apps/` 아래 패키지마다 API와 설정을 적은 README(영어)가 있습니다
 
 ## 알려진 한계
 
-자동 검사는 fake 백엔드로 돕니다. 실제 Claude Agent SDK 실행과 일부 플랫폼 조합(Windows 파일 시스템 특성, OS 폴더 선택 창,
-한국어 입력기, FTS5가 없는 SQLite, 아주 큰 위키, 루프백이 아닌 주소 바인딩)은 자동 검사 범위 밖이므로 쓰는 환경에서 직접
-확인하세요. 웹 화면과 대부분의
-문서는 아직 한국어로만 되어 있습니다. 패키지는 PyPI나 npm에 올리지 않았으므로 소스에서 설치합니다. 자세한 내용은
+자동 검사는 fake 백엔드로 돕니다. 실제 Claude Agent SDK 실행, 실제 계정의 모델 조회, 일부 플랫폼 조합(Windows 파일 시스템
+특성, OS 폴더 선택 창, 한국어 입력기, FTS5가 없는 SQLite, 아주 큰 위키, 루프백이 아닌 주소 바인딩)은 자동 검사 범위 밖이므로
+쓰는 환경에서 직접 확인하세요. 모델 목록은 백엔드 상태 카드가 점검하는 인증과 설치된 Claude Code CLI가 알려 주는 목록을
+따릅니다. 구독 자격을 Agent SDK에 쓰는 것이 약관상 허용되는지는 확인되지 않았으므로 약관을 직접 확인하고 본인 책임으로
+쓰세요. 번역되는 것은 앱 문구뿐입니다. 사용자가 쓴 이름·지시문 같은 데이터, 에이전트 출력, 로그 원문, 문구 묶음을 주지 않는
+확장의 문구는 쓰인 그대로 보입니다. 패키지는 PyPI나 npm에 올리지 않았으므로 소스에서 설치합니다. 자세한 내용은
 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
 
 ## 기여

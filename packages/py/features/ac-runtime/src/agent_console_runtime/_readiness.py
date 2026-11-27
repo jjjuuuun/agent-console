@@ -23,9 +23,16 @@ from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel, ValidationError
 
-from agent_console_contracts import BackendDescriptor, BackendProbeResult, BackendReadiness
+from agent_console_contracts import (
+    BackendDescriptor,
+    BackendProbeResult,
+    BackendReadiness,
+    TextTemplate,
+    render_text_parts,
+)
 
 from ._interfaces import ExecutionBackend
+from ._text_templates import compact_number, matching_text_templates
 
 _log = logging.getLogger("agent_console_runtime.readiness")
 
@@ -50,13 +57,17 @@ class ProbeReasons:
 
 @dataclass(frozen=True)
 class ReadinessTexts:
-    """서비스가 만드는 기본 문구(데이터). 앱이 바꿔 넣을 수 있다."""
+    """서비스가 만드는 기본 문구(데이터). 앱이 바꿔 넣을 수 있다.
+
+    값이 섞인 문구(``probe_timeout``의 ``{seconds}``)는 응답 ``text_templates``에 원문 틀 + 값으로도
+    실린다. 바꾼 문구는 화면이 번역하지 않는다(그 틀을 키로 한 묶음 항목을 ``catalog_dirs``에 둔다).
+    """
 
     unknown_summary: str = "확인할 수 없음"
     unknown_short: str = "확인 불가"
     unsupported_detail: str = "이 백엔드는 상태 점검을 지원하지 않습니다."
     failed_detail: str = "상태 점검이 실패했거나 시간 안에 끝나지 않았습니다."
-    probe_timeout: str = "{seconds:g}초 안에 응답이 없었습니다."
+    probe_timeout: str = "{seconds}초 안에 응답이 없었습니다."
     probe_error: str = "연결 테스트 중 오류가 났습니다."
 
 
@@ -195,6 +206,12 @@ class BackendReadinessService:
             ValidationError: 가린 결과가 계약 형식에 맞지 않을 때(호출자가 대체 응답을 만든다).
         """
         dumped = model.model_dump(mode="json")
+        templates = getattr(model, "text_templates", None)
+        if isinstance(templates, dict):  # 칸 값과 맞지 않는 틀은 빼고 같이 가린다
+            dumped["text_templates"] = {
+                pointer: [part.model_dump(mode="json") for part in parts]
+                for pointer, parts in matching_text_templates(dumped, templates).items()
+            }
         return type(model).model_validate(self._redact(dumped))
 
     def clamp_timeout(self, requested: float | None) -> float:
@@ -307,13 +324,20 @@ class BackendReadinessService:
                 backend.probe(self._context(backend_id), timeout_s), timeout_s
             )
         except TimeoutError:
+            parts = [
+                TextTemplate(
+                    template=self._texts.probe_timeout,
+                    params={"seconds": compact_number(timeout_s)},
+                )
+            ]
             result = BackendProbeResult(
                 backend_id=backend_id,
                 ok=False,
                 reason=ProbeReasons.TIMEOUT,
-                message=self._texts.probe_timeout.format(seconds=timeout_s),
+                message=render_text_parts(parts),
                 details={"timeout_s": timeout_s},
                 finished_at=self._clock(),
+                text_templates={"/message": parts},
             )
         except Exception as exc:  # 문장 원문(비밀이 섞일 수 있음)은 버리고 형식 이름만
             result = BackendProbeResult(

@@ -93,7 +93,11 @@ from .ports import (
     RunEnvironment,
 )
 from .project_scope import unscoped_project_policy, unscoped_project_warning
-from .readiness import build_login_service, build_readiness_service
+from .readiness import (
+    build_login_service,
+    build_model_catalog_service,
+    build_readiness_service,
+)
 from .records import SpaceRecorder, recover_space, space_records
 from .redaction import SuspectedRedaction
 from .routes import build_router
@@ -289,6 +293,19 @@ class RunsModule:
             probe_timeout_max_s=cfg.backend_probe_timeout_max_s,
             min_chars=cfg.min_redact_chars,
         )
+        discovery_cfg = cfg.model_discovery
+        catalog = build_model_catalog_service(
+            registries,
+            secrets,
+            ctx.environ,
+            rules=lambda: ctx.port(SECRET_RULES),
+            enabled=discovery_cfg.enabled,
+            disabled_backends=discovery_cfg.disabled_backends,
+            ttl_s=discovery_cfg.ttl_s,
+            failure_ttl_s=discovery_cfg.failure_ttl_s,
+            timeout_s=discovery_cfg.timeout_s,
+            min_chars=cfg.min_redact_chars,
+        )
         login_cfg = cfg.backend_login
         login = (
             build_login_service(
@@ -302,6 +319,8 @@ class RunsModule:
                 retain_s=login_cfg.retain_s,
                 screen_max_lines=login_cfg.screen_max_lines,
                 min_chars=cfg.min_redact_chars,
+                # 같은 프로세스의 로그인·로그아웃이 끝나면 그 백엔드 모델 목록을 다시 묻는다
+                on_account_change=catalog.invalidate,
             )
             if login_cfg.enabled
             else None
@@ -414,6 +433,7 @@ class RunsModule:
         async def stop() -> None:
             if login is not None:  # 진행 중인 로그인 하위 과정을 남기지 않는다
                 await login.aclose()
+            await catalog.aclose()  # 진행 중인 모델 목록 조회(CLI 하위 과정 포함)를 멈춘다
             await service.shutdown()
 
         return ModuleParts(
@@ -429,6 +449,7 @@ class RunsModule:
                     activity_limit=cfg.activity_limit,
                     readiness=lambda: readiness,
                     login=(lambda: login) if login is not None else None,
+                    model_catalog=lambda: catalog,
                     observe_event_prefixes=observe_event_prefixes_of(cfg.observe_event_prefixes),
                 )
             ],

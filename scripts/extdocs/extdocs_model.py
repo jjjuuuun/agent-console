@@ -93,8 +93,12 @@ class ExtensionPoint(BaseModel):
         default_factory=list, description="공개 기호(모듈:이름, @pkg#이름)"
     )
     settings: list[str] = Field(default_factory=list, description="관련 설정 키")
-    builtin: str | None = Field(
-        default=None, description="기본 구현 목록을 모으는 방법(entry-points·providers·none)"
+    builtin: str | list[str] | None = Field(
+        default=None,
+        description=(
+            "기본 구현 목록을 모으는 방법(entry-points·providers·none) 또는 구현하는 워크스페이스 "
+            "배포 이름 목록(등록 그룹·포트가 없는 선택 능력 등)"
+        ),
     )
     example: list[Example] = Field(default_factory=list, description="예제(하나 이상이어야 완성)")
     guide: str | None = Field(default=None, pattern=GUIDE_PATTERN, description="가이드 파일#절")

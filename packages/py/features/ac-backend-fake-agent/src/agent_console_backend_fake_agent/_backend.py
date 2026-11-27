@@ -53,6 +53,7 @@ from agent_console_runtime import (
     InteractivePort,
     LoginDriver,
     LoginRefusedError,
+    ModelDiscoveryResult,
     SecretResolver,
     SessionArchive,
     SessionRef,
@@ -133,6 +134,10 @@ def _default_ids() -> str:
     return uuid.uuid4().hex
 
 
+FAKE_DISCOVERY_UNSUPPORTED = "unsupported"
+"""`discovery_failure` 값: 실패가 아니라 "이 인증에서 조회할 수 없음"(상태 `unsupported`)."""
+
+
 class FakeInstallOptions(BaseModel):
     """설치자 설정(`modules.options.mod-runs.backends.fake-agent`) 형식.
 
@@ -142,6 +147,20 @@ class FakeInstallOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     models: list[ModelInfo] = Field(default_factory=list, description="`list_models()` 목록.")
+    discovered_models: list[ModelInfo] | None = Field(
+        default=None,
+        description="계정 모델 조회(X54) 흉내 결과(e2e·테스트용, 모델 id는 쓰는 쪽이 정한다). "
+        "null이고 discovery_failure도 없으면 조회 능력 없음.",
+    )
+    discovery_failure: str | None = Field(
+        default=None,
+        min_length=1,
+        description="주면 조회가 이 사유 코드로 실패한다(예: auth_missing, network). "
+        "unsupported면 이 인증에서 조회할 수 없다고 알린다.",
+    )
+    discovery_delay_s: float = Field(
+        default=0.0, ge=0, description="조회 응답 전 기다리는 시간(초, 시간 초과·진행 중 흉내)."
+    )
     rate_limits: list[FakeRateLimit] = Field(
         default_factory=list,
         description="실행마다 `agent.session_started` 직후 낼 `usage.rate_limit` 이벤트.",
@@ -232,6 +251,10 @@ class FakeBackend:
         session_dir: 가짜 세션 기록 폴더(X38 흉내). 주면 실행마다 `<폴더>/<cwd 키>/<세션>.jsonl`에
             한 줄을 남기고, 이어 쓰는 요청인데 파일이 없으면 `fake.session_missing`으로 실패한다.
             `session_archive()`가 보관·복원을 준다. None이면 둘 다 없다(지금 동작).
+        discovered_models: 계정 모델 조회(X54) 흉내 결과. 이것이나 `discovery_failure`를 주면
+            `capabilities.model_discovery = true`(둘 다 None = 능력 없음, 지금 동작).
+        discovery_failure: 주면 조회가 이 사유로 실패한다(`unsupported` = 이 인증에서 못 함).
+        discovery_delay_s: 조회 응답 전 기다리는 시간(초).
     """
 
     def __init__(
@@ -249,6 +272,9 @@ class FakeBackend:
         hook_probe_folder: str = DEFAULT_HOOK_PROBE_FOLDER,
         login: FakeLoginScript | Mapping[str, Any] | None = None,
         session_dir: Path | str | None = None,
+        discovered_models: Iterable[ModelInfo | Mapping[str, Any]] | None = None,
+        discovery_failure: str | None = None,
+        discovery_delay_s: float = 0.0,
     ) -> None:
         self._session_dir = Path(session_dir) if session_dir is not None else None
         script = FakeLoginScript.model_validate(login) if login is not None else None
@@ -263,6 +289,15 @@ class FakeBackend:
         )
         self._probe_folder = hook_probe_folder
         self._models = [ModelInfo.model_validate(m) for m in models]
+        self._discovered = (
+            [ModelInfo.model_validate(m) for m in discovered_models]
+            if discovered_models is not None
+            else None
+        )
+        self._discovery_failure = discovery_failure
+        self._discovery_delay = max(0.0, discovery_delay_s)
+        self.discovery_calls = 0
+        """`discover_models` 호출 수(테스트가 캐시를 확인한다)."""
         self._ids = ids
         self._rate_limits = [FakeRateLimit.model_validate(r) for r in rate_limits]
         self._delegate_tool = delegate_tool
@@ -295,6 +330,7 @@ class FakeBackend:
                 probe=True,
                 login=self._login is not None,
                 logout=self._login is not None,
+                model_discovery=self._discovered is not None or discovery_failure is not None,
             ),
             login_methods=[self._login.method()] if self._login is not None else [],
         )
@@ -330,6 +366,9 @@ class FakeBackend:
             hook_probe_folder=parsed.hook_probe_folder,
             login=parsed.login,
             session_dir=_session_root(parsed.session_dir, host),
+            discovered_models=parsed.discovered_models,
+            discovery_failure=parsed.discovery_failure,
+            discovery_delay_s=parsed.discovery_delay_s,
         )
 
     def session_archive(self) -> SessionArchive | None:
@@ -358,6 +397,25 @@ class FakeBackend:
     async def list_models(self) -> list[ModelInfo]:
         """생성 시 받은 모델 목록(복사본)."""
         return list(self._models)
+
+    async def discover_models(
+        self, ctx: BackendCheckContext, timeout_s: float
+    ) -> ModelDiscoveryResult:
+        """선택 능력(X54) 흉내: 설정한 조회 목록·실패를 돌려준다(모델·네트워크 호출 없음).
+
+        `discovery_delay_s`만큼 기다린 뒤 답한다(서비스가 `timeout_s`로 끊는다).
+        """
+        self.discovery_calls += 1
+        if self._discovery_delay:
+            await asyncio.sleep(self._discovery_delay)
+        failure = self._discovery_failure
+        if failure == FAKE_DISCOVERY_UNSUPPORTED:
+            return ModelDiscoveryResult(
+                ok=False, unsupported=True, method="fake", reason=FAKE_DISCOVERY_UNSUPPORTED
+            )
+        if failure is not None:
+            return ModelDiscoveryResult(ok=False, method="fake", reason=failure)
+        return ModelDiscoveryResult(ok=True, models=list(self._discovered or []), method="fake")
 
     async def status(self, ctx: BackendCheckContext) -> BackendReadiness:
         """선택 능력(정적 점검): 인증이 필요 없어 늘 준비됨(``always_ready``, 톤 ok).

@@ -7,7 +7,7 @@ Each example shows one or more extension points. See each README for how to inst
 | Example | Language | Points shown | Install |
 | --- | --- | --- | --- |
 | [agent-console-example-architecture](agent-console-example-architecture/README.md) | python | `architecture-profile` Architecture profile | `uv pip install -e examples/extensions/agent-console-example-architecture` |
-| [agent-console-example-backend](agent-console-example-backend/README.md) | python | `backend-session-archive` Backend session archive and restore, `execution-backend` Execution backend | `uv pip install -e examples/extensions/agent-console-example-backend` |
+| [agent-console-example-backend](agent-console-example-backend/README.md) | python | `backend-model-discovery` Backend model discovery, `backend-session-archive` Backend session archive and restore, `execution-backend` Execution backend | `uv pip install -e examples/extensions/agent-console-example-backend` |
 | [agent-console-example-collector](agent-console-example-collector/README.md) | python | `collector` Observation collector | `uv pip install -e examples/extensions/agent-console-example-collector` |
 | [agent-console-example-condition](agent-console-example-condition/README.md) | python | `condition-operator` Condition operator | `uv pip install -e examples/extensions/agent-console-example-condition` |
 | [agent-console-example-delegation](agent-console-example-delegation/README.md) | python | `delegation-strategy` Delegation strategy | `uv pip install -e examples/extensions/agent-console-example-delegation` |

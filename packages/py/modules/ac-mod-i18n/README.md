@@ -7,11 +7,11 @@ language. Catalog format, merging, and lookup come from `agent-console-i18n`.
 
 | What | Details |
 | --- | --- |
-| REST | `GET /i18n` (`I18nInfo`: languages in code order with `sources`, `complete`, `missing`, plus `default_language` and `fallback_language`), `GET /i18n/{lang}` (`MessageCatalog`; `en-US` matches `en`; `ETag` + `Cache-Control: no-cache`, `If-None-Match` → 304) |
+| REST | `GET /i18n` (`I18nInfo`: languages in code order with `sources`, `complete`, `missing`, plus `default_language`, `fallback_language` and `source_language`), `GET /i18n/{lang}` (`MessageCatalog`; `en-US` matches `en`; `ETag` + `Cache-Control: no-cache`, `If-None-Match` → 304) |
 | Errors | `i18n.unknown_language` (404; no catalog matches the language, `details.language`, `details.available`) |
 | Provided ports | `server.warnings` (catalog files, entries, and packages skipped while loading; `i18n.*` issue codes, severity warning, no catalog values) |
 | Required ports | none (the module runs alone) |
-| Administrator options | `modules.options.mod-i18n.{default_language, fallback_language, catalog_dirs, disabled_catalogs}` |
+| Administrator options | `modules.options.mod-i18n.{default_language, fallback_language, source_language, catalog_dirs, disabled_catalogs}` |
 | Plugins | Entry point `agent_console.message_catalogs` (name = catalog id, value = a module with a `locales/` folder). The host plugin loader (`i18n` of `agent_console.host_plugin_loaders`) registers them in the `message_catalogs` extension of the host bundle without importing them |
 | Own catalog | `locales/en.json` (entry point `ac-mod-i18n`): English for this module's title, description, and settings schema |
 | Web role | `i18n` |
@@ -22,6 +22,7 @@ Settings (all optional):
 | --- | --- | --- |
 | `default_language` | `en` | Language when neither the screen setting nor the browser language decides it |
 | `fallback_language` | `en` | Language for text the chosen language lacks; `complete` and `missing` count against it |
+| `source_language` | `ko` | Language the server source text is written in (`I18nInfo.source_language`). The web stops source-text lookups at this language, so a screen in this language shows the source text even when other catalogs are loaded. `null` or empty = unknown (the web looks through the whole fallback chain). Change it only for packages whose source text is in another language |
 | `catalog_dirs` | `[]` | Folders with `<language>.json` files. Relative paths are relative to the settings file folder. They come after package catalogs, in list order (later wins) |
 | `disabled_catalogs` | `[]` | Package catalog ids to leave out |
 

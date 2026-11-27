@@ -1,4 +1,20 @@
 {
+  "text": {
+    "로그인을 준비하고 있습니다.": "Preparing sign-in.",
+    "취소했습니다. 로그인 정보는 바뀌지 않았습니다.": "Canceled. Your sign-in info is unchanged.",
+    "화면과 연결이 끊겨 로그인을 취소했습니다. 로그인 정보는 바뀌지 않았습니다.": "Canceled the sign-in because the screen disconnected. Your sign-in info is unchanged.",
+    "서버가 종료되어 로그인을 취소했습니다.": "Canceled the sign-in because the server shut down.",
+    "로그인을 시작하지 못했습니다.": "Couldn't start sign-in.",
+    "로그인 중 오류가 났습니다.": "An error occurred during sign-in.",
+    "로그아웃 중 오류가 났습니다.": "An error occurred while signing out.",
+    "확인할 수 없음": "Can't check",
+    "확인 불가": "Unknown",
+    "이 백엔드는 상태 점검을 지원하지 않습니다.": "This backend doesn't support status checks.",
+    "상태 점검이 실패했거나 시간 안에 끝나지 않았습니다.": "The status check failed or didn't finish in time.",
+    "{seconds}초 안에 응답이 없었습니다.": "No response within {seconds} seconds.",
+    "시간({minutes}분) 안에 끝나지 않아 로그인을 멈췄습니다. 다시 시도해 주세요.": "Sign-in stopped because it didn't finish within the time limit ({minutes} min). Try again.",
+    "로그아웃이 {seconds}초 안에 끝나지 않았습니다.": "Sign-out didn't finish within {seconds} seconds."
+  },
   "codes": {
     "cancelled": "Canceled.",
     "delegation.conflicting_options": "The request option values of the combined delegation strategies differ.",

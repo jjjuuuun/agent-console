@@ -31,10 +31,10 @@ from extdocs_docs import (
 )
 from extdocs_generate import Generator, write_plan
 from extdocs_points import check_points
-from extdocs_testkit import Repo, language_rule, tool_data
+from extdocs_testkit import Repo, language_rule, other_lint_rules, tool_data
 
 HOOKS_SNIPPET = """\
-노트를 저장한 뒤 할 일을 더할 때 쓴다.
+Use it to add work that runs after a note is saved.
 
 ```python
 >>> 1 + 1
@@ -70,7 +70,7 @@ def fill_guides(repo: Repo) -> Path:
     text = page.read_text(encoding="utf-8")
     todo = str(tool_data().text["todo_text"])
     text = text.replace(
-        f"## note-kind\n\n{todo}", "## note-kind\n\n노트 종류 플러그인을 더할 때 쓴다."
+        f"## note-kind\n\n{todo}", "## note-kind\n\nUse it to add a note kind plugin."
     )
     text = text.replace(f"## note-hooks\n\n{todo}", f"## note-hooks\n\n{HOOKS_SNIPPET}")
     assert todo not in text
@@ -204,7 +204,7 @@ def test_broken_anchor_and_link_fail(documented: Repo) -> None:
 def test_public_lint_rules(tmp_path: Path, line: str, rule: str) -> None:
     path = tmp_path / "doc.md"
     path.write_text(f"# 제목\n\n{line}\n", encoding="utf-8")
-    found = public_lint(tmp_path, [path], tool_data().lint_rules, warning=False)
+    found = public_lint(tmp_path, [path], other_lint_rules(), warning=False)
     assert rule in {f.code for f in found}
 
 
@@ -214,7 +214,7 @@ def test_public_lint_clean_text(tmp_path: Path) -> None:
         "# 제목\n\n`uv run poe extdocs` 후 `examples/extensions/README.md`를 본다. 버전 0.14.1.\n",
         encoding="utf-8",
     )
-    assert public_lint(tmp_path, [path], tool_data().lint_rules, warning=False) == []
+    assert public_lint(tmp_path, [path], other_lint_rules(), warning=False) == []
 
 
 @pytest.mark.parametrize(
@@ -240,7 +240,7 @@ def test_public_lint_clean_text(tmp_path: Path) -> None:
 def test_public_lint_product_terms_pass(tmp_path: Path, line: str) -> None:
     path = tmp_path / "doc.md"
     path.write_text(f"# 제목\n\n{line}\n", encoding="utf-8")
-    assert public_lint(tmp_path, [path], tool_data().lint_rules, warning=False) == []
+    assert public_lint(tmp_path, [path], other_lint_rules(), warning=False) == []
 
 
 def test_design_id_ignores_code_fences(tmp_path: Path) -> None:
@@ -249,7 +249,7 @@ def test_design_id_ignores_code_fences(tmp_path: Path) -> None:
         '# 제목\n\n```python\nresult = ["R1", "X2"]\n```\n\n요구사항 R1을 본다.\n',
         encoding="utf-8",
     )
-    found = public_lint(tmp_path, [path], tool_data().lint_rules, warning=False)
+    found = public_lint(tmp_path, [path], other_lint_rules(), warning=False)
     assert [(f.code, f.where) for f in found] == [("public-design-id", "doc.md:7")]
 
 
@@ -262,7 +262,7 @@ def test_allow_marker_skips_named_rule_on_that_line(tmp_path: Path) -> None:
         "작업 5.2R.3과 CLAUDE.md <!-- extdocs:allow internal-config, task-number -->\n",
         encoding="utf-8",
     )
-    found = public_lint(tmp_path, [path], tool_data().lint_rules, warning=False)
+    found = public_lint(tmp_path, [path], other_lint_rules(), warning=False)
     assert [(f.code, f.where) for f in found] == [("public-internal-config", "doc.md:4")]
     assert allowed_rules("x <!-- extdocs:allow a b,c -->") == {"a", "b", "c"}
 
@@ -303,6 +303,27 @@ def test_korean_prose_rule_skips_korean_copies(tmp_path: Path) -> None:
         )
     files = [tmp_path / "README.ko.md", tmp_path / "docs/DEVELOPMENT.ko.md"]
     assert public_lint(tmp_path, files, [language_rule()], warning=False) == []
+
+
+def test_korean_prose_is_an_error_in_repo_settings(
+    documented: Repo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """저장소 규칙: 영어 문서의 한글은 오류(경고 아님), 한국어 사본 ``*.ko.md``는 대상 밖."""
+    assert language_rule().warning is False
+    root = str(documented.root)
+    assert main(["--root", root, "generate"]) == 0  # 저장소 설정(계약 표 포함)으로 다시 생성
+    assert main(["--root", root, "docs"]) == 0  # 영어 픽스처는 저장소 규칙 그대로 통과
+    (documented.root / "README.ko.md").write_text("# 제품\n\n한국어 사본이다.\n", encoding="utf-8")
+    assert main(["--root", root, "docs"]) == 0
+    (documented.root / "README.md").write_text(
+        "# Product\n\n**English** | [한국어](README.ko.md)\n\n한국어 문장이 남았다.\n",
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+    assert main(["--root", root, "docs"]) == 1
+    out = capsys.readouterr().out
+    assert "오류 [public-korean-prose] README.md:5" in out
+    assert "README.ko.md" not in out
 
 
 @pytest.mark.parametrize(
@@ -403,11 +424,11 @@ def test_expand_globs_prunes_skipped_and_hidden_dirs(tmp_path: Path) -> None:
 
 DATA_POINT = """
 [tool.agent-console.extension-points.note-defaults]
-title = "노트 기본값"
+title = "Note defaults"
 area = "memory"
-summary = "노트 기본값을 데이터로 바꾼다"
+summary = "Replaces the note defaults with data"
 registration = {{ kind = "data", path = "data/notes.json" }}
-example = {{ kind = "snippet", note = "사용자 설정 notes 데이터" }}
+example = {{ kind = "snippet", note = "notes data in the user settings" }}
 guide = "memory.md#note-defaults"
 """
 
@@ -419,7 +440,7 @@ def test_generated_sentences_skip_empty_values(tmp_path: Path) -> None:
     page = generate(repo, scaffold=True)["docs/extending/memory.md"]
     section = page.split("extdocs:facts note-defaults")[1]
     assert "- Registration: Uses the package data `data/notes.json`." in section
-    assert "  - snippet: 사용자 설정 notes 데이터\n" in section
+    assert "  - snippet: notes data in the user settings\n" in section
     assert "Keys that turn it off: ." not in page
     assert "— —" not in page
     assert "- Turning it off or removing it: Remove the data to drop only that item." in section
@@ -434,9 +455,9 @@ def test_public_lint_in_example_readme_fails(documented: Repo) -> None:
 def test_public_lint_in_root_readme_fails(documented: Repo) -> None:
     """루트 README도 공개 가능 린트 대상이다(저장소 설정 ``public_lint_globs``, 8R 검토 F-6)."""
     readme = documented.root / "README.md"
-    readme.write_text("# 제품\n\n설치는 아래를 따른다.\n", encoding="utf-8")
+    readme.write_text("# Product\n\nFollow the steps below to install.\n", encoding="utf-8")
     assert errors(docs_check(documented)) == []
-    readme.write_text("# 제품\n\n작업 5.2R.3에서 바꿨다.\n", encoding="utf-8")
+    readme.write_text("# Product\n\nChanged in task 5.2R.3.\n", encoding="utf-8")
     assert errors(docs_check(documented)) == ["public-task-number"]
 
 
@@ -573,4 +594,19 @@ def test_area_with_wrong_file_name_fails(documented: Repo) -> None:
     missing = [f for f in findings if f.code == "area-page-missing"]
     assert [f.message for f in missing] == [
         "영역 페이지 파일이 없습니다: docs/extending/no-such-area.md"
+    ]
+
+
+def test_builtin_distribution_list_renders_folder_and_distribution(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+
+    from extdocs_common import Member
+
+    members = [Member("agent-console-cap", tmp_path / "ac-cap", {})]
+    gen = Generator.__new__(Generator)
+    gen.col = SimpleNamespace(members=members)  # type: ignore[assignment]
+    decl = SimpleNamespace(point=SimpleNamespace(builtin=["agent-console-cap", "agent-console-x"]))
+    assert gen.builtins(decl) == [  # type: ignore[arg-type]
+        "ac-cap (agent-console-cap)",
+        "agent-console-x (agent-console-x)",
     ]

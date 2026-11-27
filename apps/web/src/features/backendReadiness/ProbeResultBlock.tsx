@@ -3,7 +3,7 @@ import { Banner } from "@agent-console/ui";
 import { useAppMessages } from "../../app/appMessages";
 import { FixButtons } from "../../app/fix";
 import type { ProbeView } from "./hooks";
-import { useFormat } from "../../i18n";
+import { useFormat, useServerRender } from "../../i18n";
 
 export interface ProbeResultBlockProps {
   probe: Pick<ProbeView, "result" | "requestError" | "finishedAtMs" | "running">;
@@ -17,6 +17,7 @@ function detailLines(result: BackendProbeResult): string[] {
 /** 연결 테스트 결과: 성공은 한 줄 + 확인 정보, 실패는 ① 무슨 일 ② 해결 버튼 ③ 접힌 상세. 비밀 값은 서버가 걸러 준 문장만 쓴다. */
 export function ProbeResultBlock({ probe, nowMs }: ProbeResultBlockProps) {
   const fmt = useFormat();
+  const render = useServerRender();
   const m = useAppMessages();
   const t = m.backendReadiness;
   if (probe.running) return null;
@@ -42,7 +43,7 @@ export function ProbeResultBlock({ probe, nowMs }: ProbeResultBlockProps) {
     return (
       <Banner tone="success" aria-label={t.probeResultLabel} data-testid="probe-result">
         <strong>{seconds === null ? t.probeOkNoTime : t.probeOk(seconds)}</strong>
-        {result.message ? <p className="app-muted">{result.message}</p> : null}
+        {result.message ? <p className="app-muted">{render(result.message, result.text_templates?.["/message"])}</p> : null}
         {lines.length > 0 ? <ul className="app-readiness-details">{lines.map((l) => <li key={l}>{l}</li>)}</ul> : null}
         <p className="app-muted">{t.probeCheckedAt(when)}</p>
       </Banner>
@@ -51,7 +52,7 @@ export function ProbeResultBlock({ probe, nowMs }: ProbeResultBlockProps) {
   const lines = [...(result.reason ? [`${t.probeReason}: ${result.reason}`] : []), ...detailLines(result)];
   return (
     <Banner tone="danger" aria-label={t.probeResultLabel} data-testid="probe-result">
-      <strong>{result.message || t.probeFailedTitle}</strong>
+      <strong>{result.message ? render(result.message, result.text_templates?.["/message"]) : t.probeFailedTitle}</strong>
       <FixButtons fix={{ actions: result.fixes ?? [] }} />
       {lines.length > 0 ? (
         <details className="app-details">

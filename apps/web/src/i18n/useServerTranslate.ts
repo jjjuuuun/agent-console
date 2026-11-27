@@ -1,4 +1,4 @@
-import { useServerText } from "@agent-console/i18n";
+import { useServerText, type TextTemplateLike } from "@agent-console/i18n";
 import { useOptionalI18n } from "./AppI18n";
 
 const identity = (text: string): string => text;
@@ -11,4 +11,17 @@ export function useServerTranslate(): (text: string) => string {
   const server = useServerText();
   const inProvider = useOptionalI18n() !== null;
   return inProvider ? server.text : identity;
+}
+
+/** 서버 글자 칸을 그리는 함수: `(칸 값, 그 칸의 text_templates 항목)`. 틀이 있고 모두 번역되면 번역한 틀을 값으로 채운 문장이다. */
+export type ServerRender = (value: string, parts?: readonly TextTemplateLike[] | null) => string;
+
+/**
+ * `text_templates`를 가진 서버 응답(준비 상태·연결 테스트·로그인·로그아웃·로그 이벤트)의 글자 칸을 그리는 함수(I.12e).
+ * 앱 i18n 공급자 밖이면 칸 값을 그대로 돌려준다.
+ */
+export function useServerRender(): ServerRender {
+  const server = useServerText();
+  const inProvider = useOptionalI18n() !== null;
+  return inProvider ? server.render : (value) => value;
 }

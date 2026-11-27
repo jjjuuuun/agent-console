@@ -7,6 +7,9 @@ Run·NodeRun·실행 이벤트·상호작용·흐름(trace)·노드/연결/백�
 커서 페이지 `RunPage{items, next_cursor, source}`.
 1.8.0(0.13.2, 6R.19 서버 후속): `Run.has_children`(목록 페이지 행의 직접 자식 유무, 선택).
 1.9.0(0.14.8, 더하기만): 실행 위치 `RunLocation`(`GET /runs/{id}/locate`).
+1.10.0(0.16.1, 더하기만): 모델 계정 조회 — `ModelInfo.sources`(`ModelSource`),
+`BackendCapabilities.model_discovery`, `BackendModelCatalog`·`ModelDiscoveryInfo`
+(`GET /backends/{id}/model-catalog`).
 """
 
 from ._api import (
@@ -21,6 +24,7 @@ from ._api import (
     TeamPlanSummary,
     UnresolvedBackendNode,
 )
+from ._catalog import BackendModelCatalog, ModelDiscoveryInfo, ModelDiscoveryState
 from ._conditions import (
     ConditionItem,
     ConditionItemOutcome,
@@ -48,6 +52,7 @@ from ._descriptors import (
     KnownDelegationSessions,
     LoginMethodInfo,
     ModelInfo,
+    ModelSource,
     NodeTypeDescriptor,
     ReplyFields,
 )
@@ -180,6 +185,7 @@ __all__ = [
     "BackendLoginSession",
     "BackendLoginStartRequest",
     "BackendLogoutResult",
+    "BackendModelCatalog",
     "BackendProbeRequest",
     "BackendProbeResult",
     "BackendReadiness",
@@ -230,7 +236,10 @@ __all__ = [
     "LoopExhaustedPayload",
     "LoopIterationEvent",
     "LoopIterationPayload",
+    "ModelDiscoveryInfo",
+    "ModelDiscoveryState",
     "ModelInfo",
+    "ModelSource",
     "NodeRun",
     "NodeRunStatus",
     "NodeStatusEvent",

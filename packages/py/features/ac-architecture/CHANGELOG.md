@@ -1,27 +1,36 @@
-# 변경 기록
+# Changelog
 
-## 0.1.1 (미발행)
+## 0.1.1 (unreleased)
 
-- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-architecture`, so the web can show the default architecture map profile (cells, edges and notes) in English (data only, no API change).
-- FU.6: 기본 프로필 Instructions 칸 조건을 `/documents` `any_item`으로(규칙이 첫 문서여도 뒤의 skill·spec 등을 센다, 5.7R.7 과소 집계). 묶음 값은 그대로 첫 문서 종류.
-
-- 6R.9(M-1): `ProfileMatcher.row_fields`·`match_row(row)`(기본 None). `selector_predicate`가 출처 제한이 있거나 판정기가 열 값으로 답할 수 있으면 행 기준 미리 거르기(`row_fields`·`check_row`, ac-logs `RowPredicate`와 같은 모양)를 가진다. 늘 거짓 대상(관측 안 하는 연결·분류 안 됨 꺼짐)은 행으로 거짓. 판정 결과는 같다.
-- 5.7R.8(M-4): `unlisted_path_issues(profile, unlisted_paths)`, `profile_issues(..., unlisted_paths=())`·
-  `check_profile_data(..., unlisted_paths=())` — 조건(칸·연결 `when`, `error_when`) 경로가 주어진 접두와
-  같거나 그 아래면 warning `architecture.condition_path_unlisted`(`details.prefix`·`condition_path`).
-  접두 이름은 패키지에 없고 호출자가 준다. 넘기지 않으면 지금과 같다.
-
-- 5.7R.7(M-2): 기본 프로필 `platform-runs` 수집 범위에 `rules`를 되돌림(플랫폼 맥락 구성의 규칙 리소스가
-  대응표로 첫 문서 `kind: rules`가 된다). 표본 `run_with_session_log`의 맥락 구성 이벤트에 `documents`를
-  더함 — 골든 Rules가 `partial`·0회에서 `observed`·1회(묶음 `house-rules`)로 바뀜.
-- 5.5R.10: `project_architecture(..., matches=)`(미리 판정한 결과로 투영 — 연동 모듈의 결과 캐시·증분
-  읽기용), `selector_predicate(..., matcher=)`(판정 결과를 기억하는 판정기 주입). 넘기지 않으면 지금과 같다.
-- 5.5R.8: 기본 프로필 데이터 `agent-architecture`(칸 16·연결 21·영역 3, 수집 범위·출처 우선순위),
-  `testing.load_sample`·`SAMPLES`·`Sample`(수집 결과 표본 2개: Claude Code 세션, 플랫폼 기록 + 세션 로그).
+- Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
+  `ac-architecture`, so the web app can show the default architecture map profile (cells, edges and notes) in English
+  (data only, no API change).
+- The Instructions cell condition of the default profile now uses `any_item` on `/documents` (skills, specs and
+  others after a leading rules document are counted, fixing an undercount). The group value is still the kind of the
+  first document.
+- `ProfileMatcher.row_fields` and `match_row(row)` (None by default). When there is a source restriction or the
+  matcher can answer from column values, `selector_predicate` gets a row-level prefilter (`row_fields` and
+  `check_row`, the same shape as ac-logs `RowPredicate`). Targets that are always false (edges that are not observed,
+  unassigned turned off) are false at the row level. The decisions are the same.
+- `unlisted_path_issues(profile, unlisted_paths)`, `profile_issues(..., unlisted_paths=())` and
+  `check_profile_data(..., unlisted_paths=())`: when a condition path (cell or edge `when`, `error_when`) equals a
+  given prefix or is below it, a warning `architecture.condition_path_unlisted` is reported (`details.prefix`,
+  `condition_path`). The package has no prefix names; the caller provides them. Without them, behavior is unchanged.
+- Restored `rules` to the collection scope of the default profile `platform-runs` (rules resources of the platform
+  context configuration become a first document `kind: rules` through the mapping table). Added `documents` to the
+  context configuration event of the sample `run_with_session_log`; the golden Rules cell changes from `partial` with
+  0 occurrences to `observed` with 1 (group `house-rules`).
+- `project_architecture(..., matches=)` (project from precomputed decisions, for result caching and incremental reads
+  in link modules) and `selector_predicate(..., matcher=)` (inject a matcher that remembers decisions). Without them,
+  behavior is unchanged.
+- Default profile data `agent-architecture` (16 cells, 21 edges, 3 areas, collection scope and source priority) and
+  `testing.load_sample`, `SAMPLES` and `Sample` (two collected samples: a Claude Code session, and platform records
+  plus a session log).
 
 ## 0.1.0
 
-- 처음 만듦(5.5R.4): 프로필 문서·병합(`merge_profiles`, origin·덮어쓰기·null 지우기), 검사(`profile_issues`·
-  `check_profile_data`), 투영(`project_architecture`: 지표 5개·상태 3개·수집 범위·묶기·하위 구조도·분류 안 됨·
-  출처 우선순위·`max_seq`), 판정(`ProfileMatcher`·`event_membership`·`selector_predicate`), X23 로더,
-  `testing` 도구. 기본 프로필 데이터는 자리만(5.5R.8).
+- First release: profile documents and merging (`merge_profiles`, origin, overrides, null removal), checks
+  (`profile_issues`, `check_profile_data`), projection (`project_architecture`: five metrics, three states, collection
+  scope, grouping, nested architecture maps, unassigned, source priority, `max_seq`), matching (`ProfileMatcher`,
+  `event_membership`, `selector_predicate`), the profile plugin loader, and `testing` tools. The default profile data
+  was only a placeholder at first.
