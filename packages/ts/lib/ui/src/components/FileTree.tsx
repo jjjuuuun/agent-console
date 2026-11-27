@@ -21,6 +21,8 @@ export interface FileTreeProps {
   selected?: string | null;
   /** Enter/클릭으로 파일을 고를 때 */
   onSelect?: (path: string) => void;
+  /** 이름 정렬에 쓰는 언어(BCP 47). 기본 `en` */
+  locale?: string;
   className?: string;
 }
 
@@ -35,7 +37,7 @@ interface Row {
 }
 
 /** 경로 목록 → 폴더/파일 행(폴더 먼저, 이름순). 순수 함수. */
-export function buildRows(items: readonly FileTreeItem[], view: "tree" | "flat", collapsed: ReadonlySet<string>): Row[] {
+export function buildRows(items: readonly FileTreeItem[], view: "tree" | "flat", collapsed: ReadonlySet<string>, locale = "en"): Row[] {
   if (view === "flat") {
     return items.map((item) => ({ key: item.path, kind: "file" as const, label: item.path, depth: 1, parent: null, item }));
   }
@@ -62,11 +64,11 @@ export function buildRows(items: readonly FileTreeItem[], view: "tree" | "flat",
   }
   const rows: Row[] = [];
   const walk = (dir: Dir, depth: number, parent: string | null) => {
-    for (const d of [...dir.dirs.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const d of [...dir.dirs.values()].sort((a, b) => a.name.localeCompare(b.name, locale))) {
       rows.push({ key: `dir:${d.key}`, kind: "folder", label: d.name, depth, parent });
       if (!collapsed.has(d.key)) walk(d, depth + 1, `dir:${d.key}`);
     }
-    for (const f of [...dir.files].sort((a, b) => a.path.localeCompare(b.path))) {
+    for (const f of [...dir.files].sort((a, b) => a.path.localeCompare(b.path, locale))) {
       const name = f.path.split("/").filter((p) => p !== "").pop() ?? f.path;
       rows.push({ key: f.path, kind: "file", label: name, depth, parent });
       rows[rows.length - 1]!.item = f;
@@ -80,11 +82,11 @@ export function buildRows(items: readonly FileTreeItem[], view: "tree" | "flat",
  * 경로 배열을 트리(또는 평면 목록)로 보여 주는 `role="tree"`. 도메인을 모른다.
  * 키보드: `↑↓` 이동, `→` 폴더 펴기/첫 자식, `←` 폴더 접기/부모, `Enter`/`Space` 파일 선택·폴더 토글, `Home`/`End`.
  */
-export function FileTree({ items, ariaLabel, view = "tree", selected, onSelect, className }: FileTreeProps) {
+export function FileTree({ items, ariaLabel, view = "tree", selected, onSelect, locale, className }: FileTreeProps) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [active, setActive] = useState<string | null>(null);
   const refs = useRef(new Map<string, HTMLDivElement>());
-  const rows = useMemo(() => buildRows(items, view, collapsed), [items, view, collapsed]);
+  const rows = useMemo(() => buildRows(items, view, collapsed, locale), [items, view, collapsed, locale]);
   const current = rows.some((r) => r.key === active) ? active : (rows[0]?.key ?? null);
 
   const focusRow = (key: string | undefined) => {

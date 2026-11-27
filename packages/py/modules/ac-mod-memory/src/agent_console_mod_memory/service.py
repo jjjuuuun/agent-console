@@ -247,7 +247,7 @@ class MemoryService:
         try:
             return _plain(self._section())
         except Exception:
-            _log.warning("메모리 설정을 읽지 못해 기본값을 씁니다", exc_info=True)
+            _log.warning("Couldn't read memory settings; using defaults", exc_info=True)
             return None
 
     def _defaults_data(self) -> Mapping[str, Any]:
@@ -270,7 +270,7 @@ class MemoryService:
                 user=settings.scope_kinds,
             )
         except ValueError:  # pragma: no cover - parse가 틀린 종류를 뺀다
-            _log.warning("사용자 범위 종류를 합치지 못해 빼고 씁니다", exc_info=True)
+            _log.warning("Couldn't merge user scope kinds; continuing without them", exc_info=True)
             catalog = merge_scope_kinds(
                 defaults=self._defaults_data(),
                 include_defaults=settings.include_default_scope_kinds,
@@ -601,7 +601,7 @@ class MemoryService:
             result = apply_retention(self._store, plan)
         if result.archived or result.deleted:
             _log.info(
-                "메모리 정리: 보관 %d, 지움 %d, 건너뜀 %d",
+                "Memory cleanup: archived %d, deleted %d, skipped %d",
                 result.archived,
                 result.deleted,
                 result.skipped,

@@ -165,7 +165,7 @@ class PublishingSink:
         try:
             self._on_event(event)
         except Exception:
-            _log.exception("실행 이벤트 알림 실패: %s", event.type)
+            _log.exception("Run event notification failed: %s", event.type)
 
 
 class RunsModule:
@@ -405,7 +405,7 @@ class RunsModule:
             if not service.has_preparers:
                 _log.warning("%s", team_rules_warning().message)
             _log.info(
-                "실행 모듈 시작: 노드 타입 %d, 백엔드 %d, 복구한 Run %d",
+                "Runs module started: %d node types, %d backends, %d recovered runs",
                 len(registries.node_types),
                 len(registries.backends),
                 len(service.recovered),

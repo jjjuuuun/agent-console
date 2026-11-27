@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-projects"
 version = "0.3.0"
-description = "Agent Console — 프로젝트 기능 모듈: 폴더 등록·폴더 고르기·프로젝트 구성 공간·공간 사이 복사"
+description = "Agent Console — projects feature module: folder registration, folder picking, project configuration space, copying between spaces"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ mod-projects = "agent_console_mod_projects.module:module"
 
 [project.entry-points."agent_console.host_plugin_loaders"]
 projects = "agent_console_mod_projects.plugins:load_plugins"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-projects = "agent_console_mod_projects"
 
 [dependency-groups]
 dev = [

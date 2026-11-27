@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-wiki-check"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 위키 페이지 머리말에 필요한 키가 없으면 경고·거부하는 쓰기 검사(example.front-matter-keys)"
+description = "Agent Console example extension — a write check that warns about or rejects wiki pages whose front matter lacks required keys (example.front-matter-keys)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

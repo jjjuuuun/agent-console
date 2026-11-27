@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { TIME_MODES, defaultLogViewMessages, type TimeMode } from "@agent-console/log-view";
+import { TIME_MODES, type LogViewMessages, type TimeMode } from "@agent-console/log-view";
 import { ActionMenu, type ActionMenuEntry } from "./ActionMenu";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages, type LogsMessages } from "./messages";
+import { useLogViewMessages } from "./useLogViewMessages";
 
 export interface LogViewMenuProps {
   /** 응답 묶기(세션 상세) */
@@ -21,7 +22,7 @@ export interface LogViewMenuProps {
 }
 
 /** [보기 ▾] 메뉴 항목 만들기(순수 함수): 응답 묶기 · 숨긴 범주 포함 · 정렬 · 시각 표시 · 열 구성 · 분류 체계 편집…. 넘기지 않은 부분은 없다. */
-export function viewMenuEntries(p: LogViewMenuProps): ActionMenuEntry[] {
+export function viewMenuEntries(p: LogViewMenuProps, t: LogsMessages, lv: LogViewMessages): ActionMenuEntry[] {
   const out: ActionMenuEntry[] = [];
   if (p.groupResponses) out.push({ kind: "check", id: "group", label: t.view.groupResponses, checked: p.groupResponses.checked, onChange: p.groupResponses.onChange });
   if (p.includeHidden) out.push({ kind: "check", id: "hidden", label: t.view.includeHidden, checked: p.includeHidden.checked, onChange: p.includeHidden.onChange });
@@ -34,7 +35,7 @@ export function viewMenuEntries(p: LogViewMenuProps): ActionMenuEntry[] {
   const time = p.time;
   if (time) {
     out.push({ kind: "heading", id: "time", label: t.view.timeMode });
-    for (const mode of TIME_MODES) out.push({ kind: "radio", id: `time-${mode}`, label: defaultLogViewMessages.timeMode[mode], checked: time.mode === mode, onSelect: () => time.onChange(mode) });
+    for (const mode of TIME_MODES) out.push({ kind: "radio", id: `time-${mode}`, label: lv.timeMode[mode], checked: time.mode === mode, onSelect: () => time.onChange(mode) });
   }
   const cols = p.columns;
   if (cols) {
@@ -56,6 +57,8 @@ export function viewMenuEntries(p: LogViewMenuProps): ActionMenuEntry[] {
  * 상태·콜백은 전부 props이고 저장은 호출자(`useColumnChoice`·`useLogTimeMode` 등)가 한다.
  */
 export function LogViewMenu(p: LogViewMenuProps) {
-  const entries = useMemo(() => viewMenuEntries(p), [p]);
+  const lv = useLogViewMessages();
+  const t = useLogsMessages();
+  const entries = useMemo(() => viewMenuEntries(p, t, lv), [p, t, lv]);
   return <ActionMenu label={t.view.button} trigger={<>{t.view.button} ▾</>} entries={entries} {...(p.open === undefined ? {} : { open: p.open })} {...(p.onOpenChange === undefined ? {} : { onOpenChange: p.onOpenChange })} />;
 }

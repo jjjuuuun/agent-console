@@ -2,6 +2,7 @@
 
 ## 미출시 (0.3.0)
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-projects`, so the web can show the `project.copy_reserved_id` issue in English (data only, no API change).
 - REL.14 — BREAKING CHANGE: Removed the old definition-scope rules visible, scope_issues, move_plan, delete_plan and their constants. Use legacy_items, legacy_counts, and copy_plan.
   지운 이름: `visible`·`scope_issues`·`move_plan`·`delete_plan`·`UnknownDefinitionError`·`MOVE_TO_SHARED_SUGGESTION`·
   `CODE_SHARED_USES_PROJECT`·`CODE_CROSS_PROJECT`·`DEFAULT_MESSAGES`(범위 문구 표)·`effective_scope`·`known_project_ids`.

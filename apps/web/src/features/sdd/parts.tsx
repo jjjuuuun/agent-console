@@ -7,7 +7,7 @@ import { isImeKeyEvent } from "../../lib/ime";
 import { ROUTE_ROLES, routePath } from "../library";
 import { SDD_LIMITS } from "./sddConfig";
 import { classifySddError } from "./sddErrors";
-import { sddMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 /** 입력이 멈춘 뒤 `onCommit`을 부르는 검색 칸. 한글 조합 중에는 보내지 않고, 밖에서 값이 바뀌면 따라간다. */
 export function SearchBox({ value, onCommit, label, placeholder, inputRef, delayMs = SDD_LIMITS.searchDebounceMs }: { value: string; onCommit: (q: string) => void; label: string; placeholder?: string; inputRef?: Ref<HTMLInputElement>; delayMs?: number }) {
@@ -54,14 +54,15 @@ export function SearchBox({ value, onCommit, label, placeholder, inputRef, delay
 
 /** 프로젝트 연동이 꺼져 본문 전체를 대신하는 안내(`sdd.spaces_unavailable`). 기능 모듈 화면으로 가는 링크는 설정이 있을 때만. */
 export function UnavailableState() {
+  const t = useT("sdd");
   const settings = routePath(ROUTE_ROLES.settings);
   return (
     <div className="sdd-state" data-testid="sdd-unavailable">
       <EmptyState
         icon={<Icon name="folder" size={40} />}
-        title={m.unavailable.title}
-        description={m.unavailable.body}
-        action={settings === "/" ? undefined : <a className="app-link-btn" href={`${settings}#modules`}>{m.unavailable.openModules}</a>}
+        title={t("unavailable.title")}
+        description={t("unavailable.body")}
+        action={settings === "/" ? undefined : <a className="app-link-btn" href={`${settings}#modules`}>{t("unavailable.openModules")}</a>}
       />
     </div>
   );
@@ -69,18 +70,20 @@ export function UnavailableState() {
 
 /** 요청 실패를 종류별로 보인다: 연동 꺼짐은 안내, 스펙 없음·폴더 문제·그 밖은 오류 블록(+ 다시 시도). */
 export function FailureBlock({ error, title, onRetry, backTo }: { error: unknown; title: string; onRetry?: () => void; backTo?: ReactNode }) {
-  const failure = classifySddError(error, title);
+  const t = useT("sdd");
+  const failure = classifySddError(error, title, t);
   if (failure.kind === "unavailable") return <UnavailableState />;
-  if (failure.kind === "notFound") return <ErrorBlock title={m.notFound}>{backTo}</ErrorBlock>;
-  return <ErrorBlock title={title} message={failure.message} {...(onRetry === undefined ? {} : { onRetry, retryLabel: m.retry })} />;
+  if (failure.kind === "notFound") return <ErrorBlock title={t("notFound")}>{backTo}</ErrorBlock>;
+  return <ErrorBlock title={title} message={failure.message} {...(onRetry === undefined ? {} : { onRetry, retryLabel: t("retry") })} />;
 }
 
 /** 150ms 넘게 걸릴 때만 보이는 스켈레톤 행. */
 export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+  const t = useT("sdd");
   const show = useDelayed(true, SDD_LIMITS.skeletonDelayMs);
   if (!show) return null;
   return (
-    <div className="app-skeleton" role="status" aria-busy="true" aria-label={m.loading}>
+    <div className="app-skeleton" role="status" aria-busy="true" aria-label={t("loading")}>
       {Array.from({ length: rows }, (_, i) => <div key={i} className="app-skeleton-row" />)}
     </div>
   );

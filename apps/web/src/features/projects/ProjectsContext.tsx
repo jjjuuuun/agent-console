@@ -20,10 +20,11 @@ import { ApiError } from "@agent-console/api-client";
 import { DEFAULT_ROUTES, isDefinitionPath } from "../../shell/routeConfig";
 import { useModules, useRequires } from "../../modules";
 import { useToast } from "@agent-console/ui";
-import { folderHomeMessages } from "./folderHomeMessages";
-import { projectMessages } from "./messages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
+import { useProjectMessages } from "./messages";
 import { UnregisterDialog } from "./UnregisterDialog";
 import { regionProjects } from "./projectRegionLib";
+import { useLanguageCode } from "../../i18n";
 import { ProjectFolderHost, type FolderRequest } from "./ProjectFolderHost";
 
 /** 프로젝트 홈 주소(라우트 `/projects/:id`). 현재 프로젝트 질의는 주소에 `?prj=`로 이어 붙는다. */
@@ -111,6 +112,9 @@ function asProjectStorage(storage: SafeStorage) {
  * 화면 이동 때 주소 질의가 사라지면 다시 붙여 공유 가능한 주소를 유지한다.
  */
 export function ProjectsProvider({ children }: { children: ReactNode }) {
+  const language = useLanguageCode();
+  const folderHomeMessages = useFolderHomeMessages();
+  const projectMessages = useProjectMessages();
   const phase = useRequires(PROJECT_REQUIRES).phase;
   // 모듈 목록을 못 받은 서버(구버전 등)에서는 켜져 있는지 알 수 없으므로 프로젝트 UI를 만들지 않는다(다른 기능의 fail-open과 달리 이 UI는 덧붙는 것이다).
   const listKnown = useModules().state.phase === "ready";
@@ -144,7 +148,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   // 주소 질의와 맞춘다: 주소가 바뀌어 값이 다르면 따르고, 값이 있는데 주소에 없으면 붙인다.
   // 프로젝트가 1개 이상이면 현재 프로젝트가 늘 있다("모든 프로젝트" 없음, screen-projects §7.4): 값이 없거나 보관·삭제된 것이면 이름순 첫 프로젝트.
   // 저장소·주소를 바꾸지 않고 파생한다(주소를 덮어쓰는 이동과 경쟁하지 않는다).
-  const active = useMemo(() => regionProjects(projects), [projects]);
+  const active = useMemo(() => regionProjects(projects, language), [projects, language]);
   const fallbackId = listed ? (active[0]?.id ?? null) : null;
   const effective = !enabled ? null : current !== null && (!listed || active.some((p) => p.id === current)) ? current : listed ? fallbackId : current;
   const lastSearch = useRef(location.search);
@@ -215,7 +219,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       setCurrent(id);
       toast({ tone: "info", text: projectMessages.switcher.adoptedToast(names.get(id) ?? id) });
     },
-    [enabled, knownIds, setCurrent, toast, names],
+    [enabled, knownIds, setCurrent, toast, names, projectMessages],
   );
 
   const value = useMemo<ProjectsValue>(

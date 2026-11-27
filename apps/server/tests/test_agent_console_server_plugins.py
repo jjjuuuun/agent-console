@@ -141,7 +141,7 @@ def test_plugins_disabled_turns_off_one_entry_point_only(tmp_path: Path) -> None
         assert team
         assert all(p["status"] == "skipped" and p["error"] is None for p in team)
         assert all("plugins.disabled" in str(p["reason"]) for p in team)  # 끈 이유(0.14.3)
-        assert not [w for w in info["warnings"] if w["code"] == "plugins.config"]
+        assert not [w for w in info["warnings"] if w["code"].startswith("plugins.")]
 
 
 def test_plugins_disabled_with_enabled_and_module_plugins(
@@ -171,7 +171,8 @@ def test_plugins_disabled_unknown_name_is_server_warning(tmp_path: Path) -> None
     settings = make_settings(tmp_path, plugins={"disabled": ["no-such-plugin-xyz"]})
     with server(settings) as client:
         info = client.get(f"{API}/server-info").json()
-        warnings = [w for w in info["warnings"] if w["code"] == "plugins.config"]
+        warnings = [w for w in info["warnings"] if w["code"] == "plugins.unknown_disabled"]
         assert len(warnings) == 1
         assert "no-such-plugin-xyz" in warnings[0]["message"]
+        assert warnings[0]["details"] == {"name": "no-such-plugin-xyz"}  # 웹이 문구를 고른다
         assert client.get(f"{API}/node-types").json()  # 다른 것은 그대로

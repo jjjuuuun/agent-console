@@ -9,9 +9,10 @@ import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { ToneChip } from "@agent-console/sdd-view";
 import { ConditionListField, useConfigIssuesUnder } from "../../delegation";
 import { TONE_CHOICES } from "../sddConfig";
-import { sddMessages as m } from "../messages";
 import { pointerOf, rootOf, ShapedField, type ItemRenderArgs } from "./ShapedField";
 import { useSddWidgetEnv } from "./SddWidgetEnv";
+import { useT, type Translate } from "@agent-console/i18n";
+import { useMaybeT } from "../../../i18n/useMaybeT";
 
 /** 조건(`ac-conditions`): 팀 구성 연결의 조건 편집 부품을 그대로 쓴다. 이슈 위치는 폼이 알려 준 정확한 위치다. */
 export function ConditionField(p: SchemaFormFieldProps) {
@@ -21,6 +22,7 @@ export function ConditionField(p: SchemaFormFieldProps) {
 
 /** 정규식 칸(mono). 문자열 하나 또는 정규식 목록. 검사는 서버가 한다. */
 export function RegexField(p: SchemaFormFieldProps) {
+  const t = useT("sdd");
   return (
     <ShapedField
       field={p}
@@ -33,7 +35,7 @@ export function RegexField(p: SchemaFormFieldProps) {
           aria-label={a.label}
           aria-invalid={a.invalid || undefined}
           aria-describedby={a.describedBy}
-          placeholder={m.widgets.regexPlaceholder}
+          placeholder={t("widgets.regexPlaceholder")}
           value={a.value}
           disabled={a.disabled}
           onChange={(e) => a.onChange(e.target.value)}
@@ -44,6 +46,7 @@ export function RegexField(p: SchemaFormFieldProps) {
 }
 
 function TemplateItem({ a, variables }: { a: ItemRenderArgs; variables: readonly string[] }) {
+  const t = useT("sdd");
   const ref = useRef<HTMLTextAreaElement>(null);
   const insert = (name: string) => {
     const el = ref.current;
@@ -60,9 +63,9 @@ function TemplateItem({ a, variables }: { a: ItemRenderArgs; variables: readonly
     <>
       <textarea ref={ref} id={a.id} className="ac-input sdd-w-mono" rows={3} aria-label={a.label} aria-invalid={a.invalid || undefined} aria-describedby={a.describedBy} value={a.value} disabled={a.disabled} onChange={(e) => a.onChange(e.target.value)} />
       {variables.length > 0 ? (
-        <div className="sdd-w-chips" role="group" aria-label={m.widgets.variables}>
+        <div className="sdd-w-chips" role="group" aria-label={t("widgets.variables")}>
           {variables.map((v) => (
-            <button key={v} type="button" className="sdd-w-chip" disabled={a.disabled} aria-label={m.widgets.insertVariable(v)} onClick={() => insert(v)}>{`{${v}}`}</button>
+            <button key={v} type="button" className="sdd-w-chip" disabled={a.disabled} aria-label={t("widgets.insertVariable", { token: `{${v}}` })} onClick={() => insert(v)}>{`{${v}}`}</button>
           ))}
         </div>
       ) : null}
@@ -77,8 +80,9 @@ export function TemplateTextField(p: SchemaFormFieldProps) {
 }
 
 /** 값 고르기(목록 + 직접 입력): 목록은 위젯 이름으로 `SddWidgetEnv`에서 온다. 목록에 없는 값은 칸 아래 경고. */
-export function createRefField(widgetName: string, missing: (id: string) => string = m.widgets.refMissing): ComponentType<SchemaFormFieldProps> {
+export function createRefField(widgetName: string, missing: (id: string, t: Translate) => string = (id, t) => t("widgets.refMissing", { id })): ComponentType<SchemaFormFieldProps> {
   function RefField(p: SchemaFormFieldProps) {
+    const t = useT("sdd");
     const env = useSddWidgetEnv();
     const options = env.refs[widgetName] ?? null;
     const listId = useId();
@@ -107,7 +111,7 @@ export function createRefField(widgetName: string, missing: (id: string) => stri
             )}
           </>
         )}
-        itemNote={(value) => (options !== null && value !== "" && !options.some((o) => o.id === value) && issues.length === 0 ? <p className="sdd-w-note" data-tone="warning" data-testid="sdd-w-missing">{missing(value)}</p> : null)}
+        itemNote={(value) => (options !== null && value !== "" && !options.some((o) => o.id === value) && issues.length === 0 ? <p className="sdd-w-note" data-tone="warning" data-testid="sdd-w-missing">{missing(value, t)}</p> : null)}
       />
     );
   }
@@ -116,14 +120,16 @@ export function createRefField(widgetName: string, missing: (id: string) => stri
 
 /** 톤: 제안 칩(미리보기) + 직접 입력. 값은 열린 문자열이다. */
 export function ToneField(p: SchemaFormFieldProps) {
+  const t = useT("sdd");
+  const tm = useMaybeT("sdd");
   return (
     <ShapedField
       field={p}
       renderItem={(a) => (
         <>
-          <div className="sdd-w-tones" role="group" aria-label={m.widgets.toneGroup}>
+          <div className="sdd-w-tones" role="group" aria-label={t("widgets.toneGroup")}>
             {TONE_CHOICES.map((c) => {
-              const label = m.widgets.tones[c.labelKey] ?? c.tone;
+              const label = tm(`widgets.tones.${c.labelKey}`) ?? c.tone;
               return (
                 <button key={c.tone} type="button" className="sdd-w-tone" aria-pressed={a.value === c.tone} aria-label={label} disabled={a.disabled} onClick={() => a.onChange(a.value === c.tone ? "" : c.tone)}>
                   <ToneChip label={label} tone={c.tone} />
@@ -131,7 +137,7 @@ export function ToneField(p: SchemaFormFieldProps) {
               );
             })}
           </div>
-          <input id={a.id} className="ac-input" autoComplete="off" aria-label={m.widgets.toneDirect} value={a.value} disabled={a.disabled} onChange={(e) => a.onChange(e.target.value)} />
+          <input id={a.id} className="ac-input" autoComplete="off" aria-label={t("widgets.toneDirect")} value={a.value} disabled={a.disabled} onChange={(e) => a.onChange(e.target.value)} />
         </>
       )}
     />
@@ -143,7 +149,7 @@ export const SDD_WIDGET_FIELDS: Readonly<Record<string, ComponentType<SchemaForm
   [KNOWN_UI_WIDGETS.CONDITION]: ConditionField,
   [KNOWN_UI_WIDGETS.REGEX]: RegexField,
   [KNOWN_UI_WIDGETS.TEMPLATE_TEXT]: TemplateTextField,
-  [KNOWN_UI_WIDGETS.GRAPH_REF]: createRefField(KNOWN_UI_WIDGETS.GRAPH_REF, m.widgets.refMissingGraph),
+  [KNOWN_UI_WIDGETS.GRAPH_REF]: createRefField(KNOWN_UI_WIDGETS.GRAPH_REF, (id, t) => t("widgets.refMissingGraph", { id })),
   [KNOWN_UI_WIDGETS.PROFILE_REF]: createRefField(KNOWN_UI_WIDGETS.PROFILE_REF),
   [KNOWN_UI_WIDGETS.STATE_REF]: createRefField(KNOWN_UI_WIDGETS.STATE_REF),
   [KNOWN_UI_WIDGETS.STATUS_REF]: createRefField(KNOWN_UI_WIDGETS.STATUS_REF),

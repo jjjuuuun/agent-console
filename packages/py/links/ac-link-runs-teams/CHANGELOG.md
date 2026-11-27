@@ -2,6 +2,7 @@
 
 ## 미출시 (0.2.0)
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-runs-teams`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
 - P1.16 — BREAKING CHANGE: `TeamRules` no longer reads the legacy `WorkspaceSettings.default_backend`. It does not fill the node service `DEFAULT_BACKEND` from settings and does not pass it as the fallback to validation or preflight. Put the value in `agent_defaults.backend`.
   노드 서비스 키 `DEFAULT_BACKEND`(`ac-nodes-core`)와 `resolve_backends`·`validate_team`의 인자 `default_backend`는
   남는다(호스트가 주입하는 확장 지점). README 최소 사용 예는 `agent_defaults.backend`를 본다.

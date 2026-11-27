@@ -405,7 +405,7 @@ class ChatService:
         try:
             return self._busy_elsewhere(conversation_id)
         except Exception:
-            _log.exception("다른 곳의 실행 중 턴 확인 실패: %s", conversation_id)
+            _log.exception("Checking for a running turn elsewhere failed: %s", conversation_id)
             return None
 
     async def post_message(
@@ -816,7 +816,7 @@ class ChatService:
         try:
             return continuity.state(conversation.project_id, ref)
         except Exception:  # 상태를 모르면 보내기를 막지 않는다
-            _log.exception("대화 %s 세션 상태 확인 실패", conversation.id)
+            _log.exception("Checking the session state of conversation %s failed", conversation.id)
             return KnownSessionStates.NOT_APPLICABLE
 
     def _check_sessions(
@@ -857,7 +857,7 @@ class ChatService:
             try:
                 state = continuity.prepare(conversation.project_id, ref)
             except Exception:
-                _log.exception("대화 %s 세션 복원 실패", conversation.id)
+                _log.exception("Restoring the session of conversation %s failed", conversation.id)
                 state = KnownSessionStates.NOT_APPLICABLE
             if state == KnownSessionStates.MISSING:
                 notes[key] = FRESH_SESSION_NOTE
@@ -904,7 +904,7 @@ class ChatService:
                 raise  # 이 감시 태스크가 취소됨(aclose)
             run = handle.run  # Run 태스크 쪽이 취소됨: 끝난 것으로 처리
         except Exception:
-            _log.exception("턴 %s 대기 실패", handle.run_id)
+            _log.exception("Waiting for turn %s failed", handle.run_id)
             run = handle.run
         # 턴 마무리 순서(5.2R.39): 세션 기록 → 손잡이 내림(그때부터 끝난 상태가 보인다) → 알림.
         # 손잡이가 `_active`에 있는 동안 `_turn`·`_status`는 끝난 Run을 `CLOSING_STATUS`로 보인다.
@@ -916,7 +916,7 @@ class ChatService:
                     try:
                         conversation = self._record_sessions(conversation, run)
                     except Exception:  # 저장 실패: 기록하고 이전 대화 상태로 이어 간다
-                        _log.exception("턴 %s 세션 기록 실패", run.id)
+                        _log.exception("Recording the session of turn %s failed", run.id)
             finally:
                 if self._active.get(conversation_id) is handle:
                     del self._active[conversation_id]
@@ -933,7 +933,7 @@ class ChatService:
         try:
             found = rules.collect(run)
         except Exception:  # 세션 기록 실패가 대화 진행(대기열)을 막지 않게 한다
-            _log.exception("턴 %s 세션 수집 실패", run.id)
+            _log.exception("Collecting the session of turn %s failed", run.id)
             found = {}
         graph = self._graph(conversation.graph_id, conversation.project_id)
         if graph is not None:  # 실행 중에 팀 구성이 바뀌었으면 새 팀 구성 기준으로 거른다
@@ -957,7 +957,7 @@ class ChatService:
                 return
             except Exception:
                 # 대기 중에 팀 구성이 지워졌거나 검증에 실패한 메시지는 버리고 다음 것을 시도한다.
-                _log.exception("대기열 메시지 %s 시작 실패(버림)", item.id)
+                _log.exception("Starting queued message %s failed (dropped)", item.id)
         self._notify(conversation)
 
     def _status(self, conversation: Conversation) -> RunStatus | None:
@@ -1013,4 +1013,4 @@ class ChatService:
         try:
             self._listener(self._summarize(conversation))
         except Exception:
-            _log.exception("대화 %s 변경 알림 실패", conversation.id)
+            _log.exception("Notifying a change to conversation %s failed", conversation.id)

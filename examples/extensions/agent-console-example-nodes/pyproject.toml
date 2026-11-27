@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-nodes"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 텍스트 변환 노드 타입(example.text_transform)"
+description = "Agent Console example extension — a text transform node type (example.text_transform)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 # entry point 이름 = 레지스트리 key = 디스크립터 id.
 [project.entry-points."agent_console.node_types"]
 "example.text_transform" = "agent_console_example_nodes:TextTransformNode"
+
+[project.entry-points."agent_console.message_catalogs"]
+agent-console-example-nodes = "agent_console_example_nodes"
 
 # 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
 [tool.agent-console.example]

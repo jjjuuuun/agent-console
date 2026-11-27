@@ -52,10 +52,10 @@ importers:
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/api-client
       '@agent-console/arch-view':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/arch-view
       '@agent-console/chat':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/chat
       '@agent-console/contracts':
         specifier: ^0.16.0
@@ -64,22 +64,22 @@ importers:
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/folder-picker
       '@agent-console/graph-editor':
-        specifier: ^0.2.0
+        specifier: ^0.2.2
         version: link:../../packages/ts/lib/graph-editor
       '@agent-console/i18n':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/i18n
       '@agent-console/list-arrange':
-        specifier: ^0.1.0
+        specifier: ^0.1.1
         version: link:../../packages/ts/lib/list-arrange
       '@agent-console/log-view':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/log-view
       '@agent-console/markdown-doc':
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/markdown-doc
       '@agent-console/memory-view':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/memory-view
       '@agent-console/projects':
         specifier: ^0.3.0
@@ -97,10 +97,10 @@ importers:
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/trace-view
       '@agent-console/ui':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/ui
       '@agent-console/wiki-view':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../../packages/ts/lib/wiki-view
       '@tanstack/react-query':
         specifier: ^5.104.3

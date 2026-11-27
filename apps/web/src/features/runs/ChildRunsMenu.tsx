@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { Run } from "@agent-console/contracts";
 import { StatusChip } from "@agent-console/ui";
-import { delegationMessages as dm } from "../delegation";
+import { useDelegationMessages } from "../delegation";
 
 export interface ChildRunRow {
   run: Run;
@@ -26,6 +26,7 @@ export interface ChildRunsMenuProps {
  * `↑↓`로 행을 옮기고 `Esc`로 닫아 단추로 돌아간다.
  */
 export function ChildRunsMenu({ rows, onOpen, defaultOpen = false }: ChildRunsMenuProps) {
+  const dm = useDelegationMessages();
   const [open, setOpen] = useState(defaultOpen);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);

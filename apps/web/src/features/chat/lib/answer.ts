@@ -4,7 +4,7 @@ import { setAt } from "../../../lib/jsonPointer";
 /** 입력창 텍스트를 종류의 `free_text_path`(JSON Pointer) 자리에 넣은 응답. */
 export function buildResponse(descriptor: Pick<InteractionKindDescriptor, "free_text_path">, text: string): Record<string, unknown> {
   const path = descriptor.free_text_path;
-  if (!path) throw new Error("free_text_path가 없는 종류에는 입력창으로 답할 수 없습니다");
+  if (!path) throw new Error("This interaction kind has no free_text_path, so it cannot be answered from the message box");
   return setAt({}, path, text) as Record<string, unknown>;
 }
 

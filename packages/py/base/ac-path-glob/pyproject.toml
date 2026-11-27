@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-path-glob"
 version = "0.1.0"
-description = "Agent Console — 경로 글롭(** 지원) 기반 패키지"
+description = "Agent Console — base package for path globs (with ** support)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

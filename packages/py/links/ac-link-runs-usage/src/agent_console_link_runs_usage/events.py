@@ -88,7 +88,7 @@ class MergedEventQuery:
                         source.latest_by_type(type, run_id=run_id, actor=actor, limit=limit)
                     )
                 except Exception:  # 프로젝트 기록 하나가 깨져도 사용량 화면은 나온다
-                    _log.warning("프로젝트 기록 이벤트를 읽지 못했습니다", exc_info=True)
+                    _log.warning("Couldn't read project record events", exc_info=True)
         merged = heapq.merge(*found, key=lambda event: event.ts, reverse=True)
         return [event for _, event in zip(range(limit), merged, strict=False)]
 
@@ -96,7 +96,7 @@ class MergedEventQuery:
         try:
             yield from self._extra()
         except Exception:
-            _log.warning("프로젝트 기록 목록을 읽지 못했습니다", exc_info=True)
+            _log.warning("Couldn't read the project records list", exc_info=True)
 
 
 def project_readers(
@@ -127,7 +127,9 @@ def project_readers(
         try:
             reader = stores.reader(project.id)
         except RecordsUnavailable as exc:
-            _log.warning("프로젝트 기록을 읽을 수 없어 건너뜁니다: %s (%s)", project.id, exc.reason)
+            _log.warning(
+                "Skipping project records that can't be read: %s (%s)", project.id, exc.reason
+            )
             continue
         except (UnknownSpace, LookupError):
             continue  # 목록과 공간 사이에 지워진 프로젝트(``RecordsStores``는 ``UnknownSpace``)

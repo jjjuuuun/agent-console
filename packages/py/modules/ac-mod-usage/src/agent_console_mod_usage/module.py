@@ -84,7 +84,7 @@ def usage_sources_of(registries: Any) -> Registry[UsageSource]:
     registry = new_usage_sources()
     for report in load_usage_sources(registry):
         if not report.ok:
-            _log.warning("사용량 출처 로드 실패: %s (%s)", report.source, report.error)
+            _log.warning("Couldn't load usage source: %s (%s)", report.source, report.error)
     return registry
 
 
@@ -123,7 +123,7 @@ def runtime_usage_sources(items: Iterable[object]) -> tuple[dict[str, UsageSourc
         try:
             source = as_usage_source(item)
         except TypeError:
-            _log.warning("usage.sources 항목이 사용량 출처가 아닙니다: %s", type(item).__name__)
+            _log.warning("usage.sources item is not a usage source: %s", type(item).__name__)
             continue
         key = source.descriptor.id
         if key in found:
@@ -235,9 +235,9 @@ class UsageModule:
                     try:
                         removed = await asyncio.to_thread(usage.prune, keep_seconds=retention)
                         if removed:
-                            _log.info("오래된 사용량 관측값 %d개를 지웠습니다", removed)
+                            _log.info("Deleted %d old usage observations", removed)
                     except Exception:
-                        _log.exception("사용량 관측값 정리 실패")
+                        _log.exception("Usage observation cleanup failed")
                     await asyncio.sleep(cfg.prune_interval_seconds)
 
             background.append(prune)

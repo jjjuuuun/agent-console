@@ -5,7 +5,7 @@
 import { useId, useMemo } from "react";
 import { templateFields, scopeKey } from "@agent-console/memory-view";
 import type { MemoryScopeKindInfo, MemoryScopeRef, MemoryScopeSummary } from "@agent-console/contracts/memory";
-import { memoryMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface ScopePickerState {
   /** `scope:<종류>:<id>`(있는 범위) · `kind:<종류>`(종류만) · ""(고르지 않음) */
@@ -55,6 +55,7 @@ export interface ScopePickerProps {
 }
 
 export function ScopePicker({ label, kinds, scopes, state, onChange, labelOf, pickers = {}, disabled = false }: ScopePickerProps) {
+  const t = useT("memory");
   const uid = useId();
   const writable = useMemo(() => kinds.filter((k) => k.disabled !== true && k.id !== null && k.id !== undefined), [kinds]);
   const known = useMemo(() => scopes.filter((s) => s.kind_known !== false && writable.some((k) => k.kind === s.scope.kind)), [scopes, writable]);
@@ -71,29 +72,29 @@ export function ScopePicker({ label, kinds, scopes, state, onChange, labelOf, pi
     <div className="mem-field">
       <label htmlFor={`${uid}-select`} className="mem-label">{label}</label>
       <select id={`${uid}-select`} className="mem-input" value={state.choice} disabled={disabled} onChange={(e) => onChange({ choice: e.target.value, id: "" })}>
-        <option value="">{t.newEntry.scopeNone}</option>
+        <option value="">{t("newEntry.scopeNone")}</option>
         {extra !== null ? <option value={state.choice}>{labelOf(extra)}</option> : null}
         {known.map((s) => (
           <option key={scopeKey(s.scope)} value={`${SCOPE}${scopeKey(s.scope)}`}>{labelOf(s.scope)}</option>
         ))}
         {writable.map((k) => (
-          <option key={`kind-${k.kind}`} value={`${KIND}${k.kind}`}>{(k.id ?? "") === "" ? k.label : `${k.label} — ${t.move.other}`}</option>
+          <option key={`kind-${k.kind}`} value={`${KIND}${k.kind}`}>{(k.id ?? "") === "" ? k.label : `${k.label} — ${t("move.other")}`}</option>
         ))}
       </select>
       {needsId ? (
         <div className="mem-subfield">
-          <label htmlFor={`${uid}-id`} className="mem-label">{t.newEntry.scopeId}</label>
+          <label htmlFor={`${uid}-id`} className="mem-label">{t("newEntry.scopeId")}</label>
           <input id={`${uid}-id`} className="mem-input mem-mono" value={state.id} aria-describedby={helpId} onChange={(e) => onChange({ ...state, id: e.target.value })} />
           {picker !== null && picker.length > 0 ? (
-            <select aria-label={t.newEntry.scopeIdPick} className="mem-input" value="" onChange={(e) => e.target.value !== "" && onChange({ ...state, id: e.target.value })}>
-              <option value="">{t.newEntry.scopeIdPick}</option>
+            <select aria-label={t("newEntry.scopeIdPick")} className="mem-input" value="" onChange={(e) => e.target.value !== "" && onChange({ ...state, id: e.target.value })}>
+              <option value="">{t("newEntry.scopeIdPick")}</option>
               {picker.map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
           ) : null}
           <span id={helpId} className="mem-help">
-            {t.newEntry.scopeIdHelp(template)}
+            {t("newEntry.scopeIdHelp", { template })}
           </span>
         </div>
       ) : null}

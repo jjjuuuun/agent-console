@@ -2,15 +2,17 @@ import { useMemo, useState } from "react";
 import type { Issue } from "@agent-console/contracts";
 import type { MemoryRetentionPlan, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { RetentionPreview } from "@agent-console/memory-view";
-import { SchemaForm, type UiSchema } from "@agent-console/schema-form";
+import { type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { Button, Dialog, Tabs } from "@agent-console/ui";
 import { CONDITION_WIDGET_NAME, CONFIG_FIELDS } from "../delegation";
 import { dropFilledNulls } from "./dropFilled";
 import { IssueList } from "./IssueList";
 import { LIMITS, RULE_FIELDS } from "./memorySettingsConfig";
-import { memorySettingsMessages as t } from "./messages";
 import { ruleKey, useRetentionPreview } from "./useRetentionPreview";
 import { useDebouncedCheck } from "./useDebouncedCheck";
+import { useT } from "@agent-console/i18n";
+import { useViewMessages } from "../memory";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -48,6 +50,8 @@ export interface RuleEditorDialogProps {
 
 /** 정리 규칙 편집기(대화상자): 왼쪽 폼(스키마 폼 + 조건 위젯), 오른쪽 [검사 결과 | 미리보기]. 서버 호출은 props로 받는다. */
 export function RuleEditorDialog({ schema, rule: initial, isNew, otherIds, check, plan, scopeText, onApply, onClose, checkDelayMs = LIMITS.checkDelayMs }: RuleEditorDialogProps) {
+  const viewMessages = useViewMessages();
+  const t = useT("memorySettings");
   const [rule, setRule] = useState<Obj>(initial);
   const [tab, setTab] = useState<"check" | "preview">("check");
   const [composing, setComposing] = useState(false);
@@ -80,12 +84,12 @@ export function RuleEditorDialog({ schema, rule: initial, isNew, otherIds, check
     <Dialog
       open
       size="xl"
-      title={isNew ? t.retention.editorNew : t.retention.editorEdit(id)}
+      title={isNew ? t("retention.editorNew") : t("retention.editorEdit", { id })}
       onClose={onClose}
       actions={
         <>
-          <Button onClick={onClose}>{t.cancel}</Button>
-          <Button variant="primary" disabled={blocked} onClick={submit}>{t.apply}</Button>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button variant="primary" disabled={blocked} onClick={submit}>{t("apply")}</Button>
         </>
       }
     >
@@ -100,37 +104,37 @@ export function RuleEditorDialog({ schema, rule: initial, isNew, otherIds, check
             rawJsonToggle={false}
             idPrefix="memset-rule"
           />
-          {dup ? <p className="memset-warn" role="alert">{t.retention.idTaken}</p> : null}
+          {dup ? <p className="memset-warn" role="alert">{t("retention.idTaken")}</p> : null}
         </div>
         <div className="memset-rule-side">
           <Tabs
-            ariaLabel={t.retention.editorNew}
+            ariaLabel={t("retention.editorNew")}
             activeId={tab}
             onChange={(v) => setTab(v as "check" | "preview")}
             tabs={[
               {
                 id: "check",
-                label: t.retention.tabCheck,
+                label: t("retention.tabCheck"),
                 content: (
                   <div aria-live="polite" className="memset-rule-pane">
-                    {!runnable ? <p className="memset-note app-muted">{dup ? t.retention.idTaken : t.kindEditor.idEmpty}</p> : result.phase === "checking" ? (
-                      <p className="memset-note app-muted">{t.kindEditor.checking}</p>
+                    {!runnable ? <p className="memset-note app-muted">{dup ? t("retention.idTaken") : t("kindEditor.idEmpty")}</p> : result.phase === "checking" ? (
+                      <p className="memset-note app-muted">{t("kindEditor.checking")}</p>
                     ) : result.phase === "failed" ? (
-                      <p className="memset-note memset-warn">{t.kindEditor.checkFailed} <Button size="sm" onClick={result.retry}>{t.retry}</Button></p>
+                      <p className="memset-note memset-warn">{t("kindEditor.checkFailed")} <Button size="sm" onClick={result.retry}>{t("retry")}</Button></p>
                     ) : result.issues.length === 0 ? (
-                      <p className="memset-note app-muted">{t.kindEditor.checkOk}</p>
+                      <p className="memset-note app-muted">{t("kindEditor.checkOk")}</p>
                     ) : (
-                      <IssueList issues={result.issues} label={t.kindEditor.issues} />
+                      <IssueList issues={result.issues} label={t("kindEditor.issues")} />
                     )}
                   </div>
                 ),
               },
               {
                 id: "preview",
-                label: t.retention.tabPreview,
+                label: t("retention.tabPreview"),
                 content: (
                   <div className="memset-rule-pane">
-                    <RetentionPreview
+                    <RetentionPreview messages={viewMessages}
                       plan={preview.state.plan}
                       ruleCount={1}
                       loading={preview.state.loading}

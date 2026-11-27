@@ -2,7 +2,7 @@ import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { MiddleEllipsisPath } from "@agent-console/folder-picker";
 import { Button, Icon, Popover, type MenuItemDef } from "@agent-console/ui";
 import { RowContextMenu } from "./RowContextMenu";
-import { projectMessages as t } from "./messages";
+import { useProjectMessages } from "./messages";
 import { TYPE_AHEAD_RESET_MS, projectInitial, typeAheadChar, typeAheadIndex } from "./projectRegionLib";
 
 /** 영역이 그리는 프로젝트 한 줄에 필요한 값(계약 `Project`의 부분집합이라 어떤 출처도 넣을 수 있다). */
@@ -55,6 +55,7 @@ interface RowProps {
 }
 
 function Row({ project, current, page, onSelect, popover, onMenu }: RowProps) {
+  const t = useProjectMessages();
   const path = project.folder ?? "";
   const unset = path === "";
   const statusText = project.status !== undefined && !project.status.plain ? project.status.label : undefined;
@@ -131,6 +132,7 @@ function listKeyDown(e: KeyboardEvent<HTMLElement>) {
  * 레일: 이니셜 배지 버튼 + 팝오버. 영역을 그릴지(역할 유무)는 호출한 쪽이 정한다.
  */
 export function ProjectRegion(p: ProjectRegionProps) {
+  const t = useProjectMessages();
   const headId = useId();
   const listId = useId();
   const current = p.projects.find((x) => x.id === p.currentId);

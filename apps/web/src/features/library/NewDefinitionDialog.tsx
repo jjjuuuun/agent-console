@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
 import { DefinitionIdField, useDefinitionId } from "./DefinitionIdField";
 import { useKindReservedIds } from "./useKindReservedIds";
-import { libraryMessages as t } from "./messages";
+import { useLibraryMessages } from "./messages";
 
 export interface NewDefinitionValues {
   name: string;
@@ -41,6 +41,7 @@ export interface NewDefinitionDialogProps {
  * 열 때마다 내용을 새로 시작하도록 호출자가 `open`일 때만 렌더하거나 `key`를 바꾼다.
  */
 export function NewDefinitionDialog(props: NewDefinitionDialogProps) {
+  const t = useLibraryMessages();
   const { open, title, submitLabel, existingIds, fallbackId, showDescription = true, hideId = false, extra, disabled, busy, error, onSubmit, onClose } = props;
   const [name, setName] = useState(props.initialName ?? "");
   const [description, setDescription] = useState(props.initialDescription ?? "");

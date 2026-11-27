@@ -12,9 +12,13 @@ import { useEscapeLayer } from "../../shell/escapeStack";
 import { activeRoute, routeServing, type RouteDef } from "../../shell/routeConfig";
 import { useSetTitleSuffix } from "../../shell/titles";
 import { ROUTE_ROLES } from "../library";
-import { itemSpoken, indicatorAriaLabel, titleSuffixOf } from "./indicatorText";
+import { itemSpoken, indicatorAriaLabel, titleSuffixOf, useIndicatorTexts } from "./indicatorText";
 import { resolveIndicatorSettings, resolvePlacement, splitFields } from "./indicatorSettings";
-import { usageIndicatorMessages as t } from "./messages";
+import { useTranslatedSources } from "./useTranslatedSources";
+import { useUsageIndicatorMessages } from "./messages";
+import { createToastText } from "../../app/ToastText";
+
+const IndicatorToast = createToastText(useUsageIndicatorMessages);
 import { IndicatorMenu, type IndicatorMenuItem } from "./IndicatorMenu";
 import { useIndicatorActions } from "./useIndicatorActions";
 import { UsageIndicatorPopover } from "./UsageIndicatorPopover";
@@ -83,6 +87,8 @@ interface ActiveProps {
 }
 
 function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: ActiveProps) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
   const navigate = useNavigate();
   const location = useLocation();
   const settings = useWorkspaceSettings();
@@ -90,6 +96,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   const scopeReady = useProjectScopeReady();
   const report = useApiQuery([...USAGE_WINDOWS_KEY, projectId], (rest) => loadReport(rest, projectId), { refetchInterval: USAGE_POLL_MS, meta: SILENT_META, enabled: scopeReady });
   const sources = useApiQuery(USAGE_SOURCES_KEY, loadSources, { staleTime: INDICATOR_SOURCES_STALE_MS, meta: SILENT_META });
+  const sourcesData = useTranslatedSources(sources.data);
   const nowMs = useNow(true, INDICATOR_NOW_MS);
   const nowSec = nowMs / 1000;
   const popId = useId();
@@ -100,8 +107,8 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   const rawOrder = usage?.primary_source_order;
   const order = useMemo(() => rawOrder ?? NONE, [rawOrder]);
   const staleAfter = usage?.stale_after_seconds ?? null;
-  const index = useMemo(() => sourceIndex(sources.data ?? []), [sources.data]);
-  const windowInfo = useMemo(() => windowNameIndex(sources.data ?? []), [sources.data]);
+  const index = useMemo(() => sourceIndex(sourcesData ?? []), [sourcesData]);
+  const windowInfo = useMemo(() => windowNameIndex(sourcesData ?? []), [sourcesData]);
   const sourceInfo = useCallback(
     (id: string) => {
       const d = index.get(id)?.descriptor;
@@ -163,13 +170,13 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
     timers.current.close = setTimeout(() => setHover(false), INDICATOR_HOVER_CLOSE_MS);
   };
 
-  const spoken = useMemo(() => items.map((i) => itemSpoken(i, cfg.value_mode, nowSec)).join(". "), [items, cfg.value_mode, nowSec]);
+  const spoken = useMemo(() => items.map((i) => itemSpoken(i, cfg.value_mode, nowSec, x)).join(". "), [items, cfg.value_mode, nowSec, x]);
   const peek = useCallback(() => {
     setPinned(true);
     clearTimeout(timers.current.pin);
     timers.current.pin = setTimeout(() => setPinned(false), INDICATOR_PEEK_MS);
     setLive(t.peekLive(spoken === "" ? t.noData : spoken));
-  }, [spoken]);
+  }, [spoken, t]);
   // 켜져 있을 때만 단축키·명령이 등록된다(이 컴포넌트가 마운트된 동안). 기본 키는 표 데이터, 설정 `ui.keybindings`가 덮어쓴다.
   useShortcuts([{ ...INDICATOR_PEEK_SHORTCUT, scope: "global", modifierRequired: true, run: peek }]);
   useRegisterCommands([{ id: INDICATOR_PEEK_SHORTCUT.id, titleKey: "palette.actions.usagePeek", run: peek }]);
@@ -190,7 +197,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
         break;
       }
     }
-  }, [items, hasData]);
+  }, [items, hasData, t]);
 
   // ----- 컨텍스트 메뉴: 우클릭 / Shift+F10 / ContextMenu 키
   const toast = useToast();
@@ -224,7 +231,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
 
   const current = activeRoute(location.pathname, routes)?.id === usageRoute.id;
   // 구독 연결 안내가 필요한 출처가 켜져 있으면, 보일 사용률이 없을 때 미니가 연결 안내(#setup)로 이어 준다
-  const needsSetup = (sources.data ?? []).some((s) => s.enabled !== false && s.descriptor.needs_setup === true);
+  const needsSetup = (sourcesData ?? []).some((s) => s.enabled !== false && s.descriptor.needs_setup === true);
   const setupHref = needsSetup && !cfg.hide_when_empty ? `${usageRoute.path}${USAGE_SETUP_HASH}` : undefined;
   const onActivate = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -247,14 +254,14 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
       label: t.menu.hide,
       onSelect: () => {
         actions.hide().then(
-          () => toast({ tone: "info", text: t.menu.hidden }),
-          () => toast({ tone: "danger", text: t.menu.hideFailed }),
+          () => toast({ tone: "info", text: <IndicatorToast render={(i) => i.menu.hidden} /> }),
+          () => toast({ tone: "danger", text: <IndicatorToast render={(i) => i.menu.hideFailed} /> }),
         );
       },
     },
   ];
 
-  const emptyText = (sources.data ?? [])
+  const emptyText = (sourcesData ?? [])
     .filter((s) => s.enabled !== false && s.descriptor.description)
     .map((s) => s.descriptor.description as string)
     .join(" ");
@@ -264,7 +271,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   if (status === "error-empty") extra.push(t.loadFailed);
   if (status === "empty") extra.push(setupHref === undefined ? t.noDataHint : t.unlinkedHint);
   if (report.isError && hasData) extra.push(t.loadFailed);
-  const ariaLabel = status === "ready" ? indicatorAriaLabel(items, cfg.value_mode, nowSec, extra) : `${t.summary(extra.join(". "))}. ${t.openLabel}`;
+  const ariaLabel = status === "ready" ? indicatorAriaLabel(items, cfg.value_mode, nowSec, x, extra) : `${t.summary(extra.join(". "))}. ${t.openLabel}`;
 
   if (cfg.hide_when_empty && status === "empty") return null;
   if (status === "loading" && !slow) return null;

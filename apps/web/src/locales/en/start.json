@@ -1,0 +1,25 @@
+{
+  "title": "Getting started",
+  "close": "Close",
+  "description": "If this is your first time, follow these steps in order.",
+  "stepsLabel": "Getting started steps",
+  "go": "Go",
+  "done": "Done",
+  "steps": {
+    "create": {
+      "label": "Create a team",
+      "hint": "Place agents and the entry and reply are connected automatically",
+      "action": "New team"
+    },
+    "talk": {
+      "label": "Start a chat",
+      "hint": "The first time, you are asked to pick an execution backend",
+      "action": "New chat"
+    },
+    "review": {
+      "label": "See the results",
+      "hint": "Check each step's result in the run history",
+      "action": "Run history"
+    }
+  }
+}

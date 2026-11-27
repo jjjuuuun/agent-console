@@ -15,6 +15,9 @@ dependencies = [
 [project.entry-points."agent_console.backends"]
 fake-agent = "agent_console_backend_fake_agent:FakeBackend"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-backend-fake-agent = "agent_console_backend_fake_agent"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

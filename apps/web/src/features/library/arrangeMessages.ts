@@ -1,49 +1,96 @@
+import type { Translate } from "@agent-console/i18n";
+import { useMessageTable } from "../../i18n";
 /** 목록 보기(묶기·정렬·접기)·폴더 이동·라벨 편집의 공용 문구. 화면별 기준 이름은 `groupNames` 등에 덧붙여 쓴다(5.2R.62·63). */
-export const arrangeMessages = {
-  viewLabel: "보기",
-  groupTitle: "묶는 기준",
-  sortTitle: "정렬",
-  collapseAll: "모두 접기",
-  expandAll: "모두 펼치기",
-  none: "묶지 않음",
-  groupNames: { "group.folder": "폴더", "group.labels": "라벨", "group.project": "프로젝트", "group.type": "종류", "group.attribute": "속성 키…" } as Record<string, string>,
-  summaryGroup: (name: string) => `${name}별`,
-  noneLabels: { "group.folder": "(폴더 없음)", "group.labels": "(라벨 없음)", "group.project": "(공용)", "group.type": "(종류 없음)", "group.attribute": "(값 없음)" } as Record<string, string>,
-  sortNames: { "sort.name": "이름", "sort.modified": "최근 수정" } as Record<string, string>,
-  /** 보기 버튼 글자에 쓰는 정렬 이름 */
-  sortSummaries: { "sort.name": "이름순", "sort.modified": "최근 수정순" } as Record<string, string>,
-  /** 저장 중 버전이 어긋났을 때(412·428) 안내와 다시 시도 */
-  conflict: "다른 곳에서 먼저 바뀌어 저장하지 못했습니다. 다시 시도하면 최신 내용에 적용합니다.",
-  retry: "다시 시도",
-  noProjects: "프로젝트에 속한 항목이 없습니다",
-  attrKey: "속성 키",
-  attrKeyPlaceholder: "예: team_tag",
-  move: {
-    title: "폴더로 이동",
-    target: (name: string) => `‘${name}’을(를) 옮길 폴더`,
-    search: "폴더 찾기 또는 새 이름 입력",
-    listLabel: "폴더 목록",
-    create: (name: string) => `+ 새 폴더 "${name}" 만들기`,
-    clear: "폴더 없음으로",
-    current: "현재",
-    cancel: "취소",
-    done: (name: string, folder: string) => `‘${name}’을(를) ‘${folder}’ 폴더로 옮겼습니다`,
-    doneClear: (name: string) => `‘${name}’을(를) 폴더 밖으로 옮겼습니다`,
-    undo: "되돌리기",
-    undone: "되돌렸습니다",
-    failed: "폴더를 옮기지 못했습니다",
-  },
-  labels: {
-    title: "라벨 편집",
-    target: (name: string) => `‘${name}’의 라벨`,
-    input: "라벨 추가(Enter)",
-    remove: (l: string) => `라벨 ${l} 삭제`,
-    empty: "라벨이 없습니다",
-    save: "저장",
-    cancel: "취소",
-    saved: (name: string) => `‘${name}’의 라벨을 저장했습니다`,
-    failed: "라벨을 저장하지 못했습니다",
-  },
-};
+/** 목록 보기 공용 문구를 만든다(번역 함수 `t`는 `arrange` 묶음). */
+export function createArrangeMessages(t: Translate) {
+  return {
+    viewLabel: t("viewLabel"),
+    groupTitle: t("groupTitle"),
+    sortTitle: t("sortTitle"),
+    collapseAll: t("collapseAll"),
+    expandAll: t("expandAll"),
+    none: t("none"),
+    groupNames: {
+      "group.folder": t("groupNames.groupFolder"),
+      "group.labels": t("groupNames.groupLabels"),
+      "group.project": t("groupNames.groupProject"),
+      "group.type": t("groupNames.groupType"),
+      "group.attribute": t("groupNames.groupAttribute"),
+    } as Record<string, string>,
+    summaryGroup: (name: string) => t("summaryGroup", { name }),
+    noneLabels: {
+      "group.folder": t("noneLabels.groupFolder"),
+      "group.labels": t("noneLabels.groupLabels"),
+      "group.project": t("noneLabels.groupProject"),
+      "group.type": t("noneLabels.groupType"),
+      "group.attribute": t("noneLabels.groupAttribute"),
+    } as Record<string, string>,
+    sortNames: {
+      "sort.name": t("sortNames.sortName"),
+      "sort.modified": t("sortNames.sortModified"),
+    } as Record<string, string>,
+    sortSummaries: {
+      "sort.name": t("sortSummaries.sortName"),
+      "sort.modified": t("sortSummaries.sortModified"),
+    } as Record<string, string>,
+    conflict: t("conflict"),
+    retry: t("retry"),
+    noProjects: t("noProjects"),
+    attrKey: t("attrKey"),
+    attrKeyPlaceholder: t("attrKeyPlaceholder"),
+    move: {
+      title: t("move.title"),
+      target: (name: string) => t("move.target", { name }),
+      search: t("move.search"),
+      listLabel: t("move.listLabel"),
+      create: (name: string) => t("move.create", { name }),
+      clear: t("move.clear"),
+      current: t("move.current"),
+      cancel: t("move.cancel"),
+      done: (name: string, folder: string) => t("move.done", { name, folder }),
+      doneClear: (name: string) => t("move.doneClear", { name }),
+      undo: t("move.undo"),
+      undone: t("move.undone"),
+      failed: t("move.failed"),
+    },
+    labels: {
+      title: t("labels.title"),
+      target: (name: string) => t("labels.target", { name }),
+      input: t("labels.input"),
+      remove: (l: string) => t("labels.remove", { l }),
+      empty: t("labels.empty"),
+      save: t("labels.save"),
+      cancel: t("labels.cancel"),
+      saved: (name: string) => t("labels.saved", { name }),
+      failed: t("labels.failed"),
+    },
+  };
+}
+export type ArrangeMessages = ReturnType<typeof createArrangeMessages>;
 
-export type ArrangeMessages = typeof arrangeMessages;
+/** 현재 언어의 목록 보기 공용 문구(렌더 때 만든다). */
+export function useArrangeMessages(): ArrangeMessages {
+  return useMessageTable("arrange", createArrangeMessages);
+}
+
+
+/** 화면이 덧붙이는 목록 보기 문구: 묶는 기준·정렬 이름 표에 항목을 더하고 그 밖의 문구를 더한다. */
+export interface ArrangeExtra {
+  groupNames?: Record<string, string>;
+  noneLabels?: Record<string, string>;
+  sortNames?: Record<string, string>;
+  sortSummaries?: Record<string, string>;
+}
+
+/**
+ * 공용 목록 보기 문구에 화면 몫을 합친다(표는 항목 단위로 덧씌우고, 나머지 문구는 그대로 더한다).
+ * @param base 공용 문구.
+ * @param extra 화면이 덧붙인 문구(없으면 공용 문구 그대로).
+ */
+export function mergeArrange<E extends ArrangeExtra>(base: ArrangeMessages, extra?: E): ArrangeMessages & E {
+  const merged = { ...base, ...extra } as ArrangeMessages & E;
+  for (const key of ["groupNames", "noneLabels", "sortNames", "sortSummaries"] as const) {
+    merged[key] = { ...base[key], ...extra?.[key] };
+  }
+  return merged;
+}

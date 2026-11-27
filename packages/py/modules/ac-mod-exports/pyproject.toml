@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-exports"
 version = "0.1.0"
-description = "Agent Console — 내보내기 기능 모듈: /exporters·/exports/*(보관 파일·허용 폴더 쓰기)"
+description = "Agent Console — exports feature module: /exporters and /exports/* (archive files, writing to allowed folders)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

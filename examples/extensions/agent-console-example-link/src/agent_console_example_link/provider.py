@@ -174,7 +174,7 @@ class NotesToolProvider:
                 notes = list(reader.list_notes(self.project_id, limit=None if tag else count))
             except Exception as exc:
                 reason = _reason(exc)
-                _log.info("노트를 읽지 못함: %s (%s)", self.project_id, reason)
+                _log.info("Could not read the note: %s (%s)", self.project_id, reason)
                 await emit(tool_use_id, reason)
                 return HostToolResult(text=f"노트를 읽지 못했습니다({reason})", is_error=True)
             if tag:

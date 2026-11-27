@@ -1,14 +1,14 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { Trace, TraceLink, TraceSpan } from "@agent-console/contracts";
-import { TraceTimeline, defaultTraceMessages, type GroupBadge, type LinkBadge, type MethodBadge, type SessionBadgeView, type SpanLabel, type TraceGroupInfo } from "@agent-console/trace-view";
+import { TraceTimeline, type GroupBadge, type LinkBadge, type MethodBadge, type SessionBadgeView, type SpanLabel, type TraceGroupInfo } from "@agent-console/trace-view";
 import { Button, Icon } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { messages as appMessages } from "../../app/messages";
-import { formatCount, formatDateTime, formatDuration } from "../../lib/format";
-import { runsMessages as t } from "./messages";
+
+import { useRunsMessages } from "./messages";
 import { FAILED_STATUS } from "./runsConfig";
 import { filterFailedSpans } from "./runsLib";
+import { useFormat, useTraceViewMessages } from "../../i18n";
 
 /** 방식 글자 표시 토글의 로컬 저장 키(화면 선택이라 localStorage) */
 export const TRACE_METHOD_TEXT_KEY = "ac.trace.methodText";
@@ -46,6 +46,9 @@ export interface TraceTabProps {
 
 /** 탭 ① 위임 흐름. `TraceTimeline`에 이름·방식 해석과 상세 드로어를 더한다. */
 export function TraceTab(p: TraceTabProps) {
+  const traceLib = useTraceViewMessages();
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const [showUserWait, setShowUserWait] = useState(true);
   const [scale, setScale] = useState(1);
   const [follow, setFollow] = useState(false);
@@ -61,7 +64,7 @@ export function TraceTab(p: TraceTabProps) {
   const shown = useMemo(() => (p.trace === undefined ? undefined : failedOnly ? filterFailedSpans(p.trace, FAILED_STATUS) : p.trace), [p.trace, failedOnly]);
 
   if (p.status === "loading" && p.trace === undefined) return <div className="app-loading" role="status">{t.trace.loading}</div>;
-  if (p.status === "error" && p.trace === undefined) return <ErrorBlock title={t.trace.loadFailed} retryLabel={appMessages.common.retry} onRetry={p.onRetry} />;
+  if (p.status === "error" && p.trace === undefined) return <ErrorBlock title={t.trace.loadFailed} retryLabel={t.shared.retry} onRetry={p.onRetry} />;
   if (shown === undefined) return null;
 
   const renderDetail = (span: TraceSpan): ReactNode => {
@@ -75,20 +78,20 @@ export function TraceTab(p: TraceTabProps) {
           <dt>{t.trace.status}</dt>
           <dd>{span.status ? p.statusLabel(span.status) : "–"}</dd>
           <dt>{t.trace.started}</dt>
-          <dd>{formatDateTime(span.started_at)}</dd>
+          <dd>{fmt.dateTimeFull(span.started_at)}</dd>
           <dt>{t.trace.ended}</dt>
-          <dd>{formatDateTime(span.ended_at)}</dd>
+          <dd>{fmt.dateTimeFull(span.ended_at)}</dd>
           <dt>{t.trace.duration}</dt>
-          <dd>{formatDuration(duration)}</dd>
+          <dd>{fmt.duration(duration)}</dd>
           <dt>{t.trace.usage}</dt>
           <dd>
             {usage == null ? (
               "–"
             ) : isChild ? (
-              t.trace.usageTotalOnly(formatCount(usage.total_tokens))
+              t.trace.usageTotalOnly(fmt.number(usage.total_tokens))
             ) : (
               <span>
-                {t.trace.usageInput} {formatCount(usage.input_tokens)} · {t.trace.usageOutput} {formatCount(usage.output_tokens)} · {t.trace.usageCache} {formatCount(usage.cache_read_tokens)} · {t.trace.usageCost} {usage.cost_usd == null ? "–" : `$${usage.cost_usd}`}
+                {t.trace.usageInput} {fmt.number(usage.input_tokens)} · {t.trace.usageOutput} {fmt.number(usage.output_tokens)} · {t.trace.usageCache} {fmt.number(usage.cache_read_tokens)} · {t.trace.usageCost} {usage.cost_usd == null ? "–" : `$${usage.cost_usd}`}
               </span>
             )}
           </dd>
@@ -146,7 +149,7 @@ export function TraceTab(p: TraceTabProps) {
         onShowMethodTextChange={changeMethodText}
         renderIcon={renderTraceIcon}
         renderDetail={renderDetail}
-        messages={{ empty: t.trace.empty, sameSession: t.trace.sessionSame, separateSession: t.trace.sessionSeparate, statusText: { ...appMessages.runStatus, ...appMessages.nodeStatus, ...defaultTraceMessages.statusText } }}
+        messages={{ ...traceLib, empty: t.trace.empty, sameSession: t.trace.sessionSame, separateSession: t.trace.sessionSeparate, statusText: { ...t.runStatus, ...t.nodeStatus, ...traceLib.statusText } }}
       />
     </div>
   );

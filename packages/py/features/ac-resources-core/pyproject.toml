@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-resources-core"
 version = "0.1.0"
-description = "Agent Console — 기본 리소스 종류 플러그인(instruction, file, mcp-server, tool-permission, skill, rule, hook)"
+description = "Agent Console — default resource kind plugins (instruction, file, mcp-server, tool-permission, skill, rule, hook)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -22,6 +22,9 @@ tool-permission = "agent_console_resources_core.tool_permission:ToolPermissionTy
 skill = "agent_console_resources_core.skill:SkillType"
 rule = "agent_console_resources_core.rule:RuleType"
 hook = "agent_console_resources_core.hook:HookType"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-resources-core = "agent_console_resources_core"
 
 [dependency-groups]
 dev = [

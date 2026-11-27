@@ -3,8 +3,8 @@ import { contractsSchema, getContractSchema, type UsageSourceInfo, type UsageSou
 import { InlineMarkdown } from "@agent-console/schema-form";
 import { AppSchemaForm } from "../../../i18n";
 import { Button, ConfirmDialog, Disclosure, TrustBadge } from "@agent-console/ui";
-import { messages as m } from "../../../app/messages";
-import { formatDateTime } from "../../../lib/format";
+import { useAppMessages } from "../../../app/appMessages";
+
 import type { SchemaNode } from "../../../lib/schemaTools";
 import { UserSettingsForm } from "../UserSettingsForm";
 import { errorsUnder, messagesAt } from "../errorPaths";
@@ -15,6 +15,8 @@ import { COMMON_LAYER_ID, type SectionEditProps } from "./FormSections";
 import { UsageIndicatorEditor } from "./UsageIndicatorEditor";
 import { useNow } from "../../../app/useNow";
 import { ROUTE_ROLES, routePath } from "../../library";
+import { useFormat } from "../../../i18n";
+import { useTranslatedSources } from "../../usage";
 /** 신뢰 등급 어휘(계약 문서화 상수) 중 확인이 필요한 등급. */
 const UNOFFICIAL_TRUST = "unofficial";
 
@@ -48,6 +50,8 @@ export interface UsageSourcesEditorProps {
 
 /** 출처 디스크립터 목록을 행으로: 신뢰 배지·설명·사용 스위치·출처 설정 폼. 비공식 출처를 켜면 확인한다. */
 export function UsageSourcesEditor({ sources, settings, onChange, disabled, errors }: UsageSourcesEditorProps) {
+  const m = useAppMessages();
+  const fmt = useFormat();
   const [confirm, setConfirm] = useState<UsageSourceInfo | null>(null);
   const t = m.settings.usage;
   if (sources.length === 0) return <p className="app-muted">{t.sourcesEmpty}</p>;
@@ -78,7 +82,7 @@ export function UsageSourcesEditor({ sources, settings, onChange, disabled, erro
                   <strong>{d.title}</strong>
                 </label>
                 <TrustBadge trust={d.trust} />
-                {info.last_observed_at == null ? null : <span className="app-muted">{t.lastObserved(formatDateTime(info.last_observed_at))}</span>}
+                {info.last_observed_at == null ? null : <span className="app-muted">{t.lastObserved(fmt.dateTimeFull(info.last_observed_at))}</span>}
               </div>
               {d.description ? <p className="app-muted app-source-desc"><InlineMarkdown text={d.description} /></p> : null}
               {info.error ? <p className="app-field-error" role="alert">{t.sourceError}: {info.error.message}</p> : null}
@@ -131,6 +135,7 @@ export interface PrimaryOrderEditorProps {
 
 /** 대표값 우선순위: 체크한 출처만 목록에 들어가고 ↑↓ 버튼으로 순서를 바꾼다(키보드 가능). 비우면 가장 최근 공식 값. */
 export function PrimaryOrderEditor({ sources, order, onChange, disabled }: PrimaryOrderEditorProps) {
+  const m = useAppMessages();
   const t = m.settings.usage;
   const title = (id: string) => sources.find((s) => s.descriptor.id === id)?.descriptor.title ?? id;
   const unselected = sources.map((s) => s.descriptor.id).filter((id) => !order.includes(id));
@@ -166,13 +171,15 @@ export function PrimaryOrderEditor({ sources, order, onChange, disabled }: Prima
 
 /** ③ 사용량 섹션: 창 이름·오래된 관측(스키마 폼) + 출처 + 대표값 우선순위. */
 export function UsageSection({ value, onChange, errors, disabled }: SectionEditProps) {
+  const m = useAppMessages();
   const sources = useUsageSources();
+  const sourcesData = useTranslatedSources(sources.data);
   const report = useUsageReport();
   const schema = useMemo(() => usageFormSchema(), []);
   const usage = (value.usage ?? {}) as NonNullable<WorkspaceSettings["usage"]>;
   const windowIds = useMemo(() => [...new Set((report.data?.windows ?? []).map((w) => w.window))], [report.data]);
   const options = useMemo(() => ({ windowIds }), [windowIds]);
-  const layers = useMemo(() => [{ id: COMMON_LAYER_ID, label: m.settings.layerCommon }], []);
+  const layers = useMemo(() => [{ id: COMMON_LAYER_ID, label: m.settings.layerCommon }], [m]);
   const setUsage = (patch: Partial<NonNullable<WorkspaceSettings["usage"]>>) => onChange({ ...value, usage: { ...usage, ...patch } });
 
   const nowMs = useNow(true, 15_000);
@@ -184,7 +191,7 @@ export function UsageSection({ value, onChange, errors, disabled }: SectionEditP
         windowIds={windowIds}
         labels={usage.window_labels ?? NO_LABELS}
         windows={report.data?.windows ?? NO_WINDOWS}
-        sources={sources.data ?? NO_SOURCES}
+        sources={sourcesData ?? NO_SOURCES}
         primaryOrder={usage.primary_source_order ?? NO_ORDER}
         staleAfterSeconds={usage.stale_after_seconds ?? null}
         nowMs={nowMs}
@@ -218,11 +225,11 @@ export function UsageSection({ value, onChange, errors, disabled }: SectionEditP
       ) : sources.error ? (
         <p className="app-field-error" role="alert">{m.settings.optionsFailed}</p>
       ) : (
-        <UsageSourcesEditor sources={sources.data ?? []} settings={usage.sources ?? []} onChange={(next) => setUsage({ sources: next })} {...(errors === undefined ? {} : { errors })} {...(disabled === undefined ? {} : { disabled })} />
+        <UsageSourcesEditor sources={sourcesData ?? []} settings={usage.sources ?? []} onChange={(next) => setUsage({ sources: next })} {...(errors === undefined ? {} : { errors })} {...(disabled === undefined ? {} : { disabled })} />
       )}
       <h3 className="app-block-subtitle">{m.settings.usage.primary}</h3>
       <p className="app-muted">{m.settings.usage.primaryHelp}</p>
-      <PrimaryOrderEditor sources={sources.data ?? []} order={usage.primary_source_order ?? []} onChange={(next) => setUsage({ primary_source_order: next })} {...(disabled === undefined ? {} : { disabled })} />
+      <PrimaryOrderEditor sources={sourcesData ?? []} order={usage.primary_source_order ?? []} onChange={(next) => setUsage({ primary_source_order: next })} {...(disabled === undefined ? {} : { disabled })} />
       <p className="app-muted">{m.settings.usage.noHome}</p>
     </>
   );

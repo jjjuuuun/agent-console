@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, type ComponentType, type ReactNode } from "react";
 import { LoadingBlock } from "../app/ErrorBlock";
-import { messages } from "../app/messages";
+import { useShellMessages } from "../app/shellMessages";
 import { ScreenBoundary } from "./ScreenBoundary";
 
 /**
@@ -35,6 +35,7 @@ export function lazyScreen<M, K extends keyof M>(load: () => Promise<M>, name: K
   // 실패한 지연 로딩은 React가 결과를 캐시하므로, 다시 시도할 때 새로 만든다
   let Screen = make();
   function LazyScreen(props: P & object) {
+    const messages = useShellMessages();
     const [, setAttempt] = useState(0);
     return (
       <ScreenBoundary onRetry={() => { Screen = make(); setAttempt((n) => n + 1); }} isLoadError={(e) => e instanceof ScreenLoadError}>

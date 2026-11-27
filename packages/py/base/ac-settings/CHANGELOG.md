@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: English for the `merge` and `intersect` merge strategy descriptions (data only).
 - I.7a: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-settings`, so the web can show the merge strategy descriptions in English (data only, no API change).
 
 ## 0.1.0

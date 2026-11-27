@@ -7,6 +7,8 @@ export interface CommandItem {
   label: string;
   /** 보조 설명(오른쪽 흐린 글씨). */
   hint?: string;
+  /** 검색에만 쓰는 별칭(공백으로 구분, 화면에는 보이지 않는다). 화면 언어와 상관없이 찾히게 할 때 쓴다. */
+  keywords?: string;
   /** 앞 아이콘 슬롯. 이름으로 그리려면 호출자가 `<Icon name=…/>`을 넘긴다. */
   icon?: ReactNode;
   /** 칩 등 배지 슬롯(예: "응답 대기"). */
@@ -52,7 +54,7 @@ export function filterCommandGroups(groups: readonly CommandGroup[], query: stri
   const q = query.trim().toLowerCase();
   const out: CommandGroup[] = [];
   for (const group of groups) {
-    const matched = q === "" ? group.items : group.items.filter((i) => i.label.toLowerCase().includes(q) || (i.hint?.toLowerCase().includes(q) ?? false));
+    const matched = q === "" ? group.items : group.items.filter((i) => i.label.toLowerCase().includes(q) || (i.hint?.toLowerCase().includes(q) ?? false) || (i.keywords?.toLowerCase().includes(q) ?? false));
     const items = maxPerGroup === undefined ? matched : matched.slice(0, maxPerGroup);
     if (items.length > 0) out.push({ ...group, items });
   }

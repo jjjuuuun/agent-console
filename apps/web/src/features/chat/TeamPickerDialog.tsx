@@ -2,14 +2,12 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } 
 import { Link, useNavigate } from "react-router";
 import type { GraphSummary } from "@agent-console/contracts";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { messages as appMessages } from "../../app/messages";
-import { formatRelative } from "../../lib/format";
-import { chatMessages } from "./chatMessages";
+import { useShellMessages } from "../../app/shellMessages";
+import { useChatMessages } from "./chatMessages";
 import { hasEntry } from "./lib/team";
-import { blocksRun, ValidationChip, teamMessages as vt } from "../teams";
+import { blocksRun, ValidationChip, useTeamMessages } from "../teams";
 import { useImeGuard } from "../../lib/ime";
-
-const t = chatMessages.newDialog;
+import { useFormat } from "../../i18n";
 
 export interface TeamPickerDialogProps {
   open: boolean;
@@ -50,6 +48,11 @@ export function TeamPickerDialog(props: TeamPickerDialogProps) {
 }
 
 function TeamPickerBody(props: TeamPickerDialogProps) {
+  const fmt = useFormat();
+  const shell = useShellMessages();
+  const vt = useTeamMessages();
+  const m = useChatMessages();
+  const t = m.newDialog;
   const { open, graphs } = props;
   const [query, setQuery] = useState("");
   const [pickedId, setPicked] = useState<string | undefined>(undefined);
@@ -105,7 +108,7 @@ function TeamPickerBody(props: TeamPickerDialogProps) {
       wide
       actions={
         <>
-          <Button onClick={props.onClose}>{appMessages.common.cancel}</Button>
+          <Button onClick={props.onClose}>{shell.common.cancel}</Button>
           <Button variant="primary" disabled={!canConfirm} loading={props.busy} onClick={confirm}>{props.confirmLabel}</Button>
         </>
       }
@@ -163,7 +166,7 @@ function TeamPickerBody(props: TeamPickerDialogProps) {
                       {g.description ? <div className="app-muted ac-ellipsis">{g.description}</div> : null}
                       <div className="app-muted chat-picker-meta">
                         <span>{t.nodes(g.node_count)}</span>
-                        {used !== undefined ? <span>{t.lastUsed(formatRelative(used, props.nowMs))}</span> : null}
+                        {used !== undefined ? <span>{t.lastUsed(fmt.relative(used, props.nowMs))}</span> : null}
                       </div>
                     </div>
                     {/* 칩·펼침·링크는 라디오 밖에 둔다: aria-disabled 요소 안의 컨트롤은 비활성으로 취급되기 때문 */}

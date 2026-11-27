@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildConfigUi, namedWidgetUi, withEnumArraysUnique } from "./configUi";
+import { koMessages } from "../../testing/messageTables";
+import { buildConfigUi as buildConfigUiWith, namedWidgetUi, withEnumArraysUnique } from "./configUi";
+import { createResourceMessages } from "./messages";
+
+const rm = koMessages("resources", createResourceMessages);
+const buildConfigUi = (schema: Parameters<typeof buildConfigUiWith>[0], serverUi: Parameters<typeof buildConfigUiWith>[1], widgets: ReadonlySet<string> = new Set()) => buildConfigUiWith(schema, serverUi, widgets, rm);
 
 describe("namedWidgetUi(리소스 폼 위젯 이음)", () => {
   const schema = {

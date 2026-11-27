@@ -1,0 +1,169 @@
+{
+  "moduleStatus": {
+    "active": "켜짐",
+    "disabled": "꺼짐",
+    "unsatisfied": "연결 부족",
+    "failed": "시작 실패",
+    "conflict": "충돌"
+  },
+  "moduleStatusDefault": {
+    "disabled": "설정에서 꺼져 있습니다.",
+    "unsatisfied": "필요한 기능이 없어 꺼졌습니다.",
+    "failed": "시작하지 못했습니다. 서버 로그를 확인하세요.",
+    "conflict": "같은 연결을 두 기능이 제공합니다."
+  },
+  "moduleOff": {
+    "title": {
+      "disabled": "이 기능은 꺼져 있습니다",
+      "unsatisfied": "이 기능은 필요한 연결이 없어 꺼졌습니다",
+      "failed": "이 기능을 시작하지 못했습니다",
+      "conflict": "이 기능의 연결이 겹칩니다",
+      "missing": "이 서버에는 이 기능이 설치되어 있지 않습니다"
+    },
+    "body": {
+      "disabled": "‘{screen}’ 화면에 필요한 기능이 꺼져 있습니다.",
+      "unsatisfied": "‘{screen}’ 화면에 필요한 기능이 다른 기능을 기다리고 있습니다.",
+      "failed": "서버가 이 기능을 시작하다 실패했습니다. 서버 로그를 확인하세요.",
+      "conflict": "같은 연결을 두 기능이 제공해 하나를 고르지 않으면 꺼진 채로 둡니다.",
+      "missing": "‘{screen}’ 화면에 필요한 기능이 서버 목록에 없습니다."
+    },
+    "needed": "필요한 기능",
+    "roleMark": "(역할)",
+    "notListed": "서버 목록에 없음",
+    "moreMatches": "외 {n}개",
+    "showMore": "더 보기",
+    "howto": {
+      "title": "켜는 방법 (서버 설치자)",
+      "comment": "# 서버 설정 파일",
+      "removeFrom": "# 여기서 {id} 를 뺍니다",
+      "orCli": "# 또는 서버 실행 때",
+      "unsatisfied": "먼저 필요한 연결을 제공하는 기능을 켜세요.",
+      "conflict": "설정 파일의 `modules.bindings`에서 제공자를 하나 고르세요.",
+      "failed": "서버 로그를 확인하세요."
+    },
+    "notInstalled": "이 기능은 서버에 설치되어 있지 않습니다. 설치자에게 문의하세요.",
+    "noChange": "이 화면은 설정을 바꾸지 않습니다. 서버를 다시 시작해야 적용됩니다.",
+    "toModules": "기능 목록 보기",
+    "goTo": "{screen}(으)로 이동",
+    "unsavedBanner": "서버에서 이 기능이 꺼졌습니다. 저장할 수 없을 수 있습니다.",
+    "enabledToast": "기능이 켜졌습니다",
+    "loading": "기능 구성을 확인하는 중…"
+  },
+  "linkPart": {
+    "note": {
+      "sendUnavailable": "이 서버에서는 메시지를 보낼 수 없습니다 (실행 연동이 꺼져 있습니다).",
+      "usageRollupOff": "플랫폼 실행분 토큰 집계는 이 서버에서 꺼져 있습니다."
+    },
+    "interactionsOff": "상호작용을 쓸 수 없습니다 (기능이 꺼져 있습니다)",
+    "names": {
+      "chat": {
+        "delegation-chip": "채팅: 진행 줄의 위임 칩",
+        "interaction-card": "채팅: 상호작용 카드",
+        "send": "채팅: 메시지 전송",
+        "resume-turn": "채팅: 끊긴 턴 이어 가기"
+      },
+      "runs": {
+        "flow-tab": "실행 상세: 위임 흐름 탭",
+        "handoff-view": "실행 기록: 위임 집계 보기",
+        "architecture-tab": "실행 상세: 구조도 탭",
+        "trace-child-groups": "실행 상세: 하위 실행 묶음",
+        "memory-chips": "실행 상세: 메모리 칩",
+        "wiki-changes": "실행 상세: 위키 변경"
+      },
+      "usage": {
+        "token-rollup": "사용량: 토큰 집계"
+      },
+      "logs": {
+        "trace-flow": "로그 세션 상세: 위임 흐름",
+        "run-link": "로그: 실행 상세 링크",
+        "runs-tab": "실행 상세: 세션 로그 탭",
+        "architecture-flow": "로그 세션 상세: 구조도 흐름",
+        "usage-link": "로그 세션 목록: 사용량 링크"
+      },
+      "teams": {
+        "validation-column": "팀 구성 목록: 검증 요약",
+        "draft-preview": "팀 구성: 초안 미리보기",
+        "condition-operators": "팀 구성: 조건 연산자"
+      },
+      "agents": {
+        "usages-panel": "에이전트: 사용처 패널"
+      }
+    }
+  },
+  "modules": {
+    "title": "기능 모듈",
+    "description": "이 서버에 설치된 기능과 연동의 상태입니다. 켜고 끄는 일은 서버 설치자가 설정 파일 또는 서버 실행 옵션으로 합니다.",
+    "refresh": "새로고침",
+    "summary": {
+      "total": "모듈",
+      "unit": "개",
+      "active": "켜짐",
+      "off": "꺼짐",
+      "problems": "문제"
+    },
+    "filterAll": "전체",
+    "filterLabel": "상태 필터",
+    "search": "id·역할 검색",
+    "searchLabel": "모듈 검색",
+    "list": "기능 모듈 목록",
+    "empty": "이 서버에는 켜진 기능이 없습니다.",
+    "emptyBody": "설치된 기능이 없거나 모두 꺼져 있습니다. 서버 설정 파일의 `modules` 항목과 서버 실행 옵션을 확인하세요.",
+    "noMatch": "일치하는 모듈이 없습니다",
+    "clearFilter": "필터 지우기",
+    "fetchFailed": "기능 목록을 가져오지 못했습니다. 모든 화면을 켜 둔 상태로 표시합니다.",
+    "noEndpoint": "이 서버는 기능 목록을 제공하지 않습니다. 모든 화면을 켜 둔 상태로 표시합니다.",
+    "retry": "다시 시도",
+    "sectionName": "기능 모듈",
+    "dotLabel": "문제가 있는 기능 모듈이 있습니다",
+    "expand": "펼치기",
+    "collapse": "접기",
+    "cmd": {
+      "copy": "명령 조각 복사",
+      "copied": "명령 조각을 복사했습니다",
+      "enableTitle": "켜는 방법",
+      "disableTitle": "끄는 방법",
+      "comment": "# 서버 설정 파일에 넣거나",
+      "orCli": "# 서버 실행 때 붙입니다"
+    },
+    "options": {
+      "title": "모듈 옵션 (읽기 전용)",
+      "hint": "설정 파일의 modules.options 아래에서만 바꿉니다. 비밀로 보이는 값은 가려져 있습니다.",
+      "loading": "옵션을 불러오는 중",
+      "noSchema": "이 모듈은 옵션 스키마를 선언하지 않았습니다.",
+      "empty": "설정된 옵션이 없습니다(기본값으로 동작합니다).",
+      "loadFailed": "옵션을 불러오지 못했습니다",
+      "copyYaml": "YAML 조각 복사",
+      "yamlCopied": "YAML 조각을 복사했습니다",
+      "unavailable": "이 서버는 모듈 옵션 조회를 지원하지 않습니다."
+    },
+    "pluginOptions": {
+      "title": "확장 옵션 (읽기 전용)",
+      "hint": "비밀 공급자처럼 설정 훅이 있는 확장의 설치자 옵션입니다. 설정 파일에서만 바꾸며, 비밀로 보이는 값은 가려져 있습니다.",
+      "place": "설정 자리",
+      "configured": "설정됨",
+      "notConfigured": "설정 없음(기본값)",
+      "noSchema": "이 확장은 옵션 스키마를 선언하지 않았습니다.",
+      "empty": "설정된 옵션이 없습니다(기본값으로 동작합니다).",
+      "copyYaml": "YAML 조각 복사",
+      "yamlCopied": "YAML 조각을 복사했습니다"
+    },
+    "summaryProvides": "제공: {list}",
+    "summaryRoles": "화면 역할: {list}",
+    "detail": {
+      "reason": "이유",
+      "version": "버전",
+      "contracts": "계약",
+      "provides": "제공 연결",
+      "roles": "화면 역할",
+      "screens": "영향받는 화면",
+      "parts": "영향받는 부분"
+    },
+    "configChanged": "서버의 기능 구성이 바뀌었습니다",
+    "problemToast": "일부 기능이 꺼졌습니다 (문제 {n}건)",
+    "problemToastAction": "보기",
+    "featureUnavailable": "이 동작은 지금 서버에서 쓸 수 없습니다 ({module}이(가) 필요한 연결 {port}을(를) 받지 못했습니다)",
+    "navDot": "문제 있음",
+    "loadingRows": "기능 목록을 불러오는 중",
+    "rolesMore": "{shown} 외 {n}"
+  }
+}

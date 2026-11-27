@@ -1,0 +1,126 @@
+{
+  "title": "Agents",
+  "list": {
+    "label": "Agents",
+    "search": "Search agents",
+    "searchPlaceholder": "Name, role, description, id",
+    "new": "New agent",
+    "filterAll": "All",
+    "filterUsed": "In use",
+    "filterUnused": "Unused",
+    "filterLabel": "Usage",
+    "empty": "No agents yet",
+    "emptyBody": "An agent is a role definition that a team uses as a node.",
+    "noMatch": "No matching agents",
+    "loadFailed": "Couldn't load agents",
+    "usedBy_one": "Used in {n} team",
+    "usedBy_other": "Used in {n} teams",
+    "usageNone": "Not in a team",
+    "usageMany": "{n} teams"
+  },
+  "arrange": {
+    "groupNames": {
+      "groupRole": "Role",
+      "groupBackend": "Backend",
+      "groupModel": "Model"
+    },
+    "noneLabels": {
+      "groupRole": "(No role)",
+      "groupBackend": "(Uses common settings)",
+      "groupModel": "(Uses common settings)"
+    },
+    "sortNames": {
+      "sortUsage": "Most used"
+    },
+    "sortSummaries": {
+      "sortUsage": "Most used"
+    },
+    "roleDistinct": "Every value is different, so it can't be grouped"
+  },
+  "pick": {
+    "title": "Select an agent or create one",
+    "body": "Pick an agent in the list to see its settings and where it's used."
+  },
+  "create": {
+    "fallbackId": "agent",
+    "title": "New agent",
+    "submit": "Create",
+    "role": "Role",
+    "roleHint": "e.g. design, review, backend",
+    "failed": "Couldn't create the agent",
+    "resourcesTitle": "Attached resources"
+  },
+  "detail": {
+    "notFound": "Agent not found",
+    "toList": "Back to list",
+    "loadFailed": "Couldn't load the agent",
+    "id": "id",
+    "save": "Save",
+    "saved": "Saved",
+    "revert": "Revert",
+    "menu": "Agent menu",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "viewJson": "View JSON",
+    "jsonTitle": "Agent definition (read-only)",
+    "tabsLabel": "Agent detail"
+  },
+  "tabs": {
+    "settings": "Settings",
+    "resources": "Resources",
+    "usages": "Used by",
+    "activity": "Recent activity"
+  },
+  "identity": {
+    "title": "Identity",
+    "name": "Name",
+    "role": "Role",
+    "description": "Description",
+    "descriptionHint": "Used as the default for “when to hand work to this agent” when another agent delegates.",
+    "nameRequired": "Enter a name"
+  },
+  "display": {
+    "title": "Display (advanced)",
+    "icon": "Icon",
+    "iconHint": "1–2 characters (emoji allowed) shown on chat replies, team graph nodes, and run screens. Leave empty to use the first letter of the name.",
+    "iconInvalid": "Use 1–2 characters. This value is ignored and the first letter of the name is shown.",
+    "color": "Color",
+    "colorHint": "Pick one, or type a CSS color such as #rrggbb. Leave empty to use the color derived from the name.",
+    "colorInvalid": "Unknown color. This value is ignored and the default color is shown.",
+    "colorOption": "Palette color {n}",
+    "preview": "Preview"
+  },
+  "settings": {
+    "title": "Settings",
+    "hint": "Gray values are inherited from the common settings. Changing a value sets it for this agent only.",
+    "effectiveFailed": "Couldn't load inherited values. You can still edit the values you set.",
+    "loading": "Loading settings…"
+  },
+  "resources": {
+    "footer": "In a team, team-wide resources and resources attached at the node are added on top of these.",
+    "layerFallback": "Agent",
+    "commonFailed": "Couldn't load the common settings' resources"
+  },
+  "usages": {
+    "empty": "No team uses this agent yet.",
+    "toTeams": "Create a team",
+    "team": "Team",
+    "nodes": "Nodes",
+    "failed": "Couldn't load where it's used",
+    "nodeIdsNone": "–"
+  },
+  "activity": {
+    "empty": "No runs yet",
+    "failed": "Couldn't load recent activity",
+    "started": "Started",
+    "run": "Run",
+    "events": "Events",
+    "last": "Last event",
+    "more": "More",
+    "open": "Open run detail"
+  },
+  "delete": {
+    "usedNote": "If you delete it, the matching nodes in these teams are left as “unknown agent”.",
+    "failed": "Couldn't delete"
+  }
+}

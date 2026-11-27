@@ -69,3 +69,11 @@ describe("metricPieces·sumMetrics·정렬", () => {
     expect(abbreviateNumber(41000)).toBe("41k");
   });
 });
+
+describe("locale", () => {
+  it("groups digits by the given locale and defaults to en-US", () => {
+    expect(formatMetric(obs(1234567), m, { name: "count", locale: "de" }).long).toContain("1.234.567");
+    expect(formatMetric(obs(1234567), m, { name: "count" }).long).toContain("1,234,567");
+    expect(metricPieces({ count: obs(1234) }, m, { locale: "de" })[0]!.aria).toContain("1.234");
+  });
+});

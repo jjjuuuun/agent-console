@@ -2,10 +2,12 @@ import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph 
 import type { ChipView } from "@agent-console/graph-editor";
 import { DEFAULT_TEAM_CONVENTIONS, stringAt, type TeamConventions } from "./conventions";
 import { resolveCycleLimit, type CycleLimitSource } from "./cycleLimit";
-import { delegationMessages as t } from "./messages";
+import type { DelegationMessages } from "./messages";
 import { chipsFromWidgets, type WidgetRegistry, type WidgetSummaryContext } from "./widgetRegistry";
 
 export interface EdgeChipContext {
+  /** 위임 문구 표(화면 언어) */
+  messages: DelegationMessages;
   /** 위임 방식 목록(방식 칩 제목) */
   strategies?: readonly Pick<DelegationStrategyDescriptor, "id" | "title">[];
   /** 서버 연산자 목록(없으면 null → 연산자 id 그대로) */
@@ -20,11 +22,11 @@ export interface EdgeChipContext {
   onLimitChipActivate?: (edgeId: string) => void;
 }
 
-const SOURCE_NOTE: Record<Exclude<CycleLimitSource, "edge">, string> = {
+const sourceNote = (t: DelegationMessages): Record<Exclude<CycleLimitSource, "edge">, string> => ({
   kindDefault: t.edge.cycleInheritedKind,
   teamSettings: t.edge.cycleInheritedTeam,
   commonSettings: t.edge.cycleInheritedCommon,
-};
+});
 
 /** 연결의 유효 위임 방식 id: 연결 config의 덮어쓰기 → 연결 종류 기본. 위임 연결이 아니면 undefined. */
 export function effectiveStrategyId(edge: Pick<EdgeSpec, "config">, edgeType: Pick<EdgeTypeDescriptor, "invocation"> | undefined, conventions: TeamConventions = DEFAULT_TEAM_CONVENTIONS): string | undefined {
@@ -47,8 +49,9 @@ export function edgeStrategyIds(graph: Pick<Graph, "edges">, edgeTypes: readonly
  * 연결 위에 붙는 추가 칩(편집기 `edgeExtraChips`): 반복 한도, 위임 방식(종류 기본과 다를 때만), 위젯 `summary`(조건 요약).
  * 판정은 디스크립터 속성(`cycle`·`invocation`·`ui_schema`의 위젯 이름)만 쓰고 종류 id·config 키는 `TeamConventions` 데이터를 거친다.
  */
-export function deriveEdgeChips(edge: EdgeSpec, edgeType: EdgeTypeDescriptor | undefined, ctx: EdgeChipContext = {}): ChipView[] {
+export function deriveEdgeChips(edge: EdgeSpec, edgeType: EdgeTypeDescriptor | undefined, ctx: EdgeChipContext): ChipView[] {
   if (edgeType === undefined) return [];
+  const t = ctx.messages;
   const conventions = ctx.conventions ?? DEFAULT_TEAM_CONVENTIONS;
   const chips: ChipView[] = [];
 
@@ -59,7 +62,7 @@ export function deriveEdgeChips(edge: EdgeSpec, edgeType: EdgeTypeDescriptor | u
     } else {
       const text = t.edge.cycleChip(limit.value);
       const inherited = limit.source !== "edge";
-      chips.push({ key: "cycle-limit", title: text, fullTitle: inherited ? `${text} (${SOURCE_NOTE[limit.source as Exclude<CycleLimitSource, "edge">]})` : text, tone: "neutral", ...(inherited ? { dashed: true } : {}), ...(ctx.onLimitChipActivate ? { onActivate: () => ctx.onLimitChipActivate?.(edge.id) } : {}) });
+      chips.push({ key: "cycle-limit", title: text, fullTitle: inherited ? `${text} (${sourceNote(t)[limit.source as Exclude<CycleLimitSource, "edge">]})` : text, tone: "neutral", ...(inherited ? { dashed: true } : {}), ...(ctx.onLimitChipActivate ? { onActivate: () => ctx.onLimitChipActivate?.(edge.id) } : {}) });
     }
   }
 
@@ -72,14 +75,14 @@ export function deriveEdgeChips(edge: EdgeSpec, edgeType: EdgeTypeDescriptor | u
   }
 
   if (ctx.widgets !== undefined && edgeType.ui_schema !== undefined) {
-    const summaryCtx = (options: Readonly<Record<string, unknown>>): WidgetSummaryContext => ({ operators: ctx.operators ?? null, options });
+    const summaryCtx = (options: Readonly<Record<string, unknown>>): WidgetSummaryContext => ({ operators: ctx.operators ?? null, options, messages: t });
     chips.push(...chipsFromWidgets(edgeType.ui_schema, edge.config, ctx.widgets, (f) => summaryCtx(f.options)));
   }
   return chips;
 }
 
 /** 그래프 전체 연결의 추가 칩 표(편집기 `edgeExtraChips`). 칩이 없는 연결은 키를 만들지 않는다. */
-export function deriveAllEdgeChips(graph: Pick<Graph, "edges">, edgeTypes: readonly EdgeTypeDescriptor[], ctx: EdgeChipContext = {}): Record<string, ChipView[]> {
+export function deriveAllEdgeChips(graph: Pick<Graph, "edges">, edgeTypes: readonly EdgeTypeDescriptor[], ctx: EdgeChipContext): Record<string, ChipView[]> {
   const kinds = new Map(edgeTypes.map((e) => [e.id, e]));
   const out: Record<string, ChipView[]> = {};
   for (const edge of graph.edges ?? []) {

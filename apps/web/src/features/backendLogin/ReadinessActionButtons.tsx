@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReadinessAction } from "@agent-console/contracts";
 import { Button, Menu, Popover } from "@agent-console/ui";
-import { loginMessages as t } from "./messages";
+import { useLoginMessages } from "./messages";
 import { KNOWN_ACTION_KINDS } from "./types";
 
 export interface ReadinessActionButtonsProps {
@@ -13,6 +13,7 @@ export interface ReadinessActionButtonsProps {
 
 /** 주 동작은 버튼, 나머지는 `…` 메뉴. 문구는 서버가 준 데이터. */
 export function ReadinessActionButtons({ actions, onAction, size = "sm" }: ReadinessActionButtonsProps) {
+  const t = useLoginMessages();
   const [open, setOpen] = useState(false);
   const known = (actions ?? []).filter((a) => KNOWN_ACTION_KINDS.includes(a.kind));
   if (known.length === 0) return null;

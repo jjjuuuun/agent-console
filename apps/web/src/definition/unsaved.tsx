@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useBlocker } from "react-router";
 import { Button, Dialog } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
+import { useAppMessages } from "../app/appMessages";
 
 interface UnsavedRegistry {
   /** 저장하지 않은 변경이 있는 화면 수 */
@@ -61,6 +61,7 @@ export function useReportUnsaved(dirty: boolean): void {
  * 렌더 결과는 이탈 확인 다이얼로그이며, 화면 어디에든 한 번 둔다.
  */
 export function UnsavedGuard({ dirty }: { dirty: boolean }) {
+  const m = useAppMessages();
   useReportUnsaved(dirty);
 
   const blocker = useBlocker(dirty);

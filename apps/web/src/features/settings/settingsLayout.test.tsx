@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { render } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ModuleInfo } from "@agent-console/contracts";
 import { createFakeClients } from "../../testing/fakes";
@@ -8,9 +8,13 @@ import { mountApp } from "../../testing/screenHarness";
 import { ModulesSectionView } from "./sections/ModulesSection";
 import { ModuleOptionsReadOnly } from "./sections/ModuleOptionsPanel";
 import { moduleCommandSnippet } from "./modulesView";
+import { createModuleTable } from "../../app/moduleMessages";
+import { koT } from "../../testing/koText";
 import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
+
+const koM = createModuleTable(koT("modules"));
 
 const mod = (id: string, status: string, extra: Partial<ModuleInfo> = {}): ModuleInfo => ({ id, kind: "k", version: "1.0.0", status, web_roles: [], provides: [], ...extra });
 
@@ -69,8 +73,8 @@ describe("설정 화면: 섹션 하나씩", () => {
 
 describe("기능 모듈 섹션: 명령 조각·옵션", () => {
   it("켜진 모듈은 끄는 조각, 꺼진 모듈은 켜는 조각을 만든다", () => {
-    expect(moduleCommandSnippet({ id: "m-a", status: "active" })).toContain("--disable-module m-a");
-    const off = moduleCommandSnippet({ id: "m-b", status: "disabled" });
+    expect(moduleCommandSnippet({ id: "m-a", status: "active" }, koM)).toContain("--disable-module m-a");
+    const off = moduleCommandSnippet({ id: "m-b", status: "disabled" }, koM);
     expect(off).toContain("--enable-module m-b");
   });
 

@@ -91,7 +91,9 @@ def test_loading_problems_become_warning_issues(tmp_path: Path) -> None:
     entry = next(issue for issue in issues if issue.code == "i18n.entry_invalid")
     assert entry.details["key"] == "저장"
     assert entry.details["language"] == "de"
-    assert "3" not in str(entry.details.values())  # catalog values are not sent
+    # catalog values are not sent (compare values, not text: the tmp path may contain "3")
+    assert 3 not in entry.details.values()
+    assert "3" not in entry.details.values()
     # the remaining catalogs are still used
     assert service.catalog("en").catalog.text["저장"] == "Save"
 

@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeSpec } from "@agent-console/contracts";
-import { SchemaForm } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { Disclosure } from "@agent-console/ui";
 import { getAt, setAt, unsetAt } from "../../lib/jsonPointer";
 import { DEFAULT_TEAM_CONVENTIONS, type TeamConventions } from "./conventions";
 import { effectiveStrategyId } from "./edgeChips";
-import { delegationMessages as t } from "./messages";
+import { useDelegationMessages } from "./messages";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -45,6 +45,7 @@ export interface DelegationSettingsProps {
  * 해당 방식이 없으면 아무것도 그리지 않는다.
  */
 export function DelegationSettings({ node, graph, edgeTypes, strategies, onChange, disabled, conventions = DEFAULT_TEAM_CONVENTIONS }: DelegationSettingsProps) {
+  const t = useDelegationMessages();
   const list = useMemo(() => delegatorStrategies(node, graph, edgeTypes, strategies, conventions), [node, graph, edgeTypes, strategies, conventions]);
   if (list.length === 0) return null;
   const config = (node.config ?? {}) as Obj;

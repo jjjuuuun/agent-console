@@ -5,10 +5,10 @@ import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
 import { ROUTE_ROLES, routePath } from "../library";
 import { MEMORY_PARAMS, RUN_CHIPS } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { joinTypePrefixes } from "../../lib/typePrefix";
 import { chipNumber, countRunChips } from "./runChips";
 import "./runChips.css";
+import { useT } from "@agent-console/i18n";
 
 export interface RunMemoryChipsProps {
   runId: string;
@@ -25,6 +25,7 @@ const chipKey = (runId: string) => ["memory", "run-chips", runId] as const;
  * 쓰기 칩은 메모리 화면의 `author_run` 필터로 가는 링크이고, 숫자는 이벤트 type 접두(`memory.`)로 센다.
  */
 export function RunMemoryChips({ runId, active, onOpenReads }: RunMemoryChipsProps) {
+  const t = useT("memory");
   const { ws } = useApi();
   const qc = useQueryClient();
   const events = useApiQuery(chipKey(runId), (rest) => rest.listRunEvents(runId, { type_prefix: RUN_CHIPS.typePrefix }), { meta: { silentBackgroundError: true }, retry: false });
@@ -47,15 +48,15 @@ export function RunMemoryChips({ runId, active, onOpenReads }: RunMemoryChipsPro
   const { write, read } = countRunChips(events.data);
   if (write.count === 0 && read.count === 0) return null;
   const href = `${routePath(ROUTE_ROLES.memory)}?${MEMORY_PARAMS.authorRun}=${encodeURIComponent(runId)}`;
-  const fail = (n: number) => (n > 0 ? <span className="mem-runchip-fail"><span className="app-sev" data-severity="warning" aria-hidden="true">▲</span> {t.runChips.failed(n)}</span> : null);
+  const fail = (n: number) => (n > 0 ? <span className="mem-runchip-fail"><span className="app-sev" data-severity="warning" aria-hidden="true">▲</span> {t("runChips.failed", { n })}</span> : null);
   return (
-    <span className="mem-runchips" role="group" aria-label={t.runChips.label}>
+    <span className="mem-runchips" role="group" aria-label={t("runChips.label")}>
       <span className="mem-runchip-item">
-        <Link className="mem-runchip" to={href} title={t.runChips.writeTip}>{t.runChips.write(chipNumber(write.count))}</Link>
+        <Link className="mem-runchip" to={href} title={t("runChips.writeTip")}>{t("runChips.write", { n: chipNumber(write.count) })}</Link>
         {fail(write.failed)}
       </span>
       <span className="mem-runchip-item">
-        <button type="button" className="mem-runchip" title={t.runChips.readTip} onClick={() => onOpenReads(joinTypePrefixes(RUN_CHIPS.read.openPrefixes))}>{t.runChips.read(chipNumber(read.count))}</button>
+        <button type="button" className="mem-runchip" title={t("runChips.readTip")} onClick={() => onOpenReads(joinTypePrefixes(RUN_CHIPS.read.openPrefixes))}>{t("runChips.read", { n: chipNumber(read.count) })}</button>
         {fail(read.failed)}
       </span>
     </span>

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { getContractSchema, type UsageIndicatorColorRule, type UsageIndicatorSettings, type UsageSourceInfo, type UsageWindowSnapshot } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { InlineMarkdown } from "@agent-console/schema-form";
+import { useServerTranslate } from "../../../i18n";
 import {
   INDICATOR_FIELDS,
   INDICATOR_PLACEMENTS,
@@ -10,11 +11,10 @@ import {
   resolveIndicatorSettings,
   resolvePlacement,
   splitFields,
-  usageIndicatorMessages,
+  useUsageIndicatorMessages,
 } from "../../usage";
 import { changedKeysOnly } from "./NotificationsSection";
 
-const t = usageIndicatorMessages.settings;
 
 type PropSchema = { title?: string; description?: string; minimum?: number; maximum?: number; enum?: string[] };
 const props = (): Record<string, PropSchema> => (getContractSchema("UsageIndicatorSettings") as { properties: Record<string, PropSchema> }).properties;
@@ -42,7 +42,14 @@ export interface UsageIndicatorEditorProps {
  * 저장 값에는 이미 있던 키와 이번에 바꾼 키만 남긴다(생략 = 상속).
  */
 export function UsageIndicatorEditor(p: UsageIndicatorEditorProps) {
-  const schema = useMemo(() => props(), []);
+  const all = useUsageIndicatorMessages();
+  const t = all.settings;
+  const tr = useServerTranslate();
+  // 스키마 제목·설명은 서버 원문이라 화면 언어로 바꾼다.
+  const schema = useMemo(
+    () => Object.fromEntries(Object.entries(props()).map(([k, v]) => [k, { ...v, ...(v.title === undefined ? {} : { title: tr(v.title) }), ...(v.description === undefined ? {} : { description: tr(v.description) }) }])) as Record<string, PropSchema>,
+    [tr],
+  );
   const eff = resolveIndicatorSettings(p.value);
   const set = (patch: Partial<UsageIndicatorSettings>) => p.onChange(changedKeysOnly<UsageIndicatorSettings>(p.value, { ...eff }, { ...eff, ...patch }));
   const off = p.disabled === true || !eff.enabled;
@@ -172,7 +179,7 @@ export function UsageIndicatorEditor(p: UsageIndicatorEditorProps) {
               </label>
               <select className="ac-input" aria-label={t.ruleTone} value={r.tone} onChange={(e) => setRule(i, { tone: e.target.value })}>
                 {r.tone in INDICATOR_TONES ? null : <option value={r.tone}>{r.tone}</option>}
-                {Object.keys(INDICATOR_TONES).map((id) => <option key={id} value={id}>{usageIndicatorMessages.tones[id] ?? id}</option>)}
+                {Object.keys(INDICATOR_TONES).map((id) => <option key={id} value={id}>{all.tones[id] ?? id}</option>)}
               </select>
               <Button size="sm" aria-label={t.ruleRemove} onClick={() => set({ color_rules: rules.filter((_, k) => k !== i) })}>🗑</Button>
               {dup(i) ? <span className="app-field-error" role="alert">{t.ruleDuplicate}</span> : null}

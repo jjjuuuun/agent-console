@@ -1,4 +1,5 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { useMemo } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
@@ -71,6 +72,27 @@ describe("react hooks", () => {
     expect(screen.getByTestId("issue").textContent).toBe("2개");
     expect(screen.getByTestId("t").textContent).toBe("서버 Ann");
     expect(screen.getByTestId("lib").textContent).toBe("서버 저장|Extra|닫기 {n}");
+  });
+
+  test("useServerText gets a new identity when the server catalog arrives (memo keys stay correct)", async () => {
+    const i18n = createI18n({ language: "ko", bundled });
+    const seen: unknown[] = [];
+    function Capture() {
+      const server = useServerText();
+      seen.push(server.text);
+      return <p data-testid="memo">{useMemo(() => server.text("Orig"), [server])}</p>;
+    }
+    render(
+      <I18nProvider i18n={i18n}>
+        <Capture />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId("memo").textContent).toBe("Orig");
+    await act(async () => {
+      applyServerCatalog(i18n, { language: "ko", text: { Orig: "원문" }, codes: {}, ns: {} });
+    });
+    expect(screen.getByTestId("memo").textContent).toBe("원문");
+    expect(new Set(seen).size).toBeGreaterThan(1);
   });
 
   test("useLibMessages keeps its identity while nothing changes", () => {

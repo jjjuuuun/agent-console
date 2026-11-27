@@ -14,15 +14,16 @@ import { ROUTE_ROLES, routePath } from "../library";
 import { FailureBlock, ListSkeleton, MultiFilter, SearchBox } from "./parts";
 import { PrereqState, useTaskPrereq } from "./taskPrereq";
 import { gapDisplay, OPENABLE_LINK_KINDS, SDD_PARAMS, verificationDisplay } from "./sddConfig";
-import { lookupSpecKey, sddMessages as m, viewMessages } from "./messages";
+import { useSddViewMessages, useSpecKeyText } from "./useViewMessages";
 import { setList } from "./params";
 import type { SddTabProps } from "./sddTabs";
 import { useSpecTrace } from "./useSddApi";
+import { useT } from "@agent-console/i18n";
 
 const P = SDD_PARAMS;
 
 /** 코드 → 보일 값 표: 톤은 표시 데이터, 문구는 messages(키가 없으면 비워 두어 컴포넌트가 원문을 쓴다). */
-function displayTable(codes: Iterable<string>, of: (code: string) => { tone: string; labelKey?: string; hintKey?: string }): CodeDisplayTable {
+function displayTable(codes: Iterable<string>, of: (code: string) => { tone: string; labelKey?: string; hintKey?: string }, lookupSpecKey: (key: string | undefined) => string | undefined): CodeDisplayTable {
   const out: Record<string, { tone: string; label?: string; hint?: string }> = {};
   for (const code of codes) {
     const d = of(code);
@@ -34,6 +35,9 @@ function displayTable(codes: Iterable<string>, of: (code: string) => { tone: str
 }
 
 export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTabProps) {
+  const t = useT("sdd");
+  const viewMessages = useSddViewMessages();
+  const lookupSpecKey = useSpecKeyText();
   const navigate = useNavigate();
   const prereq = useTaskPrereq(specId, view);
   const traceQ = useSpecTrace(specId, prereq.state === "ok");
@@ -54,8 +58,8 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
 
   const gapCodes = useMemo(() => [...new Set(rows.flatMap((r) => r.gaps ?? []))], [rows]);
   const verifyCodes = useMemo(() => [...new Set(rows.flatMap((r) => (r.verification ? [r.verification.status] : [])))], [rows]);
-  const gapTable = useMemo(() => displayTable(gapCodes, gapDisplay), [gapCodes]);
-  const verifyTable = useMemo(() => displayTable(verifyCodes, verificationDisplay), [verifyCodes]);
+  const gapTable = useMemo(() => displayTable(gapCodes, gapDisplay, lookupSpecKey), [gapCodes, lookupSpecKey]);
+  const verifyTable = useMemo(() => displayTable(verifyCodes, verificationDisplay, lookupSpecKey), [verifyCodes, lookupSpecKey]);
   const gapLabel = (code: string) => gapTable[code]?.label ?? code;
 
   const visible = useMemo(() => {
@@ -76,19 +80,19 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
     if (OPENABLE_LINK_KINDS.includes(link.kind)) void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(link.ref)}`);
   };
 
-  if (prereq.state !== "ok") return <PrereqState prereq={prereq} onOpenRules={openRules} loadFailed={m.trace.loadFailed} />;
+  if (prereq.state !== "ok") return <PrereqState prereq={prereq} onOpenRules={openRules} loadFailed={t("trace.loadFailed")} />;
   if (traceQ.isPending) return <ListSkeleton rows={8} />;
-  if (traceQ.isError) return <FailureBlock error={traceQ.error} title={m.trace.loadFailed} onRetry={() => void traceQ.refetch()} />;
+  if (traceQ.isError) return <FailureBlock error={traceQ.error} title={t("trace.loadFailed")} onRetry={() => void traceQ.refetch()} />;
   if (rows.length === 0) {
     return (
       <div className="sdd-state" data-testid="sdd-trace-empty">
         <EmptyState
-          title={m.trace.emptyTitle}
-          description={m.trace.emptyBody}
+          title={t("trace.emptyTitle")}
+          description={t("trace.emptyBody")}
           action={
             <>
-              {reqDoc === undefined ? null : <Button size="sm" onClick={() => goTab("documents", { [P.doc]: reqDoc.id })}>{m.trace.openRequirement}</Button>}
-              <Button size="sm" onClick={openRules}>{m.trace.openRules}</Button>
+              {reqDoc === undefined ? null : <Button size="sm" onClick={() => goTab("documents", { [P.doc]: reqDoc.id })}>{t("trace.openRequirement")}</Button>}
+              <Button size="sm" onClick={openRules}>{t("trace.openRules")}</Button>
             </>
           }
         />
@@ -105,21 +109,21 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
 
   return (
     <div className="sdd-trace" data-testid="sdd-trace">
-      <div className="sdd-toolbar" role="group" aria-label={m.trace.search}>
-        <SearchBox value={q} onCommit={(next) => patch((p) => (next.trim() === "" ? p.delete(P.q) : p.set(P.q, next)))} label={m.trace.search} />
-        {gapCodes.length === 0 ? null : <MultiFilter label={m.trace.gapFilter} options={gapCodes.map((c) => ({ id: c, label: gapLabel(c) }))} selected={gapSel} onChange={(next) => patch((p) => setList(p, P.gaps, next))} />}
-        <Switch checked={only} onChange={(on) => patch((p) => (on ? p.set(P.only, "1") : p.delete(P.only)))} label={m.trace.gapsOnly} onText={m.on} offText={m.off} />
+      <div className="sdd-toolbar" role="group" aria-label={t("trace.search")}>
+        <SearchBox value={q} onCommit={(next) => patch((p) => (next.trim() === "" ? p.delete(P.q) : p.set(P.q, next)))} label={t("trace.search")} />
+        {gapCodes.length === 0 ? null : <MultiFilter label={t("trace.gapFilter")} options={gapCodes.map((c) => ({ id: c, label: gapLabel(c) }))} selected={gapSel} onChange={(next) => patch((p) => setList(p, P.gaps, next))} />}
+        <Switch checked={only} onChange={(on) => patch((p) => (on ? p.set(P.only, "1") : p.delete(P.only)))} label={t("trace.gapsOnly")} onText={t("on")} offText={t("off")} />
         <span className="sdd-spacer" />
         <span role="status" data-testid="sdd-trace-summary">
-          {m.trace.summary(rows.length, totalGaps)}
-          {filtering ? <span className="app-muted"> · {m.trace.shown(shownRows.length)}</span> : null}
+          {t("trace.summary", { n: rows.length, m: totalGaps })}
+          {filtering ? <span className="app-muted"> · {t("trace.shown", { k: shownRows.length })}</span> : null}
         </span>
-        {totalGaps === 0 ? <ToneChip label={m.trace.noGaps} tone="success" /> : null}
+        {totalGaps === 0 ? <ToneChip label={t("trace.noGaps")} tone="success" /> : null}
       </div>
       {filtering && shownRows.length === 0 ? (
         <div className="sdd-state">
-          <p role="status">{m.trace.noMatch}</p>
-          <button type="button" className="app-link-btn" onClick={() => patch((p) => [P.q, P.gaps, P.only].forEach((k) => p.delete(k)))}>{m.trace.clear}</button>
+          <p role="status">{t("trace.noMatch")}</p>
+          <button type="button" className="app-link-btn" onClick={() => patch((p) => [P.q, P.gaps, P.only].forEach((k) => p.delete(k)))}>{t("trace.clear")}</button>
         </div>
       ) : (
         <div className="sdd-trace-table">
@@ -141,20 +145,20 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
         </div>
       )}
       {selectedRow === undefined ? null : (
-        <section className="sdd-trace-detail" aria-label={m.trace.selectedReq(selectedRow.id)} data-testid="sdd-trace-detail">
-          <h3 className="sdd-section-title">{m.trace.selectedReq(selectedRow.id)} {selectedRow.title ?? ""}</h3>
+        <section className="sdd-trace-detail" aria-label={t("trace.selectedReq", { id: selectedRow.id })} data-testid="sdd-trace-detail">
+          <h3 className="sdd-section-title">{t("trace.selectedReq", { id: selectedRow.id })} {selectedRow.title ?? ""}</h3>
           <dl className="sdd-detail-list">
-            <dt>{m.trace.detail.location}</dt>
+            <dt>{t("trace.detail.location")}</dt>
             <dd>
               <button type="button" className="app-link-btn" onClick={() => goTab("documents", { [P.doc]: selectedRow.document, [P.line]: String(selectedRow.line) })}>
                 {docTitles[selectedRow.document] ?? selectedRow.document}:{selectedRow.line}
               </button>
             </dd>
-            <dt>{m.trace.detail.tasks}</dt>
-            <dd>{(selectedRow.tasks ?? []).length === 0 ? <span className="app-muted">{m.trace.detail.none}</span> : (selectedRow.tasks ?? []).map((k) => <button key={k} type="button" className="app-link-btn sdd-mono" onClick={() => openTask(k)}>{k}</button>)}</dd>
-            <dt>{m.trace.detail.results}</dt>
+            <dt>{t("trace.detail.tasks")}</dt>
+            <dd>{(selectedRow.tasks ?? []).length === 0 ? <span className="app-muted">{t("trace.detail.none")}</span> : (selectedRow.tasks ?? []).map((k) => <button key={k} type="button" className="app-link-btn sdd-mono" onClick={() => openTask(k)}>{k}</button>)}</dd>
+            <dt>{t("trace.detail.results")}</dt>
             <dd>
-              {(selectedRow.results ?? []).length === 0 ? <span className="app-muted">{m.trace.detail.none}</span> : (
+              {(selectedRow.results ?? []).length === 0 ? <span className="app-muted">{t("trace.detail.none")}</span> : (
                 <ul className="sdd-plan-list">
                   {(selectedRow.results ?? []).map((r, i) => {
                     const d = verificationDisplay(r.status);
@@ -169,29 +173,29 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
                 </ul>
               )}
             </dd>
-            <dt>{m.trace.detail.gaps}</dt>
+            <dt>{t("trace.detail.gaps")}</dt>
             <dd>
-              {(selectedRow.gaps ?? []).length === 0 ? <span className="app-muted">{m.trace.detail.none}</span> : (
+              {(selectedRow.gaps ?? []).length === 0 ? <span className="app-muted">{t("trace.detail.none")}</span> : (
                 <ul className="sdd-plan-list">
                   {(selectedRow.gaps ?? []).map((g) => <li key={g}><strong>{gapLabel(g)}</strong> <span className="app-muted">{gapTable[g]?.hint ?? ""}</span></li>)}
                 </ul>
               )}
             </dd>
           </dl>
-          <Button size="sm" onClick={() => patch((p) => p.delete(P.req))}>{m.trace.detail.close}</Button>
+          <Button size="sm" onClick={() => patch((p) => p.delete(P.req))}>{t("trace.detail.close")}</Button>
         </section>
       )}
       {orphanCount === 0 ? null : (
-        <Disclosure summary={`${m.trace.orphans} ${orphanCount}`}>
+        <Disclosure summary={`${t("trace.orphans")} ${orphanCount}`}>
           <div data-testid="sdd-trace-orphans">
             {(orphans?.tasks_without_requirements ?? []).length > 0 ? (
-              <section><h4>{m.trace.orphanTasksNoReq}</h4><ul className="sdd-plan-list">{(orphans?.tasks_without_requirements ?? []).map((k) => <li key={k}><button type="button" className="app-link-btn sdd-mono" onClick={() => openTask(k)}>{k}</button></li>)}</ul></section>
+              <section><h4>{t("trace.orphanTasksNoReq")}</h4><ul className="sdd-plan-list">{(orphans?.tasks_without_requirements ?? []).map((k) => <li key={k}><button type="button" className="app-link-btn sdd-mono" onClick={() => openTask(k)}>{k}</button></li>)}</ul></section>
             ) : null}
             {(orphans?.unknown_requirement_refs ?? []).length > 0 ? (
-              <section><h4>{m.trace.orphanUnknownReq}</h4><ul className="sdd-plan-list">{(orphans?.unknown_requirement_refs ?? []).map((u) => <li key={`${u.task_key}:${u.requirement_id}`}><span className="sdd-mono">{u.task_key}</span> → <span className="sdd-mono">{u.requirement_id}</span></li>)}</ul></section>
+              <section><h4>{t("trace.orphanUnknownReq")}</h4><ul className="sdd-plan-list">{(orphans?.unknown_requirement_refs ?? []).map((u) => <li key={`${u.task_key}:${u.requirement_id}`}><span className="sdd-mono">{u.task_key}</span> → <span className="sdd-mono">{u.requirement_id}</span></li>)}</ul></section>
             ) : null}
             {(orphans?.unknown_task_links ?? []).length > 0 ? (
-              <section><h4>{m.trace.orphanUnknownTask}</h4><p className="app-muted sdd-note">{m.trace.orphanUnknownTaskHint}</p><ul className="sdd-plan-list">{(orphans?.unknown_task_links ?? []).map((l) => <li key={`${l.ref}:${l.task_key ?? ""}`}><span className="sdd-mono">{l.ref}</span> → <span className="sdd-mono">{l.task_key ?? ""}</span></li>)}</ul></section>
+              <section><h4>{t("trace.orphanUnknownTask")}</h4><p className="app-muted sdd-note">{t("trace.orphanUnknownTaskHint")}</p><ul className="sdd-plan-list">{(orphans?.unknown_task_links ?? []).map((l) => <li key={`${l.ref}:${l.task_key ?? ""}`}><span className="sdd-mono">{l.ref}</span> → <span className="sdd-mono">{l.task_key ?? ""}</span></li>)}</ul></section>
             ) : null}
           </div>
         </Disclosure>

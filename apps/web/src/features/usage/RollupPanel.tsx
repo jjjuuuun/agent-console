@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Button, Tabs, Tag } from "@agent-console/ui";
-import { formatCount } from "../../lib/format";
-import { usageMessages as t } from "./messages";
+import { useUsageMessages, type UsageMessages } from "./messages";
 import { aggregateRollup, barRatio, type RollupDimension, type RollupLine } from "./usageLib";
+import { useFormat } from "../../i18n";
 
 export interface RollupPanelProps {
   /** 기간 안으로 이미 걸러진 서버 집계 행에서 만든 줄(차원별로 다시 합친 것) */
@@ -24,7 +24,7 @@ export interface RollupPanelProps {
   scopeNote?: string;
 }
 
-function dayLabel(value: string | null): string {
+function dayLabel(value: string | null, t: UsageMessages): string {
   if (value === null) return t.rollup.unnamed;
   const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(value);
   return m ? `${Number(m[1])}/${Number(m[2])}` : value;
@@ -32,11 +32,13 @@ function dayLabel(value: string | null): string {
 
 /** 토큰 집계: 가로 막대 리스트(일 보기는 세로 막대) + 표 보기. 막대 색은 중립이며 의미 색이 없다. */
 export function RollupPanel(p: RollupPanelProps) {
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const [asTable, setAsTable] = useState(false);
   const { linesByView, view } = p;
   const lines = useMemo(() => linesByView[view] ?? [], [linesByView, view]);
   const max = useMemo(() => lines.reduce((m, l) => Math.max(m, l.total ?? 0), 0), [lines]);
-  const name = (l: RollupLine) => (p.view === "day" ? dayLabel(l.value) : p.nameOf(p.view, l.value));
+  const name = (l: RollupLine) => (p.view === "day" ? dayLabel(l.value, t) : p.nameOf(p.view, l.value));
 
   const hasNote = useMemo(() => lines.some((l) => l.precision.length > 0 || l.costUsd !== undefined), [lines]);
   const cell = (l: RollupLine) => (
@@ -84,9 +86,9 @@ export function RollupPanel(p: RollupPanelProps) {
             {lines.map((l) => (
               <tr key={l.key}>
                 <th scope="row" className="ac-ellipsis">{name(l)}</th>
-                <td className="ac-num">{formatCount(l.total)}</td>
-                <td className="ac-num">{l.input === undefined ? t.rollup.noSplit : formatCount(l.input)}</td>
-                <td className="ac-num">{l.output === undefined ? t.rollup.noSplit : formatCount(l.output)}</td>
+                <td className="ac-num">{fmt.number(l.total)}</td>
+                <td className="ac-num">{l.input === undefined ? t.rollup.noSplit : fmt.number(l.input)}</td>
+                <td className="ac-num">{l.output === undefined ? t.rollup.noSplit : fmt.number(l.output)}</td>
                 <td>{cell(l)}</td>
               </tr>
             ))}
@@ -95,8 +97,8 @@ export function RollupPanel(p: RollupPanelProps) {
       ) : p.view === "day" ? (
         <ul className="usage-columns" aria-label={t.rollup.barsLabel}>
           {lines.slice(-31).map((l) => (
-            <li key={l.key} title={`${name(l)}: ${formatCount(l.total)}`}>
-              <span className="usage-col-bar" style={{ height: `${Math.round(barRatio(l.total, max) * 100)}%` }} role="img" aria-label={`${name(l)} ${formatCount(l.total)}`} />
+            <li key={l.key} title={`${name(l)}: ${fmt.number(l.total)}`}>
+              <span className="usage-col-bar" style={{ height: `${Math.round(barRatio(l.total, max) * 100)}%` }} role="img" aria-label={`${name(l)} ${fmt.number(l.total)}`} />
               <span className="usage-col-label ac-num">{name(l)}</span>
             </li>
           ))}
@@ -107,9 +109,9 @@ export function RollupPanel(p: RollupPanelProps) {
             <li key={l.key} className="usage-bar-row">
               <span className="usage-bar-name ac-ellipsis" title={name(l)}>{name(l)}</span>
               <span className="usage-bar-track"><span className="usage-bar-fill" style={{ width: `${Math.round(barRatio(l.total, max) * 100)}%` }} /></span>
-              <span className="ac-num usage-bar-total">{formatCount(l.total)}</span>
+              <span className="ac-num usage-bar-total">{fmt.number(l.total)}</span>
               <span className="app-muted usage-bar-split">
-                {l.input !== undefined || l.output !== undefined ? t.rollup.inOut(l.input === undefined ? t.rollup.noSplit : formatCount(l.input), l.output === undefined ? t.rollup.noSplit : formatCount(l.output)) : t.rollup.noSplit}
+                {l.input !== undefined || l.output !== undefined ? t.rollup.inOut(l.input === undefined ? t.rollup.noSplit : fmt.number(l.input), l.output === undefined ? t.rollup.noSplit : fmt.number(l.output)) : t.rollup.noSplit}
               </span>
               {hasNote ? <span className="usage-bar-note">{cell(l)}</span> : null}
             </li>

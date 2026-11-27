@@ -11,7 +11,8 @@ export interface ReadinessToneView {
 
 export const READINESS_TONES: Readonly<Record<ReadinessTone, ReadinessToneView>> = {
   ok: { icon: "succeeded", banner: "success" },
-  warn: { icon: "unknown", banner: "warning" },
+  // warn과 unknown은 모양이 달라야 한다(색만으로 구분하지 않는다): warn = 정지, unknown = 물음표
+  warn: { icon: "waiting", banner: "warning" },
   error: { icon: "failed", banner: "danger" },
   unknown: { icon: "unknown", banner: "info" },
 };

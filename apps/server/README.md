@@ -207,7 +207,8 @@ Node services (`runs.services`, `link-runs-teams`): `AGENT_LOOKUP`, `WORKSPACE_S
 `plugins.modules` is loaded after the plugin loaders into the same bundle (`load_host_plugins`) and goes through each
 registry's validator and `plugins.enabled` and `plugins.disabled` (keys that are off are `disabled`). The reports of
 left-out items carry a reason (`LoadReport.reason`), and names in `plugins.disabled` that appear in no report show up as
-a `plugins.config` warning in `GET /server-info` `warnings`.
+a `plugins.unknown_disabled` warning (or `plugins.disabled_distribution` and similar codes with `details`) in
+`GET /server-info` `warnings`.
 
 ## REST (`/api/v1`)
 

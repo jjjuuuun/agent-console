@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { BackendDescriptor } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { useStorage } from "../../app/StorageContext";
 import type { ProbeView } from "./hooks";
 import { ProbeConfirmDialog } from "./ProbeConfirmDialog";
@@ -15,6 +15,7 @@ export interface BackendProbeButtonProps {
 
 /** [연결 테스트] 버튼. 누르면 확인 다이얼로그가 먼저 뜬다("다음부터 묻지 않기" 뒤에는 바로 실행). 호출은 `probe.run`뿐이다. */
 export function BackendProbeButton({ descriptor, probe, size = "sm" }: BackendProbeButtonProps) {
+  const m = useAppMessages();
   const storage = useStorage();
   const [asking, setAsking] = useState(false);
   const key = `${PROBE_CONFIRMED_KEY_PREFIX}${descriptor.id}`;

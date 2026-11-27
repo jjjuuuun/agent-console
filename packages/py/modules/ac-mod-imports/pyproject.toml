@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-imports"
 version = "0.1.0"
-description = "Agent Console — 가져오기 기능 모듈: /resources/import/*(외부 설정 복사, 원본 읽기 전용)"
+description = "Agent Console — imports feature module: /resources/import/* (copies from external settings; sources are read-only)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

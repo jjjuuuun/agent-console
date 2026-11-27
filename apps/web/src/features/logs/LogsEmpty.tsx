@@ -10,8 +10,9 @@ import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { LOGS_STORAGE, NOTICE_PRIORITY } from "./logsConfig";
 import type { LogNotice } from "./NoticeBar";
 import { firstUseSources, offReadingSources } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { sourceStatusLine } from "./sourceStatus";
+import { useFormat } from "../../i18n";
 
 /** 설정 화면의 로그 출처 섹션 주소(`#logs`, 출처 카드를 펼치려면 `?source=<id>`). */
 export function settingsLogsHref(sourceId?: string): string {
@@ -22,6 +23,7 @@ const MAX_CARDS = 5;
 
 /** A: 켜진 출처가 0개 — 첫 사용 카드. 출처 카드는 전부 서버 디스크립터에서 온다(이름을 코드에 두지 않는다). */
 export function FirstUseCard({ sources }: { sources: readonly LogSourceInfo[] }) {
+  const t = useLogsMessages();
   const storage = useStorage();
   const [all, setAll] = useState(false);
   const [openHelp, setOpenHelp] = useState<ReadonlySet<string>>(new Set());
@@ -38,7 +40,7 @@ export function FirstUseCard({ sources }: { sources: readonly LogSourceInfo[] })
         title={f.title}
         description={f.body}
         steps={f.steps.map((s, i) => ({ label: `${s.title} — ${s.body}`, done: i === 0 ? sources.some((x) => x.enabled) : i === 1 ? scanned : opened }))}
-        doneLabel="완료"
+        doneLabel={t.first.stepDone}
       />
       <section className="logs-first-sources" aria-label={f.available}>
         <h3 className="app-block-subtitle">{f.available}</h3>
@@ -89,6 +91,8 @@ export interface EmptyBProps {
 
 /** B: 켜진 출처는 있는데 이벤트가 0건 — 출처별 상태 한 줄 + [지금 수집] + 설정 링크. */
 export function EmptyNoLogs({ sources, scanning, onScan }: EmptyBProps) {
+  const fmt = useFormat();
+  const t = useLogsMessages();
   const nowMs = useNow(true, 30_000);
   const enabled = sources.filter((s) => s.enabled);
   return (
@@ -101,7 +105,7 @@ export function EmptyNoLogs({ sources, scanning, onScan }: EmptyBProps) {
             <p>{t.empty.bBody}</p>
             <ul className="logs-empty-sources">
               {enabled.map((s) => (
-                <li key={s.descriptor.id} className="app-wrap">{t.empty.sourceLine(s.descriptor.title, sourceStatusLine(s, nowMs))}</li>
+                <li key={s.descriptor.id} className="app-wrap">{t.empty.sourceLine(s.descriptor.title, sourceStatusLine(s, nowMs, t, fmt))}</li>
               ))}
             </ul>
           </>
@@ -122,6 +126,7 @@ export interface EmptyCProps {
 
 /** C: 이벤트는 있는데 필터 결과가 0건. */
 export function EmptyNoMatch({ onClearFilters, onAllRange }: EmptyCProps) {
+  const t = useLogsMessages();
   return (
     <div className="logs-empty" data-testid="logs-empty-c">
       <EmptyState
@@ -139,6 +144,7 @@ export function EmptyNoMatch({ onClearFilters, onAllRange }: EmptyCProps) {
  * `active`가 false면 아무것도 내지 않는다(예: 목록이 비어 있을 때).
  */
 export function useOtherSourcesNotice(sources: readonly LogSourceInfo[] | undefined, active: boolean): LogNotice | null {
+  const t = useLogsMessages();
   const hint = useHint(LOGS_STORAGE.hintOtherSources);
   const off = offReadingSources(sources);
   if (!active || !hint.visible || off.length === 0) return null;

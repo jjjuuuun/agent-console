@@ -259,7 +259,7 @@ class SpacedChatService(ChatService):
             project_ids=project_ids,
             limit=locate_limit,
             spaced=lambda: self.spaced,
-            label="대화",
+            label="conversation",
         )
         self._spaces: dict[str, ChatService] = {}
         self._links: dict[str, Any] = {}

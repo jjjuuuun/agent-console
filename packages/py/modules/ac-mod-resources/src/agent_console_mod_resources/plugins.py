@@ -31,7 +31,7 @@ def _settings(ctx: PluginLoadContext) -> ResourceModuleSettings:
     try:
         return ResourceModuleSettings.model_validate(raw)
     except ValidationError:
-        _log.warning("%s 설정이 잘못되어 리소스 종류 로딩에 기본값을 씁니다", MODULE_ID)
+        _log.warning("%s settings are invalid; loading resource kinds with defaults", MODULE_ID)
         return ResourceModuleSettings()
 
 

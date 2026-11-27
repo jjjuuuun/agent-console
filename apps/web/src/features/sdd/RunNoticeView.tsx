@@ -5,8 +5,9 @@
 import { Banner, Button } from "@agent-console/ui";
 import { GateNotice } from "@agent-console/sdd-view";
 import type { SddGateBlockedDetails } from "@agent-console/contracts/sdd";
-import { sddMessages as m, viewMessages } from "./messages";
+import { useSddViewMessages } from "./useViewMessages";
 import type { TaskRunner } from "./useTaskRunner";
+import { useT } from "@agent-console/i18n";
 
 export interface RunNoticeViewProps {
   runner: TaskRunner;
@@ -28,6 +29,8 @@ export interface RunNoticeViewProps {
 }
 
 export function RunNoticeView({ runner, extraGate = null, onDismissExtra, documentTitles, onOpenDocument, onOpenRules, canImport, accepts = () => true, extraGateTaskKey }: RunNoticeViewProps) {
+  const t = useT("sdd");
+  const viewMessages = useSddViewMessages();
   const own = runner.notice;
   const notice = own !== null && accepts(own.kind === "gate" ? own.taskKey : own.task.key) ? own : null;
   // 러너의 관문 안내가 있으면 러너가 우선한다(같은 관문을 두 자리에 그리지 않는다)
@@ -40,7 +43,7 @@ export function RunNoticeView({ runner, extraGate = null, onDismissExtra, docume
           documentTitles={documentTitles}
           onOpenDocument={onOpenDocument}
           onDismiss={() => { onDismissExtra?.(); runner.dismiss(); }}
-          actions={<button type="button" className="app-link-btn" onClick={onOpenRules}>{m.gate.openRules}</button>}
+          actions={<button type="button" className="app-link-btn" onClick={onOpenRules}>{t("gate.openRules")}</button>}
           messages={viewMessages}
         />
       )}
@@ -51,9 +54,9 @@ export function RunNoticeView({ runner, extraGate = null, onDismissExtra, docume
           actions={
             <>
               {canImport && notice.view?.fix === "importAndRun" && notice.view.notImported?.inLibrary === true ? (
-                <Button size="sm" variant="primary" onClick={() => runner.importAndRun(notice)}>{m.run.importAndRun}</Button>
+                <Button size="sm" variant="primary" onClick={() => runner.importAndRun(notice)}>{t("run.importAndRun")}</Button>
               ) : null}
-              <Button size="sm" onClick={runner.dismiss}>{m.run.dismiss}</Button>
+              <Button size="sm" onClick={runner.dismiss}>{t("run.dismiss")}</Button>
             </>
           }
         >

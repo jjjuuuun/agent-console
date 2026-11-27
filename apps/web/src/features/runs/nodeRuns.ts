@@ -1,5 +1,5 @@
 import type { NodeRun } from "@agent-console/contracts";
-import { delegationMessages as dm, displayNumber, formatRunOrdinal } from "../delegation";
+import { displayNumber, formatRunOrdinal, type DelegationMessages } from "../delegation";
 
 /**
  * 한 노드의 여러 실행(NodeRun: 회차·호출·시도) 다루기. 순수 함수이며 서버 값(0부터)을 그대로 받는다.
@@ -67,11 +67,11 @@ export function runDimensions(list: readonly NodeRun[]): { iterations: boolean; 
 }
 
 /** "실행" 열 문구: 회차만 `N회차`, 호출만 `호출 N`, 둘 다 `A회차 · 호출 B`, 시도가 1보다 크면 뒤에 `· 시도 N`. 갈리는 축이 없으면 시도 번호. */
-export function runOrdinalText(run: NodeRun, list: readonly NodeRun[]): string {
+export function runOrdinalText(run: NodeRun, list: readonly NodeRun[], dm: DelegationMessages): string {
   const { iterations, calls } = runDimensions(list);
   const parts: string[] = [];
-  if (iterations) parts.push(formatRunOrdinal(run.iteration ?? 0, "iteration"));
-  if (calls) parts.push(formatRunOrdinal(run.call ?? 0, "call"));
+  if (iterations) parts.push(formatRunOrdinal(run.iteration ?? 0, "iteration", dm));
+  if (calls) parts.push(formatRunOrdinal(run.call ?? 0, "call", dm));
   if ((run.attempt ?? 1) > 1 || parts.length === 0) parts.push(dm.run.attempt(run.attempt ?? 1));
   return parts.join(" · ");
 }
@@ -86,18 +86,18 @@ export interface RunBadgeText {
  * 그래프 노드의 회차·호출 배지(실행이 2개 이상일 때만): 회차만 `#3`, 호출만 `×4`(호출 수), 둘 다 `#3 · ×2`.
  * 번호는 보이는 실행 기준이고 화면 값은 +1이다. 접근성 이름에 노드·실행 위치·상태가 들어간다.
  */
-export function runBadge(list: readonly NodeRun[], v: VisibleRun, nodeLabel: string, statusLabel: string): RunBadgeText | undefined {
+export function runBadge(list: readonly NodeRun[], v: VisibleRun, nodeLabel: string, statusLabel: string, dm: DelegationMessages, callAria: (ordinal: string) => string = (o) => o): RunBadgeText | undefined {
   if (list.length < 2) return undefined;
   const { iterations, calls } = runDimensions(list);
   const text: string[] = [];
   const aria: string[] = [];
   if (iterations) {
     text.push(`#${displayNumber(v.run.iteration ?? 0)}`);
-    aria.push(formatRunOrdinal(v.run.iteration ?? 0, "iteration"));
+    aria.push(formatRunOrdinal(v.run.iteration ?? 0, "iteration", dm));
   }
   if (calls) {
     text.push(`×${distinct(list, (n) => n.call ?? 0)}`);
-    aria.push(`${formatRunOrdinal(v.run.call ?? 0, "call")}번째`);
+    aria.push(callAria(formatRunOrdinal(v.run.call ?? 0, "call", dm)));
   }
   if (text.length === 0) {
     text.push(`#${v.run.attempt ?? 1}`);

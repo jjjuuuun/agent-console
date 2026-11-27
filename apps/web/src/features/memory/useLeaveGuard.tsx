@@ -6,7 +6,7 @@ import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useBlocker } from "react-router";
 import { Button, Dialog } from "@agent-console/ui";
 import { useReportUnsaved } from "../../definition/unsaved";
-import { memoryMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface LeaveGuard {
   /** 변경이 없으면 바로 `action`을 부르고, 있으면 확인 창을 띄워 고른 뒤에 부른다. */
@@ -20,6 +20,7 @@ export interface LeaveGuard {
  * @param discard 변경을 버린다(이동 전에 호출)
  */
 export function useLeaveGuard(dirty: boolean, save: (() => Promise<boolean>) | undefined, discard: () => void): LeaveGuard {
+  const t = useT("memory");
   useReportUnsaved(dirty);
   const [pending, setPending] = useState<{ run: () => void } | null>(null);
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
@@ -52,13 +53,13 @@ export function useLeaveGuard(dirty: boolean, save: (() => Promise<boolean>) | u
     <Dialog
       open={open}
       size="sm"
-      title={t.leave.title}
+      title={t("leave.title")}
       onClose={cancel}
       initialFocus={cancelRef}
       actions={
         <>
-          <Button ref={cancelRef} onClick={cancel}>{t.leave.cancel}</Button>
-          <Button variant="danger" onClick={() => proceed(discard)}>{t.leave.discard}</Button>
+          <Button ref={cancelRef} onClick={cancel}>{t("leave.cancel")}</Button>
+          <Button variant="danger" onClick={() => proceed(discard)}>{t("leave.discard")}</Button>
           {save === undefined ? null : (
             <Button
               variant="primary"
@@ -70,13 +71,13 @@ export function useLeaveGuard(dirty: boolean, save: (() => Promise<boolean>) | u
                   .finally(() => setSaving(false));
               }}
             >
-              {t.leave.save}
+              {t("leave.save")}
             </Button>
           )}
         </>
       }
     >
-      <p className="ac-text">{t.leave.body}</p>
+      <p className="ac-text">{t("leave.body")}</p>
     </Dialog>
   );
   return { guard, dialog };

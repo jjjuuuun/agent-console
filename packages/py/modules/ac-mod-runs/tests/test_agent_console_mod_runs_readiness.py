@@ -233,7 +233,7 @@ def test_secret_never_in_responses_or_logs(
     # 가림 표시는 남는다(값이 흘렀던 자리)
     assert "[REDACTED]" in texts[2]
     # 서버 로그: 백엔드 id·ok·reason·소요 시간만(결과 문장 원문 없음)
-    probe_logs = [r.getMessage() for r in caplog.records if "연결 테스트" in r.getMessage()]
+    probe_logs = [r.getMessage() for r in caplog.records if "latency_ms=" in r.getMessage()]
     assert probe_logs
     assert all("invalid x-api-key" not in line for line in probe_logs)
 

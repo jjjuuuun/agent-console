@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { TestI18n } from "../../testing/TestI18n";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ModuleInfo } from "@agent-console/contracts";
@@ -20,6 +21,7 @@ const mod = (roles: string[], status = "active"): ModuleInfo => ({ id: "any-mod"
 function setup(modules: ModuleInfo[] | "none", operators: () => Promise<unknown>) {
   const { clients, rest } = createFakeClients({ listConditionOperators: vi.fn(operators), ...(modules === "none" ? {} : { listModules: vi.fn(async () => modules) }) });
   const wrapper = ({ children }: { children: ReactNode }) => (
+    <TestI18n>
     <QueryClientProvider client={createAppQueryClient({ retry: false })}>
       <ApiProvider clients={clients}>
         <ModulesProvider>
@@ -27,6 +29,7 @@ function setup(modules: ModuleInfo[] | "none", operators: () => Promise<unknown>
         </ModulesProvider>
       </ApiProvider>
     </QueryClientProvider>
+    </TestI18n>
   );
   return { rest, ...renderHook(() => useConditionOperators(), { wrapper }) };
 }

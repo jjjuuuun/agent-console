@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { Button, Icon } from "@agent-console/ui";
-import { folderHomeMessages } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 
 export interface NoProjectStateProps {
   /** [폴더 추가] — 폴더 추가 대화상자를 연다 */
@@ -16,6 +16,7 @@ export interface NoProjectStateProps {
  * 필터·탭·화면 액션은 이 부품 밖(호출한 화면)이 그리지 않는 것으로 보장한다.
  */
 export function NoProjectState({ onAddFolder, libraryHref, messages }: NoProjectStateProps) {
+  const folderHomeMessages = useFolderHomeMessages();
   const t = { ...folderHomeMessages.none, ...messages };
   return (
     <div className="prj-none" role="region" aria-labelledby="prj-none-title" data-testid="no-project-state">

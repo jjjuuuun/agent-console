@@ -25,6 +25,9 @@ function sources(dir: string): string[] {
   });
 }
 
+/** 소스 전체를 훑는 테스트의 시간 한도(부하가 있으면 기본 5초를 넘는다). */
+const SCAN_TIMEOUT = 60_000;
+
 describe("옛 범위 이름 사용 0", () => {
   it("웹 소스에 지운 이름이 없다", () => {
     const self = resolve(__dirname, "retiredScopeNames.test.ts");
@@ -35,7 +38,7 @@ describe("옛 범위 이름 사용 0", () => {
       for (const re of RETIRED) if (re.test(text)) hits.push(`${file}: ${re.source}`);
     }
     expect(hits).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
 
   it("log-view 세션 목록은 summary.project를 읽지 않는다", () => {
     const text = readFileSync(resolve(__dirname, "../../../../packages/ts/lib/log-view/src/SessionList.tsx"), "utf8");

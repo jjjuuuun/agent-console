@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "runs.storage_memory": "DB가 없어 실행 기록을 메모리에만 둡니다(재시작하면 사라집니다)",
+    "team.rules_unavailable": "실행 전 팀 규칙 검사(runs.preparers)를 주는 모듈이 없어 엔진 검증만으로 실행합니다"
+  }
+}

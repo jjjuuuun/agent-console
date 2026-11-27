@@ -1,10 +1,12 @@
 import { useMemo, type ReactNode } from "react";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, GraphSummary, NodeTypeDescriptor, WorkspaceSettings } from "@agent-console/contracts";
 import type { BindSummary, ChipView, DefinitionItem } from "@agent-console/graph-editor";
-import { CONFIG_WIDGETS, deriveAllEdgeChips, deriveBindSummaries, edgeStrategyIds, nestedDefinitionList, nestedInfoOf, useConditionOperators, useRenderIcon, type NestedInfo } from "../delegation";
+import { CONFIG_WIDGETS, deriveAllEdgeChips, deriveBindSummaries, edgeStrategyIds, nestedDefinitionList, nestedInfoOf, useConditionOperators, useDelegationMessages, useRenderIcon, type NestedInfo } from "../delegation";
 import { DEFINITION_KINDS } from "../library";
+import { useTeamMessages } from "./messages";
 import { edgeLeadChips, nodeFootAnnotations } from "./sessionView";
 import { usageCounts } from "./teamsLogic";
+import { useLanguageCode } from "../../i18n";
 
 export interface DelegationPropsInput {
   graphId: string;
@@ -45,26 +47,29 @@ export interface DelegationProps {
 export function useDelegationProps(i: DelegationPropsInput): DelegationProps {
   const ops = useConditionOperators();
   const renderIcon = useRenderIcon();
+  const sessionText = useTeamMessages().sessions;
+  const dm = useDelegationMessages();
+  const language = useLanguageCode();
   const currentKind = DEFINITION_KINDS.graph;
   const infos = useMemo(() => (i.summaries === undefined ? undefined : nestedInfoOf(i.summaries)), [i.summaries]);
   const teamSettings = i.graph?.settings;
   const edgeExtraChips = useMemo(
-    () => (i.graph === undefined ? {} : deriveAllEdgeChips(i.graph, i.edgeTypes, { strategies: i.strategies, operators: ops.operators, teamSettings, commonSettings: i.workspace, widgets: CONFIG_WIDGETS, ...(i.onLimitChip ? { onLimitChipActivate: i.onLimitChip } : {}) })),
-    [i.graph, i.edgeTypes, i.strategies, ops.operators, teamSettings, i.workspace, i.onLimitChip],
+    () => (i.graph === undefined ? {} : deriveAllEdgeChips(i.graph, i.edgeTypes, { messages: dm, strategies: i.strategies, operators: ops.operators, teamSettings, commonSettings: i.workspace, widgets: CONFIG_WIDGETS, ...(i.onLimitChip ? { onLimitChipActivate: i.onLimitChip } : {}) })),
+    [i.graph, i.edgeTypes, i.strategies, ops.operators, teamSettings, i.workspace, i.onLimitChip, dm],
   );
   const strategyIds = useMemo(() => (i.graph === undefined ? {} : edgeStrategyIds(i.graph, i.edgeTypes)), [i.graph, i.edgeTypes]);
   const kindTitle = currentKind === undefined ? undefined : i.kindTitles[currentKind];
   const bindSummaries = useMemo(
-    () => (i.graph === undefined ? {} : deriveBindSummaries(i.graph.nodes ?? [], i.nodeTypes, { currentKind, currentId: i.graphId, infos, kindTitle, open: i.openNested })),
-    [i.graph, i.nodeTypes, currentKind, i.graphId, infos, kindTitle, i.openNested],
+    () => (i.graph === undefined ? {} : deriveBindSummaries(i.graph.nodes ?? [], i.nodeTypes, { messages: dm, currentKind, currentId: i.graphId, infos, kindTitle, open: i.openNested })),
+    [i.graph, i.nodeTypes, currentKind, i.graphId, infos, kindTitle, i.openNested, dm],
   );
-  const leadChips = useMemo(() => (i.graph === undefined ? {} : edgeLeadChips(i.graph, i.edgeTypes, i.strategies)), [i.graph, i.edgeTypes, i.strategies]);
-  const nodeAnnotations = useMemo(() => (i.graph === undefined ? {} : nodeFootAnnotations(i.graph, i.edgeTypes, i.strategies)), [i.graph, i.edgeTypes, i.strategies]);
+  const leadChips = useMemo(() => (i.graph === undefined ? {} : edgeLeadChips(i.graph, i.edgeTypes, i.strategies, dm)), [i.graph, i.edgeTypes, i.strategies, dm]);
+  const nodeAnnotations = useMemo(() => (i.graph === undefined ? {} : nodeFootAnnotations(i.graph, i.edgeTypes, i.strategies, sessionText)), [i.graph, i.edgeTypes, i.strategies, sessionText]);
   const nestedList = useMemo(() => {
     if (infos === undefined || i.graph === undefined) return undefined;
     const counts = usageCounts(i.graph, i.nodeTypes);
-    return nestedDefinitionList(infos, i.graphId, (id) => counts.get(`${currentKind}:${id}`) ?? 0);
-  }, [infos, i.graph, i.nodeTypes, i.graphId, currentKind]);
+    return nestedDefinitionList(infos, i.graphId, dm, language, (id) => counts.get(`${currentKind}:${id}`) ?? 0);
+  }, [infos, i.graph, i.nodeTypes, i.graphId, currentKind, dm, language]);
   const nested = useMemo(() => ({ currentKind, infos, kindTitle, open: i.openNested }), [currentKind, infos, kindTitle, i.openNested]);
   return { edgeExtraChips, edgeStrategyIds: strategyIds, bindSummaries, edgeLeadChips: leadChips, nodeAnnotations, nestedList, nested, renderIcon };
 }

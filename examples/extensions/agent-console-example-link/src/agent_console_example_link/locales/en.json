@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "example_notes.access_invalid": "The notes tool isn't provided because the merged notes resource settings don't match the format."
+  }
+}

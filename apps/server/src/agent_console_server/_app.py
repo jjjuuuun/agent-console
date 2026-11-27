@@ -159,7 +159,7 @@ def create_app(
         )
     except SecretProviderOptionsError as exc:
         raise ConfigError(str(exc)) from None
-    plugin_warnings = [*plugins.warnings, *secret_setup.warnings]
+    plugin_warnings = [*plugins.notices, *secret_setup.notices]
     chosen = installed_modules() if modules is None else list(modules)
     assembly = assemble(chosen, cfg.modules, base=_base_services(cfg, env, plugins, paths))
     for warning in assembly.warnings:

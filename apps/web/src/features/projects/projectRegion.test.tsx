@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectRegion, type ProjectRegionProps } from "./ProjectRegion";
 import { parseCollapsed, projectInitial, regionProjects, typeAheadChar, typeAheadIndex } from "./projectRegionLib";
@@ -77,7 +78,7 @@ describe("projectRegionLib", () => {
       { id: "1", name: "p10" },
       { id: "2", name: "p2" },
       { id: "3", name: "x", archived: true },
-    ] as never);
+    ] as never, "ko");
     expect(list.map((p) => p.name)).toEqual(["p2", "p10"]);
   });
   it("이니셜·접힘 해석", () => {

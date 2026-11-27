@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-delegation-host"
 version = "0.1.0"
-description = "Agent Console — 독립 위임 방식 host(X12): 대상 노드를 자기 세션·백엔드·설정으로 실행하는 위임 도구"
+description = "Agent Console — independent delegation method host (X12): a delegation tool that runs the target node with its own session, backend, and settings"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -15,6 +15,9 @@ dependencies = [
 # 위임 방식 등록(X12). 이름 = 레지스트리 key = 디스크립터 id.
 [project.entry-points."agent_console.delegation_strategies"]
 host = "agent_console_delegation_host:HostDelegation"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-delegation-host = "agent_console_delegation_host"
 
 # 테스트 전용: fake 백엔드·claude-sdk(SDK 목)로 위임 도구 호출을 끝까지 돌린다(패키지 코드는 import하지 않음).
 [dependency-groups]

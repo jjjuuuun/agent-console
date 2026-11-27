@@ -7,11 +7,12 @@ import { Button, EmptyState, ListPane } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApi } from "../../app/ApiContext";
 import { Skeleton } from "../settings";
-import { useListShortcuts, useListView, routeIconNode, ROUTE_ROLES, libraryMessages, ListEditDialogs } from "../library";
+import { useListShortcuts, useListView, routeIconNode, ROUTE_ROLES, useLibraryMessages, ListEditDialogs } from "../library";
 import { filterAgents } from "./agentLogic";
 import { agentGroupDefs, agentSortDefs, attributeKeys } from "./arrange";
+import { useLanguageCode } from "../../i18n";
 import { useAgentEdits } from "./useAgentEdits";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
 
 export interface AgentListProps {
   agents: readonly Agent[] | undefined;
@@ -50,6 +51,8 @@ export function useAgentUsageCounts(agents: readonly Agent[], enabled = true): (
 
 /** 에이전트 목록 패널: 검색·사용 여부 필터·정렬(이름순)·키보드 이동. 데이터와 콜백은 props. */
 export function AgentList({ agents, loading, error, onRetry, selectedId, onSelect, onNew, onRename, onDelete, scopeBar, selectTool, rowExtra }: AgentListProps) {
+  const libraryMessages = useLibraryMessages();
+  const t = useAgentMessages();
   const [query, setQuery] = useState("");
   const [used, setUsed] = useState<UsedFilter>("all");
   const root = useRef<HTMLDivElement>(null);
@@ -62,7 +65,8 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
   const usage = useAgentUsageCounts(all, usagePart.visible);
   const filtered = filterAgents(all, query, usagePart.visible ? used : "all", usage);
   // 묶는 기준·정렬은 데이터다. 속성 키는 보기 상태가 쥔다.
-  const sortDefs = useMemo(() => agentSortDefs(usagePart.visible ? usage : undefined), [usagePart.visible, usage]);
+  const language = useLanguageCode();
+  const sortDefs = useMemo(() => agentSortDefs(usagePart.visible ? usage : undefined, language), [usagePart.visible, usage, language]);
   const view = useListView<Agent>({
     listId: LIST_ID,
     items: filtered,
@@ -74,7 +78,7 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
     selectedId,
     idOf: (a) => a.id,
     showMenu: !(all.length === 0 || loading),
-    attributeKeys: attributeKeys(all),
+    attributeKeys: attributeKeys(all, language),
     extra: selectTool,
   });
   const { arranged } = view;

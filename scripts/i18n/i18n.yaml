@@ -47,7 +47,11 @@ texts:
   # 서버 원문으로 보지 않을 문자열(정규식, search).
   exclude: []
   # 응답에서 들어가지 않을 키(값 전체를 건너뜀). `$comment`는 화면에 나오지 않는 스키마 주석.
-  skip_keys: ["$comment"]
+  # `default`·`const`·`enum`·`examples`·`example`(x-ui 예시)은 스키마의 데이터 값이다 — 웹 schema-form
+  # 번역(`translateSchema`)도 들어가지 않는다. 설정 값이라 화면에서 번역하면 저장 값이 바뀌고,
+  # 에이전트에게 가는 본문 기본값(도구 설명·결과 문구·프롬프트 틀)도 여기 있다(design §I18N.4 "번역 안 함").
+  # `yaml_snippet`은 모듈 옵션 조회의 복사용 설정 YAML(값 = 설치자 데이터)이다.
+  skip_keys: ["$comment", default, const, enum, examples, example, yaml_snippet]
   # 같은 문구가 여러 패키지에 있을 때 뽑기가 고를 패키지(앞이 이김). 없으면 이름 순 첫째.
   prefer_owners: [ac-contracts]
 

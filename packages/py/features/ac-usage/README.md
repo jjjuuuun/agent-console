@@ -203,12 +203,12 @@ The output below is generated from that data (a doctest: if you change the data,
 }
 <BLANKLINE>
 [이미 다른 상태 줄 스크립트를 써요 · bash]
-# 기존 스크립트에서 입력을 변수에 담은 줄(예: input=$(cat)) 바로 아래에 붙입니다.
-# 입력을 변수에 담지 않는 스크립트라면 맨 위에 input=$(cat)을 넣고, 아래 명령들이 "$input"을 읽게 바꿉니다.
+# Paste right below the line of your script that stores the input in a variable (e.g. input=$(cat)).
+# If your script does not store the input, add input=$(cat) at the top and make the commands below read "$input".
 printf '%s' "$input" | /srv/me/.local/bin/agent-console statusline --output /srv/me/agent-console/.state/usage/statusline.json >/dev/null 2>&1 || true
 <BLANKLINE>
 [이미 다른 상태 줄 스크립트를 써요 · powershell]
-# 기존 스크립트에서 입력을 변수에 담은 줄(예: $raw = $input | Out-String) 바로 아래에 붙입니다.
+# Paste right below the line of your script that stores the input in a variable (e.g. $raw = $input | Out-String).
 $raw | & '/srv/me/.local/bin/agent-console' statusline --output '/srv/me/agent-console/.state/usage/statusline.json' | Out-Null
 <BLANKLINE>
 

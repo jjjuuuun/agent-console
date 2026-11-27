@@ -60,6 +60,9 @@ dependencies = [
     "starlette>=0.37",
 ]
 
+[project.entry-points."agent_console.message_catalogs"]
+server = "agent_console_server"
+
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9"]
 build-backend = "uv_build"

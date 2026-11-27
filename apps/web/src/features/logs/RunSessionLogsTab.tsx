@@ -11,13 +11,14 @@ import { useDetailLink } from "./useDetailLink";
 import { LogsLiveProvider, useLogsIngested } from "./LogsLive";
 import { settingsLogsHref } from "./LogsEmpty";
 import { CELL_IDS, FILTER_KEYS, LOGS_LIMITS, RUN_TAB_COLUMNS, SEARCH_FIELD } from "./logsConfig";
-import { errorBlockOf } from "./logsErrors";
+import { useErrorBlockOf } from "./logsErrors";
 import { categoryItems, originOf, toRequestParams, valuesOf, withValues } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
 import { useLogScan } from "./useLogScan";
 import { useLogSources, useLogTaxonomyView, useRunLogPages } from "./useLogsApi";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
 export interface RunSessionLogsTabProps {
   runId: string;
@@ -41,6 +42,10 @@ export function RunSessionLogsTab(props: RunSessionLogsTabProps) {
 const NO_FILTER: LogFilterValue = {};
 
 function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSessionLogsTabProps) {
+  const errorBlockOf = useErrorBlockOf();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const t = useLogsMessages();
   const qc = useQueryClient();
   const taxonomy = useLogTaxonomyView();
   const sources = useLogSources();
@@ -68,7 +73,7 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
   const chips = useMemo(() => orderCategories(categoryItems(items, items), taxonomy), [items, taxonomy]);
   const origin = useMemo(() => originOf(items), [items]);
   const time = useLogTimeMode();
-  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, undefined, time.widths), [time.widths]);
+  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, lv, time.widths), [lv, time.widths]);
   const selected = selectedUidRaw === null ? undefined : items.find((e) => e.uid === selectedUidRaw);
   // 목록에서 사라진 행의 선택은 없는 것으로 본다
   const selectedUid = selected === undefined ? null : selectedUidRaw;
@@ -112,7 +117,7 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
     );
   } else {
     body = (
-      <LogEventTable
+      <LogEventTable messages={lv} formatters={lvFormatters}
         ref={eventTableRef}
         onActivate={activateEvent}
         rows={rows}
@@ -200,7 +205,7 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
             }}
             onBlur={() => !composing.current && q !== (valuesOf(filter, SEARCH_FIELD)[0] ?? "") && commitQ(q)}
           />
-          <CategoryChips items={chips} taxonomy={taxonomy} slotFor={slotFor} selected={valuesOf(filter, FILTER_KEYS.category)} onChange={setCategories} maxInline={LOGS_LIMITS.categoryChipsInline} />
+          <CategoryChips messages={lv} items={chips} taxonomy={taxonomy} slotFor={slotFor} selected={valuesOf(filter, FILTER_KEYS.category)} onChange={setCategories} maxInline={LOGS_LIMITS.categoryChipsInline} />
           <label className="app-check"><input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />{t.runTab.errorsOnly}</label>
           {running ? <label className="app-check"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />{t.runTab.follow}</label> : null}
           {highlighted !== undefined ? <Button size="sm" onClick={() => setSelectedUid(highlighted.uid)}>{t.runTab.toNode}</Button> : null}

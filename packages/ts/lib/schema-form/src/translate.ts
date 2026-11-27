@@ -15,6 +15,8 @@ function translateXUi(raw: unknown, t: TranslateText): unknown {
   if (!isObj(raw)) return raw;
   const out: Obj = { ...raw };
   for (const key of ["when", "group_title", "unit"]) if (typeof out[key] === "string") out[key] = t(out[key] as string);
+  // 예시 글자도 화면에 그대로 보이는 문구다(문자열일 때만; 값이 숫자·객체인 예시는 데이터라 그대로)
+  if (typeof out["example"] === "string") out["example"] = t(out["example"] as string);
   if (isObj(out["enum_labels"])) {
     out["enum_labels"] = Object.fromEntries(Object.entries(out["enum_labels"]).map(([k, v]) => [k, typeof v === "string" ? t(v) : v]));
   }
@@ -36,7 +38,7 @@ function translateNode(node: unknown, t: TranslateText): unknown {
 }
 
 /**
- * 스키마의 보이는 문구(`title`·`description`·`x-ui`의 `when`·`group_title`·`unit`·`enum_labels` 값, `oneOf` 가지 이름)를 `t`로 바꾼 복사본을 돌려준다.
+ * 스키마의 보이는 문구(`title`·`description`·`x-ui`의 `when`·`group_title`·`unit`·문자열 `example`·`enum_labels` 값, `oneOf` 가지 이름)를 `t`로 바꾼 복사본을 돌려준다.
  * 기본값·`enum`·`const`·`examples`와 속성 이름은 데이터라서 그대로 둔다. 원본은 바꾸지 않는다.
  */
 export function translateSchema<T extends JsonSchema>(schema: T, t: TranslateText): T {
@@ -46,7 +48,8 @@ export function translateSchema<T extends JsonSchema>(schema: T, t: TranslateTex
 const UI_TEXT_KEYS = new Set(["ui:title", "ui:description", "ui:placeholder", "ui:help"]);
 
 function translateUiNode(node: unknown, t: TranslateText): unknown {
-  if (!isObj(node)) return node;
+  // React 요소(`ui:options`의 미리보기 등)는 그대로 둔다: 렌더 중에 만든 요소는 `_owner`로 순환 참조를 가진다.
+  if (!isObj(node) || "$$typeof" in node) return node;
   return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, UI_TEXT_KEYS.has(k) && typeof v === "string" ? t(v) : translateUiNode(v, t)]));
 }
 

@@ -7,10 +7,11 @@ import { Choice, Icon, Popover, Spinner } from "@agent-console/ui";
 import { MemorySortMenu, type SortState } from "@agent-console/memory-view";
 import { isImeKeyEvent } from "../../lib/ime";
 import { AUTHOR_KIND_FILTERS, ENTRY_SORTS, MEMORY_LIMITS } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { useMemoryTags } from "./useMemoryApi";
 import type { MemoryViewState } from "./memoryUrl";
-import { messages as appMessages } from "../../app/messages";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useViewMessages } from "./format";
 
 export interface MemoryToolbarProps {
   view: MemoryViewState;
@@ -27,6 +28,7 @@ export interface MemoryToolbarProps {
 }
 
 function SearchBox({ value, onCommit, inputRef, placeholder }: { value: string; onCommit: (q: string) => void; inputRef: Ref<HTMLInputElement>; placeholder: string }) {
+  const t = useT("memory");
   const [text, setText] = useState(value);
   const [seen, setSeen] = useState(value);
   const composing = useRef(false);
@@ -54,7 +56,7 @@ function SearchBox({ value, onCommit, inputRef, placeholder }: { value: string; 
         type="search"
         role="searchbox"
         className="mem-search-input"
-        aria-label={t.toolbar.searchLabel}
+        aria-label={t("toolbar.searchLabel")}
         placeholder={placeholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -80,7 +82,7 @@ function SearchBox({ value, onCommit, inputRef, placeholder }: { value: string; 
         }}
       />
       {text !== "" ? (
-        <button type="button" className="mem-iconbtn" aria-label={t.toolbar.searchClear} title={t.toolbar.searchClear} onClick={() => (setText(""), onCommit(""))}>
+        <button type="button" className="mem-iconbtn" aria-label={t("toolbar.searchClear")} title={t("toolbar.searchClear")} onClick={() => (setText(""), onCommit(""))}>
           <Icon name="close" size={12} />
         </button>
       ) : null}
@@ -89,6 +91,7 @@ function SearchBox({ value, onCommit, inputRef, placeholder }: { value: string; 
 }
 
 function TagPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onChange">) {
+  const t = useT("memory");
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const tags = useMemoryTags(view.scope, view.includeArchived, open);
@@ -101,19 +104,19 @@ function TagPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onCha
     <Popover
       open={open}
       onOpenChange={setOpen}
-      panelLabel={t.tags.list}
+      panelLabel={t("tags.list")}
       panelClassName="mem-pop"
       renderTrigger={(p) => (
         <button {...p} type="button" className="mem-tool" data-active={view.tag !== null ? "" : undefined}>
-          {view.tag === null ? t.toolbar.tag : t.chip.tag(view.tag)} <Icon name="chevron-down" size={12} />
+          {view.tag === null ? t("toolbar.tag") : t("chip.tag", { name: view.tag })} <Icon name="chevron-down" size={12} />
         </button>
       )}
     >
       <div className="mem-pop-body">
         <input
           className="mem-input"
-          aria-label={t.tags.inputLabel}
-          placeholder={t.tags.placeholder}
+          aria-label={t("tags.inputLabel")}
+          placeholder={t("tags.placeholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           onKeyDown={(e) => {
@@ -124,45 +127,47 @@ function TagPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onCha
           }}
         />
         {tags.isPending ? (
-          <div className="mem-skeleton" role="status" aria-label={t.loading}><Spinner /></div>
+          <div className="mem-skeleton" role="status" aria-label={t("loading")}><Spinner /></div>
         ) : tags.isError ? (
           <p className="mem-error" role="alert">
-            {t.tags.error} <button type="button" className="mem-linkbtn" onClick={() => void tags.refetch()}>{t.retry}</button>
+            {t("tags.error")} <button type="button" className="mem-linkbtn" onClick={() => void tags.refetch()}>{t("retry")}</button>
           </p>
         ) : (
-          <ul className="mem-taglist" aria-label={t.tags.list}>
-            {shown.length === 0 ? <li className="mem-muted">{t.tags.empty}</li> : null}
+          <ul className="mem-taglist" aria-label={t("tags.list")}>
+            {shown.length === 0 ? <li className="mem-muted">{t("tags.empty")}</li> : null}
             {shown.map((x) => (
               <li key={x.tag}>
                 <Choice checked={view.tag === x.tag} onChange={() => pick(view.tag === x.tag ? null : x.tag)}>
-                  <span className="ac-ellipsis" title={x.tag}>{x.tag}</span> <span className="mem-muted">{x.entries.toLocaleString(appMessages.locale)}</span>
+                  <span className="ac-ellipsis" title={x.tag}>{x.tag}</span> <span className="mem-muted">{x.entries.toLocaleString(t.language)}</span>
                 </Choice>
               </li>
             ))}
           </ul>
         )}
-        {tags.data?.truncated === true ? <p className="mem-help">{t.tags.truncated}</p> : null}
+        {tags.data?.truncated === true ? <p className="mem-help">{t("tags.truncated")}</p> : null}
       </div>
     </Popover>
   );
 }
 
 function AuthorPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onChange">) {
+  const t = useT("memory");
+  const tm = useMaybeT("memory");
   const [open, setOpen] = useState(false);
   const current = view.authorKind ?? "";
   return (
     <Popover
       open={open}
       onOpenChange={setOpen}
-      panelLabel={t.toolbar.authorKind}
+      panelLabel={t("toolbar.authorKind")}
       panelClassName="mem-pop"
       renderTrigger={(p) => (
         <button {...p} type="button" className="mem-tool" data-active={current !== "" ? "" : undefined}>
-          {current === "" ? t.toolbar.authorKind : t.chip.authorKind(t.authorKind[current] ?? current)} <Icon name="chevron-down" size={12} />
+          {current === "" ? t("toolbar.authorKind") : t("chip.authorKind", { label: tm(`authorKind.${current}`) ?? current })} <Icon name="chevron-down" size={12} />
         </button>
       )}
     >
-      <div className="mem-pop-body" role="radiogroup" aria-label={t.toolbar.authorKind}>
+      <div className="mem-pop-body" role="radiogroup" aria-label={t("toolbar.authorKind")}>
         {AUTHOR_KIND_FILTERS.map((kind) => (
           <Choice
             key={kind === "" ? "all" : kind}
@@ -174,7 +179,7 @@ function AuthorPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "on
               setOpen(false);
             }}
           >
-            {kind === "" ? t.authorKind["all"] : (t.authorKind[kind] ?? kind)}
+            {kind === "" ? tm("authorKind.all") : (tm(`authorKind.${kind}`) ?? kind)}
           </Choice>
         ))}
       </div>
@@ -183,45 +188,48 @@ function AuthorPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "on
 }
 
 function SortPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onChange">) {
+  const viewMessages = useViewMessages();
+  const t = useT("memory");
   const [open, setOpen] = useState(false);
   return (
     <Popover
       open={open}
       onOpenChange={setOpen}
-      panelLabel={t.toolbar.sort}
+      panelLabel={t("toolbar.sort")}
       panelClassName="mem-pop"
       align="end"
       renderTrigger={(p) => (
         <button {...p} type="button" className="mem-tool" data-active={view.sort !== null ? "" : undefined}>
-          {t.toolbar.sort} <Icon name="chevron-down" size={12} />
+          {t("toolbar.sort")} <Icon name="chevron-down" size={12} />
         </button>
       )}
     >
-      <MemorySortMenu sorts={ENTRY_SORTS} value={view.sort satisfies SortState | null} onChange={(sort) => onChange({ sort })} />
+      <MemorySortMenu messages={viewMessages} sorts={ENTRY_SORTS} value={view.sort satisfies SortState | null} onChange={(sort) => onChange({ sort })} />
     </Popover>
   );
 }
 
 export function MemoryToolbar({ view, onChange, scopePicker, searchRef, refreshing, onRefresh, disconnected, searchSlow }: MemoryToolbarProps) {
+  const t = useT("memory");
   return (
-    <div className="mem-toolbar" role="toolbar" aria-label={t.toolbar.label}>
+    <div className="mem-toolbar" role="toolbar" aria-label={t("toolbar.label")}>
       {scopePicker}
-      <SearchBox value={view.q} inputRef={searchRef} placeholder={t.toolbar.search} onCommit={(q) => onChange({ q })} />
+      <SearchBox value={view.q} inputRef={searchRef} placeholder={t("toolbar.search")} onCommit={(q) => onChange({ q })} />
       <TagPopover view={view} onChange={onChange} />
       <AuthorPopover view={view} onChange={onChange} />
-      <Choice checked={view.includeArchived} onChange={(e) => onChange({ includeArchived: e.target.checked })}>{t.toolbar.includeArchived}</Choice>
-      <Choice checked={view.includeDeleted} onChange={(e) => onChange({ includeDeleted: e.target.checked })}>{t.toolbar.includeDeleted}</Choice>
+      <Choice checked={view.includeArchived} onChange={(e) => onChange({ includeArchived: e.target.checked })}>{t("toolbar.includeArchived")}</Choice>
+      <Choice checked={view.includeDeleted} onChange={(e) => onChange({ includeDeleted: e.target.checked })}>{t("toolbar.includeDeleted")}</Choice>
       <SortPopover view={view} onChange={onChange} />
       <span className="mem-toolbar-end">
-        {searchSlow && view.q.trim() !== "" && [...view.q.trim()].length < 3 ? <span className="mem-muted" role="status">{t.toolbar.searchSlow}</span> : null}
+        {searchSlow && view.q.trim() !== "" && [...view.q.trim()].length < 3 ? <span className="mem-muted" role="status">{t("toolbar.searchSlow")}</span> : null}
         {disconnected ? (
           <span className="mem-warn" role="status">
-            <span className="mem-mark" aria-hidden="true" /> {t.live.disconnected}{" "}
-            <button type="button" className="mem-linkbtn" onClick={onRefresh}>{t.live.refresh}</button>
+            <span className="mem-mark" aria-hidden="true" /> {t("live.disconnected")}{" "}
+            <button type="button" className="mem-linkbtn" onClick={onRefresh}>{t("live.refresh")}</button>
           </span>
         ) : null}
-        {refreshing ? <Spinner label={t.toolbar.refreshing} /> : null}
-        <button type="button" className="mem-iconbtn" aria-label={t.toolbar.refresh} title={t.toolbar.refresh} onClick={onRefresh}>
+        {refreshing ? <Spinner label={t("toolbar.refreshing")} /> : null}
+        <button type="button" className="mem-iconbtn" aria-label={t("toolbar.refresh")} title={t("toolbar.refresh")} onClick={onRefresh}>
           <Icon name="refresh" />
         </button>
       </span>

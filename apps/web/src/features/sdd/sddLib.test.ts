@@ -8,6 +8,9 @@ import { gapDisplay, SDD_TAB_DEFS, verificationDisplay } from "./sddConfig";
 import { mergeSection, ruleSections, sectionValue, issueInSection } from "./ruleSections";
 import { filterSpecs } from "./SpecListScreen";
 import { classifySddError } from "./sddErrors";
+import type { Translate } from "@agent-console/i18n";
+
+const t: Translate = Object.assign((key: string) => key, { language: "ko" });
 import { ApiError } from "@agent-console/api-client";
 import { setList } from "./params";
 
@@ -89,19 +92,19 @@ describe("목록 거르기·오류 분류·주소 인자", () => {
     { id: "b", name: "나", updated_at: 3, ready: 2, documents: [{ id: "d", state: "s2" }] },
   ];
   it("갱신 시각 내림차순, 이름·문서 상태·준비 거르기", () => {
-    expect(filterSpecs(specs, "", new Set(), false).map((s) => s.id)).toEqual(["b", "a"]);
-    expect(filterSpecs(specs, "가", new Set(), false).map((s) => s.id)).toEqual(["a"]);
-    expect(filterSpecs(specs, "", new Set(["s2"]), false).map((s) => s.id)).toEqual(["b"]);
-    expect(filterSpecs(specs, "", new Set(), true).map((s) => s.id)).toEqual(["b"]);
+    expect(filterSpecs(specs, "", new Set(), false, { id: "updated", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["b", "a"]);
+    expect(filterSpecs(specs, "가", new Set(), false, { id: "updated", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["a"]);
+    expect(filterSpecs(specs, "", new Set(["s2"]), false, { id: "updated", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["b"]);
+    expect(filterSpecs(specs, "", new Set(), true, { id: "updated", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["b"]);
   });
   it("오류 코드를 화면 종류로 나눈다", () => {
     const e = (code: string, details = {}) => new ApiError(409, { code, message: "m", details });
-    expect(classifySddError(e("sdd.spaces_unavailable"), "f").kind).toBe("unavailable");
-    expect(classifySddError(e("sdd.not_found"), "f").kind).toBe("notFound");
-    expect(classifySddError(e("project.folder_missing"), "f").kind).toBe("problem");
-    expect(classifySddError(e("folders.invalid_path", { reason: "reserved" }), "f")).toMatchObject({ kind: "problem" });
-    expect(classifySddError(e("x.y"), "f")).toMatchObject({ kind: "generic", code: "x.y" });
-    expect(classifySddError(new Error("net"), "f")).toEqual({ kind: "generic", message: "net" });
+    expect(classifySddError(e("sdd.spaces_unavailable"), "f", t).kind).toBe("unavailable");
+    expect(classifySddError(e("sdd.not_found"), "f", t).kind).toBe("notFound");
+    expect(classifySddError(e("project.folder_missing"), "f", t).kind).toBe("problem");
+    expect(classifySddError(e("folders.invalid_path", { reason: "reserved" }), "f", t)).toMatchObject({ kind: "problem" });
+    expect(classifySddError(e("x.y"), "f", t)).toMatchObject({ kind: "generic", code: "x.y" });
+    expect(classifySddError(new Error("net"), "f", t)).toEqual({ kind: "generic", message: "net" });
   });
   it("setList는 같은 이름의 값을 통째로 바꾼다", () => {
     const p = new URLSearchParams("a=1&s=x&s=y");

@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../../testing/renderI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { KeyValueMapField } from "./KeyValueMapField";
 

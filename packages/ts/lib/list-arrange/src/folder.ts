@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE } from "./sort";
+
 const SEP = "/";
 const UI = "ui";
 const FOLDER = "folder";
@@ -42,7 +44,7 @@ export interface FolderNode {
 }
 
 /** 폴더 경로들(중복 허용)로 이름순 트리를 만든다. 중간 단계도 노드가 된다. */
-export function buildFolderTree(paths: readonly (string | undefined)[], locale = "ko"): FolderNode[] {
+export function buildFolderTree(paths: readonly (string | undefined)[], locale = DEFAULT_LOCALE): FolderNode[] {
   const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
   const root: FolderNode = { name: "", path: "", children: [] };
   for (const raw of paths) {

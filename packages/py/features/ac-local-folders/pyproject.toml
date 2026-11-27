@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-local-folders"
 version = "0.1.0"
-description = "로컬 폴더 고르기 순수 규칙: 경로 정규화·폴더 확인·하위 폴더 나열·만들기(파일 시스템 주입)"
+description = "Pure rules for picking local folders: path normalization, folder checks, listing and creating subfolders (file system injected)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

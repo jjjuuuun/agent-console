@@ -8,18 +8,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast, ConfirmDialog } from "@agent-console/ui";
 import type { WikiCreateRequest, WikiSummary } from "@agent-console/contracts/wiki";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { saveBlob } from "../../lib/download";
 import { routePath, useRouteOn } from "../library";
 import { useCopyDialog } from "../projects";
 import { NewWikiDialog } from "./NewWikiDialog";
 import { WikiExportDialog, WikiImportDialog } from "./WikiTransferDialog";
-import { wikiMessages as m } from "./messages";
 import { useInvalidateWiki, useWikiList, useWikiRulesList, useWikiSpace } from "./useWikiApi";
 import { useWikiContext } from "./useWikiContext";
 import { wikiRulesPath } from "./wikiPaths";
 import { WIKI_RULES_ROLE } from "./wikiConfig";
 import { useNavigate } from "react-router";
+import { useT } from "@agent-console/i18n";
 
 /** 위키 규칙 화면이 이 앱에 있고 켜져 있는가(규칙 열기·공용에서 가져오기 UI의 조건). */
 export function useRulesScreenOn(): boolean {
@@ -71,6 +71,7 @@ export function useNewWikiDialog(onCreated: (wikiId: string) => void, onImportZi
 }
 
 function NewWikiHost({ onClose, onCreated, copy, onImportZip }: { onClose: () => void; onCreated: (id: string) => void; copy: ReturnType<typeof useCopyDialog>; onImportZip?: () => void }) {
+  const t = useT("wiki");
   const space = useWikiSpace();
   const ctx = useWikiContext();
   const invalidate = useInvalidateWiki();
@@ -106,7 +107,7 @@ function NewWikiHost({ onClose, onCreated, copy, onImportZip }: { onClose: () =>
       rules={rules.data}
       rulesFailed={rules.isError}
       blockedReason={ctx.readOnly ? ctx.readOnlyReason : undefined}
-      {...(canImport ? { onImportRules: importRules, importDisabledReason: library.loading || library.kind !== null ? undefined : m.newWiki.fromLibraryNone } : {})}
+      {...(canImport ? { onImportRules: importRules, importDisabledReason: library.loading || library.kind !== null ? undefined : t("newWiki.fromLibraryNone") } : {})}
       {...(rulesScreen ? { onOpenRule: (id: string) => void navigate(wikiRulesPath(id) ?? routePath(WIKI_RULES_ROLE)) } : {})}
       onImportZip={ctx.capabilities.import_export && onImportZip !== undefined ? () => { onClose(); onImportZip(); } : undefined}
       onSubmit={async (body: WikiCreateRequest) => {
@@ -128,6 +129,7 @@ export function useImportDialog(onImported?: (wikiId: string, n: number) => void
 }
 
 function ImportHost({ initialWiki, onClose, onImported }: { initialWiki: string | undefined; onClose: () => void; onImported?: (wikiId: string, n: number) => void }) {
+  const t = useT("wiki");
   const space = useWikiSpace();
   const ctx = useWikiContext();
   const list = useWikiList();
@@ -148,7 +150,7 @@ function ImportHost({ initialWiki, onClose, onImported }: { initialWiki: string 
       onDone={(wiki, n) => {
         void invalidate();
         onClose();
-        toast({ tone: "success", text: m.transfer.done(n) });
+        toast({ tone: "success", text: t("transfer.done", { count: n }) });
         onImported?.(wiki, n);
       }}
     />
@@ -178,6 +180,8 @@ export function useExportDialog(): { open: (wiki: WikiSummary) => void; dialog: 
 
 /** 위키 삭제 확인(정의만 지워지고 페이지 폴더는 남는다는 것을 알린다). 끝나면 `onDeleted`. */
 export function useDeleteWikiDialog(onDeleted?: (wikiId: string) => void): { open: (wiki: WikiSummary) => void; dialog: ReactNode } {
+  const describeError = useDescribeError();
+  const t = useT("wiki");
   const [target, setTarget] = useState<WikiSummary | null>(null);
   const space = useWikiSpace();
   const toast = useToast();
@@ -192,22 +196,22 @@ export function useDeleteWikiDialog(onDeleted?: (wikiId: string) => void): { ope
       const directory = w.directory ?? "";
       toast({
         tone: "success",
-        text: m.deleteWiki.done,
+        text: t("deleteWiki.done"),
         durationMs: 8000,
-        ...(directory === "" ? {} : { action: { label: m.deleteWiki.copyPath, onClick: () => void navigator.clipboard?.writeText(directory) } }),
+        ...(directory === "" ? {} : { action: { label: t("deleteWiki.copyPath"), onClick: () => void navigator.clipboard?.writeText(directory) } }),
       });
       onDeleted?.(w.id);
     } catch (e) {
       setTarget(null);
-      toast({ tone: "danger", text: describeError(e, m.deleteWiki.failed).message });
+      toast({ tone: "danger", text: describeError(e, t("deleteWiki.failed")).message });
     }
   };
   const name = target === null ? "" : target.name && target.name !== "" ? target.name : target.id;
   const dialog =
     target === null ? null : (
-      <ConfirmDialog open title={m.deleteWiki.title(name)} confirmLabel={m.deleteWiki.confirm} cancelLabel={m.cancel} danger onConfirm={() => void remove(target)} onCancel={() => setTarget(null)}>
-        <p>{m.deleteWiki.body(target.directory ?? "")}</p>
-        <p className="app-muted">{m.deleteWiki.usage}</p>
+      <ConfirmDialog open title={t("deleteWiki.title", { name })} confirmLabel={t("deleteWiki.confirm")} cancelLabel={t("cancel")} danger onConfirm={() => void remove(target)} onCancel={() => setTarget(null)}>
+        <p>{(target.directory ?? "") === "" ? t("deleteWiki.bodyNoPath") : t("deleteWiki.body", { path: target.directory ?? "" })}</p>
+        <p className="app-muted">{t("deleteWiki.usage")}</p>
       </ConfirmDialog>
     );
   return { open, dialog };

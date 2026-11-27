@@ -7,16 +7,16 @@ import type { GroupBadge, LinkBadge, MethodBadge, SessionBadgeView, SpanLabel, T
 import type { NodeRunBadge } from "@agent-console/graph-editor";
 import { Badge, Banner, ConfirmDialog, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
-import { wikiEventSummary } from "../../app/wikiIssueMessages";
+import { wikiEventSummary } from "../wiki";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as appMessages } from "../../app/messages";
+import { useDescribeError } from "../../app/errors";
+import { createToastText } from "../../app/ToastText";
 import { useConnectionStatus } from "../../app/useConnectionStatus";
 import { useNow } from "../../app/useNow";
-import { formatClockTime, formatDuration, formatRelative } from "../../lib/format";
+
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { usePageTitle } from "../../shell/titles";
-import { delegationMessages as dm, CONFIG_WIDGETS, SessionChip, edgeSessionOf, sessionText, conditionPayloadOf, deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, mapConditionOutcome, shortRunId, summarizeDelegationEvent, useConditionOperators, useRenderIcon } from "../delegation";
+import { CONFIG_WIDGETS, SessionChip, edgeSessionOf, sessionText, conditionPayloadOf, deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, mapConditionOutcome, shortRunId, summarizeDelegationEvent, useConditionOperators, useRenderIcon, useDelegationMessages } from "../delegation";
 import { useDelegationStrategies } from "../settings";
 import { DEFINITION_KINDS, nodeAvatarsOf } from "../library";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
@@ -44,7 +44,9 @@ import { EMPTY_SESSIONS, deriveRunSessions } from "./runSessions";
 import { buildSessionAnnotations } from "./runSessionView";
 import { TraceTab } from "./TraceTab";
 import { runHrefs } from "./RunsListScreen";
-import { runStatusLabels, runsMessages as t } from "./messages";
+import { useRunsMessages } from "./messages";
+
+const RunsToast = createToastText(useRunsMessages);
 import { EDGE_SKIPPED_EVENT, EDGE_TRAVERSED_EVENT, SUBAGENT_STOP_EVENT } from "./runsConfig";
 import { useObservePrefixes } from "./useObservePrefixes";
 import { delegationEdgeFor, deriveRunOverlay, isActiveRun, latestNodeRuns, runDurationMs, summarizeEvent, waitSeconds, formatTokensShort, totalTokens } from "./runsLib";
@@ -53,6 +55,8 @@ import { useRunLookups } from "./useRunLookups";
 import { runOpenState, runProjectHint, useRunView } from "./useRunView";
 import { useRunNodeEvents } from "./useRunNodeEvents";
 import "./runs.css";
+import { localizePortSpec, useFormat, useUiLibMessages } from "../../i18n";
+import { useServerText } from "@agent-console/i18n";
 
 // 세션 로그 탭은 로그 기능의 공개 API이며, 탭을 열 때만 내려받는다.
 const SessionLogsTab = lazy(() => import("../logs").then((m) => ({ default: m.RunSessionLogsTab })));
@@ -84,6 +88,12 @@ function isTab(v: string | null, tabs: readonly InspectorTab[]): v is InspectorT
 
 /** 실행 상세 화면(컨테이너): 서버 상태(`useRunView`) + URL 상태를 읽어 헤더·그래프·검사 패널에 나눠 준다. */
 export function RunDetailScreen() {
+  const describeError = useDescribeError();
+  const server = useServerText();
+  const dm = useDelegationMessages();
+  const fmt = useFormat();
+  const t = useRunsMessages();
+  const ui = useUiLibMessages();
   const { id = "" } = useParams();
   const { rest, ws } = useApi();
   const toast = useToast();
@@ -170,7 +180,7 @@ export function RunDetailScreen() {
   const nowMs = useNow(active || hasPending, 1000);
   const nowSec = nowMs / 1000;
 
-  usePageTitle(run ? (tree.isChild ? `${dm.run.child.title} ${shortRunId(id)}` : `${id} · ${runStatusLabels[run.status] ?? run.status}`) : id);
+  usePageTitle(run ? (tree.isChild ? `${dm.run.child.title} ${shortRunId(id)}` : `${id} · ${t.runStatus[run.status] ?? run.status}`) : id);
 
   const setParam = (patch: Record<string, string | null>) =>
     setParams(
@@ -206,15 +216,15 @@ export function RunDetailScreen() {
         visible,
         summarize: (n: NodeRun) => {
           const tokens = totalTokens(n.usage);
-          const parts = [n.duration_ms != null ? formatDuration(n.duration_ms) : undefined, tokens !== undefined ? `${formatTokensShort(tokens)} 토큰` : undefined].filter(Boolean);
+          const parts = [n.duration_ms != null ? fmt.duration(n.duration_ms) : undefined, tokens !== undefined ? t.detail.tokensShort(formatTokensShort(tokens)) : undefined].filter(Boolean);
           return parts.length === 0 ? undefined : parts.join(" · ");
         },
       }),
-    [graph, lookups.edgeTypes, view.nodeRuns, view.events, pendingList, visible],
+    [graph, lookups.edgeTypes, view.nodeRuns, view.events, pendingList, visible, t, fmt],
   );
   // 반복 한도에 닿은 연결의 출발 노드 카드 아래에 한 줄을 더한다(상태 요약 칸 재사용)
   const overlay = useMemo(() => {
-    const lines = exhaustedLines(graph, baseOverlay);
+    const lines = exhaustedLines(graph, baseOverlay, dm);
     if (Object.keys(lines).length === 0) return baseOverlay;
     const nodeStates = { ...baseOverlay.nodeStates };
     for (const [node, line] of Object.entries(lines)) {
@@ -222,7 +232,7 @@ export function RunDetailScreen() {
       if (cur !== undefined) nodeStates[node] = { ...cur, summary: [cur.summary, line].filter(Boolean).join(" · ") };
     }
     return { ...baseOverlay, nodeStates };
-  }, [graph, baseOverlay]);
+  }, [graph, baseOverlay, dm]);
 
   // ---- 이름 해석 (노드 label · 에이전트 이름). 목록에 없으면 id 원문.
   const actorByNode = useMemo(() => {
@@ -287,7 +297,7 @@ export function RunDetailScreen() {
     if (value === undefined) return undefined;
     const parent = span.parent_id ? view.trace?.spans?.find((s) => s.id === span.parent_id) : undefined;
     const delegator = parent?.node_id ? nodeLabel(parent.node_id) : nodeLabel(edge.source.node);
-    return { text: sessionText(value), node: <SessionChip value={value} delegatorLabel={delegator} variant="icon" /> };
+    return { text: sessionText(value, dm), node: <SessionChip value={value} delegatorLabel={delegator} variant="icon" /> };
   };
   // 자식 실행(Run) 안 요청의 부모 노드 경로: 이 실행의 자식은 이 그래프의 노드 label, 더 깊은 단계는 그 단계 그래프를 몰라 노드 id를 쓴다
   const childPathOf = (runId: string): string[] => {
@@ -332,7 +342,7 @@ export function RunDetailScreen() {
       .then(() => view.reloadSnapshot())
       .catch((e: unknown) => {
         setCancelling(false);
-        toast({ tone: "danger", text: describeError(e, t.detail.cancelFailed).message });
+        toast({ tone: "danger", text: <RunsToast render={(r, d) => d(e, r.detail.cancelFailed).message} /> });
       });
   };
   const cancelBusy = cancelling && run !== undefined && isActiveRun(run.status);
@@ -373,7 +383,7 @@ export function RunDetailScreen() {
     if (to >= list.length) return setLiveNote(dm.run.list.latest);
     if (to === list.length - 1) followLatest(nodeId);
     else pickRun(nodeId, nodeRunKey(list[to]!));
-    setLiveNote(dm.run.list.moved(runOrdinalText(list[to]!, list), to + 1, list.length));
+    setLiveNote(dm.run.list.moved(runOrdinalText(list[to]!, list, dm), to + 1, list.length));
   };
   const openNodeList = (node: string) => {
     focusNode(node);
@@ -385,28 +395,29 @@ export function RunDetailScreen() {
   const renderIcon = useRenderIcon();
   const parentRun = tree.chain.length >= 2 ? tree.chain[tree.chain.length - 2] : undefined;
   const parentGraph = useRunGraph(parentRun);
-  const statusOf = (status: string) => appMessages.nodeStatus[status] ?? appMessages.runStatus[status] ?? status;
+  const statusOf = (status: string) => t.nodeStatus[status] ?? t.runStatus[status] ?? status;
   const nodeRunBadges = useMemo(() => {
     const out: Record<string, NodeRunBadge> = {};
     for (const [node, list] of groups) {
       const v = visible.get(node);
       if (v === undefined) continue;
-      const b = runBadge(list, v, nodeLabel(node), appMessages.nodeStatus[v.run.status] ?? v.run.status);
+      const b = runBadge(list, v, nodeLabel(node), t.nodeStatus[v.run.status] ?? v.run.status, dm, t.detail.callOrdinalAria);
       if (b !== undefined) out[node] = { text: b.text, ariaLabel: b.ariaLabel, picked: b.picked, onClick: () => openNodeList(node) };
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- openNodeList는 setParam/focusNode(렌더마다 새 함수)를 부를 뿐이라 의존에서 뺀다
   }, [groups, visible, nodeLabel]);
-  const edgeBadges = useMemo(() => buildEdgeBadges(graph, lookups.edgeTypes, overlay), [graph, lookups.edgeTypes, overlay]);
+  const edgeBadges = useMemo(() => buildEdgeBadges(graph, lookups.edgeTypes, overlay, dm), [graph, lookups.edgeTypes, overlay, dm]);
   const edgeChips = useMemo(
-    () => (graph === undefined ? {} : deriveAllEdgeChips(graph, lookups.edgeTypes, { strategies: delegationStrategies.data ?? [], operators: operators.operators, teamSettings: graph.settings, widgets: CONFIG_WIDGETS })),
-    [graph, lookups.edgeTypes, delegationStrategies.data, operators.operators],
+    () => (graph === undefined ? {} : deriveAllEdgeChips(graph, lookups.edgeTypes, { messages: dm, strategies: delegationStrategies.data ?? [], operators: operators.operators, teamSettings: graph.settings, widgets: CONFIG_WIDGETS })),
+    [graph, lookups.edgeTypes, delegationStrategies.data, operators.operators, dm],
   );
   const strategyIds = useMemo(() => (graph === undefined ? {} : edgeStrategyIds(graph, lookups.edgeTypes)), [graph, lookups.edgeTypes]);
   const nodeAvatars = useMemo(() => nodeAvatarsOf(graph?.nodes ?? [], lookups.nodeTypes, lookups.agents), [graph, lookups.nodeTypes, lookups.agents]);
   const nestedSummaries = useMemo(
     () =>
       nestedRunSummaries({
+        dm,
         nodes: graph?.nodes,
         nodeTypes: lookups.nodeTypes,
         currentKind: DEFINITION_KINDS.graph,
@@ -414,13 +425,13 @@ export function RunDetailScreen() {
         nodeRunsOf: (n) => groups.get(n) ?? [],
         visibleIndexOf: (n) => visible.get(n)?.index ?? 0,
         teamName: (gid) => lookups.graphName(gid) ?? gid,
-        statusLabel: (st) => runStatusLabels[st] ?? st,
+        statusLabel: (st) => t.runStatus[st] ?? st,
         shortId: shortRunId,
         onOpen: (rid) => void navigate(`/runs/${encodeURIComponent(rid)}`, run === undefined ? undefined : { state: runOpenState(run) }),
       }),
-    [graph, lookups, tree.children, groups, visible, navigate, run],
+    [dm, t, graph, lookups, tree.children, groups, visible, navigate, run],
   );
-  const extraNodeBadges = useMemo(() => Object.fromEntries(Object.keys(overlay.handledNodes).map((n) => [n, [dm.run.handled]])), [overlay.handledNodes]);
+  const extraNodeBadges = useMemo(() => Object.fromEntries(Object.keys(overlay.handledNodes).map((n) => [n, [dm.run.handled]])), [overlay.handledNodes, dm]);
   // 세션 구분(5.7R.34): trace span 기준, 없으면 NodeRun의 backend_session_id. 세션 id를 아는 것이 없으면 칩·배지·세그먼트가 모두 없다
   const sessions = useMemo(
     () => (run === undefined ? EMPTY_SESSIONS : deriveRunSessions({ runId: id, nodeRuns: view.nodeRuns, spans: view.trace?.spans, events: view.events, labelOf: nodeLabel, subStopType: SUBAGENT_STOP_EVENT })),
@@ -438,6 +449,7 @@ export function RunDetailScreen() {
   const sessionNotes = useMemo(
     () =>
       buildSessionAnnotations({
+        t,
         graph,
         edgeTypes: lookups.edgeTypes,
         strategies: delegationStrategies.data ?? [],
@@ -451,7 +463,7 @@ export function RunDetailScreen() {
         },
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setParam은 렌더마다 새 함수다
-    [graph, lookups.edgeTypes, delegationStrategies.data, sessions, nodeLabel, sessionPick, subagentNodes],
+    [t, graph, lookups.edgeTypes, delegationStrategies.data, sessions, nodeLabel, sessionPick, subagentNodes],
   );
 
   useShortcuts([
@@ -503,7 +515,7 @@ export function RunDetailScreen() {
       <div className="app-screen-frame" data-screen="run-detail">
         <PageHeader title={t.detail.loadFailed} />
         <div className="app-screen-body">
-          <ErrorBlock title={t.detail.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={view.reloadSnapshot} />
+          <ErrorBlock title={t.detail.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={t.shared.details} retryLabel={t.shared.retry} onRetry={view.reloadSnapshot} />
         </div>
       </div>
     );
@@ -558,21 +570,21 @@ export function RunDetailScreen() {
   });
 
   // ---- 자식 실행 메뉴·상위 링크·실행 목록·연결 상세
-  const clock = (ts: number | null | undefined) => (ts == null ? "–" : formatClockTime(ts));
+  const clock = (ts: number | null | undefined) => (ts == null ? "–" : fmt.time(ts));
   const childRows: ChildRunRow[] = tree.children.map((c) => ({
     run: c,
     teamName: lookups.graphName(c.graph_id, c.project_id) ?? c.graph_id,
-    nodeText: childNodeText(tree.children, c, nodeLabel),
-    statusLabel: runStatusLabels[c.status] ?? c.status,
-    startedText: formatRelative(c.started_at ?? c.created_at, nowMs),
-    durationText: formatDuration(runDurationMs(c, nowSec)),
+    nodeText: childNodeText(tree.children, c, nodeLabel, dm),
+    statusLabel: t.runStatus[c.status] ?? c.status,
+    startedText: fmt.relative(c.started_at ?? c.created_at, nowMs),
+    durationText: fmt.duration(runDurationMs(c, nowSec)),
   }));
   const childMenuNode = <ChildRunsMenu rows={childRows} onOpen={(rid) => openRun(rid)} />;
   const actorNote = (actor: string): string | undefined => {
     // 위임으로 불린 NodeRun(invoked_by)의 대상 actor에 "(← 위임자 위임)"을 덧붙인다
     for (const n of view.nodeRuns) {
       const caller = n.invoked_by?.[n.invoked_by.length - 1];
-      if (caller !== undefined && actorByNode.get(n.node_id) === actor) return `(← ${nodeLabel(caller)} 위임)`;
+      if (caller !== undefined && actorByNode.get(n.node_id) === actor) return t.detail.delegatedBy(nodeLabel(caller));
     }
     return undefined;
   };
@@ -609,7 +621,7 @@ export function RunDetailScreen() {
     const kind = kindMap.get(edgeSpec.kind);
     const records = edgeRecords(view.events, edgeSpec.id);
     const st = edgeStatus(records);
-    const chips = deriveEdgeChips(edgeSpec, kind, { strategies: delegationStrategies.data ?? [], operators: operators.operators, teamSettings: graph?.settings, widgets: CONFIG_WIDGETS }).map((c) => c.fullTitle ?? c.title);
+    const chips = deriveEdgeChips(edgeSpec, kind, { messages: dm, strategies: delegationStrategies.data ?? [], operators: operators.operators, teamSettings: graph?.settings, widgets: CONFIG_WIDGETS }).map((c) => c.fullTitle ?? c.title);
     return (
       <EdgeJudgementView
         fromLabel={nodeLabel(edgeSpec.source.node)}
@@ -649,14 +661,14 @@ export function RunDetailScreen() {
     return e === undefined ? eid : `${nodeLabel(e.source.node)} → ${nodeLabel(e.target.node)}`;
   };
   const summaryOf = (ev: RunEvent): string | undefined => {
-    const sum = summarizeDelegationEvent(ev, { nodeLabel, edgeLabel: edgeLabelOf, teamName: teamNameOfRun, statusLabel: statusOf, shortId: shortRunId });
+    const sum = summarizeDelegationEvent(ev, { messages: dm, nodeLabel, edgeLabel: edgeLabelOf, teamName: teamNameOfRun, statusLabel: statusOf, shortId: shortRunId });
     if (sum !== null) return sum.text;
     const cond = conditionPayloadOf(ev);
     if ((ev.type === EDGE_TRAVERSED_EVENT || ev.type === EDGE_SKIPPED_EVENT) && cond !== undefined) {
       const mapped = mapConditionOutcome(cond);
       if (mapped !== null) return `${summarizeEvent(ev)} · ${mapped.result ? dm.run.event.conditionPass : dm.run.event.conditionFalse}`;
     }
-    return wikiEventSummary(ev.payload);
+    return wikiEventSummary(ev.payload, server);
   };
 
   const content: Record<InspectorTab, React.ReactNode> = {
@@ -693,7 +705,7 @@ export function RunDetailScreen() {
           setFocusInteraction(iid);
           setTab("interactions");
         }}
-        statusLabel={(s) => appMessages.nodeStatus[s] ?? appMessages.runStatus[s] ?? s}
+        statusLabel={(s) => t.nodeStatus[s] ?? t.runStatus[s] ?? s}
       />
     ),
     agents: (
@@ -717,7 +729,7 @@ export function RunDetailScreen() {
                 onSelect: setSessionPick,
                 expandedId: sessionOpenFor,
                 formatTokens: (n: number | undefined) => (n === undefined ? "–" : formatTokensShort(n)),
-                formatSeconds: (s: number) => formatDuration(s * 1000),
+                formatSeconds: (s: number) => fmt.duration(s * 1000),
                 nowSec,
               },
             }
@@ -787,7 +799,7 @@ export function RunDetailScreen() {
         nodeId={nodeId}
         nodeLabel={nodeLabel}
         nodeRun={nodeId === null ? undefined : (visible.get(nodeId)?.run ?? latest.get(nodeId))}
-        ordinalText={nodeId === null || visible.get(nodeId) === undefined ? undefined : runOrdinalText(visible.get(nodeId)!.run, groups.get(nodeId) ?? [])}
+        ordinalText={nodeId === null || visible.get(nodeId) === undefined ? undefined : runOrdinalText(visible.get(nodeId)!.run, groups.get(nodeId) ?? [], dm)}
         invokedNote={invokedNote}
         runList={runListNode}
         edgeView={edgeViewNode}
@@ -800,13 +812,13 @@ export function RunDetailScreen() {
   };
 
   content.logs = (
-    <Suspense fallback={<div className="app-loading" role="status">{appMessages.common.loadingScreen}</div>}>
+    <Suspense fallback={<div className="app-loading" role="status">{t.shared.loadingScreen}</div>}>
       <SessionLogsTab runId={id} running={active} selectedNodeId={nodeId} onSelectNode={(n) => selectNodeFromGraph(n)} />
     </Suspense>
   );
 
   content.architecture = (
-    <Suspense fallback={<div className="app-loading" role="status">{appMessages.common.loadingScreen}</div>}>
+    <Suspense fallback={<div className="app-loading" role="status">{t.shared.loadingScreen}</div>}>
       <ArchitectureTab runId={id} running={active} hasChildren={tree.children.length > 0} refreshKey={view.events.length} />
     </Suspense>
   );
@@ -905,12 +917,13 @@ export function RunDetailScreen() {
               extraNodeBadges={extraNodeBadges}
               {...(focusRequest ? { focusRequest } : {})}
               nowMs={nowMs}
-              resolvePorts={(typeId, config) => rest.resolvePorts(typeId, (config ?? {}) as Record<string, unknown>)}
+              resolvePorts={async (typeId, config) => localizePortSpec(await rest.resolvePorts(typeId, (config ?? {}) as Record<string, unknown>), server.text)}
             />
           )}
         </div>
         <div className="runs-inspector" role="region" aria-label={t.detail.panelLabel} onKeyDown={(e) => e.key === "Escape" && (spanId !== null ? setParam({ span: null }) : nodeId !== null && setParam({ node: null }))}>
           <Tabs
+            messages={ui}
             ariaLabel={t.tabs.label}
             activeId={tab}
             onChange={setTab}

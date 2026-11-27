@@ -1,6 +1,6 @@
 import { Gauge } from "@agent-console/ui";
-import { itemValueText } from "./indicatorText";
-import { usageIndicatorMessages as t, usageMessages as u } from "./messages";
+import { itemValueText, useIndicatorTexts } from "./indicatorText";
+import { useUsageMessages, useUsageIndicatorMessages } from "./messages";
 import { formatResetClock } from "./resetDisplay";
 import { indicatorFill, plainText, type IndicatorItem } from "./usageLib";
 
@@ -20,6 +20,9 @@ export interface UsageIndicatorPopoverProps {
  * (출처·신뢰·관측 시각·상태·오류 수 등은 사용량 화면에서, 사용자 요청 10/28).
  */
 export function UsageIndicatorPopover(p: UsageIndicatorPopoverProps) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
+  const u = useUsageMessages();
   const nowSec = p.nowMs / 1000;
   return (
     <div id={p.id} className="usage-ind-pop" role="group" aria-label={t.popoverTitle} data-side={p.side ?? "right"}>
@@ -27,14 +30,14 @@ export function UsageIndicatorPopover(p: UsageIndicatorPopoverProps) {
       {p.items.map((i) => {
         const fill = indicatorFill(i, p.valueMode);
         const reset =
-          i.reset === "passed" ? t.resetsPassed : i.reset === "future" && i.resetsAt != null ? formatResetClock(i.resetsAt, nowSec, { today: t.resetsClockToday, other: t.resetsClockOther }) : null;
+          i.reset === "passed" ? t.resetsPassed : i.reset === "future" && i.resetsAt != null ? formatResetClock(i.resetsAt, nowSec, { today: t.resetsClockToday, other: t.resetsClockOther }, x.fmt.language) : null;
         return (
           <div key={i.window} className="usage-ind-pop-item">
             <div className="usage-ind-pop-row">
               <span className="usage-ind-label ac-ellipsis">{i.name}</span>
-              <span className="ac-num">{itemValueText(i, p.valueMode)}</span>
+              <span className="ac-num">{itemValueText(i, p.valueMode, x)}</span>
             </div>
-            {fill !== undefined ? <Gauge value={fill} stale={i.stale || i.reset === "passed"} label={u.cards.gaugeLabel(i.name)} noValueLabel={u.cards.noRatio} valueText={itemValueText(i, p.valueMode)} /> : null}
+            {fill !== undefined ? <Gauge value={fill} stale={i.stale || i.reset === "passed"} label={u.cards.gaugeLabel(i.name)} noValueLabel={u.cards.noRatio} valueText={itemValueText(i, p.valueMode, x)} /> : null}
             {reset === null ? null : <p className="usage-ind-pop-line app-muted">{reset}</p>}
           </div>
         );

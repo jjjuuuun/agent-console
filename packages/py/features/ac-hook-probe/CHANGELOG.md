@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-hook-probe`, so the web can show the hook probe log source and classifier in English (data only, no API change).
 - I.6: The `agent-console-hook-probe` help and usage errors are English. The recorded data and the wrapped command output are unchanged.
 
 ## 0.1.0

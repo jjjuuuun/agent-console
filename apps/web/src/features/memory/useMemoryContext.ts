@@ -10,6 +10,7 @@ import { queryKeys, useApiQuery } from "../../app/queries";
 import { LOOKUP_REQUIRES } from "../../app/requirements";
 import { useRequires } from "../../modules";
 import { useProjects } from "../projects";
+import { useViewMessages } from "./format";
 import { useMemoryProject } from "./useMemoryApi";
 
 const NAME_FIELDS = { agent: "agent_id" } as const;
@@ -63,10 +64,12 @@ export function useMemoryContext(): MemoryContext {
     return out;
   }, [graphNames, projectNames, agentNames]);
 
+  // 쓴 주체 이름("사용자" 등)의 문구는 현재 언어의 `memory-view` 묶음으로 넘긴다(안 넘기면 패키지 기본 한국어).
+  const viewMessages = useViewMessages();
   const authorOptions = useMemo<FormatAuthorOptions>(() => {
     const resolveAgent = resolver(agentNames);
-    return resolveAgent === undefined ? {} : { resolveAgent };
-  }, [agentNames]);
+    return { messages: viewMessages as unknown as Readonly<Record<string, string>>, ...(resolveAgent === undefined ? {} : { resolveAgent }) };
+  }, [agentNames, viewMessages]);
 
   const pickers = useMemo(() => {
     const out: Record<string, readonly (readonly [string, string])[]> = {};

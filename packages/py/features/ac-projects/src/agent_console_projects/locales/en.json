@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "project.copy_reserved_id": "The id of {kind}/{id} clashes with a path name of this kind, so it can't be opened in the target. Copy it under a new id."
+  }
+}

@@ -1,12 +1,12 @@
 import { Icon } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
+import { useAppMessages } from "../app/appMessages";
 import { MODULE_STATUS } from "./resolve";
 
 const KNOWN: readonly string[] = Object.values(MODULE_STATUS);
 
 /** 상태 칩 글자: 계약이 고정한 5종은 문구 표, 그 밖의 값은 원문 그대로. */
-export function moduleStatusLabel(status: string): string {
-  return (m.moduleStatus as Record<string, string>)[status] ?? status;
+export function moduleStatusLabel(status: string, labels: Readonly<Record<string, string>>): string {
+  return labels[status] ?? status;
 }
 
 /**
@@ -14,11 +14,12 @@ export function moduleStatusLabel(status: string): string {
  * 색은 `data-module-status`로 정하고 토큰만 쓴다(app.css).
  */
 export function ModuleStatusChip({ status }: { status: string }) {
+  const m = useAppMessages();
   const known = KNOWN.includes(status);
   return (
     <span className="app-module-chip" data-module-status={known ? status : "unknown"}>
       <Icon name={known ? `module-${status}` : "module-disabled"} size={12} />
-      <span>{moduleStatusLabel(status)}</span>
+      <span>{moduleStatusLabel(status, m.moduleStatus)}</span>
     </span>
   );
 }

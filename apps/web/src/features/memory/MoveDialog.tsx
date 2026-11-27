@@ -7,12 +7,12 @@ import { Button, Dialog } from "@agent-console/ui";
 import { ApiError } from "@agent-console/api-client";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeKindInfo, MemoryScopeRef, MemoryScopeSummary } from "@agent-console/contracts/memory";
 import { keyErrorText, sameScope, validateKey } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
-import { viewMessages } from "./format";
-import { memoryMessages as t } from "./messages";
+import { useDescribeError } from "../../app/errors";
+import { useViewMessages } from "./format";
 import { pickOf, pickedScope, ScopePicker, type ScopePickerState } from "./ScopePicker";
 import { useMemoryContext } from "./useMemoryContext";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
 
 export interface MoveDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -26,6 +26,9 @@ export interface MoveDialogProps {
 }
 
 export function MoveDialog({ entry, kinds, scopes, labelOf, dirty, onClose, onMoved }: MoveDialogProps) {
+  const describeError = useDescribeError();
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
   const rest = useMemoryRest();
   const ctx = useMemoryContext();
   const uid = useId();
@@ -55,7 +58,7 @@ export function MoveDialog({ entry, kinds, scopes, labelOf, dirty, onClose, onMo
       );
       onMoved(moved);
     } catch (e) {
-      setError(e instanceof ApiError && e.status === 409 ? t.move.exists : describeError(e, t.move.failed).message);
+      setError(e instanceof ApiError && e.status === 409 ? t("move.exists") : describeError(e, t("move.failed")).message);
     } finally {
       setBusy(false);
     }
@@ -64,23 +67,23 @@ export function MoveDialog({ entry, kinds, scopes, labelOf, dirty, onClose, onMo
   return (
     <Dialog
       open
-      title={t.move.title}
+      title={t("move.title")}
       onClose={onClose}
       initialFocus={keyRef}
       actions={
         <>
-          <Button onClick={onClose}>{t.cancel}</Button>
-          <Button variant="primary" disabled={!canMove} loading={busy} onClick={() => void submit()}>{t.move.submit}</Button>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button variant="primary" disabled={!canMove} loading={busy} onClick={() => void submit()}>{t("move.submit")}</Button>
         </>
       }
     >
       <div className="mem-form">
         <p className="mem-move-current">
-          <span className="mem-label">{t.move.current}</span> {labelOf(entry.scope)} / <span className="mem-mono">{entry.key}</span>
+          <span className="mem-label">{t("move.current")}</span> {labelOf(entry.scope)} / <span className="mem-mono">{entry.key}</span>
         </p>
-        <ScopePicker label={t.move.toScope} kinds={kinds} scopes={scopes} state={pick} onChange={setPick} labelOf={labelOf} pickers={ctx.pickers} />
+        <ScopePicker label={t("move.toScope")} kinds={kinds} scopes={scopes} state={pick} onChange={setPick} labelOf={labelOf} pickers={ctx.pickers} />
         <div className="mem-field">
-          <label htmlFor={`${uid}-key`} className="mem-label">{t.move.toKey}</label>
+          <label htmlFor={`${uid}-key`} className="mem-label">{t("move.toKey")}</label>
           <input
             ref={keyRef}
             id={`${uid}-key`}
@@ -101,8 +104,8 @@ export function MoveDialog({ entry, kinds, scopes, labelOf, dirty, onClose, onMo
           />
           <span id={`${uid}-err`} className="mem-error" role={keyError !== null || error !== null ? "alert" : undefined}>{keyError ?? error ?? ""}</span>
         </div>
-        <p className="mem-help">{t.move.hint}</p>
-        {dirty ? <p className="mem-error" role="alert">{t.move.dirty}</p> : null}
+        <p className="mem-help">{t("move.hint")}</p>
+        {dirty ? <p className="mem-error" role="alert">{t("move.dirty")}</p> : null}
       </div>
     </Dialog>
   );

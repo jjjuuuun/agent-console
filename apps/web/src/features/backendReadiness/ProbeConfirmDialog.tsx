@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 
 export interface ProbeConfirmDialogProps {
   open: boolean;
@@ -13,6 +13,7 @@ export interface ProbeConfirmDialogProps {
 
 /** [연결 테스트] 확인 다이얼로그. 기본 포커스는 [테스트 실행](Enter), Esc는 취소. */
 export function ProbeConfirmDialog({ open, costNote, onCancel, onConfirm }: ProbeConfirmDialogProps) {
+  const m = useAppMessages();
   const t = m.backendReadiness;
   const runRef = useRef<HTMLButtonElement>(null);
   const [remember, setRemember] = useState(false);

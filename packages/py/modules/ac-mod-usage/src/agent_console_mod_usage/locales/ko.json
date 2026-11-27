@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "usage.source_conflict": "사용량 출처 id {source}가 다른 출처와 겹쳐 하나만 씁니다(플러그인 출처, 그다음 먼저 연결된 모듈 우선)"
+  }
+}

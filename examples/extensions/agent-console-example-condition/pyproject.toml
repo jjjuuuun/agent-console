@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-condition"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 텍스트 단어 수 비교 조건 연산자(example.word_count_at_least)"
+description = "Agent Console example extension — a condition operator that compares a text's word count (example.word_count_at_least)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

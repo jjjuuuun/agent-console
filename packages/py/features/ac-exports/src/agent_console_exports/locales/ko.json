@@ -1,0 +1,16 @@
+{
+  "codes": {
+    "export.fields_dropped": "형식이 표현하지 못해 빠진 설정이 있습니다.",
+    "export.invalid_options": "옵션이 형식의 스키마에 맞지 않습니다.",
+    "export.kind_unsupported": "이 형식이 지원하지 않는 정의 종류입니다: {kind}",
+    "export.main_node_not_found": "옵션의 주 노드가 팀 구성에 없거나 에이전트 노드가 아닙니다.",
+    "export.name_conflict": "같은 이름의 산출물이 이미 있어 건너뛰었습니다.",
+    "export.not_found": "함께 쓰이는 정의 {kind}/{id}를 찾지 못해 건너뜁니다.",
+    "export.scope_widened": "한 구성원에게 붙은 것을 프로젝트 전체에 적용되는 곳에 썼습니다.",
+    "export.secret_omitted": "비밀 값을 쓰지 않았습니다.",
+    "export.secret_redacted": "평문 비밀로 보이는 값을 가렸습니다. 비밀은 참조(secret://)로 두세요.",
+    "export.semantics_approximate": "산출물이 원래 정의와 똑같이 실행된다고 보장할 수 없습니다.",
+    "export.type_unsupported": "형식이 다루지 않는 리소스 종류라 건너뛰었습니다.",
+    "export.unsafe_path": "경로가 안전하지 않습니다(밖으로 나가는 경로·링크·금지 이름·보호 위치)."
+  }
+}

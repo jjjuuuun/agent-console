@@ -247,8 +247,10 @@ class RunJournal:
             try:
                 self._sink.publish(event)
             except Exception:
-                _log.exception("이벤트 발행 실패 (run=%s seq=%s)", event.run_id, event.seq)
+                _log.exception(
+                    "Publishing an event failed (run=%s seq=%s)", event.run_id, event.seq
+                )
 
     def _fail(self, exc: BaseException) -> None:
-        _log.error("Run %s 기록 실패: %r", self.run_id, exc)
+        _log.error("Recording run %s failed: %r", self.run_id, exc)
         self._error = exc

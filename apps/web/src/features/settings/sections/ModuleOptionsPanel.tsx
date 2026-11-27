@@ -3,12 +3,11 @@ import { type JsonSchema } from "@agent-console/schema-form";
 import { AppSchemaForm } from "../../../i18n";
 import { Banner } from "@agent-console/ui";
 import { ApiError } from "@agent-console/api-client";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { useApiQuery } from "../../../app/queries";
 import { CopyButton } from "../CopyButton";
 import { SETTINGS_FIELDS, SETTINGS_WIDGETS } from "../LayerForm";
 
-const t = m.modules.options;
 const noop = () => {};
 
 export interface ModuleOptionsViewProps {
@@ -17,6 +16,7 @@ export interface ModuleOptionsViewProps {
 
 /** 모듈 옵션의 읽기 전용 표시: 스키마가 있으면 같은 폼 렌더(비활성), 없으면 안내. 아래에 [YAML 조각 복사]. */
 export function ModuleOptionsReadOnly({ view }: ModuleOptionsViewProps) {
+  const t = useAppMessages().modules.options;
   const values = view.values ?? {};
   const snippet = view.yaml_snippet ?? "";
   return (
@@ -46,6 +46,7 @@ export function ModuleOptionsReadOnly({ view }: ModuleOptionsViewProps) {
 
 /** 컨테이너: 모듈 옵션을 읽는다(행을 펼쳤을 때만 마운트되므로 그때 한 번 부른다). 쓰기는 없다. */
 export function ModuleOptionsPanel({ id }: { id: string }) {
+  const t = useAppMessages().modules.options;
   const q = useApiQuery(["module-options", id], (rest) => rest.getModuleOptions(id), { retry: false });
   if (q.isLoading) return <p className="app-muted" role="status">{t.loading}</p>;
   if (q.error) {
@@ -55,10 +56,9 @@ export function ModuleOptionsPanel({ id }: { id: string }) {
   return q.data === undefined ? null : <ModuleOptionsReadOnly view={q.data} />;
 }
 
-const tp = m.modules.pluginOptions;
-
 /** 확장 옵션 하나의 읽기 전용 표시(스키마 폼 disabled, 설정됨 여부, YAML 조각 복사). */
 export function PluginOptionsReadOnly({ item }: { item: PluginOptionsView }) {
+  const tp = useAppMessages().modules.pluginOptions;
   const values = item.values ?? {};
   const snippet = item.yaml_snippet ?? "";
   const hasValues = Object.keys(values).length > 0;
@@ -91,6 +91,7 @@ export function PluginOptionsReadOnly({ item }: { item: PluginOptionsView }) {
 
 /** "확장 옵션" 묶음. 목록이 비면 아무것도 그리지 않는다(옛 서버는 필드가 없다). */
 export function PluginOptionsGroup({ items }: { items: readonly PluginOptionsView[] }) {
+  const tp = useAppMessages().modules.pluginOptions;
   if (items.length === 0) return null;
   return (
     <section className="app-mod-plugin-options" aria-labelledby="plugin-options-title">

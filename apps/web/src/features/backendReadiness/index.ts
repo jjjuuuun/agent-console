@@ -1,6 +1,8 @@
 export { BackendReadinessCard } from "./BackendReadinessCard";
 export type { BackendReadinessCardProps } from "./BackendReadinessCard";
-export { BackendReadinessSection } from "./BackendReadinessSection";
+export { BACKEND_READINESS_ANCHOR, BackendReadinessSection } from "./BackendReadinessSection";
+export type { BackendReadinessSectionProps } from "./BackendReadinessSection";
+export { readinessShownBackends } from "./shown";
 export { BackendStatusChip } from "./BackendStatusChip";
 export { BackendProbeButton } from "./BackendProbeButton";
 export { ProbeResultBlock } from "./ProbeResultBlock";

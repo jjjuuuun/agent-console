@@ -6,10 +6,12 @@ import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph } from "@a
 import { KNOWN_DELEGATION_SESSIONS as SESSIONS } from "@agent-console/contracts/constants";
 import type { NodeAnnotation } from "@agent-console/graph-editor";
 import { edgeSessionOf } from "../delegation";
-import { runsMessages as t } from "./messages";
+import type { RunsMessages } from "./messages";
 import type { RunSessions } from "./runSessions";
 
 export interface SessionAnnotationInput {
+  /** 현재 언어의 실행 기록 문구 */
+  t: RunsMessages;
   graph: Pick<Graph, "nodes" | "edges"> | undefined;
   edgeTypes: readonly EdgeTypeDescriptor[];
   strategies: readonly DelegationStrategyDescriptor[];
@@ -24,6 +26,7 @@ export interface SessionAnnotationInput {
 }
 
 export function buildSessionAnnotations(i: SessionAnnotationInput): Record<string, NodeAnnotation> {
+  const { t } = i;
   const out: Record<string, NodeAnnotation> = {};
   const { sessions } = i;
   const selected = i.selectedSessionId === null ? undefined : sessions.byId.get(i.selectedSessionId);

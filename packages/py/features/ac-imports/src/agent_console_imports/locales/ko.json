@@ -1,0 +1,10 @@
+{
+  "codes": {
+    "import.fields_ignored": "설정으로 옮기지 않은 항목이 있습니다.",
+    "import.hook_unsupported": "명령형이 아닌 hook 처리기는 가져오지 않습니다.",
+    "import.secret_replaced": "평문 값을 저장하지 않고 secret:// 참조로 바꿨습니다. 같은 이름의 비밀을 환경변수 등에 등록하세요.",
+    "import.secret_suspected": "평문 비밀로 보이는 값을 가렸습니다. 비밀은 참조(secret://)로 두세요.",
+    "import.skipped_link": "심볼릭 링크(또는 출처 밖을 가리키는 경로)라서 건너뛰었습니다.",
+    "import.unreadable": "읽을 수 없는 항목이라 건너뛰었습니다."
+  }
+}

@@ -188,7 +188,7 @@ class ProjectScope:
         try:
             return lookup.get_project(project_id)
         except Exception:  # 제공 모듈의 오류 타입을 모른다 — 없는 것으로 본다
-            _log.exception("프로젝트 읽기 실패: %s", project_id)
+            _log.exception("Reading the project failed: %s", project_id)
             return None
 
     def _view_error(
@@ -202,7 +202,7 @@ class ProjectScope:
         except Exception as exc:
             if _not_found(exc):
                 return unknown_error(project_id, self._texts)
-            _log.exception("프로젝트 상태 읽기 실패: %s", project_id)
+            _log.exception("Reading the project status failed: %s", project_id)
             return None
         if not records and view.status == KnownProjectStatuses.READY:
             return None  # 정의 출처 단계는 상태만 본다(지난 Run 보기는 기록 DB와 무관)

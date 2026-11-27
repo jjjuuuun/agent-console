@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendDescriptor } from "@agent-console/contracts";
 import { BackendChooserCard } from "./BackendChooserCard";
@@ -82,6 +83,6 @@ describe("BackendChooserCard", () => {
     expect(screen.getByText(/백엔드가 정해지지 않았습니다/)).toBeTruthy();
     unmount();
     render(<BackendChooserCard options={options} nodeLabels={["가", "나"]} onConfirm={() => {}} />);
-    expect(screen.getByText(/'가', '나'를 실행할/)).toBeTruthy();
+    expect(screen.getByText(/'가, 나'를 실행할/)).toBeTruthy();
   });
 });

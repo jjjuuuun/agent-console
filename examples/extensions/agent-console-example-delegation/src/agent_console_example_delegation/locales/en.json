@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "example.round_robin.invalid_config": "The round-robin settings are invalid.",
+    "example.round_robin.member_failed": "A delegate failed.",
+    "example.round_robin.no_members": "There are no delegates."
+  }
+}

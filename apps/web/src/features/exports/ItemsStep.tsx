@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import type { ExporterDescriptor, ExportSelection } from "@agent-console/contracts";
-import { getDefaultValue, SchemaForm, type FormError, type JsonSchema } from "@agent-console/schema-form";
+import { getDefaultValue, type FormError, type JsonSchema } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { Button, Tag } from "@agent-console/ui";
 import { useApiQuery } from "../../app/queries";
 import { applyFormEdit } from "../../lib/formEdit";
 import { exporterSupports } from "./exportLogic";
 import { ITEM_SOURCES, kindLabel, sourceKind, type ItemSource } from "./exportSources";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 
 export interface ItemsStepProps {
   exporter: ExporterDescriptor;
@@ -22,6 +23,7 @@ export interface ItemsStepProps {
 }
 
 function ItemPicker({ exporter, items, onAdd, onClose }: { exporter: ExporterDescriptor; items: readonly ExportSelection[]; onAdd: (item: ExportSelection) => void; onClose: () => void }) {
+  const t = useExportMessages();
   const [source, setSource] = useState<ItemSource>(ITEM_SOURCES[0]!);
   const [query, setQuery] = useState("");
   const list = useApiQuery(["list", "export-pick", source.model], (rest) => source.load(rest), { retry: false });
@@ -37,7 +39,7 @@ function ItemPicker({ exporter, items, onAdd, onClose }: { exporter: ExporterDes
             const k = sourceKind(s);
             return (
               <option key={s.model} value={s.model}>
-                {k === undefined ? s.model : kindLabel(k)}
+                {k === undefined ? s.model : kindLabel(k, t)}
               </option>
             );
           })}
@@ -69,6 +71,7 @@ function ItemPicker({ exporter, items, onAdd, onClose }: { exporter: ExporterDes
 
 /** ② 항목·옵션: 왼쪽 내보낼 정의 목록, 오른쪽 형식의 `config_schema` 폼(바꾼 값만 `options`에 담는다). */
 export function ItemsStep({ exporter, items, nameOf, itemErrors, onAdd, onRemove, options, onOptionsChange, optionErrors }: ItemsStepProps) {
+  const t = useExportMessages();
   const [picking, setPicking] = useState(false);
   const schema = exporter.config_schema as JsonSchema | undefined;
   const hasOptions = useMemo(() => {
@@ -87,7 +90,7 @@ export function ItemsStep({ exporter, items, nameOf, itemErrors, onAdd, onRemove
             const serverError = itemErrors.get(i);
             return (
               <li key={`${item.kind}:${item.id}`} className="exp-item" aria-disabled={!ok || undefined} data-problem={!ok || serverError !== undefined ? "true" : undefined}>
-                <Tag>{kindLabel(item.kind)}</Tag>
+                <Tag>{kindLabel(item.kind, t)}</Tag>
                 <span className="ac-ellipsis" title={item.id}>
                   {nameOf(item)}
                 </span>

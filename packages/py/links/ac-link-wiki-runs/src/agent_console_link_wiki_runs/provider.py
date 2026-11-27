@@ -211,7 +211,7 @@ def open_targets(
     except Exception as exc:
         code = getattr(exc, "code", None)
         reason = code if isinstance(code, str) and code else type(exc).__name__
-        _log.info("위키 공간을 열지 못함: %s (%s)", space, reason)
+        _log.info("Couldn't open wiki space: %s (%s)", space, reason)
         return {}, reason
 
 
@@ -270,7 +270,7 @@ class WikiToolProvider:
         try:
             service.notify(self.project_id, payload.wiki, paths, deleted=payload.op == _DELETE)
         except Exception:
-            _log.exception("위키 변경 알림 실패: %s", payload.wiki)
+            _log.exception("Wiki change notification failed: %s", payload.wiki)
 
     def provide(self, ctx: ToolProvisionContext) -> ToolProvision:
         """이 노드의 위키 도구·지침(칸이 없거나 서비스가 없으면 빈 결과)."""

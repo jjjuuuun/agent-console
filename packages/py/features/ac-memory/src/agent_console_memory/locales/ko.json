@@ -1,0 +1,8 @@
+{
+  "codes": {
+    "memory.import_duplicate": "묶음 안에 같은 범위·키가 두 번 나와 뒤의 것을 받지 않았습니다.",
+    "memory.import_invalid_file": "항목 파일이 올바르지 않습니다(위치·YAML 머리·UTF-8·압축 데이터).",
+    "memory.import_unsafe_path": "zip 안 경로가 위험해 받지 않았습니다.",
+    "memory.import_unsupported": ".md가 아니거나 암호화된 항목이라 받지 않았습니다."
+  }
+}

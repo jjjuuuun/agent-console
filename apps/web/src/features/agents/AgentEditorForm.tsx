@@ -8,7 +8,8 @@ import { useWorkspaceSettings } from "../../app/queries";
 import { Skeleton } from "../settings";
 import { Field, AgentSettingsForm, editLayerOf, inheritedProvenance, inheritedValue, toFormLayers, Avatar, AVATAR_COLOR_TOKENS, readAvatarUi, resolveAvatarColor, withAvatarUi, layerSourcePath } from "../library";
 import { settingsOf, withSettings } from "./agentLogic";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
+import { useServerTranslate } from "../../i18n";
 
 /** 설정 탭에서 폼 밖(리소스 탭)에서 편집하는 필드. */
 const HIDDEN_IN_SETTINGS: readonly string[] = ["resources"];
@@ -40,10 +41,12 @@ export interface AgentEditorFormProps {
  * 정체성은 설정 계층에 참여하지 않아 배지가 없다.
  */
 export function AgentEditorForm({ mode = "edit", agent, onChange, effective, effectiveError = null, effectiveLoading = false, errors, disabled, afterName, identityExtra }: AgentEditorFormProps) {
+  const t = useAgentMessages();
   const navigate = useNavigate();
   const create = mode === "create";
   const common = useWorkspaceSettings();
-  const layers = useMemo(() => toFormLayers(effective), [effective]);
+  const tr = useServerTranslate();
+  const layers = useMemo(() => toFormLayers(effective, tr), [effective, tr]);
   const editLayerId = editLayerOf(effective) ?? "";
   const sourceByLayer = useMemo(() => new Map((effective?.layers ?? []).map((l) => [l.id, l.source])), [effective]);
   // 만들기: 저장 전이라 서버 유효 설정이 없다. 공통 기본값(리소스 제외)을 상속 값으로 보여 준다.
@@ -107,6 +110,7 @@ export function AgentEditorForm({ mode = "edit", agent, onChange, effective, eff
 
 /** 고급 "표시": `attributes.ui.icon`·`color`. 비우면 이름 첫 글자 + id 해시 색(기본). */
 function AgentDisplayFields({ agent, onChange, disabled }: { agent: Agent; onChange: (next: AgentUpdate) => void; disabled: boolean }) {
+  const t = useAgentMessages();
   const ui = readAvatarUi(agent.attributes);
   const listId = `agent-color-${agent.id}`;
   const apply = (patch: Partial<{ icon: string; color: string }>) => {

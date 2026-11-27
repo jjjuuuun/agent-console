@@ -2,10 +2,9 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import type { DelegationStrategyDescriptor } from "@agent-console/contracts";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { Button } from "@agent-console/ui";
-import { ATTRIBUTE_ROWS, SessionChip, attributeRows, attributeSummary, hasAttributes, sessionOf, type AttributeCell } from "../../delegation";
-import { teamMessages } from "../messages";
+import { ATTRIBUTE_ROWS, SessionChip, attributeRows, attributeSummary, hasAttributes, sessionOf, useDelegationMessages, type AttributeCell } from "../../delegation";
+import { useTeamMessages } from "../messages";
 
-const m = teamMessages.sessions;
 
 /** `ui:field` 이름(스키마 `ui_schema`·앱 빌더가 지정하는 데이터 이름). 방식 이름은 코드에 없다. */
 export const DELEGATION_STRATEGY_FIELD = "delegation-strategy";
@@ -38,11 +37,13 @@ function Value({ cell }: { cell: AttributeCell }) {
 
 /** "동작 방식" 블록(현재 방식의 속성 행) + 접힌 비교표. 속성이 하나도 없으면 아무것도 그리지 않는다. */
 export function StrategyBehavior({ strategies, current, delegatorLabel, onPick, disabled }: { strategies: readonly DelegationStrategyDescriptor[]; current: DelegationStrategyDescriptor; delegatorLabel: string; onPick: (id: string) => void; disabled: boolean }) {
+  const m = useTeamMessages().sessions;
+  const dm = useDelegationMessages();
   const [compare, setCompare] = useState(false);
   const tableId = useId();
-  const rows = attributeRows(current, delegatorLabel);
+  const rows = attributeRows(current, dm, delegatorLabel);
   const columns = useMemo(() => [current, ...strategies.filter((s) => s.id !== current.id)], [current, strategies]);
-  const columnRows = useMemo(() => columns.map((s) => new Map(attributeRows(s, delegatorLabel).map((r) => [r.key, r]))), [columns, delegatorLabel]);
+  const columnRows = useMemo(() => columns.map((s) => new Map(attributeRows(s, dm, delegatorLabel).map((r) => [r.key, r]))), [columns, delegatorLabel, dm]);
   const rowKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const map of columnRows) for (const k of map.keys()) keys.add(k);
@@ -112,6 +113,8 @@ export function StrategyBehavior({ strategies, current, delegatorLabel, onPick, 
  * 방식 이름·속성은 모두 디스크립터 데이터이고, 속성이 없는 방식은 요약 줄·블록이 없다(screen-delegation.md §14.4.2·§14.4.6).
  */
 export function DelegationStrategyField({ id, value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const m = useTeamMessages().sessions;
+  const dm = useDelegationMessages();
   const o = isOptions(options) ? options : undefined;
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -135,8 +138,8 @@ export function DelegationStrategyField({ id, value, onChange, label, disabled, 
   const current = o.strategies.find((s) => s.id === effectiveId);
   // 선택지: [종류 기본, ...서버 순서 방식]
   const choices: { value: string; title: string; summary: string; description: string | undefined }[] = [
-    { value: "", title: defaultStrategy === undefined ? m.strategyDefaultUnknown : m.strategyDefault(defaultStrategy.title), summary: attributeSummary(defaultStrategy), description: defaultStrategy?.description },
-    ...o.strategies.map((s) => ({ value: s.id, title: s.title, summary: attributeSummary(s), description: s.description })),
+    { value: "", title: defaultStrategy === undefined ? m.strategyDefaultUnknown : m.strategyDefault(defaultStrategy.title), summary: attributeSummary(defaultStrategy, dm), description: defaultStrategy?.description },
+    ...o.strategies.map((s) => ({ value: s.id, title: s.title, summary: attributeSummary(s, dm), description: s.description })),
   ];
   const selectedIndex = choices.findIndex((c) => c.value === (chosen ?? ""));
   const shownTitle = chosen === undefined ? choices[0]!.title : (current?.title ?? chosen);
@@ -214,8 +217,8 @@ export function DelegationStrategyField({ id, value, onChange, label, disabled, 
               ))}
             </ul>
           ) : null}
-          {current !== undefined && hasAttributes(current) ? (
-            <p className="app-muted lib-field-note" data-ses-summary="">{attributeSummary(current)}</p>
+          {current !== undefined && hasAttributes(current, dm) ? (
+            <p className="app-muted lib-field-note" data-ses-summary="">{attributeSummary(current, dm)}</p>
           ) : null}
         </>
       )}

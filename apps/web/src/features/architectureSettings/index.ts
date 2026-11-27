@@ -3,5 +3,6 @@ import "./archSettings.css";
 export { ArchitectureSettingsEditor, PROFILES_WIDGET, type ArchitectureSettingsEditorProps } from "./ArchitectureSettingsEditor";
 export { ProfilesPanel, type ProfilesPanelProps } from "./ProfilesPanel";
 export { ProfileEditor, type ProfileEditorProps } from "./ProfileEditor";
-export { archSettingsMessages } from "./messages";
+export { createArchSettingsMessages, useArchSettingsMessages } from "./messages";
+export type { ArchSettingsMessages } from "./messages";
 export { buildRows, deleteProfile, disableProfile, removeKey, sameValue, setProfile, suggestCloneId, type ProfileRow, type ProfilesMap } from "./profileLogic";

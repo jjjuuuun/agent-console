@@ -84,7 +84,7 @@ def resource_types_of(
         reports += load_declarative_types(declarative_dir, registry)
     for report in reports:
         if not report.ok:
-            _log.warning("리소스 종류 로드 실패: %s (%s)", report.source, report.error)
+            _log.warning("Couldn't load resource kind: %s (%s)", report.source, report.error)
     return registry
 
 

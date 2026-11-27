@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Button, Popover } from "@agent-console/ui";
 import { fieldPair, splitFieldPair } from "./params";
-import { sddMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 /** 값 목록 상한(많이 나온 순 위쪽, 나머지는 검색으로) */
 const VALUE_LIMIT = 50;
@@ -18,6 +18,7 @@ export interface FieldOption {
 }
 
 export function FieldFilter({ options, selected, onChange }: { options: readonly FieldOption[]; selected: readonly string[]; onChange: (next: string[]) => void }) {
+  const t = useT("sdd");
   const [open, setOpen] = useState(false);
   const [key, setKey] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -39,16 +40,16 @@ export function FieldFilter({ options, selected, onChange }: { options: readonly
         }
       }}
       panelRole="dialog"
-      panelLabel={m.tasks.field}
+      panelLabel={t("tasks.field")}
       renderTrigger={(trigger) => (
-        <Button size="sm" {...trigger}>{selected.length === 0 ? m.tasks.field : `${m.tasks.field} ${selected.length}`} ▾</Button>
+        <Button size="sm" {...trigger}>{selected.length === 0 ? t("tasks.field") : `${t("tasks.field")} ${selected.length}`} ▾</Button>
       )}
     >
       {current === undefined ? (
         options.length === 0 ? (
-          <p className="app-muted" role="status">{m.tasks.fieldNone}</p>
+          <p className="app-muted" role="status">{t("tasks.fieldNone")}</p>
         ) : (
-          <ul className="sdd-multi" aria-label={m.tasks.field}>
+          <ul className="sdd-multi" aria-label={t("tasks.field")}>
             {options.map((o) => (
               <li key={o.key}>
                 <button type="button" className="app-link-btn sdd-mono" onClick={() => { setKey(o.key); setSearch(""); }}>
@@ -60,10 +61,10 @@ export function FieldFilter({ options, selected, onChange }: { options: readonly
         )
       ) : (
         <div className="sdd-field-values">
-          <button type="button" className="app-link-btn" onClick={() => setKey(null)}>{m.tasks.fieldBack}</button>
-          <input type="search" className="ac-input" aria-label={m.tasks.fieldSearch} placeholder={m.tasks.fieldSearch} value={search} onChange={(e) => setSearch(e.target.value)} />
-          {values.length === 0 ? <p className="app-muted" role="status">{m.tasks.fieldValueNone}</p> : null}
-          <ul className="sdd-multi" aria-label={m.tasks.fieldValues(current.key)}>
+          <button type="button" className="app-link-btn" onClick={() => setKey(null)}>{t("tasks.fieldBack")}</button>
+          <input type="search" className="ac-input" aria-label={t("tasks.fieldSearch")} placeholder={t("tasks.fieldSearch")} value={search} onChange={(e) => setSearch(e.target.value)} />
+          {values.length === 0 ? <p className="app-muted" role="status">{t("tasks.fieldValueNone")}</p> : null}
+          <ul className="sdd-multi" aria-label={t("tasks.fieldValues", { key: current.key })}>
             {values.map((v) => (
               <li key={v.value}>
                 <label className="ac-choice">
@@ -82,21 +83,22 @@ export function FieldFilter({ options, selected, onChange }: { options: readonly
 
 /** 고른 필드 조건 칩 줄(`{키}: {값} ×`, 넘치면 `+N`). 조건이 없으면 그리지 않는다. */
 export function FieldChips({ selected, onChange }: { selected: readonly string[]; onChange: (next: string[]) => void }) {
+  const t = useT("sdd");
   const [all, setAll] = useState(false);
   if (selected.length === 0) return null;
   const shown = all ? selected : selected.slice(0, CHIP_LIMIT);
   const hidden = selected.length - shown.length;
   return (
-    <div className="sdd-field-chips" role="group" aria-label={m.tasks.fieldChips} data-testid="sdd-field-chips">
+    <div className="sdd-field-chips" role="group" aria-label={t("tasks.fieldChips")} data-testid="sdd-field-chips">
       {shown.map((pair) => {
         const { key, value } = splitFieldPair(pair);
         return (
-          <button key={pair} type="button" className="sdd-field-chip" aria-label={m.tasks.fieldChipRemove(key, value)} onClick={() => onChange(selected.filter((x) => x !== pair))}>
+          <button key={pair} type="button" className="sdd-field-chip" aria-label={t("tasks.fieldChipRemove", { key, value })} onClick={() => onChange(selected.filter((x) => x !== pair))}>
             <span className="sdd-mono">{key}</span>: {value} <span aria-hidden="true">×</span>
           </button>
         );
       })}
-      {hidden > 0 ? <button type="button" className="app-link-btn" onClick={() => setAll(true)}>{m.tasks.fieldChipMore(hidden)}</button> : null}
+      {hidden > 0 ? <button type="button" className="app-link-btn" onClick={() => setAll(true)}>{t("tasks.fieldChipMore", { n: hidden })}</button> : null}
     </div>
   );
 }

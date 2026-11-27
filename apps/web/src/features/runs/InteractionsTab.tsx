@@ -4,11 +4,11 @@ import { InteractionCard, answerViaOf, resolveAnswerSurface, type FallbackArgs, 
 import type { Interaction, InteractionKindDescriptor } from "@agent-console/contracts";
 import { Button, StatusChip } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { messages as appMessages } from "../../app/messages";
-import { formatDateTime, formatDuration } from "../../lib/format";
+
 import { InteractionSchemaForm } from "../interactions";
-import { runsMessages as t, interactionStateKey } from "./messages";
+import { interactionStateKey, useRunsMessages } from "./messages";
 import { interactionStats, isInterruptedInteraction, sortInteractions, waitSeconds } from "./runsLib";
+import { useFormat, useChatLocale } from "../../i18n";
 
 export interface InteractionsTabProps {
   interactions: readonly Interaction[];
@@ -46,6 +46,9 @@ const STATE_FILTERS = ["all", "pending", "answered", "expired", "cancelled"] as 
 
 /** 탭 ④ 상호작용: 대기 중인 요청은 채팅과 같은 `InteractionCard`로 여기서도 답한다. 닫힌 요청은 대기 시간·응답자 한 줄 + 읽기 전용 카드. */
 export function InteractionsTab(p: InteractionsTabProps) {
+  const chat = useChatLocale();
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const [state, setState] = useState<string>("all");
   const [actor, setActor] = useState("");
 
@@ -64,13 +67,13 @@ export function InteractionsTab(p: InteractionsTabProps) {
   const surface = resolveAnswerSurface({ pending: pendingAll, descriptors: new Map(pendingAll.flatMap((i) => { const k = p.kindOf(i.kind); return k ? [[i.kind, k] as const] : []; })), answerWithComposer: true, context: "run-detail" });
 
   if (p.status === "loading" && p.interactions.length === 0) return <div className="app-loading" role="status">{t.interactions.loading}</div>;
-  if (p.status === "error" && p.interactions.length === 0) return <ErrorBlock title={t.interactions.loadFailed} retryLabel={appMessages.common.retry} onRetry={p.onRetry} />;
+  if (p.status === "error" && p.interactions.length === 0) return <ErrorBlock title={t.interactions.loadFailed} retryLabel={t.shared.retry} onRetry={p.onRetry} />;
   if (p.interactions.length === 0) return <div className="app-empty"><p>{t.interactions.empty}</p></div>;
 
   return (
     <div className="runs-interactions">
       <p className="runs-note" aria-live="polite">
-        {t.interactions.summary(stats.total, stats.waiting, stats.avgWaitSec === undefined ? "" : formatDuration(stats.avgWaitSec * 1000))}
+        {t.interactions.summary(stats.total, stats.waiting, stats.avgWaitSec === undefined ? "" : fmt.duration(stats.avgWaitSec * 1000))}
       </p>
       <div className="runs-interactions-tools" role="group" aria-label={t.interactions.filterLabel}>
         {STATE_FILTERS.map((s) => (
@@ -103,13 +106,14 @@ export function InteractionsTab(p: InteractionsTabProps) {
                     <StatusChip status={key === "interrupted" ? "interrupted" : i.status === "answered" ? "succeeded" : i.status === "expired" ? "skipped" : "cancelled"} kind={key === "interrupted" ? "run" : "node"} label={t.interactions.states[key] ?? key} />
                     <span>{kind?.title ?? i.kind}</span>
                     <span className="app-muted">{p.actorLabel(i)}</span>
-                    <span className="app-muted" title={formatDateTime(i.created_at)}>{t.interactions.requestedAt(formatDateTime(i.created_at))}</span>
-                    <span className="ac-num">{t.interactions.waited(formatDuration(waitSeconds(i, p.nowSec) * 1000))}</span>
+                    <span className="app-muted" title={fmt.dateTimeFull(i.created_at)}>{t.interactions.requestedAt(fmt.dateTimeFull(i.created_at))}</span>
+                    <span className="ac-num">{t.interactions.waited(fmt.duration(waitSeconds(i, p.nowSec) * 1000))}</span>
                     {i.answered_by ? <span>{t.interactions.responder(t.interactions.responders[i.answered_by] ?? i.answered_by)}</span> : null}
                     {i.close_reason ? <span className="app-muted">{t.interactions.closeReason(t.interactions.closeReasons[i.close_reason] ?? i.close_reason)}</span> : null}
                   </div>
                 )}
                 <InteractionCard
+                messages={chat.interaction}
                   interaction={i}
                   descriptor={kind}
                   actorLabel={p.actorLabel(i)}

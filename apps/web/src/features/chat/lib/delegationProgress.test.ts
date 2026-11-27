@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EdgeTypeDescriptor, Graph, Interaction, NodeTypeDescriptor, RunEvent } from "@agent-console/contracts";
+import { koT } from "../../../testing/koText";
+import { createDelegationMessages } from "../../delegation";
 import { buildAgentView } from "./actors";
 import { mergeInteractions } from "./assemble";
 import { applyRunEvent, emptyLiveRun, foldRunEvents } from "./liveRun";
@@ -34,7 +36,7 @@ const graph: Graph = {
 const childGraph: Graph = { id: "g2", name: "자식 팀", nodes: [{ id: "a", type: "nt-1", label: "자식 노드 가" }, { id: "b", type: "nt-1", label: "자식 노드 나" }, { id: "cu", type: "nt-u" }], edges: [{ id: "ce", source: { node: "a", port: "o" }, target: { node: "b", port: "i" }, kind: "k-flow" }] };
 
 const ev = (seq: number, type: string, payload: Record<string, unknown> = {}, node_path: string[] = [], runId = "r1"): RunEvent => ({ event_id: `e${seq}`, run_id: runId, seq, ts: seq, node_path, type, payload });
-const base = { graph, kinds, naming };
+const base = { graph, kinds, naming, delegation: createDelegationMessages(koT("delegation")) };
 
 describe("liveRun: 반복·호출·자식 실행 이벤트", () => {
   it("자식 실행 알림은 부모 Run 상태로 읽지 않는다", () => {

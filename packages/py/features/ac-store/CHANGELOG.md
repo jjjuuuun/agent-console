@@ -2,6 +2,7 @@
 
 ## 미출시 (0.2.0)
 
+- I.7d: Internal log messages are now in English (`SpaceLocator` default `label` is `record`).
 - P1.19: Added `DefinitionKind.open_role` (default `None`, the store does not read it): the web route role of the screen that opens an item of the kind. The default kinds `graph`, `agent`, and `resource` use `definition:<kind>`. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only, no table changes.
 - P1.17: Added `diff_versions(store, kind, id, from_hash, to_hash=None, *, secret_paths, mask)`, which compares two versions of one definition and returns the contract `DefinitionDiff` (document changes as JSON Pointers, content files by sha256). Also exported `SECRET_MASK`, `SecretPaths`, and the `VersionDiffSource` protocol. The calculation moved here from `ac-mod-versions` `VersionService.diff` so that `ac-mod-sdd` can share it without importing another module. The caller decides which locations are secret.
 - New dependency `agent-console-settings` (document diff). Consumer range: `agent-console-store>=0.2,<0.3`.

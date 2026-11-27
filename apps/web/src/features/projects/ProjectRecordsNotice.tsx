@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { createProjectsText, projectAbilities } from "@agent-console/projects";
+import { projectAbilities } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import { useApi } from "../../app/ApiContext";
 import { ProjectProblemBanner } from "./ProjectProblemBanner";
 import { problemBanners, type BannerAction, type BannerSpec } from "./projectHomeLib";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { useProjects } from "./ProjectsContext";
 
 /** 목록 화면에서 처리하는 동작. 나머지(경로 복사·등록 해제 등)는 프로젝트 홈에서 한다. */
@@ -22,17 +23,19 @@ export interface ProjectRecordsState {
  */
 export function useProjectRecordsState(): ProjectRecordsState {
   const { currentView } = useProjects();
+  const m = useFolderHomeMessages();
   return useMemo(() => {
     if (currentView === undefined || currentView.project.archived === true) return { banners: [], blocking: false };
-    const banners = problemBanners(currentView)
+    const banners = problemBanners(currentView, m)
       .filter((b) => b.kind === "folder" || b.kind === "records" || b.kind === "readonly")
       .map((b) => ({ ...b, actions: b.actions.filter((a) => LIST_ACTIONS.has(a)) }));
     return { banners, blocking: banners.some((b) => b.kind === "folder") || currentView.records_state === "unavailable" };
-  }, [currentView]);
+  }, [currentView, m]);
 }
 
 /** 채팅·실행 목록 위에 붙는 폴더·기록 상태 띠(표현은 `ProjectProblemBanner`). 문제가 없으면 아무것도 그리지 않는다. */
 export function ProjectRecordsNotice({ banners }: { banners: readonly BannerSpec[] }) {
+  const m = useFolderHomeMessages();
   const { rest } = useApi();
   const p = useProjects();
   const id = p.current;
@@ -49,23 +52,23 @@ export function ProjectRecordsNotice({ banners }: { banners: readonly BannerSpec
     void rest
       .getProject(id)
       .then(() => p.refresh())
-      .then(() => setNote(m.problem.stillOpen(new Date().toTimeString().slice(0, 5))))
+      .then(() => setNote(new Date().toTimeString().slice(0, 5)))
       .finally(() => setBusy(null));
   };
   return (
     <div className="prj-records-notice">
-      <ProjectProblemBanner banners={banners} onAction={onAction} busy={busy} note={note} />
+      <ProjectProblemBanner banners={banners} onAction={onAction} busy={busy} note={note === null ? null : m.problem.stillOpen(note)} />
     </div>
   );
 }
 
-const projectText = createProjectsText();
 
 /**
  * 현재 프로젝트에서 새 대화·실행을 시작할 수 없는 이유 문구(막혀 있지 않으면 null).
  * 프로젝트 홈·시작 대화상자와 같은 능력표(`projectAbilities`)의 첫 이유를 쓴다. 목록 화면의 [새 대화] 같은 단추가 aria-disabled + 이유로 쓴다.
  */
 export function useStartBlockReason(action: "start_chat" | "start_run" | "copy_in"): string | null {
+  const projectText = useProjectsText();
   const { currentView } = useProjects();
   if (currentView === undefined) return null;
   const a = projectAbilities(currentView, { recordsWritable: currentView.records_writable !== false })[action];

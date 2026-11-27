@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-versions"
 version = "0.1.0"
-description = "Agent Console — 버전 기능 모듈: 정의 버전 목록·비교·되돌리기, 보존 개수"
+description = "Agent Console — versions feature module: definition version list, comparison, rollback, retention count"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 mod-versions = "agent_console_mod_versions.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-versions = "agent_console_mod_versions"
 
 [dependency-groups]
 dev = [

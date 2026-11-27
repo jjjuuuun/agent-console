@@ -2,6 +2,7 @@
 
 ## 0.1.1 (미발행)
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-logs-architecture`, so the web can show the link module description and settings and the `architecture.invalid_query` issue in English (data only, no API change).
 - 6R.9(M-1): `MemoMatcher.match_row`(`seq`·`uid`로 판정 캐시만 봄), `ScopeCache.lookup_seq`·`ScopeEvents.match_seq`. 구조도를 그린 범위의 `arch` 표 질의가 본문을 읽지 않는다(맞는 행이 끝에만 있는 첫 쪽 약 4배 빠름). 규모 테스트에 strict 0.3초 상한.
 - 5.7R.8(M-4, X32): 포트 `architecture.profile_checks` 제공(`UnlistedPathCheck`) — 프로필 조건이 목록
   본문에 없는 경로를 보면 warning `architecture.condition_path_unlisted`. 접두는 설치자 옵션

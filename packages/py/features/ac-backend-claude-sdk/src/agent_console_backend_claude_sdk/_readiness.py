@@ -141,8 +141,9 @@ class ClaudeSdkReadinessTexts(BaseModel):
     )
     login_required_summary: str = "로그인 필요 — 앱 전용 자격 폴더에 구독 로그인 정보가 없습니다"
     login_required_short: str = "로그인 필요"
+    # 고정 문구(화면 번역 키). 경로는 점검 항목 "자격 위치"에 있다. ``{path}`` 틀도 된다.
     login_required_detail: str = (
-        "앱 작업 공간의 자격 폴더 {path}에 구독 로그인 정보가 없습니다. [구독으로 로그인]을 "
+        "앱 작업 공간의 자격 폴더에 구독 로그인 정보가 없습니다. [구독으로 로그인]을 "
         "누르면 이 폴더에 저장되고 모든 프로젝트가 함께 씁니다. 터미널의 ~/.claude 로그인은 "
         "쓰지 않습니다."
     )
@@ -176,7 +177,7 @@ class ClaudeSdkReadinessTexts(BaseModel):
     note_inline: str = "설정 값에 직접 적힘(비밀 참조를 권장합니다)"
     note_on: str = "켜짐"
     note_off: str = "꺼짐"
-    note_files: str = "확인한 파일 {count}개 중 {found}개 있음"
+    note_files: str = "{found}/{count}"  # 언어 없는 줄(찾은 파일 수/확인한 파일 수)
     mode_api_key: str = "API 키"
     mode_subscription: str = "구독 로그인"
 

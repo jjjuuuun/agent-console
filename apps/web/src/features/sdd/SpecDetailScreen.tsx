@@ -11,7 +11,7 @@ import { Banner, Button, ConfirmDialog, PageHeader, Tabs, useToast, type TabItem
 import { ToneChip } from "@agent-console/sdd-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { useReportUnsaved } from "../../definition/unsaved";
 import { usePageTitle } from "../../shell/titles";
 import { ProjectChip } from "../projects";
@@ -28,8 +28,9 @@ import { TasksTab } from "./TasksTab";
 import { TraceTab } from "./TraceTab";
 import { useInvalidateSdd, useSddLive, useSddSpace, useSpecSyntax, useSpecView } from "./useSddApi";
 import { useSddContext } from "./useSddContext";
-import { sddMessages as m } from "./messages";
 import "./sdd.css";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 const P = SDD_PARAMS;
 
@@ -48,6 +49,9 @@ export interface SpecDetailScreenProps {
 }
 
 export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScreenProps) {
+  const describeError = useDescribeError();
+  const t = useT("sdd");
+  const tm = useMaybeT("sdd");
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [params, setSearch] = useSearchParams();
@@ -76,9 +80,22 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
   useReportUnsaved(dirty);
   // 다른 화면으로 가는 이동만 막는다(같은 스펙 안의 탭·문서 이동은 주소 인자만 바뀌므로 막지 않는다)
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
-  const view = viewQ.data?.value;
+  const serverText = useServerText();
+  const rawView = viewQ.data?.value;
+  // 기본 작업 문법·문서 상태의 이름은 서버 원문(패키지 데이터)이라 화면 언어로 옮긴다. 사용자가 쓴 이름은 묶음에 없어 그대로다.
+  const view = useMemo(
+    () =>
+      rawView === undefined
+        ? undefined
+        : {
+            ...rawView,
+            ...(rawView.task_statuses === undefined ? {} : { task_statuses: rawView.task_statuses.map((s) => ({ ...s, label: serverText.text(s.label) })) }),
+            ...(rawView.document_states === undefined ? {} : { document_states: rawView.document_states.map((s) => ({ ...s, label: serverText.text(s.label) })) }),
+          },
+    [rawView, serverText],
+  );
   const versionHash = viewQ.data?.version_hash ?? view?.version_hash ?? "";
-  usePageTitle(view?.spec.name ?? m.title);
+  usePageTitle(view?.spec.name ?? t("title"));
 
   const tabs = SDD_TAB_DEFS.filter((t) => panels[t.id] !== undefined);
   const fromUrl = params.get(P.tab);
@@ -113,12 +130,12 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
     return [...out.values()];
   }, [view]);
   const errorCount = (view?.issues ?? []).filter((i) => i.severity === "error").length;
-  const backLink = <Button onClick={() => void navigate(specsPath())}>{m.backToList}</Button>;
+  const backLink = <Button onClick={() => void navigate(specsPath())}>{t("backToList")}</Button>;
 
   if (viewQ.isPending) {
     return (
       <div className="app-screen-frame sdd-screen">
-        <PageHeader title={m.title} />
+        <PageHeader title={t("title")} />
         <div className="sdd-screen-body"><ListSkeleton rows={8} /></div>
       </div>
     );
@@ -126,8 +143,8 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
   if (viewQ.isError || view === undefined) {
     return (
       <div className="app-screen-frame sdd-screen">
-        <PageHeader title={m.title} />
-        <div className="sdd-screen-body"><FailureBlock error={viewQ.error} title={m.loadFailed} onRetry={() => void viewQ.refetch()} backTo={backLink} /></div>
+        <PageHeader title={t("title")} />
+        <div className="sdd-screen-body"><FailureBlock error={viewQ.error} title={t("loadFailed")} onRetry={() => void viewQ.refetch()} backTo={backLink} /></div>
       </div>
     );
   }
@@ -137,7 +154,7 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
   const writeBlock = ctx.readOnly ? ctx.readOnlyReason : undefined;
   const copyPath = () => {
     void navigator.clipboard?.writeText(directory);
-    toast({ tone: "success", text: m.head.copied });
+    toast({ tone: "success", text: t("head.copied") });
   };
   const rename = async (name: string) => {
     const saved = await space.client.putSpec(view.spec.id, { ...view.spec, name }, versionHash);
@@ -154,15 +171,15 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
       void navigate(specsPath());
     } catch (e) {
       setDialog(null);
-      toast({ tone: "danger", text: describeError(e, m.problem.generic).message });
+      toast({ tone: "danger", text: describeError(e, t("problem.generic")).message });
     }
   };
 
   const tabProps: SddTabProps = { specId: view.spec.id, view, versionHash, ctx, params, setParams, goTab, ownHashes, refresh, reportDirty };
-  const badge = (id2: string): string | null => (id2 === "tasks" && readyCount > 0 ? m.tabBadge.tasks(readyCount) : null);
+  const badge = (id2: string): string | null => (id2 === "tasks" && readyCount > 0 ? t("tabBadge.tasks", { count: readyCount }) : null);
   const items: TabItem[] = tabs.map((t) => {
     const Panel = panels[t.id];
-    const label = m.tabs[t.labelKey] ?? t.id;
+    const label = tm(`tabs.${t.labelKey}`) ?? t.id;
     const b = t.id === "tasks" ? readyCount : 0;
     return {
       id: t.id,
@@ -177,22 +194,22 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
       <PageHeader
         title={specName}
         leading={
-          <nav className="sdd-crumb" aria-label={m.head.crumbLabel}>
-            <Link to={specsPath()} className="app-back">← {m.back}</Link>
+          <nav className="sdd-crumb" aria-label={t("head.crumbLabel")}>
+            <Link to={specsPath()} className="app-back">← {t("back")}</Link>
             <span className="ac-breadcrumb-sep" aria-hidden="true">/</span>
           </nav>
         }
         actions={
           <>
             <ProjectChip />
-            {ctx.capabilities.import_export ? <GuardedButton blockedReason={writeBlock} onClick={() => setDialog("export")}>{m.head.export}</GuardedButton> : null}
+            {ctx.capabilities.import_export ? <GuardedButton blockedReason={writeBlock} onClick={() => setDialog("export")}>{t("head.export")}</GuardedButton> : null}
             <MenuButton
               label="⋯"
-              panelLabel={m.head.more}
+              panelLabel={t("head.more")}
               items={[
-                { id: "rename", label: m.head.rename, disabled: writeBlock !== undefined, onSelect: () => setDialog("rename") },
-                { id: "copy", label: m.head.copyPath, disabled: directory === "", onSelect: copyPath },
-                { id: "delete", label: m.head.delete, danger: true, disabled: writeBlock !== undefined, onSelect: () => setDialog("delete") },
+                { id: "rename", label: t("head.rename"), disabled: writeBlock !== undefined, onSelect: () => setDialog("rename") },
+                { id: "copy", label: t("head.copyPath"), disabled: directory === "", onSelect: copyPath },
+                { id: "delete", label: t("head.delete"), danger: true, disabled: writeBlock !== undefined, onSelect: () => setDialog("delete") },
               ]}
             />
           </>
@@ -202,31 +219,31 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
         {directory === "" ? null : <span className="ac-mono-wrap ac-ellipsis sdd-mono" title={directory}>{directory}</span>}
         {tasks.length > 0 ? (
           <span className="sdd-inline" role="status">
-            <progress className="sdd-progress" max={tasks.length} value={done} aria-label={m.head.progress(done, tasks.length)} />
-            <span className="app-muted">{m.head.progress(done, tasks.length)}</span>
+            <progress className="sdd-progress" max={tasks.length} value={done} aria-label={t("head.progress", { done, total: tasks.length })} />
+            <span className="app-muted">{t("head.progress", { done, total: tasks.length })}</span>
           </span>
-        ) : syntax.data?.empty === true ? <span className="app-muted">{m.head.noSyntax}</span> : null}
+        ) : syntax.data?.empty === true ? <span className="app-muted">{t("head.noSyntax")}</span> : null}
         {stateCounts.map((s) => <ToneChip key={s.label} label={`${s.label} ${s.n}`} tone={s.tone} />)}
-        {view.automation_state?.enabled === true ? <ToneChip label={m.head.automationOn} tone="info" /> : null}
-        {viewQ.isFetching ? <span className="ac-sr-only" role="status">{m.refreshing}</span> : null}
+        {view.automation_state?.enabled === true ? <ToneChip label={t("head.automationOn")} tone="info" /> : null}
+        {viewQ.isFetching ? <span className="ac-sr-only" role="status">{t("refreshing")}</span> : null}
       </div>
       {ctx.readOnly ? (
         <div className="sdd-banner-row">
-          <div className="sdd-readonly-note" role="status" data-testid="sdd-readonly"><strong>{m.readonly.title}</strong> <span>{m.readonly.body}</span></div>
+          <div className="sdd-readonly-note" role="status" data-testid="sdd-readonly"><strong>{t("readonly.title")}</strong> <span>{t("readonly.body")}</span></div>
         </div>
       ) : null}
       {errorCount > 0 && active !== "rules" ? (
         <div className="sdd-banner-row">
-          <Banner tone="warning" actions={tabs.some((t) => t.id === "rules") ? <Button size="sm" onClick={() => goTab("rules")}>{m.openRules}</Button> : undefined}>{m.specIssues(errorCount)}</Banner>
+          <Banner tone="warning" actions={tabs.some((t) => t.id === "rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t("openRules")}</Button> : undefined}>{t("specIssues", { count: errorCount })}</Banner>
         </div>
       ) : null}
       <div className="sdd-screen-body">
-        {tabs.length === 0 || active === undefined ? <ErrorBlock title={m.loadFailed} /> : (
+        {tabs.length === 0 || active === undefined ? <ErrorBlock title={t("loadFailed")} /> : (
           <Tabs
             tabs={items}
             activeId={active}
             onChange={(next) => goTab(next)}
-            ariaLabel={m.tabsLabel}
+            ariaLabel={t("tabsLabel")}
             lazy
           />
         )}
@@ -234,9 +251,9 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
       {dialog === "export" ? (
         <SpecExportDialog open onClose={() => setDialog(null)} blockedReason={writeBlock} loadDirs={(path) => space.client.listImportFiles(path)} onSubmit={(body) => space.client.exportSpec(view.spec.id, body)} />
       ) : null}
-      <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
-      <ConfirmDialog open={dialog === "delete"} title={m.delete.title(specName)} confirmLabel={m.delete.confirm} cancelLabel={m.cancel} danger onConfirm={() => void remove()} onCancel={() => setDialog(null)}>
-        {m.delete.body(directory)}
+      <ConfirmDialog open={blocker.state === "blocked"} title={t("leave.title")} confirmLabel={t("leave.leave")} cancelLabel={t("leave.stay")} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{t("leave.body")}</ConfirmDialog>
+      <ConfirmDialog open={dialog === "delete"} title={t("delete.title", { name: specName })} confirmLabel={t("delete.confirm")} cancelLabel={t("cancel")} danger onConfirm={() => void remove()} onCancel={() => setDialog(null)}>
+        {directory === "" ? t("delete.bodyRoot") : t("delete.body", { path: directory })}
       </ConfirmDialog>
       {dialog === "rename" ? <SpecRenameDialog open initialName={view.spec.name} onClose={() => setDialog(null)} onSubmit={rename} /> : null}
     </div>

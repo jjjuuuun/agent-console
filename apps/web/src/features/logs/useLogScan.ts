@@ -1,11 +1,10 @@
-import { useCallback, useState } from "react";
+import { createElement, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@agent-console/ui";
 import type { LogScanReport, LogSourceInfo } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
 import { logKeys } from "./useLogsApi";
-import { logsMessages as t } from "./messages";
+import { LogsToast } from "./LogsToast";
 
 export interface LogScan {
   scanning: boolean;
@@ -31,14 +30,14 @@ export function useLogScan(sources?: readonly LogSourceInfo[], opts: { toast?: b
           if (failed.length > 0) {
             const first = failed[0];
             const title = sources?.find((s) => s.descriptor.id === first?.source_id)?.descriptor.title ?? first?.source_id ?? "";
-            toast({ tone: "warning", text: `${t.scanPartial(title, failed.length - 1)}${first?.message ? `: ${first.message}` : ""}` });
+            toast({ tone: "warning", text: createElement(LogsToast, { render: (t) => `${t.scanPartial(title, failed.length - 1)}${first?.message ? `: ${first.message}` : ""}` }) });
           } else {
-            toast({ tone: "success", text: t.scanDone(report.new_events ?? 0) });
+            toast({ tone: "success", text: createElement(LogsToast, { render: (t) => t.scanDone(report.new_events ?? 0) }) });
           }
         }
         return report;
       } catch (e) {
-        toast({ tone: "danger", text: describeError(e, t.scanFailed).message });
+        toast({ tone: "danger", text: createElement(LogsToast, { render: (t, d) => d(e, t.scanFailed).message }) });
         return undefined;
       } finally {
         setScanning(false);

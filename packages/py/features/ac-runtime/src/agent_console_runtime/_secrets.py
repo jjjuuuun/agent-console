@@ -73,7 +73,9 @@ class SecretResolver:
                 elif value and name not in self._warned:
                     self._warned.add(name)
                     _log.warning(
-                        "비밀 %r의 값이 %d자보다 짧아 기록에서 가리지 않습니다", name, self._min
+                        "Secret %r is shorter than %d characters, so it is not masked in records",
+                        name,
+                        self._min,
                     )
                 return value
         raise SecretNotFoundError(name)

@@ -30,6 +30,9 @@ runs = "agent_console_mod_runs.plugins:create_registries"
 [project.entry-points."agent_console.host_plugin_loaders"]
 runs = "agent_console_mod_runs.plugins:load_plugins"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-runs = "agent_console_mod_runs"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

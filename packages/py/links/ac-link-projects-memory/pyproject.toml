@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-projects-memory"
 version = "0.1.0"
-description = "Agent Console — 프로젝트·메모리 연동 모듈: 프로젝트 폴더의 memory.sqlite3를 열고 계보를 맞춰 메모리 모듈의 공간으로 준다"
+description = "Agent Console — projects and memory link module: opens memory.sqlite3 in a project folder, brings its lineage up to date, and gives it to the memory module as a space"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-projects-memory = "agent_console_link_projects_memory.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-projects-memory = "agent_console_link_projects_memory"
 
 [dependency-groups]
 dev = [

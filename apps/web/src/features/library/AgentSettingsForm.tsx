@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { contractsSchema, getContractSchema } from "@agent-console/contracts";
 import type { FormError, ProvenanceLayer, UiSchema } from "@agent-console/schema-form";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { useApiQuery } from "../../app/queries";
 import { setAt } from "../../lib/jsonPointer";
 import { enumValues, pickProperties, type SchemaNode } from "../../lib/schemaTools";
-import { LayerForm, useBackends, useResourceList, useResourceTypes, agentSchemaForBackend, buildAgentDefaultsUi } from "../settings";
-import { libraryMessages as t } from "./messages";
+import { LayerForm, useBackends, useResourceList, useResourceTypes, agentSchemaForBackend, buildAgentDefaultsUi, useUserSettingsText } from "../settings";
+import { useLibraryMessages } from "./messages";
 import { MODEL_WIDGET, ModelWidget, type ModelOptions } from "./ModelWidget";
 import { TAGS_FIELD, TagsField, type TagsOptions } from "./TagsField";
 
@@ -59,6 +59,9 @@ export function useBackendModels(backendId: string | null) {
  * 필드는 스키마에서 오고, 모델·백엔드·도구 위젯만 서버 데이터(백엔드 목록·모델 목록)로 채운다.
  */
 export function AgentSettingsForm(props: AgentSettingsFormProps) {
+  const m = useAppMessages();
+  const text = useUserSettingsText();
+  const t = useLibraryMessages();
   const { value, onChange, layers, editLayerId, backendId, hideKeys = NO_KEYS, ...rest } = props;
   const backends = useBackends();
   const resources = useResourceList();
@@ -79,7 +82,7 @@ export function AgentSettingsForm(props: AgentSettingsFormProps) {
       resourceTypes: types.data ?? [],
       attachmentModes: modes,
       layerLabel: layers.find((l) => l.id === editLayerId)?.label ?? "",
-    }) as Record<string, unknown>;
+    }, text) as Record<string, unknown>;
     const props = (schema["properties"] ?? {}) as Record<string, unknown>;
     if ("model" in props) {
       const options: ModelOptions = { models: models.data ?? [], failed: models.isError, emptyLabel: m.settings.unset, customLabel: t.agentForm.customModel, failedNote: t.agentForm.modelsFailed };
@@ -90,7 +93,7 @@ export function AgentSettingsForm(props: AgentSettingsFormProps) {
       if (key in props) out = setAt(out, `/${key}`, { "ui:field": TAGS_FIELD, "ui:options": tags }) as Record<string, unknown>;
     }
     return out as UiSchema;
-  }, [schema, backends.data, resources.data, types.data, modes, models.data, models.isError, layers, editLayerId]);
+  }, [schema, backends.data, resources.data, types.data, modes, models.data, models.isError, layers, editLayerId, t, text, m]);
 
   // 숨긴 키는 폼 값에서도 빼서 다시 합칠 때 잃지 않게 한다.
   const shown = useMemo(() => Object.fromEntries(Object.entries(value).filter(([k]) => !hideKeys.includes(k))), [value, hideKeys]);

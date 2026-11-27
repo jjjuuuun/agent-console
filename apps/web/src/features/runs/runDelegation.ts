@@ -1,13 +1,13 @@
 import type { EdgeTypeDescriptor, Graph, NodeRun, NodeTypeDescriptor, Run } from "@agent-console/contracts";
 import type { BindSummary, EdgeBadge } from "@agent-console/graph-editor";
-import { delegationMessages as dm, formatRunOrdinal, stringAt } from "../delegation";
+import { formatRunOrdinal, stringAt, type DelegationMessages } from "../delegation";
 import type { RunOverlay } from "./runsLib";
 import { siblingIndex } from "./runTree";
 
 /** 실행 상세 그래프에 얹는 반복·조건·실패 처리·중첩 팀 표시 계산(순수 함수). 판정은 디스크립터 속성(`cycle`)과 이벤트 결과(`RunOverlay`)로만 한다. */
 
 /** 연결 배지: 반복 연결 통과 횟수 `↻×k`, 한도 도달 `↻×k 한도 m회 도달`(warning), 조건이 맞지 않아 건너뜀 `✕`. 종류 패턴은 건드리지 않는다. */
-export function buildEdgeBadges(graph: Pick<Graph, "edges"> | undefined, edgeTypes: readonly EdgeTypeDescriptor[], overlay: Pick<RunOverlay, "edgeTraversals" | "exhausted" | "conditionSkipped">): Record<string, EdgeBadge[]> {
+export function buildEdgeBadges(graph: Pick<Graph, "edges"> | undefined, edgeTypes: readonly EdgeTypeDescriptor[], overlay: Pick<RunOverlay, "edgeTraversals" | "exhausted" | "conditionSkipped">, dm: DelegationMessages): Record<string, EdgeBadge[]> {
   const kinds = new Map(edgeTypes.map((e) => [e.id, e]));
   const out: Record<string, EdgeBadge[]> = {};
   for (const edge of graph?.edges ?? []) {
@@ -28,7 +28,7 @@ export function buildEdgeBadges(graph: Pick<Graph, "edges"> | undefined, edgeTyp
 }
 
 /** 한도 도달 줄: 출발 노드 카드 아래 "반복 한도에 도달했습니다 (한도 m회)". 노드 id → 문구. */
-export function exhaustedLines(graph: Pick<Graph, "edges"> | undefined, overlay: Pick<RunOverlay, "exhausted">): Record<string, string> {
+export function exhaustedLines(graph: Pick<Graph, "edges"> | undefined, overlay: Pick<RunOverlay, "exhausted">, dm: DelegationMessages): Record<string, string> {
   const out: Record<string, string> = {};
   for (const edge of graph?.edges ?? []) {
     if (!(edge.id in overlay.exhausted)) continue;
@@ -59,6 +59,8 @@ export function childForNodeRun(nodeId: string, runs: readonly NodeRun[], visibl
 }
 
 export interface NestedSummaryInput {
+  /** 현재 언어의 위임 문구 */
+  dm: DelegationMessages;
   nodes: Graph["nodes"];
   nodeTypes: readonly NodeTypeDescriptor[];
   /** 지금 화면의 정의 종류(`binds.kind`와 비교만 한다) */
@@ -74,6 +76,7 @@ export interface NestedSummaryInput {
 
 /** 중첩 노드 카드에 얹는 자식 실행 한 줄(`자식 실행 r-7c1b · 실행 중` + [열기 ↗]). 자식이 없으면 요약을 만들지 않는다. */
 export function nestedRunSummaries(i: NestedSummaryInput): Record<string, BindSummary> {
+  const { dm } = i;
   const types = new Map(i.nodeTypes.map((n) => [n.id, n]));
   const out: Record<string, BindSummary> = {};
   for (const node of i.nodes ?? []) {
@@ -97,8 +100,8 @@ export function nestedRunSummaries(i: NestedSummaryInput): Record<string, BindSu
 }
 
 /** 부모 노드 문구: 같은 노드에서 자식이 여럿이면 "검토 · 2회차". */
-export function childNodeText(children: readonly Run[], child: Run, nodeLabel: (id: string) => string): string {
+export function childNodeText(children: readonly Run[], child: Run, nodeLabel: (id: string) => string, dm: DelegationMessages): string {
   const label = child.parent_node_id == null ? "" : nodeLabel(child.parent_node_id);
   const { index, total } = siblingIndex(children, child);
-  return total > 1 ? dm.run.child.nodeIter(label, formatRunOrdinal(index, "iteration")) : label;
+  return total > 1 ? dm.run.child.nodeIter(label, formatRunOrdinal(index, "iteration", dm)) : label;
 }

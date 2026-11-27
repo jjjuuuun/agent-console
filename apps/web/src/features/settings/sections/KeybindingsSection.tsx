@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { computeEffectiveKeys, isPlainCharCombo, splitKeySequence, SEQUENCE_TIMEOUT_MS, useEffectiveShortcuts, type KeyPlatform } from "@agent-console/ui";
 import { Button } from "@agent-console/ui";
 import type { WorkspaceSettings } from "@agent-console/contracts";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { checkKeybinding, comboFromEvent, isPlainKeys } from "../../../lib/keybindings";
-import { shortcutKeysText, shortcutLabel } from "../../../shell/HelpDialog";
+import { useShortcutKeysText, useShortcutLabel } from "../../../shell/HelpDialog";
 import { useShortcutEnvironment } from "../../../shell/shortcutDefaults";
 import type { SectionEditProps } from "./FormSections";
 import { isImeKeyEvent } from "../../../lib/ime";
@@ -14,6 +14,7 @@ import { isImeKeyEvent } from "../../../lib/ime";
  * `Esc`는 취소.
  */
 export function KeyCapture({ platform, label, onCapture, onCancel }: { platform: KeyPlatform; label: string; onCapture: (keys: string) => void; onCancel: () => void }) {
+  const m = useAppMessages();
   const first = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -62,6 +63,9 @@ export function KeyCapture({ platform, label, onCapture, onCancel }: { platform:
 
 /** ③ 단축키 섹션 (`ui.keybindings`). 충돌·예약 키·수식키 필요는 경고만 하고 저장은 막지 않는다. */
 export function KeybindingsSection({ value, onChange, disabled }: SectionEditProps) {
+  const m = useAppMessages();
+  const shortcutLabel = useShortcutLabel();
+  const shortcutKeysText = useShortcutKeysText();
   const { defaultKeys, platform } = useShortcutEnvironment();
   const registered = useEffectiveShortcuts();
   const overrides = useMemo(() => (value.ui?.keybindings ?? {}) as Record<string, string>, [value.ui?.keybindings]);

@@ -436,7 +436,7 @@ class AgentNode:
         try:
             fix = fixer(error.code, ctx.graph, ctx.node.id)
         except Exception:  # 버튼 계산 실패가 실패 결과를 가리지 않게
-            _log.exception("노드 실패 해결 버튼 계산 실패: %s", error.code)
+            _log.exception("Computing fix buttons for a node failure failed: %s", error.code)
             return result
         if fix is None:
             return result
@@ -661,7 +661,7 @@ def _delegation_tool_names(strategy: Any, plan: DelegationPlan, ctx: NodeContext
         if isinstance(strategy, ComposableDelegation):
             return [t.name for t in strategy.contribute(plan, ctx).host_tools]
     except Exception:  # 이름을 몰라도 실행은 계속(방식의 run이 자기 오류를 낸다)
-        _log.debug("위임 도구 이름을 읽지 못했습니다: %s", plan.strategy, exc_info=True)
+        _log.debug("Could not read the delegation tool name: %s", plan.strategy, exc_info=True)
     return []
 
 

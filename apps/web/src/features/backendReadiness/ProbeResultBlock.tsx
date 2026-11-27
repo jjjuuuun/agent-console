@@ -1,9 +1,9 @@
 import type { BackendProbeResult } from "@agent-console/contracts";
 import { Banner } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { FixButtons } from "../../app/fix";
-import { formatRelative } from "../../lib/format";
 import type { ProbeView } from "./hooks";
+import { useFormat } from "../../i18n";
 
 export interface ProbeResultBlockProps {
   probe: Pick<ProbeView, "result" | "requestError" | "finishedAtMs" | "running">;
@@ -16,11 +16,13 @@ function detailLines(result: BackendProbeResult): string[] {
 
 /** 연결 테스트 결과: 성공은 한 줄 + 확인 정보, 실패는 ① 무슨 일 ② 해결 버튼 ③ 접힌 상세. 비밀 값은 서버가 걸러 준 문장만 쓴다. */
 export function ProbeResultBlock({ probe, nowMs }: ProbeResultBlockProps) {
+  const fmt = useFormat();
+  const m = useAppMessages();
   const t = m.backendReadiness;
   if (probe.running) return null;
   const { result, requestError } = probe;
   if (result === null && requestError === null) return null;
-  const when = formatRelative(probe.finishedAtMs === null ? null : probe.finishedAtMs / 1000, nowMs);
+  const when = fmt.relative(probe.finishedAtMs === null ? null : probe.finishedAtMs / 1000, nowMs);
   if (requestError !== null) {
     return (
       <Banner tone="danger" aria-label={t.probeResultLabel} data-testid="probe-result">

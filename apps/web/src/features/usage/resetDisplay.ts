@@ -1,7 +1,6 @@
-import { formatDateTime } from "../../lib/format";
-import { usageMessages as u } from "./messages";
-import { RESET_CLOCK_LOCALE, RESET_DATE_AFTER_SECONDS, RESET_WEEKDAY_WITHIN_DAYS } from "./usageConfig";
-import { formatRemaining } from "./usageLib";
+import type { Format } from "../../i18n";
+import type { UsageMessages } from "./messages";
+import { RESET_DATE_AFTER_SECONDS, RESET_WEEKDAY_WITHIN_DAYS } from "./usageConfig";
 
 /** 초기화 시각이 기준(`farAfterSeconds`)보다 먼 미래인가. */
 export function isFarReset(resetsAt: number, nowSec: number, farAfterSeconds: number = RESET_DATE_AFTER_SECONDS): boolean {
@@ -17,18 +16,20 @@ export function isFarReset(resetsAt: number, nowSec: number, farAfterSeconds: nu
 export function formatResetsPhrase(
   resetsAt: number,
   nowSec: number,
+  fmt: Pick<Format, "dateTimeFull" | "remaining">,
+  underMinute: string,
   relative: (remaining: string) => string,
   onDate: (date: string) => string,
   farAfterSeconds: number = RESET_DATE_AFTER_SECONDS,
 ): { text: string; far: boolean } {
-  if (isFarReset(resetsAt, nowSec, farAfterSeconds)) return { text: onDate(formatDateTime(resetsAt)), far: true };
-  return { text: relative(formatRemaining(resetsAt - nowSec)), far: false };
+  if (isFarReset(resetsAt, nowSec, farAfterSeconds)) return { text: onDate(fmt.dateTimeFull(resetsAt)), far: true };
+  return { text: relative(fmt.remaining(resetsAt - nowSec, underMinute)), far: false };
 }
 
 /** 카드·팝오버용 자세한 구절: 가까우면 "초기화까지 2시간 (절대 시각)", 기준보다 멀면 날짜만. */
-export function futureResetsText(resetsAt: number, nowSec: number): string {
-  const p = formatResetsPhrase(resetsAt, nowSec, u.cards.resets, u.cards.resetsOnDate);
-  return p.far ? p.text : `${p.text} ${u.cards.resetsAt(formatDateTime(resetsAt))}`;
+export function futureResetsText(resetsAt: number, nowSec: number, fmt: Format, u: UsageMessages): string {
+  const p = formatResetsPhrase(resetsAt, nowSec, fmt, u.cards.resetsUnderMinute, u.cards.resets, u.cards.resetsOnDate);
+  return p.far ? p.text : `${p.text} ${u.cards.resetsAt(fmt.dateTimeFull(resetsAt))}`;
 }
 
 export interface ResetClockText {
@@ -48,11 +49,11 @@ export function formatResetClock(
   resetsAt: number,
   nowSec: number,
   text: ResetClockText,
+  locale: string,
   weekdayWithinDays: number = RESET_WEEKDAY_WITHIN_DAYS,
-  locale: string = RESET_CLOCK_LOCALE,
 ): string {
   const at = new Date(resetsAt * 1000);
-  const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+  const time = at.toLocaleTimeString(locale, { timeStyle: "short" });
   if (sameDay(at, new Date(nowSec * 1000))) return text.today(time);
   const near = resetsAt - nowSec <= weekdayWithinDays * 86_400;
   const day = near ? at.toLocaleDateString(locale, { weekday: "long" }) : at.toLocaleDateString(locale, { month: "long", day: "numeric" });
@@ -65,17 +66,16 @@ export interface ResetLineText {
 }
 
 /** 카드 초기화 줄의 짧은 절대 시각: 같은 날 "오후 3:45", 같은 해 다른 날 "10/31(토) 오후 2:45", 다른 해 "2027. 1. 3. 오후 2:45". */
-export function formatShortClock(resetsAt: number, nowSec: number, locale: string = RESET_CLOCK_LOCALE): string {
+export function formatShortClock(resetsAt: number, nowSec: number, locale: string): string {
   const at = new Date(resetsAt * 1000);
   const now = new Date(nowSec * 1000);
-  const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+  const time = at.toLocaleTimeString(locale, { timeStyle: "short" });
   if (sameDay(at, now)) return time;
   if (at.getFullYear() !== now.getFullYear()) return `${at.toLocaleDateString(locale, { year: "numeric", month: "numeric", day: "numeric" })} ${time}`;
-  const wd = at.toLocaleDateString(locale, { weekday: "short" });
-  return `${at.getMonth() + 1}/${at.getDate()}(${wd}) ${time}`;
+  return `${at.toLocaleDateString(locale, { month: "numeric", day: "numeric", weekday: "short" })} ${time}`;
 }
 
 /** 미래 초기화의 한 줄 문구와 초 단위 전체 시각(title용). */
-export function formatResetLine(resetsAt: number, nowSec: number, text: ResetLineText): { text: string; full: string } {
-  return { text: text.line(formatRemaining(resetsAt - nowSec), formatShortClock(resetsAt, nowSec)), full: formatDateTime(resetsAt) };
+export function formatResetLine(resetsAt: number, nowSec: number, text: ResetLineText, fmt: Format, underMinute: string): { text: string; full: string } {
+  return { text: text.line(fmt.remaining(resetsAt - nowSec, underMinute), formatShortClock(resetsAt, nowSec, fmt.language)), full: fmt.dateTimeFull(resetsAt) };
 }

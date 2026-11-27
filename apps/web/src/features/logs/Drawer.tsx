@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { FOCUSABLE_SELECTOR, IconButton, trapTabKey, useModalBackdrop } from "@agent-console/ui";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 
 export interface DrawerProps {
   open: boolean;
@@ -19,6 +19,7 @@ export interface DrawerProps {
  * 닫으면 열기 전에 포커스가 있던 요소로 돌아간다(트리거가 사라졌으면 포커스를 두지 않는다).
  */
 export function Drawer({ open, title, onClose, children, width = 440, modal = true }: DrawerProps) {
+  const t = useLogsMessages();
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);

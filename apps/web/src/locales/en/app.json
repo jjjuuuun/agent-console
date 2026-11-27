@@ -1,0 +1,155 @@
+{
+  "backendChooser": {
+    "title": "Choose an execution backend",
+    "leadNone": "No backend is set to run the agent.",
+    "explain": "This setting decides how agents respond. Once you choose, the same message is sent again right away.",
+    "leadChange": "Change the execution backend currently in use.",
+    "explainChange": "This setting decides how agents respond. Choosing only changes the default; messages already sent are not sent again.",
+    "group": "Execution backend",
+    "saveNote": "The backend you pick is saved as the default in Settings › Agent defaults › Execution backend. You can change it later.",
+    "perNode": "To use a different one per node, set it on the node panel's Settings tab.",
+    "submit": "Choose and continue",
+    "submitting": "Saving and resending…",
+    "none": "No backend is available. Check the server settings and extensions.",
+    "saveFailed": "Couldn't save the backend",
+    "lead": "No backend is set to run '{list}'."
+  },
+  "backendReadiness": {
+    "sectionTitle": "Backend sign-in and readiness",
+    "sectionLead": "Shows whether each execution backend can be used right now. The status is read from settings and the environment only; no model is called.",
+    "loadFailed": "Couldn't check the backend status",
+    "recheck": "Check again",
+    "recheckBusy": "Checking…",
+    "checkedAt": "Checked: {when} (static check)",
+    "toneLabel": {
+      "ok": "Ready",
+      "warn": "Attention",
+      "error": "Problem",
+      "unknown": "Unknown"
+    },
+    "unknownSummary": "Can't be checked",
+    "checks": "Checks",
+    "probeButton": "Test connection",
+    "probeUnsupported": "This backend doesn't support connection tests",
+    "probeRunning": "Testing…",
+    "probeDialogTitle": "Test connection",
+    "probeDialogBody": "Sends one very short real request. It may cost a little in model usage.",
+    "probeDialogRun": "Run test",
+    "probeDialogCancel": "Cancel",
+    "probeDialogRemember": "Don't ask again",
+    "probePassed": "Test passed",
+    "probePassedAgo": "Passed {when}",
+    "probeOk": "Connected — responded in {seconds}s",
+    "probeOkNoTime": "Connected",
+    "probeCheckedAt": "Checked: {when}",
+    "probeFailedTitle": "Connection test failed",
+    "probeRequestFailed": "Couldn't send the connection test request",
+    "probeDetails": "Details",
+    "probeReason": "Reason code",
+    "probeResultLabel": "Connection test result",
+    "chooserWarn": "This backend needs sign-in. Fix that before using it.",
+    "chipLabel": "{title} status: {summary}",
+    "fixesLabel": "How to fix"
+  },
+  "textDiff": {
+    "unchangedLines": "$ unchanged lines — expand",
+    "split": "Side by side",
+    "unified": "Unified",
+    "toolbar": "Diff view mode",
+    "before": "Before",
+    "after": "After"
+  },
+  "notifications": {
+    "test": {
+      "body": "This is a test notification"
+    },
+    "request": "Request browser notification permission",
+    "sendTest": "Send test notification",
+    "hearSound": "Play sound",
+    "needPermission": "Allow permission to receive notifications",
+    "soundLocked": "Sound plays after you click this page once",
+    "eventsEmpty": "When empty, no notifications are sent",
+    "eventsAdd": "Add event name",
+    "eventsAddButton": "Add",
+    "eventsRemove": "Remove {name}",
+    "eventsList": "Events to notify",
+    "live": {
+      "permissionChanged": "Notification permission: {label}"
+    },
+    "grant": {
+      "unsupported": "Notifications aren't available in this browser or at this address",
+      "insecure": "Only works over https or on localhost",
+      "default": "Not allowed yet",
+      "granted": "Allowed",
+      "denied": "Blocked by the browser",
+      "deniedHelp": "Allow notifications for this address in the browser's site settings, then reload",
+      "label": "Notification permission in this browser"
+    }
+  },
+  "definition": {
+    "attachProblems": {
+      "label": "Attachment errors",
+      "masked": "A secret value is masked (***). Replace it with a secret reference (secret://name) to save."
+    },
+    "saved": "Saved",
+    "dirty": "Unsaved",
+    "saving": "Saving…",
+    "failed": "Save failed",
+    "retry": "Retry",
+    "savedToast": "Saved",
+    "missingVersion": "No save info. Reload.",
+    "issues": {
+      "title": "Saved, but there are warnings to review",
+      "region": "Save warnings",
+      "pathIndex": "#{n}"
+    },
+    "conflict": {
+      "region": "Save conflict",
+      "title": "It was changed elsewhere first",
+      "body": "To save your changes, load the server version or overwrite it with your changes.",
+      "savedAt": "Server modified {when}",
+      "loadServer": "Load server version",
+      "saveCopy": "Save my changes as a copy",
+      "overwrite": "Overwrite with my changes",
+      "loadServerTitle": "Load the server version",
+      "loadServerBody": "Unsaved changes on this screen will be lost.",
+      "overwriteTitle": "Overwrite the server version",
+      "overwriteBody": "Changes made elsewhere will be replaced by yours.",
+      "saveDisabled": "Resolve the conflict to save"
+    },
+    "unsaved": {
+      "title": "You have unsaved changes",
+      "body": "If you leave this screen, your changes will be lost.",
+      "stay": "Stay",
+      "leave": "Discard changes"
+    }
+  },
+  "hints": {
+    "dismiss": "Dismiss tip"
+  },
+  "severity": {
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "errorByCode": {
+    "project": {
+      "config_readonly": "This folder is read-only, so the configuration couldn't be imported, edited or deleted",
+      "memory_unavailable": "The memory of this project folder can't be opened. The server may have been updated, or the folder's memory store may be a newer version"
+    }
+  },
+  "issueValidators": {
+    "pattern": "Invalid format",
+    "required": "A required field is empty",
+    "anyOf": "Not an allowed shape",
+    "oneOf": "Not an allowed shape",
+    "type": "Invalid value type",
+    "enum": "Not an allowed value",
+    "minLength": "Too short",
+    "maxLength": "Too long",
+    "minItems": "Not enough items",
+    "maxItems": "Too many items",
+    "minimum": "Value is too small",
+    "maximum": "Value is too large"
+  }
+}

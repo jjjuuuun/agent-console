@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-resources"
 version = "0.1.0"
-description = "Agent Console — 리소스 종류(X14) 등록·선언형 종류 로더·첨부 층 병합·실행 묶음 조립"
+description = "Agent Console — resource kind (X14) registration, declarative kind loader, attachment layer merging, and run bundle assembly"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
     "ruamel-yaml>=0.18",
     "referencing>=0.28",
 ]
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-resources = "agent_console_resources"
 
 [dependency-groups]
 dev = [

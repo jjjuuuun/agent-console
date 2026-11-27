@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-edges"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 접두어 붙여 넘기기 연결 종류(example.relay)"
+description = "Agent Console example extension — an edge type that passes text on with a prefix (example.relay)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -26,6 +26,12 @@ const schema = {
 };
 
 describe("translateSchema", () => {
+  it("문자열 x-ui.example은 옮기고 문자열이 아닌 예시는 그대로 둔다", () => {
+    const out = translateSchema({ type: "object", properties: { a: { type: "string", "x-ui": { example: "이름" } }, b: { type: "number", "x-ui": { example: 3 } } } }, (x) => (x === "이름" ? "Name" : x)) as { properties: Record<string, { "x-ui": { example: unknown } }> };
+    expect(out.properties["a"]?.["x-ui"].example).toBe("Name");
+    expect(out.properties["b"]?.["x-ui"].example).toBe(3);
+  });
+
   it("제목·설명·x-ui 문구·가지 이름만 바꾸고 기본값·enum·속성 이름은 그대로 둔다", () => {
     const out = translateSchema(schema, t) as typeof schema;
     expect(out.properties.name.title).toBe("Name");
@@ -55,5 +61,14 @@ describe("SchemaForm translate", () => {
     rerender(<SchemaForm schema={schema} value={{}} onChange={() => undefined} xui={false} translate={t} />);
     expect(screen.getAllByText("Name").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("이름")).toEqual([]);
+  });
+});
+
+describe("translateUiSchema: React 요소", () => {
+  it("순환 참조가 있는 React 요소는 복사하지 않고 그대로 둔다", () => {
+    const element = { $$typeof: Symbol.for("react.transitional.element"), props: {}, _owner: {} as Record<string, unknown> };
+    element._owner["self"] = element;
+    const out = translateUiSchema({ mode: { "ui:options": { previews: { a: element } } } }, t) as { mode: { "ui:options": { previews: { a: unknown } } } };
+    expect(out.mode["ui:options"].previews.a).toBe(element);
   });
 });

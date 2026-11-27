@@ -8,31 +8,44 @@ import data from "./wikiData.json";
 import display from "./wikiDisplay.json";
 import { buildWikiDisplay, importStatusDisplay, severityTone } from "./wikiConfig";
 import { classifyWikiError } from "./wikiErrors";
-import { localizeIssue, wikiEventSummary, wikiIssueText } from "../../app/wikiIssueMessages";
+import type { ServerText, Translate } from "@agent-console/i18n";
+import type { MaybeTranslate } from "../../i18n/useMaybeT";
+import koWiki from "../../locales/ko/wiki.json";
+import { localizeIssue, wikiEventSummary, wikiIssueText } from "./wikiIssueText";
 import { routeWordOf } from "./PageDialogs";
 import { filterWikis } from "./WikiListScreen";
 import { lintBadge } from "./WikiScreen";
 import { buildWikiShortcuts, WIKI_SHORTCUT_DEFS } from "./wikiShortcuts";
 
+/** 한국어 묶음을 읽는 번역 함수(앱 i18n 없이 값만 확인한다). */
+const tm: MaybeTranslate = (key) => {
+  const v = key.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], koWiki);
+  return typeof v === "string" ? v : undefined;
+};
+const t: Translate = Object.assign((key: string) => tm(key) ?? key, { language: "ko" });
+/** 서버 코드 묶음(계약 ko 묶음)을 읽는 서버 문구 조회. */
+const serverCodes = (JSON.parse(readFileSync(join(resolve(__dirname, "../../../../.."), "packages/py/base/ac-contracts/src/agent_console_contracts/locales/ko.json"), "utf8")) as { codes: Record<string, string> }).codes;
+const server: ServerText = { text: (x) => x, issue: (code, _details, fallback) => serverCodes[code] ?? fallback };
+
 const err = (status: number, code: string, details: Record<string, unknown> = {}, message = "서버 문장") => new ApiError(status, { code, message, details });
 
 describe("오류 분류", () => {
   it("규칙 거부는 서버가 준 규칙 id·메시지·줄을 그대로 담는다", () => {
-    expect(classifyWikiError(err(422, "wiki.rule_rejected", { rule_id: "r-임의", message: "금지", lines: [3, 4] }), "x")).toEqual({ kind: "ruleRejected", ruleId: "r-임의", message: "금지", lines: [3, 4] });
+    expect(classifyWikiError(err(422, "wiki.rule_rejected", { rule_id: "r-임의", message: "금지", lines: [3, 4] }), "x", t)).toEqual({ kind: "ruleRejected", ruleId: "r-임의", message: "금지", lines: [3, 4] });
   });
   it("비밀 거부는 줄 번호만(값 없음), 크기 초과는 한도, 404는 기록 유무", () => {
-    expect(classifyWikiError(err(422, "wiki.secret_rejected", { issues: [{ details: { lines: [2] } }] }), "x")).toMatchObject({ kind: "secretRejected", lines: [2] });
-    expect(classifyWikiError(err(422, "wiki.too_large", { limit: 1024 }), "x")).toMatchObject({ kind: "tooLarge", limit: 1024 });
-    expect(classifyWikiError(err(404, "wiki.page_not_found", { path: "a", has_history: true }), "x")).toEqual({ kind: "pageNotFound", hasHistory: true });
-    expect(classifyWikiError(err(404, "wiki.page_not_found", { path: "a" }), "x")).toEqual({ kind: "pageNotFound", hasHistory: false });
+    expect(classifyWikiError(err(422, "wiki.secret_rejected", { issues: [{ details: { lines: [2] } }] }), "x", t)).toMatchObject({ kind: "secretRejected", lines: [2] });
+    expect(classifyWikiError(err(422, "wiki.too_large", { limit: 1024 }), "x", t)).toMatchObject({ kind: "tooLarge", limit: 1024 });
+    expect(classifyWikiError(err(404, "wiki.page_not_found", { path: "a", has_history: true }), "x", t)).toEqual({ kind: "pageNotFound", hasHistory: true });
+    expect(classifyWikiError(err(404, "wiki.page_not_found", { path: "a" }), "x", t)).toEqual({ kind: "pageNotFound", hasHistory: false });
   });
   it("연동 꺼짐·충돌·기록 없음·프로젝트 문제·모르는 코드", () => {
-    expect(classifyWikiError(err(409, "wiki.spaces_unavailable"), "x").kind).toBe("unavailable");
-    expect(classifyWikiError(err(412, "version_conflict"), "x").kind).toBe("conflict");
-    expect(classifyWikiError(err(409, "wiki.history_unavailable"), "x").kind).toBe("historyUnavailable");
-    expect(classifyWikiError(err(409, "project.config_readonly"), "x").kind).toBe("problem");
-    expect(classifyWikiError(err(500, "뭔가"), "x")).toMatchObject({ kind: "generic", code: "뭔가" });
-    expect(classifyWikiError(new Error("끊김"), "x")).toEqual({ kind: "generic", message: "끊김" });
+    expect(classifyWikiError(err(409, "wiki.spaces_unavailable"), "x", t).kind).toBe("unavailable");
+    expect(classifyWikiError(err(412, "version_conflict"), "x", t).kind).toBe("conflict");
+    expect(classifyWikiError(err(409, "wiki.history_unavailable"), "x", t).kind).toBe("historyUnavailable");
+    expect(classifyWikiError(err(409, "project.config_readonly"), "x", t).kind).toBe("problem");
+    expect(classifyWikiError(err(500, "뭔가"), "x", t)).toMatchObject({ kind: "generic", code: "뭔가" });
+    expect(classifyWikiError(new Error("끊김"), "x", t)).toEqual({ kind: "generic", message: "끊김" });
   });
 });
 
@@ -46,19 +59,19 @@ describe("표시 표(wikiDisplay.json)", () => {
     expect(Object.keys(display.importStatuses).sort()).toEqual(values(KNOWN_WIKI_IMPORT_STATUSES).sort());
   });
   it("점검 코드 표는 서버 이슈 코드(이름공간이 붙은 코드)로도 같은 항목을 찾는다", () => {
-    const d = buildWikiDisplay();
+    const d = buildWikiDisplay(tm);
     expect(resolveDisplay(d.codes, KNOWN_ISSUE_CODES.WIKI_BROKEN_LINK)).toMatchObject({ label: "끊긴 링크", known: true });
     expect(resolveDisplay(d.codes, KNOWN_WIKI_LINT_CODES.ORPHAN)).toMatchObject({ label: "고아 페이지", known: true });
     expect(resolveDisplay(d.codes, KNOWN_ISSUE_CODES.WIKI_ORPHAN)).toMatchObject({ label: "고아 페이지", known: true });
     expect(resolveDisplay(d.codes, "wiki.rule_violation")).toMatchObject({ label: "wiki.rule_violation", known: false });
   });
   it("모르는 동작·종류·상태는 원문 + 중립으로 떨어진다", () => {
-    const d = buildWikiDisplay();
+    const d = buildWikiDisplay(tm);
     expect(resolveDisplay(d.ops, "update")).toMatchObject({ label: "수정", known: true });
     expect(resolveDisplay(d.ops, "zap")).toMatchObject({ label: "zap", tone: "neutral", known: false });
     expect(authorLabel({ kind: "robot" }, d)).toBe("robot");
     expect(authorLabel({ kind: "agent", agent_id: "ag", label: "이름" }, d)).toBe("이름");
-    expect(importStatusDisplay("뭔가")).toEqual({ tone: "neutral", label: "뭔가" });
+    expect(importStatusDisplay("뭔가", tm)).toEqual({ tone: "neutral", label: "뭔가" });
     expect(severityTone("purple")).toBe("neutral");
   });
 });
@@ -66,9 +79,9 @@ describe("표시 표(wikiDisplay.json)", () => {
 describe("순수 함수", () => {
   it("위키 목록 거르기·정렬: 이름·설명·id 부분 일치, 한국어 이름 순", () => {
     const list = [{ id: "b", name: "나", description: "두번째" }, { id: "a", name: "가" }, { id: "c", name: "다 노트" }];
-    expect(filterWikis(list, "").map((w) => w.id)).toEqual(["a", "b", "c"]);
-    expect(filterWikis(list, "노트").map((w) => w.id)).toEqual(["c"]);
-    expect(filterWikis(list, "두번").map((w) => w.id)).toEqual(["b"]);
+    expect(filterWikis(list, "", "ko").map((w) => w.id)).toEqual(["a", "b", "c"]);
+    expect(filterWikis(list, "노트", "ko").map((w) => w.id)).toEqual(["c"]);
+    expect(filterWikis(list, "두번", "ko").map((w) => w.id)).toEqual(["b"]);
   });
   it("주소와 겹쳐 읽을 수 없는 이름은 새 경로 입력에서 알린다", () => {
     expect(routeWordOf("a/history")).toBe("history");
@@ -110,22 +123,24 @@ describe("noHardcoding: 위키 화면 코드", () => {
     }
     expect(hits).toEqual([]);
   });
-  it("위키 이름·페이지 경로 예시가 문구 표에 없다", () => {
-    const text = readFileSync(join(dir, "messages.ts"), "utf8");
-    expect(text).not.toMatch(/decisions\/|notes\/|payments/);
+  it("위키 이름·페이지 경로 예시가 문구 묶음(ko·en)에 없다", () => {
+    for (const lang of ["ko", "en"]) {
+      const text = readFileSync(join(dir, "../../locales", lang, "wiki.json"), "utf8");
+      expect(text, lang).not.toMatch(/decisions\/|notes\/|payments/);
+    }
   });
 });
 
 
 describe("위키 이슈 코드 문구 표(FU.20)", () => {
   it("알려진 코드는 표 문구, 모르는 코드는 서버 message", () => {
-    expect(wikiIssueText(KNOWN_ISSUE_CODES.WIKI_REDACTED_CONTENT, "원문")).toContain("가린 비밀 표시");
-    expect(wikiIssueText("wiki.something_new", "서버 문장")).toBe("서버 문장");
-    expect(localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE, message: "x", severity: "warning" }).message).toContain("제목 출처");
-    expect(localizeIssue({ code: "other", message: "x" }).message).toBe("x");
+    expect(wikiIssueText(KNOWN_ISSUE_CODES.WIKI_REDACTED_CONTENT, "원문", server)).toContain("가린 비밀 표시");
+    expect(wikiIssueText("wiki.something_new", "서버 문장", server)).toBe("서버 문장");
+    expect(localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE, message: "x", severity: "warning" }, server).message).toContain("제목 출처");
+    expect(localizeIssue({ code: "other", message: "x" }, server).message).toBe("x");
   });
   it("실행 이벤트 요약은 사유 코드가 표에 있을 때만 바꾼다", () => {
-    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" })).toContain("가린 줄을 직접 고치세요");
-    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.secret_rejected" })).toBeUndefined();
+    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" }, server)).toContain("가린 줄을 직접 고치세요");
+    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.secret_rejected" }, server)).toBeUndefined();
   });
 });

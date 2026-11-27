@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-memory-scope"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 메모리 계산 범위 종류 플러그인(ISO 주차)"
+description = "Agent Console example extension — a memory scope kind plugin (ISO week)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

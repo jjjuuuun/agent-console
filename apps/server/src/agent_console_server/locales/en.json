@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "plugin_load_failed": "Couldn't load the plugin.",
+    "plugins.config": "There is a problem with the plugin settings.",
+    "settings.removed_key": "The settings file has a removed key. Move it to the new location as described."
+  }
+}

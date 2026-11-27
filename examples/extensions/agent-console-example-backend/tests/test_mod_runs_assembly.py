@@ -189,7 +189,7 @@ def test_removed_backend_disappears_and_warns(
         assert client.get(f"{API}/backends/{BACKEND_ID}/models").status_code == 404
         # 남은 설치자 설정: 서버는 시작하고 경고만 남긴다.
         assert any(
-            BACKEND_ID in r.getMessage() and "등록되어 있지 않습니다" in r.getMessage()
+            BACKEND_ID in r.getMessage() and "is not registered" in r.getMessage()
             for r in caplog.records
         )
         # 이 백엔드를 고른 에이전트: 노드가 "등록되지 않은 실행 백엔드"로 실패한다(나머지는 정상).

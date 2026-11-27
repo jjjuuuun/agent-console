@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-wiki-search"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 메모리 안 낱말 역색인 위키 검색 방식(example-inverted)"
+description = "Agent Console example extension — an in-memory inverted word index wiki search method (example-inverted)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

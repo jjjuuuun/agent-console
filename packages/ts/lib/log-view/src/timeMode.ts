@@ -1,4 +1,3 @@
-import { fullTimeTitle } from "./format";
 import type { Formatters } from "./types";
 
 /**
@@ -32,9 +31,9 @@ export interface EventTimeText {
  * 이벤트 시각 한 칸의 글자. 기록된 시각(`epochSeconds`)이 없으면 null이다 — 경과 시각 등으로 대신하지 않는다.
  * `elapsed`에서 기준 시각(`origin`)이 없으면 null.
  */
-export function formatEventTime(mode: TimeMode, epochSeconds: number | null | undefined, origin: number | null | undefined, formatters: Pick<Formatters, "absoluteTime" | "dateTime" | "relativeTime">): EventTimeText | null {
+export function formatEventTime(mode: TimeMode, epochSeconds: number | null | undefined, origin: number | null | undefined, formatters: Pick<Formatters, "absoluteTime" | "dateTime" | "relativeTime" | "fullTime">): EventTimeText | null {
   if (epochSeconds == null) return null;
   if (mode === "elapsed" && origin == null) return null;
   const text = mode === "datetime" ? formatters.dateTime(epochSeconds) : mode === "time" ? formatters.absoluteTime(epochSeconds) : formatters.relativeTime((epochSeconds - (origin as number)) * 1000);
-  return { text, title: fullTimeTitle(epochSeconds) };
+  return { text, title: formatters.fullTime(epochSeconds) };
 }

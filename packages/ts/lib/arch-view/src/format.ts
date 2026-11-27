@@ -34,18 +34,23 @@ export interface FormatMetricOptions {
   compact?: boolean;
   /** 칸 줄 우선 순서를 정하는 지표 종류 표(기본 `defaultMetricKinds`). */
   kinds?: Readonly<Record<string, MetricKindSpec>>;
+  /** 숫자 자릿수 표기 로캘(BCP 47, 보통 화면 언어). 생략하면 `DEFAULT_NUMBER_LOCALE`("en-US"). */
+  locale?: string;
 }
 
 const trim1 = (n: number): string => (Math.round(n * 10) / 10).toString();
 
-/** 천 단위 쉼표 정수. */
-export function groupDigits(n: number): string {
-  return Math.round(n).toLocaleString("en-US");
+/** 로캘을 안 주었을 때의 숫자 표기 기준(환경 로캘에 기대지 않는다). */
+export const DEFAULT_NUMBER_LOCALE = "en-US";
+
+/** 자릿수 구분 정수(`locale` 규칙, 생략하면 `DEFAULT_NUMBER_LOCALE`). */
+export function groupDigits(n: number, locale: string = DEFAULT_NUMBER_LOCALE): string {
+  return Math.round(n).toLocaleString(locale);
 }
 
 /** `12.4k` 같은 약식 수. 1,000 미만은 정수 그대로. */
-export function abbreviateNumber(n: number): string {
-  return Math.abs(n) < 1000 ? groupDigits(n) : `${trim1(n / 1000)}k`;
+export function abbreviateNumber(n: number, locale: string = DEFAULT_NUMBER_LOCALE): string {
+  return Math.abs(n) < 1000 ? groupDigits(n, locale) : `${trim1(n / 1000)}k`;
 }
 
 /** 밀리초를 `340ms`·`1.2s`로. */
@@ -61,6 +66,7 @@ export function formatDurationMs(ms: number, messages: ArchViewMessages = resolv
  */
 export function formatMetric(metric: ArchitectureMetric, messages: ArchViewMessages = resolveMessages(), options: FormatMetricOptions = {}): MetricText {
   const name = options.name ?? "";
+  const locale = options.locale ?? DEFAULT_NUMBER_LOCALE;
   const spec = options.kinds?.[name] ?? defaultMetricKinds[name];
   const kind = options.kind ?? spec?.kind ?? "number";
   const alwaysInferred = options.inferred ?? spec?.inferred ?? false;
@@ -76,21 +82,21 @@ export function formatMetric(metric: ArchitectureMetric, messages: ArchViewMessa
   let long: string;
   switch (kind) {
     case "times": {
-      const n = options.compact && value >= 10_000 ? abbreviateNumber(value) : groupDigits(value);
+      const n = options.compact && value >= 10_000 ? abbreviateNumber(value, locale) : groupDigits(value, locale);
       text = options.compact ? n : formatMessage(messages.metricCount, { n });
-      aria = formatMessage(messages.metricCount, { n: groupDigits(value) });
-      long = `${label} ${groupDigits(value)}`;
+      aria = formatMessage(messages.metricCount, { n: groupDigits(value, locale) });
+      long = `${label} ${groupDigits(value, locale)}`;
       break;
     }
     case "failures":
-      text = formatMessage(messages.metricErrors, { n: groupDigits(value) });
+      text = formatMessage(messages.metricErrors, { n: groupDigits(value, locale) });
       aria = text;
       long = text;
       break;
     case "tokenCount":
-      text = abbreviateNumber(value);
+      text = abbreviateNumber(value, locale);
       aria = formatMessage(messages.metricTokens, { n: text });
-      long = formatMessage(messages.metricTokens, { n: groupDigits(value) });
+      long = formatMessage(messages.metricTokens, { n: groupDigits(value, locale) });
       break;
     case "millis":
       text = formatDurationMs(value, messages);
@@ -98,7 +104,7 @@ export function formatMetric(metric: ArchitectureMetric, messages: ArchViewMessa
       long = formatMessage(messages.metricDuration, { n: text });
       break;
     default:
-      text = groupDigits(value);
+      text = groupDigits(value, locale);
       aria = `${label} ${text}`.trim();
       long = aria;
   }
@@ -124,14 +130,14 @@ function nameOf(kind: MetricKindSpec["kind"], name: string, m: ArchViewMessages)
 export function metricPieces(
   metrics: Readonly<Record<string, ArchitectureMetric>> | undefined,
   messages: ArchViewMessages = resolveMessages(),
-  options: { compact?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; only?: readonly string[] } = {},
+  options: { compact?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; only?: readonly string[]; locale?: string } = {},
 ): MetricText[] {
   if (!metrics) return [];
   const kinds = options.kinds ?? defaultMetricKinds;
   const known = Object.keys(kinds);
   const names = Object.keys(metrics).filter((n) => !options.only || options.only.includes(n));
   const ordered = [...names.filter((n) => known.includes(n)).sort((a, b) => known.indexOf(a) - known.indexOf(b)), ...names.filter((n) => !known.includes(n))];
-  return ordered.map((n) => formatMetric(metrics[n] as ArchitectureMetric, messages, { name: n, kinds, compact: options.compact }));
+  return ordered.map((n) => formatMetric(metrics[n] as ArchitectureMetric, messages, { name: n, kinds, compact: options.compact, ...(options.locale === undefined ? {} : { locale: options.locale }) }));
 }
 
 /**

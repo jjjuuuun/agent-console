@@ -34,7 +34,7 @@ __all__ = [
 ]
 
 FIELD_VARIABLE_PREFIX = "task_field_"
-"""작업 필드 변수 접두(`task_field_<필드>`). 필드 이름은 데이터라 어떤 이름이든 이 접두로 쓴다."""
+"""작업 필드 변수 접두(`task_field_<field>`). 필드 이름은 데이터라 어떤 이름이든 이 접두로 쓴다."""
 
 _NON_WORD = re.compile(r"\W")
 _DRIVE = re.compile(r"^[A-Za-z]:")
@@ -67,7 +67,7 @@ def document_variable(document_id: str) -> str:
 
 
 def field_variable(field: str) -> str:
-    """작업 필드 변수 이름(`task_field_<필드>`, `\\w` 밖 글자는 `_`)."""
+    """작업 필드 변수 이름(`task_field_<field>`, `\\w` 밖 글자는 `_`)."""
     return f"{FIELD_VARIABLE_PREFIX}{_word(field)}"
 
 
@@ -79,16 +79,16 @@ def run_input_variables(
     Args:
         documents: 문서 목록(문서마다 `doc_<id>_file`).
         fields: 이름을 미리 보일 작업 필드(예: 문법 `roles`의 필드). 다른 필드도
-            `task_field_<필드>`로 쓸 수 있다.
+            `task_field_<field>`로 쓸 수 있다.
 
     Returns:
-        고정 변수 → `task_field_<필드>` 안내 → 주어진 필드 → 문서 파일 순서.
+        고정 변수 → `task_field_<field>` 안내 → 주어진 필드 → 문서 파일 순서.
     """
     out = [TemplateVariable(name=n, description=d, example=e) for n, d, e in _FIXED]
     out.append(
         TemplateVariable(
-            name=f"{FIELD_VARIABLE_PREFIX}<필드>",
-            description="작업 줄의 [필드: 값] 값입니다. <필드> 자리에 필드 이름을 씁니다.",
+            name=f"{FIELD_VARIABLE_PREFIX}<field>",
+            description="작업 줄의 [필드: 값] 값입니다. <field> 자리에 필드 이름을 씁니다.",
             example=f"{FIELD_VARIABLE_PREFIX}owner",
         )
     )

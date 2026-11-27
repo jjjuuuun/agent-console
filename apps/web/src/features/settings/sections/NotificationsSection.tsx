@@ -3,7 +3,7 @@ import { getDefaultValue, type JsonSchema, type UiSchema } from "@agent-console/
 import { AppSchemaForm } from "../../../i18n";
 import { getContractSchema, type NotificationSettings, type WorkspaceSettings } from "@agent-console/contracts";
 import { Banner, Button } from "@agent-console/ui";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages, type AppMessages } from "../../../app/appMessages";
 import { resolveNotifySettings, useNotifications, type PermissionState } from "../../notifications";
 import { STRING_TAGS_FIELD, StringTagsField } from "../widgets/StringTagsField";
 import type { SectionEditProps } from "./FormSections";
@@ -12,8 +12,8 @@ const FIELDS = { [STRING_TAGS_FIELD]: StringTagsField };
 const TONES = { unsupported: "info", default: "warning", granted: "success", denied: "danger" } as const;
 
 /** 권한 상태 -> 표시 문구. */
-function permissionText(p: PermissionState): string {
-  return m.notifications.permission[p];
+function permissionText(p: PermissionState, m: AppMessages): string {
+  return m.notifications.grant[p];
 }
 
 /**
@@ -41,6 +41,7 @@ export interface NotificationsEditorProps {
  * 권한 상태 줄은 설정이 아니라 이 브라우저의 상태이며, 권한 요청·테스트 알림·소리 듣기는 클릭에서만 일어난다.
  */
 export function NotificationsEditor({ value, onChange, errors, disabled }: NotificationsEditorProps) {
+  const m = useAppMessages();
   const api = useNotifications();
   // 알려지지 않은 키를 더하는 입력은 숨긴다(계약의 확장 허용은 저장 값 보존용). 제목·설명은 섹션 머리가 맡는다.
   const schema = useMemo(() => {
@@ -62,7 +63,7 @@ export function NotificationsEditor({ value, onChange, errors, disabled }: Notif
       setLive(m.notifications.needPermission);
     }
     prevEnabled.current = settings.enabled;
-  }, [settings.enabled, api.permission]);
+  }, [settings.enabled, api.permission, m]);
 
   const suggestions = useMemo(() => {
     const examples = ((schema as { properties?: { events?: { examples?: unknown } } }).properties?.events?.examples ?? []) as unknown[];
@@ -71,19 +72,19 @@ export function NotificationsEditor({ value, onChange, errors, disabled }: Notif
   }, [schema, api.observedEvents]);
   const uiSchema = useMemo<UiSchema>(
     () => ({ events: { "ui:field": STRING_TAGS_FIELD, "ui:options": { suggestions, emptyNote: m.notifications.eventsEmpty } } }),
-    [suggestions],
+    [suggestions, m],
   );
 
   const p = api.permission;
   return (
     <div className="app-notifications" data-enabled={settings.enabled ? "true" : "false"}>
-      <div className="app-notify-status" role="status" aria-label={m.notifications.permission.label}>
+      <div className="app-notify-status" role="status" aria-label={m.notifications.grant.label}>
         <Banner
           tone={TONES[p]}
           role="status"
           actions={
             p === "default" ? (
-              <Button ref={requestRef} size="sm" onClick={() => void api.requestPermission().then((next) => setLive(m.notifications.live.permissionChanged(permissionText(next))))}>
+              <Button ref={requestRef} size="sm" onClick={() => void api.requestPermission().then((next) => setLive(m.notifications.live.permissionChanged(permissionText(next, m))))}>
                 {m.notifications.request}
               </Button>
             ) : p === "granted" ? (
@@ -93,9 +94,9 @@ export function NotificationsEditor({ value, onChange, errors, disabled }: Notif
             ) : undefined
           }
         >
-          {permissionText(p)}
-          {p === "unsupported" && api.insecureContext ? <span className="app-muted"> {m.notifications.permission.insecure}</span> : null}
-          {p === "denied" ? <span className="app-muted"> {m.notifications.permission.deniedHelp}</span> : null}
+          {permissionText(p, m)}
+          {p === "unsupported" && api.insecureContext ? <span className="app-muted"> {m.notifications.grant.insecure}</span> : null}
+          {p === "denied" ? <span className="app-muted"> {m.notifications.grant.deniedHelp}</span> : null}
         </Banner>
       </div>
       <span className="ac-sr-only" role="status" aria-live="polite">{live}</span>

@@ -68,6 +68,8 @@ Run view: `<GraphEditor readOnly graph=… nodeTypes=… edgeTypes=… nodeState
 | `canvasActions` | Slot for the toolbar at the top left of the canvas (a button like the app's [+ Add ▾]). Not drawn when read-only |
 | `showMinimap`, `onShowMinimapChange` | Minimap (140x96, bottom right). Passing `onShowMinimapChange` adds a toggle icon at the bottom right (controlled; the app decides the default on or off) |
 | `paletteOverlay`, `paletteOpen`, `onPaletteClose` | Overlay palette for narrow screens: it takes no canvas width and floats above only while `paletteOpen`. Esc calls `onPaletteClose` |
+| `locale` | Locale (BCP 47, normally the display language) for palette sorting and search; defaults to `"en"` (`DEFAULT_PALETTE_LOCALE`) |
+| `categoryLabel` | `(category) => string` that renames palette groups for display (for example, translating a server category). Grouping and the group color still use the original category, so they do not change with the language |
 | `idFactory`, `snapToGrid`, `showPalette`, `palette`, `undoWindowMs`, `messages` | Other settings and text |
 
 Connect from anywhere on a node: selecting a node shows an edge band, and dragging from the band (or a port handle) and dropping on the other node's body connects them. Ports are chosen by `inferKindPorts` (a pure function) in the order `default_ports` -> the first compatible port; when several kinds are candidates, you choose in the picker's port column (`EdgeKindCandidateInfo.portsText`).

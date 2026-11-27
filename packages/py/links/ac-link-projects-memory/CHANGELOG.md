@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-projects-memory`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
 - REL.16(계약 0.15.0): `MemoryDbUnavailable`의 오류 코드를 `feature_unavailable`에서 계약의 새 코드
   `project.memory_unavailable`(409)로 바꿨다. 예외는 `reason`(`REASON_NO_MIGRATIONS`·`REASON_MIGRATE_FAILED`·
   `REASON_SHUTTING_DOWN`)을 갖고, 메모리 모듈이 응답 `details.reason`으로 싣는다. 모듈이 꺼진 경우는 그대로

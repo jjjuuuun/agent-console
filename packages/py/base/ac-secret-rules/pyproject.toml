@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-secret-rules"
 version = "0.1.0"
-description = "Agent Console — 비밀 의심 판정과 텍스트 안 의심 값 가리기(기본 규칙 + 사용자 추가 규칙)"
+description = "Agent Console — detects likely secrets and masks suspicious values in text (default rules plus user rules)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

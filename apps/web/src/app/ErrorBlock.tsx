@@ -3,6 +3,7 @@ import { Button, Spinner } from "@agent-console/ui";
 import type { Fix } from "@agent-console/contracts";
 import type { ErrorView } from "./errors";
 import { FixButtons } from "./fix";
+import { useShellMessages } from "./shellMessages";
 
 export interface ErrorBlockProps {
   title: string;
@@ -21,7 +22,8 @@ export interface ErrorBlockProps {
 }
 
 /** 영역 전체를 대신하는 에러 블록. */
-export function ErrorBlock({ title, message, details, detailsLabel = "상세", retryLabel, onRetry, fix, secondary, children }: ErrorBlockProps) {
+export function ErrorBlock({ title, message, details, detailsLabel, retryLabel, onRetry, fix, secondary, children }: ErrorBlockProps) {
+  const m = useShellMessages();
   return (
     <div className="app-error-block" role="alert">
       <h2 className="app-block-title">{title}</h2>
@@ -30,13 +32,13 @@ export function ErrorBlock({ title, message, details, detailsLabel = "상세", r
       <FixButtons fix={fix} />
       {onRetry === undefined ? null : (
         <Button variant="primary" onClick={onRetry}>
-          {retryLabel ?? "다시 시도"}
+          {retryLabel ?? m.common.retry}
         </Button>
       )}
       {secondary === undefined ? null : <Button onClick={secondary.onClick}>{secondary.label}</Button>}
       {details === undefined || details === "" ? null : (
         <details className="app-details">
-          <summary>{detailsLabel}</summary>
+          <summary>{detailsLabel ?? m.common.details}</summary>
           <pre className="ac-pre">{details}</pre>
         </details>
       )}

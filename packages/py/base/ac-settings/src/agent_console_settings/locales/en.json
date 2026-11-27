@@ -2,6 +2,8 @@
   "text": {
     "교체: 이 층 값이 위 층 값을 통째로 바꾼다(`null`·빈 목록도 그대로 지정).": "Replace: this layer's value replaces the value from the layer above entirely (`null` and an empty list are set as is).",
     "이어 붙이기: 위 층 목록 뒤에 이 층 목록을 붙인다(중복 허용). 원소마다 출처가 남는다.": "Append: adds this layer's list after the list from the layer above (duplicates allowed). Each element keeps its source.",
-    "합집합: 이어 붙이되 이미 있는 값(==)은 건너뛴다. 기존 원소는 처음 넣은 층 출처를 유지한다.": "Union: appends but skips values that are already there (==). Existing elements keep the source of the layer that first added them."
+    "합집합: 이어 붙이되 이미 있는 값(==)은 건너뛴다. 기존 원소는 처음 넣은 층 출처를 유지한다.": "Union: appends but skips values that are already there (==). Existing elements keep the source of the layer that first added them.",
+    "객체 병합: 키별로 재귀 병합한다. 하위 키마다 자기 규칙을 다시 찾는다.": "Object merge: merges recursively by key. Each child key looks up its own rule again.",
+    "교집합: 위 층 목록 중 이 층 목록에도 있는 값만 남긴다(위 층 순서·출처 유지).": "Intersect: keeps only the values of the upper layer's list that are also in this layer's list (keeping the upper layer's order and sources)."
   }
 }

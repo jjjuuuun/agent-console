@@ -1,5 +1,5 @@
 import { Tag } from "@agent-console/ui";
-import { projectMessages as t } from "./messages";
+import { useProjectMessages } from "./messages";
 import { useProjects } from "./ProjectsContext";
 
 /**
@@ -7,6 +7,7 @@ import { useProjects } from "./ProjectsContext";
  * 프로젝트 기능이 꺼져 있거나 모든 프로젝트 보기면 아무것도 그리지 않는다.
  */
 export function AccountWideNote() {
+  const t = useProjectMessages();
   const p = useProjects();
   if (!p.enabled || p.current === null) return null;
   return <Tag className="prj-tag" data-tone="neutral" title={t.usage.accountWideTitle}>{t.usage.accountWide}</Tag>;

@@ -185,14 +185,20 @@ describe("팔레트 구역 (binds × 정의 목록, hidden 제외)", () => {
     ],
   };
   it("binds 있는 타입 × 목록 + binds 없는 타입(기본 노드), 숨김 제외", () => {
-    const r = buildTeamPalette(N, lists, {}, "", "기타");
+    const r = buildTeamPalette(N, lists, {}, "", "기타", "ko");
     expect(r.sections.map((s) => [s.kind, s.title, s.empty])).toEqual([
-      ["things", "에이전트", false], // 구역은 표시 이름 순(한국어 로케일)
+      ["things", "에이전트", false], // 구역은 표시 이름 순(넘긴 로캘, 여기서는 ko)
       ["docs", "docs", true], // 정의 0개 → 빈 안내 구역
     ]);
     expect(r.sections[0]!.subgroups[0]!.items.map((i) => i.id)).toEqual(["t1", "t2"]);
     expect(r.base.flatMap((g) => g.items.map((t) => t.id))).toEqual(["beta-human"]);
     expect(JSON.stringify(r)).not.toContain("delta-secret");
+  });
+  it("정렬은 넘긴 로캘을 따르고 생략하면 환경과 무관한 en이다", () => {
+    const kinds = (locale?: string) =>
+      (locale === undefined ? buildTeamPalette(N, lists, {}, "", "기타") : buildTeamPalette(N, lists, {}, "", "기타", locale)).sections.map((s) => s.kind);
+    expect(kinds("ko")).toEqual(["things", "docs"]);
+    expect(kinds()).toEqual(["docs", "things"]);
   });
   it("검색은 정의 이름·설명에도 걸린다", () => {
     const r = buildTeamPalette(N, lists, { docs: "문서" }, "라마", "기타");

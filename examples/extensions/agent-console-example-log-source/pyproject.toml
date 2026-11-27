@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-log-source"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 텍스트 로그 출처·분류기(example.text_log)"
+description = "Agent Console example extension — a text log source and classifier (example.text_log)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

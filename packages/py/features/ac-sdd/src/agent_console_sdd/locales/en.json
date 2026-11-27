@@ -1,0 +1,18 @@
+{
+  "text": {
+    "작업 줄 머리의 작업 id입니다(없으면 빈 값).": "Task id at the start of the task line (empty if none).",
+    "작업 키입니다(작업 id, 없으면 문서·순번).": "Task key (the task id, or the document and position if there is none).",
+    "작업 제목입니다.": "Task title.",
+    "작업 아래 하위 목록·문단 원문입니다.": "Original text of the sub-list and paragraphs under the task.",
+    "지금 작업 상태 id입니다.": "Current task status id.",
+    "작업이 가리키는 요구 id(쉼표로 이음)입니다.": "Requirement ids the task refers to (comma-separated).",
+    "작업이 기다리는 작업 키(쉼표로 이음)입니다.": "Keys of the tasks this task waits for (comma-separated).",
+    "작업이 속한 단계 id입니다(없으면 빈 값).": "Id of the phase the task belongs to (empty if none).",
+    "작업이 속한 단계 제목입니다(없으면 빈 값).": "Title of the phase the task belongs to (empty if none).",
+    "스펙 id입니다.": "Spec id.",
+    "스펙 이름입니다.": "Spec name.",
+    "스펙 문서 폴더입니다(프로젝트 폴더 기준 상대 경로).": "Spec document folder (relative to the project folder).",
+    "작업 줄의 [필드: 값] 값입니다. <field> 자리에 필드 이름을 씁니다.": "Value of [field: value] on the task line. Write the field name in place of <field>.",
+    "변수 이름에 적힌 작업 필드의 값입니다.": "Value of the task field named in the variable name."
+  }
+}

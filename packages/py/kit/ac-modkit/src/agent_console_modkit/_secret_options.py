@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Protocol, runtime_checkable
 
-from ._hostext import secret_provider_registry
+from ._hostext import SettingsNotice, SettingsNoticeCodes, secret_provider_registry
 
 _log = logging.getLogger("agent_console_modkit.hostext")
 
@@ -110,12 +110,17 @@ class SecretProviderSetup:
     Attributes:
         configured: 설정 값으로 다시 만든 공급자 key(등록 순).
         options: 스키마나 설정이 있는 공급자의 옵션(등록 순).
-        warnings: 사람이 읽는 설정 경고(모르는 key, 훅 없는 공급자에 설정). 값은 없다.
+        notices: 설정 경고(모르는 key, 훅 없는 공급자에 설정) — 코드·원문·``details``. 값은 없다.
     """
 
     configured: list[str] = field(default_factory=list)
     options: list[SecretProviderOptions] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    notices: list[SettingsNotice] = field(default_factory=list)
+
+    @property
+    def warnings(self) -> list[str]:
+        """``notices``의 원문 문장(사람이 읽는 설정 경고)."""
+        return [n.message for n in self.notices]
 
 
 def schema_defaults(schema: Mapping[str, Any] | None, values: Mapping[str, Any]) -> dict[str, Any]:
@@ -197,7 +202,18 @@ def configure_secret_providers(
                 f"{where}: 비밀 공급자 {entry.key}는 설정 훅({SECRET_PROVIDER_OPTIONS_HOOK})이 "
                 "없어 설정을 무시합니다"
             )
-            setup.warnings.append(message)  # 웹(server-info) 문구는 한국어 원문, 터미널은 영어
+            # 웹(server-info)은 코드·details로 문구를 고른다, 터미널은 영어
+            setup.notices.append(
+                SettingsNotice(
+                    code=SettingsNoticeCodes.SECRET_PROVIDER_NO_SETTINGS_HOOK,
+                    message=message,
+                    details={
+                        "setting": where,
+                        "provider": entry.key,
+                        "hook": SECRET_PROVIDER_OPTIONS_HOOK,
+                    },
+                )
+            )
             _log.warning(
                 "%s: secret provider %s has no settings hook (%s); its settings are ignored",
                 where,
@@ -229,7 +245,13 @@ def configure_secret_providers(
                 f"{SECRET_PROVIDERS_SETTINGS_KEY}의 '{key}'은(는) 등록된 비밀 공급자가 아닙니다"
                 "(미설치·꺼짐, 무시함)"
             )
-            setup.warnings.append(message)
+            setup.notices.append(
+                SettingsNotice(
+                    code=SettingsNoticeCodes.SECRET_PROVIDER_UNKNOWN,
+                    message=message,
+                    details={"setting": SECRET_PROVIDERS_SETTINGS_KEY, "provider": key},
+                )
+            )
             _log.warning(
                 "%s: '%s' is not a registered secret provider (not installed or turned off; "
                 "ignored)",

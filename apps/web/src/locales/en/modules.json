@@ -1,0 +1,169 @@
+{
+  "moduleStatus": {
+    "active": "On",
+    "disabled": "Off",
+    "unsatisfied": "Missing link",
+    "failed": "Failed to start",
+    "conflict": "Conflict"
+  },
+  "moduleStatusDefault": {
+    "disabled": "Turned off in settings.",
+    "unsatisfied": "Turned off because a required feature is missing.",
+    "failed": "Couldn't start. Check the server log.",
+    "conflict": "Two features provide the same link."
+  },
+  "moduleOff": {
+    "title": {
+      "disabled": "This feature is off",
+      "unsatisfied": "This feature is off because a required link is missing",
+      "failed": "This feature couldn't start",
+      "conflict": "This feature's links overlap",
+      "missing": "This feature isn't installed on this server"
+    },
+    "body": {
+      "disabled": "A feature needed by the '{screen}' screen is off.",
+      "unsatisfied": "A feature needed by the '{screen}' screen is waiting for another feature.",
+      "failed": "The server failed while starting this feature. Check the server log.",
+      "conflict": "Two features provide the same link, so it stays off until one is chosen.",
+      "missing": "A feature needed by the '{screen}' screen isn't in the server's list."
+    },
+    "needed": "Required features",
+    "roleMark": "(role)",
+    "notListed": "Not in the server's list",
+    "moreMatches": "and {n} more",
+    "showMore": "Show more",
+    "howto": {
+      "title": "How to turn it on (server installer)",
+      "comment": "# Server config file",
+      "removeFrom": "# Remove {id} from here",
+      "orCli": "# Or when starting the server",
+      "unsatisfied": "First turn on the feature that provides the required link.",
+      "conflict": "Choose one provider under `modules.bindings` in the config file.",
+      "failed": "Check the server log."
+    },
+    "notInstalled": "This feature isn't installed on the server. Ask whoever installed it.",
+    "noChange": "This screen doesn't change settings. Restart the server to apply.",
+    "toModules": "View features",
+    "goTo": "Go to {screen}",
+    "unsavedBanner": "This feature was turned off on the server. Saving may not work.",
+    "enabledToast": "The feature was turned on",
+    "loading": "Checking the feature setup…"
+  },
+  "linkPart": {
+    "note": {
+      "sendUnavailable": "Messages can't be sent on this server (the run link is off).",
+      "usageRollupOff": "Token totals for platform runs are off on this server."
+    },
+    "interactionsOff": "Interactions aren't available (the feature is off)",
+    "names": {
+      "chat": {
+        "delegation-chip": "Chat: delegation chip on the progress line",
+        "interaction-card": "Chat: interaction card",
+        "send": "Chat: send message",
+        "resume-turn": "Chat: resume a cut-off turn"
+      },
+      "runs": {
+        "flow-tab": "Run detail: delegation flow tab",
+        "handoff-view": "Run history: delegation totals view",
+        "architecture-tab": "Run detail: architecture tab",
+        "trace-child-groups": "Run detail: child run groups",
+        "memory-chips": "Run detail: memory chips",
+        "wiki-changes": "Run detail: wiki changes"
+      },
+      "usage": {
+        "token-rollup": "Usage: token totals"
+      },
+      "logs": {
+        "trace-flow": "Log session detail: delegation flow",
+        "run-link": "Logs: run detail link",
+        "runs-tab": "Run detail: session logs tab",
+        "architecture-flow": "Log session detail: architecture flow",
+        "usage-link": "Log session list: usage link"
+      },
+      "teams": {
+        "validation-column": "Team list: validation summary",
+        "draft-preview": "Team: draft preview",
+        "condition-operators": "Team: condition operators"
+      },
+      "agents": {
+        "usages-panel": "Agent: usages panel"
+      }
+    }
+  },
+  "modules": {
+    "title": "Feature modules",
+    "description": "The state of the features and links installed on this server. Whoever installs the server turns them on or off in the config file or server options.",
+    "refresh": "Refresh",
+    "summary": {
+      "total": "Modules",
+      "unit": "",
+      "active": "On",
+      "off": "Off",
+      "problems": "Problems"
+    },
+    "filterAll": "All",
+    "filterLabel": "Status filter",
+    "search": "Search id or role",
+    "searchLabel": "Search modules",
+    "list": "Feature module list",
+    "empty": "No features are on in this server.",
+    "emptyBody": "No features are installed or all are off. Check the `modules` entry in the server config file and the server options.",
+    "noMatch": "No matching modules",
+    "clearFilter": "Clear filter",
+    "fetchFailed": "Couldn't get the feature list. Showing every screen as on.",
+    "noEndpoint": "This server doesn't provide a feature list. Showing every screen as on.",
+    "retry": "Retry",
+    "sectionName": "Feature modules",
+    "dotLabel": "Some feature modules have problems",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "cmd": {
+      "copy": "Copy command snippet",
+      "copied": "Copied the command snippet",
+      "enableTitle": "How to turn on",
+      "disableTitle": "How to turn off",
+      "comment": "# Put this in the server config file, or",
+      "orCli": "# add it when starting the server"
+    },
+    "options": {
+      "title": "Module options (read-only)",
+      "hint": "Change them only under modules.options in the config file. Values that look secret are masked.",
+      "loading": "Loading options",
+      "noSchema": "This module doesn't declare an options schema.",
+      "empty": "No options are set (it runs on defaults).",
+      "loadFailed": "Couldn't load the options",
+      "copyYaml": "Copy YAML snippet",
+      "yamlCopied": "Copied the YAML snippet",
+      "unavailable": "This server doesn't support reading module options."
+    },
+    "pluginOptions": {
+      "title": "Extension options (read-only)",
+      "hint": "Installer options for extensions that have a settings hook, such as secret providers. Change them only in the config file; values that look secret are masked.",
+      "place": "Setting place",
+      "configured": "Configured",
+      "notConfigured": "Not configured (defaults)",
+      "noSchema": "This extension doesn't declare an options schema.",
+      "empty": "No options are set (it runs on defaults).",
+      "copyYaml": "Copy YAML snippet",
+      "yamlCopied": "Copied the YAML snippet"
+    },
+    "summaryProvides": "Provides: {list}",
+    "summaryRoles": "Screen roles: {list}",
+    "detail": {
+      "reason": "Reason",
+      "version": "Version",
+      "contracts": "Contracts",
+      "provides": "Provided links",
+      "roles": "Screen roles",
+      "screens": "Affected screens",
+      "parts": "Affected parts"
+    },
+    "configChanged": "The server's feature setup changed",
+    "problemToast": "Some features were turned off ({n} problems)",
+    "problemToastAction": "View",
+    "featureUnavailable": "This action isn't available on the server right now ({module} didn't get the required link {port})",
+    "navDot": "Has problems",
+    "loadingRows": "Loading the feature list",
+    "rolesMore": "{shown} and {n} more"
+  }
+}

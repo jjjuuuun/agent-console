@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { IconButton, Icon } from "@agent-console/ui";
 import type { ModuleInfo } from "@agent-console/contracts";
-import { messages as m } from "../app/messages";
+import { useAppMessages, type AppMessages } from "../app/appMessages";
 import { ModuleStatusChip } from "./ModuleStatusChip";
 import { MODULE_STATUS, worstSeverity, type Severity, type UnmetItem } from "./resolve";
 
@@ -20,13 +20,13 @@ export interface FeatureOffScreenProps {
   home?: { title: string; path: string } | undefined;
 }
 
-function reasonOf(mod: ModuleInfo): string | undefined {
+function reasonOf(mod: ModuleInfo, defaults: Readonly<Record<string, string>>): string | undefined {
   if (mod.reason !== undefined && mod.reason !== null && mod.reason !== "") return mod.reason;
-  return (m.moduleStatusDefault as Record<string, string>)[mod.status];
+  return defaults[mod.status];
 }
 
 /** 설치자가 서버 설정 파일에 붙여 넣을 수 있는 텍스트(꺼진 모듈 id를 끼운다). */
-export function enableSnippet(ids: readonly string[]): string {
+export function enableSnippet(ids: readonly string[], m: Pick<AppMessages, "moduleOff">): string {
   return [
     m.moduleOff.howto.comment,
     "modules:",
@@ -37,7 +37,8 @@ export function enableSnippet(ids: readonly string[]): string {
 }
 
 function ModuleRow({ mod }: { mod: ModuleInfo }) {
-  const reason = reasonOf(mod);
+  const m = useAppMessages();
+  const reason = reasonOf(mod, m.moduleStatusDefault);
   return (
     <li className="app-off-module">
       <span className="app-off-line">
@@ -50,6 +51,7 @@ function ModuleRow({ mod }: { mod: ModuleInfo }) {
 }
 
 function NeededItem({ item }: { item: UnmetItem }) {
+  const m = useAppMessages();
   const shown = item.matches.slice(0, MAX_MATCHES);
   const rest = item.matches.length - shown.length;
   return (
@@ -78,6 +80,7 @@ function NeededItem({ item }: { item: UnmetItem }) {
 }
 
 function CopyBox({ text }: { text: string }) {
+  const m = useAppMessages();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -104,6 +107,7 @@ function CopyBox({ text }: { text: string }) {
  * 켜는 방법은 안내만 한다(웹은 설정을 바꾸지 않는다). 모듈 id·역할 이름은 서버가 준 값을 그대로 쓴다.
  */
 export function FeatureOffScreen({ screenTitle, unmet, modulesHref, home }: FeatureOffScreenProps) {
+  const m = useAppMessages();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => headingRef.current?.focus(), []);
@@ -143,7 +147,7 @@ export function FeatureOffScreen({ screenTitle, unmet, modulesHref, home }: Feat
         {severity === "disabled" && disabledIds.length > 0 ? (
           <section className="app-off-box" aria-label={m.moduleOff.howto.title}>
             <h2 className="app-off-box-title">{m.moduleOff.howto.title}</h2>
-            <CopyBox text={enableSnippet(disabledIds)} />
+            <CopyBox text={enableSnippet(disabledIds, m)} />
           </section>
         ) : null}
         {severity === "unsatisfied" ? <p className="app-wrap">{m.moduleOff.howto.unsatisfied}</p> : null}

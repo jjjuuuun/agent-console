@@ -1,0 +1,11 @@
+{
+  "codes": {
+    "plugins.disabled_distribution": "plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함) — '{name}'은(는) 배포 이름입니다. plugins.disabled에는 entry point 이름을 적습니다. 이 배포의 entry point 이름: {entry_points}",
+    "plugins.disabled_distribution_nothing": "plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함) — '{name}'은(는) 배포 이름입니다. plugins.disabled에는 entry point 이름을 적습니다. 이 배포에는 plugins.disabled로 끌 수 있는 entry point가 없습니다",
+    "plugins.disabled_module_id": "plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함) — '{name}'은(는) 서버 모듈 id입니다. 모듈은 modules.disabled(또는 --disable-module)로 끕니다. 이 배포의 entry point 이름: {entry_points}",
+    "plugins.disabled_module_id_nothing": "plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함) — '{name}'은(는) 서버 모듈 id입니다. 모듈은 modules.disabled(또는 --disable-module)로 끕니다. 이 배포에는 plugins.disabled로 끌 수 있는 entry point가 없습니다",
+    "plugins.unknown_disabled": "plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함)",
+    "secrets.provider_no_settings_hook": "{setting}: 비밀 공급자 {provider}는 설정 훅({hook})이 없어 설정을 무시합니다",
+    "secrets.provider_unknown": "{setting}의 '{provider}'은(는) 등록된 비밀 공급자가 아닙니다(미설치·꺼짐, 무시함)"
+  }
+}

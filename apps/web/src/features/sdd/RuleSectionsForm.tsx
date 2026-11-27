@@ -4,7 +4,9 @@
  */
 import "./sdd.css";
 import { useMemo, type ComponentType, type ReactNode } from "react";
-import { SchemaForm, type FormError, type SchemaFormFieldProps } from "@agent-console/schema-form";
+import { type FormError, type SchemaFormFieldProps } from "@agent-console/schema-form";
+import { useServerText } from "@agent-console/i18n";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import type { SpecIssue } from "@agent-console/contracts/sdd";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { ConfigIssuesProvider } from "../delegation";
@@ -54,7 +56,9 @@ const errorsFor = (issues: readonly SpecIssue[], section: RuleSection): FormErro
 };
 
 export function RuleSectionsForm({ schema, value, onChange, issues, readonly, sectionId, onSectionChange, navLabel, idPrefix, widgetEnv = NO_ENV, formEpoch = 0, sectionNote, readonlyFor, extraFields = NO_FIELDS, includeAdvanced = NO_NAMES }: RuleSectionsFormProps) {
-  const sections = useMemo(() => ruleSections(schema, includeAdvanced), [schema, includeAdvanced]);
+  const serverText = useServerText();
+  // 섹션 제목은 서버 스키마의 원문이라 화면 언어로 옮긴다(폼 안쪽 글자는 AppSchemaForm이 옮긴다).
+  const sections = useMemo(() => ruleSections(schema, includeAdvanced).map((s) => ({ ...s, title: serverText.text(s.title) })), [schema, includeAdvanced, serverText]);
   const fields = useMemo(() => ({ ...SDD_WIDGET_FIELDS, ...extraFields }), [extraFields]);
   const section = sections.find((s) => s.id === sectionId) ?? sections[0];
   const sectionUi = useMemo(() => (section === undefined ? undefined : widgetUiSchema(section.schema, new Set(Object.keys(fields)))), [section, fields]);

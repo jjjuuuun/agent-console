@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-projects-sdd`, so the web can show the link module description and settings in English (data only, no API change).
 - 7R.13: 경로 지킴(예약 경로·링크를 푼 실제 경로)을 `ac-projects` `FolderGuard`·`normalize_reserved`·`relative_inside`로 바꿨다(동작 불변, `link-projects-wiki`와 같은 규칙 한 벌). `normalize_reserved`는 그대로 다시 내보낸다. `testing.FolderSpaces`는 `agent_console_project_space.testing`의 것을 다시 내보낸다.
 
 ## 0.1.0

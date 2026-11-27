@@ -516,7 +516,7 @@ class WikiUpdateNode:
             try:
                 service.notify(space, cfg.wiki, [outcome.path])
             except Exception:
-                _log.exception("위키 변경 알림 실패: %s", cfg.wiki)
+                _log.exception("Wiki change notification failed: %s", cfg.wiki)
         result = {
             "wiki": cfg.wiki,
             "path": outcome.path,

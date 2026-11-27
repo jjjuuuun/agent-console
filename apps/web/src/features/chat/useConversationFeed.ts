@@ -12,7 +12,8 @@ import { assembleTurns } from "./lib/assemble";
 import { patchConversationCache } from "./lib/conversations";
 import { applyRunEvent, emptyLiveRun, foldRunEvents, hasReachedEnd, isActiveStatus, mergeLiveRuns, type LiveRun } from "./lib/liveRun";
 import { buildProgressSteps } from "./lib/progress";
-import { chatMessages } from "./chatMessages";
+import { useDelegationMessages } from "../delegation";
+import { useChatMessages } from "./chatMessages";
 import { agentOfNode as agentOfNodeSpec, nodeName, replyEdgesOf, type NamingContext } from "./lib/team";
 
 /** 한 번에 가져오는 턴 수와, 진행 줄을 위해 이벤트를 읽는 최근 끝난 턴 수. */
@@ -153,6 +154,8 @@ export interface Feed {
  */
 export function useConversationFeed({ conversationId, projectId = null, ready = true, ws, graph, plan, kinds, strategies, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
   const { rest, space } = useApi();
+  const chatMessages = useChatMessages();
+  const delegationMessages = useDelegationMessages();
   const queryClient = useQueryClient();
   const [older, setOlder] = useState<ChatTurn[]>([]);
   const [moreBefore, setMoreBefore] = useState<boolean | undefined>(undefined);
@@ -298,6 +301,7 @@ export function useConversationFeed({ conversationId, projectId = null, ready = 
           kinds,
           ...(strategies === undefined ? {} : { strategies }),
           naming,
+          delegation: delegationMessages,
           skippedWith: chatMessages.progress.skippedWith,
           runId: t.run_id,
           childLive,
@@ -309,7 +313,7 @@ export function useConversationFeed({ conversationId, projectId = null, ready = 
       }
     }
     return out;
-  }, [turns, live, graph, kinds, strategies, naming, childLive, childGraphs]);
+  }, [turns, live, graph, kinds, strategies, naming, childLive, childGraphs, chatMessages.progress.skippedWith, delegationMessages]);
 
   // 스트리밍은 진행 중인 마지막 턴의 것을, 스트림이 켜진 답변 노드 것만 보인다.
   const streaming = useMemo(() => {

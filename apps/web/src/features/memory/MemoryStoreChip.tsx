@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Icon, Menu, Popover, type MenuItemDef } from "@agent-console/ui";
-import { memoryMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface MemoryStoreChipProps {
   /** 지금 보는 저장소가 공용인가 */
@@ -16,8 +16,9 @@ export interface MemoryStoreChipProps {
  * 모양은 구성 화면의 공간 칩(`space-chip`)과 같다. 데이터와 콜백은 props로만 받는다.
  */
 export function MemoryStoreChip({ library, project, onSelect }: MemoryStoreChipProps) {
+  const t = useT("memory");
   const [open, setOpen] = useState(false);
-  const label = library || project === null ? t.store.library : t.store.project(project.name);
+  const label = library || project === null ? t("store.library") : t("store.project", { name: project.name });
   const shown = library || project === null;
   const body = (
     <>
@@ -26,21 +27,21 @@ export function MemoryStoreChip({ library, project, onSelect }: MemoryStoreChipP
     </>
   );
   if (project === null) {
-    return <span className="space-chip mem-store-chip" data-memory-store="library" aria-label={`${t.store.label}: ${label}`}>{body}</span>;
+    return <span className="space-chip mem-store-chip" data-memory-store="library" aria-label={`${t("store.label")}: ${label}`}>{body}</span>;
   }
   const items: MenuItemDef[] = [
-    { id: "current", label: t.store.project(project.name), icon: library ? undefined : "check", onSelect: () => onSelect(false) },
-    { id: "library", label: t.store.library, icon: library ? "check" : undefined, onSelect: () => onSelect(true) },
+    { id: "current", label: t("store.project", { name: project.name }), icon: library ? undefined : "check", onSelect: () => onSelect(false) },
+    { id: "library", label: t("store.library"), icon: library ? "check" : undefined, onSelect: () => onSelect(true) },
   ];
   return (
     <Popover
       open={open}
       onOpenChange={setOpen}
       panelRole="menu"
-      panelLabel={t.store.menuLabel}
+      panelLabel={t("store.menuLabel")}
       align="end"
       renderTrigger={(p) => (
-        <button {...p} type="button" className="space-chip mem-store-chip" data-memory-store={shown ? "library" : "current"} aria-label={`${t.store.label}: ${label}`}>
+        <button {...p} type="button" className="space-chip mem-store-chip" data-memory-store={shown ? "library" : "current"} aria-label={`${t("store.label")}: ${label}`}>
           {body}
           <Icon name="chevron-down" size={12} />
         </button>

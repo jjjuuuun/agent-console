@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-usage"
 version = "0.1.0"
-description = "Agent Console — 사용량 출처(X13) 인터페이스·로더·수집 서비스, statusLine 브리지, 토큰 집계"
+description = "Agent Console — usage source (X13) interface, loader, and collection service, statusLine bridge, token totals"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -18,6 +18,9 @@ dependencies = [
 run-events = "agent_console_usage.sources.run_events:RunEventUsageSource"
 statusline-file = "agent_console_usage.sources.statusline_file:StatuslineFileSource"
 fake = "agent_console_usage.sources.fake:FakeUsageSource"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-usage = "agent_console_usage"
 
 [dependency-groups]
 dev = [

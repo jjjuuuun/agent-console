@@ -1,0 +1,11 @@
+{
+  "codes": {
+    "resource.content_missing": "본문이 없습니다.",
+    "resource.invalid_config": "리소스 설정이 올바르지 않습니다.",
+    "resource.invalid_type_schema": "리소스 종류의 설정 스키마가 잘못됐습니다.",
+    "resource.override_secret_suspected": "비밀로 의심되는 값입니다. secret:// 참조를 쓰세요.",
+    "resource.plain_secret": "평문 비밀로 보이는 값이 있습니다. secret:// 참조를 쓰세요.",
+    "resource.type_failed": "리소스 종류 검사 중 오류가 났습니다.",
+    "resource.unknown_type": "등록되지 않은 리소스 종류입니다."
+  }
+}

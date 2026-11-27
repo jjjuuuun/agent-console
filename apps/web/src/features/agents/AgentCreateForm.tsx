@@ -6,7 +6,7 @@ import { DEFINITION_KINDS, DefinitionIdField, useDefinitionId, useKindReservedId
 import { useNewScope } from "../projects";
 import { AgentEditorForm, type AgentUpdate } from "./AgentEditorForm";
 import { AgentResourcesTab } from "./AgentTabs";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
 
 /** 새 에이전트 초안 상태: 문서 + id 제안 + 프로젝트 범위. 폼(`AgentCreateForm`)과 제출 로직을 가진 호출자가 함께 쓴다. */
 export interface AgentCreateDraft {
@@ -56,6 +56,7 @@ export interface AgentCreateFormProps {
 
 /** 새 에이전트 전체 폼: 에이전트 화면과 같은 `AgentEditorForm` + id + 프로젝트 범위 + 리소스 연결. */
 export function AgentCreateForm({ draft, errors = [], disabled = false }: AgentCreateFormProps) {
+  const t = useAgentMessages();
   return (
     <div className="lib-form">
       <AgentEditorForm

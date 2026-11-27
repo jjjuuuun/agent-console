@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-logs"
 version = "0.1.0"
-description = "Agent Console — 로그 기능 모듈: 출처 수집 스케줄·/logs 질의·대시보드 템플릿·WS logs, 색인 계보 logs"
+description = "Agent Console — logs feature module: source collection schedule, /logs queries, dashboard templates, WS logs, index lineage logs"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

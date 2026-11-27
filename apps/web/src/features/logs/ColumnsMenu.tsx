@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 
 /** 열 구성 상태: 화면 선택이라 localStorage에 둔다(`key`). 저장된 값이 깨졌거나 목록에 없는 열 id면 기본으로 돌아간다. */
 export function useColumnChoice(key: string, all: readonly string[], defaults: readonly string[]): [string[], (next: string[]) => void] {
@@ -36,6 +36,7 @@ export interface ColumnsMenuProps {
 
 /** [열 ▾] 메뉴: 체크박스로 표시할 열을 고른다. 최소 한 열은 남긴다. `Esc`로 닫고 버튼으로 포커스가 돌아간다. */
 export function ColumnsMenu({ all, selected, labelOf, onChange }: ColumnsMenuProps) {
+  const t = useLogsMessages();
   const [open, setOpen] = useState(false);
   const id = useId();
   const btn = useRef<HTMLButtonElement>(null);

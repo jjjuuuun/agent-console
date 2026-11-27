@@ -1,7 +1,7 @@
 import { KNOWN_DELEGATION_BACKENDS as BACKENDS, KNOWN_DELEGATION_SESSIONS as SESSIONS } from "@agent-console/contracts/constants";
 import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor } from "@agent-console/contracts";
 import { effectiveStrategyId } from "./edgeChips";
-import { delegationMessages as dm } from "./messages";
+import type { DelegationMessages } from "./messages";
 
 /**
  * 위임 방식·연결 종류의 화면용 속성 어댑터(screen-delegation.md §14.2·§14.9). 화면은 이 파일이 돌려주는 값만 쓴다.
@@ -57,19 +57,19 @@ export function edgeSessionOf(
 }
 
 /** 세션 값 → 칩 글자(표에 없는 값은 원문). */
-export function sessionText(value: string): string {
+export function sessionText(value: string, dm: DelegationMessages): string {
   return dm.session.value[value] ?? value;
 }
 
 /** 세션 값 → 툴팁/접근성 설명. */
-export function sessionTip(value: string, delegator?: string): string {
+export function sessionTip(value: string, dm: DelegationMessages, delegator?: string): string {
   if (value === SESSIONS.SAME) return delegator === undefined || delegator === "" ? dm.session.tipSameNoDelegator : dm.session.tipSame(delegator);
   if (value === SESSIONS.SEPARATE) return dm.session.tipSeparate;
   return dm.session.unknownTip(value);
 }
 
 /** 방식의 속성 행들(표 순서). 디스크립터에 값이 없는 속성은 행을 만들지 않는다. 방식이 undefined면 빈 배열. */
-export function attributeRows(strategy: StrategyAttributeSource | undefined, delegator = ""): AttributeCell[] {
+export function attributeRows(strategy: StrategyAttributeSource | undefined, dm: DelegationMessages, delegator = ""): AttributeCell[] {
   if (strategy === undefined) return [];
   const out: AttributeCell[] = [];
   for (const key of ATTRIBUTE_ROWS) {
@@ -102,13 +102,13 @@ export function attributeRows(strategy: StrategyAttributeSource | undefined, del
 }
 
 /** 옵션 보조 줄 요약: 짧은 문구를 표 순서로 " · "로 잇는다(값이 없는 속성은 건너뜀). */
-export function attributeSummary(strategy: StrategyAttributeSource | undefined): string {
-  return attributeRows(strategy)
+export function attributeSummary(strategy: StrategyAttributeSource | undefined, dm: DelegationMessages): string {
+  return attributeRows(strategy, dm)
     .flatMap((r) => (r.short === undefined ? [] : [r.short]))
     .join(" · ");
 }
 
 /** 방식에 표시할 속성이 하나라도 있는가("동작 방식" 블록을 만들지 결정). */
-export function hasAttributes(strategy: StrategyAttributeSource | undefined): boolean {
-  return attributeRows(strategy).length > 0;
+export function hasAttributes(strategy: StrategyAttributeSource | undefined, dm: DelegationMessages): boolean {
+  return attributeRows(strategy, dm).length > 0;
 }

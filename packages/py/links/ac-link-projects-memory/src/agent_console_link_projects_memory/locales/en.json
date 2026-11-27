@@ -1,0 +1,23 @@
+{
+  "text": {
+    "프로젝트 폴더 안에 그 프로젝트의 메모리를 둔다": "Keeps each project's memory inside its project folder",
+    "프로젝트 메모리 DB 연동 설정.": "Project memory database integration settings.",
+    "한 번에 열어 두는 프로젝트 메모리 DB 개수. 넘으면 오래 안 쓴 것부터 닫는다.": "Number of project memory databases kept open at once. Above it, the least recently used are closed first.",
+    "동시에 열어 둘 프로젝트 수": "Projects kept open",
+    "이 시간 동안 쓰지 않은 프로젝트 메모리 DB의 연결을 닫는다. 0이면 닫지 않는다.": "Closes connections to project memory databases unused for this long. 0 means never close.",
+    "안 쓰면 닫기(초)": "Close when idle (seconds)",
+    "다른 앱이 같은 메모리 DB를 쓰고 있을 때 잠금이 풀리길 기다리는 시간.": "How long to wait for the lock to be released when another app is using the same memory database.",
+    "잠금 대기 시간(초)": "Lock wait (seconds)",
+    "끄면 프로젝트 메모리 검색이 단순 포함 검색이 된다.": "When off, project memory search becomes a simple substring search.",
+    "전문 검색 쓰기": "Use full-text search",
+    "auto는 네트워크 드라이브로 보이면 DELETE, 아니면 WAL을 쓴다.": "auto uses DELETE when the folder looks like a network drive, otherwise WAL.",
+    "저널 방식": "Journal mode",
+    "DELETE(네트워크 드라이브용)": "DELETE (for network drives)",
+    "WAL(기본)": "WAL (default)",
+    "자동": "Automatic",
+    "프로젝트 메모리 DB에 올릴 계보를 고르는 범위 이름. 켜진 모듈 중 이 범위를 선언한 계보만 올린다.": "Scope name that picks the migration branches applied to project memory databases. Only branches of enabled modules that declare this scope are applied.",
+    "메모리 DB 계보 범위": "Memory database branch scope",
+    "프로젝트 실행의 메모리 범위 id를 풀 때 폴더 id(매니페스트 id)를 넣을 접근 맥락 필드. 다른 앱에서 등록 id가 달라도 같은 범위가 된다.": "Access context field that receives the folder id (manifest id) when resolving memory scope ids of project runs. The scope stays the same even if another app registered the folder under a different id.",
+    "폴더 id를 넣을 맥락 필드": "Context field for the folder id"
+  }
+}

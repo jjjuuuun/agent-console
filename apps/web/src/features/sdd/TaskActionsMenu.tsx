@@ -8,8 +8,8 @@ import type { Issue } from "@agent-console/contracts";
 import { Button, Popover } from "@agent-console/ui";
 import type { ParsedTask, TaskAction } from "@agent-console/contracts/sdd";
 import { ListSkeleton } from "./parts";
-import { sddMessages as m } from "./messages";
 import { useTaskActions } from "./useSddApi";
+import { useT } from "@agent-console/i18n";
 
 export interface TaskActionsMenuProps {
   specId: string;
@@ -25,6 +25,7 @@ export interface TaskActionsMenuProps {
 }
 
 export function TaskActionsMenu({ specId, task, onRun, onBlockedPick, busy = false, blockedReason }: TaskActionsMenuProps) {
+  const t = useT("sdd");
   const [open, setOpen] = useState(false);
   const blocked = blockedReason !== undefined && blockedReason !== "";
   const actions = useTaskActions(specId, task.key, open && !blocked);
@@ -45,11 +46,11 @@ export function TaskActionsMenu({ specId, task, onRun, onBlockedPick, busy = fal
       open={open && !blocked}
       onOpenChange={(next) => setOpen(next && !blocked)}
       panelRole="menu"
-      panelLabel={m.run.actionsLabel(task.title ?? task.key)}
+      panelLabel={t("run.actionsLabel", { title: task.title ?? task.key })}
       align="end"
       renderTrigger={(trigger) => (
-        <Button size="sm" {...trigger} loading={busy} aria-disabled={blocked || undefined} title={blocked ? blockedReason : undefined} aria-label={`${task.key} ${m.run.action}`}>
-          {m.run.action} ▾
+        <Button size="sm" {...trigger} loading={busy} aria-disabled={blocked || undefined} title={blocked ? blockedReason : undefined} aria-label={`${task.key} ${t("run.action")}`}>
+          {t("run.action")} ▾
         </Button>
       )}
     >
@@ -58,17 +59,17 @@ export function TaskActionsMenu({ specId, task, onRun, onBlockedPick, busy = fal
           {actions.isPending ? <ListSkeleton rows={2} /> : null}
           {actions.isError ? (
             <div className="sdd-actions-error" role="alert">
-              <span>{m.run.error}</span>
-              <Button size="sm" onClick={() => void actions.refetch()}>{m.run.retry}</Button>
+              <span>{t("run.error")}</span>
+              <Button size="sm" onClick={() => void actions.refetch()}>{t("run.retry")}</Button>
             </div>
           ) : null}
-          {actions.isSuccess && list.length === 0 ? <p className="app-muted sdd-actions-none" role="status">{m.run.none}</p> : null}
+          {actions.isSuccess && list.length === 0 ? <p className="app-muted sdd-actions-none" role="status">{t("run.none")}</p> : null}
           {list.map((a, i) => {
             const issue = a.disabled ?? null;
             const heading = multi && (i === 0 || list[i - 1]?.integration !== a.integration);
             return (
               <div key={`${a.integration}:${a.id}`}>
-                {heading ? <p className="sdd-actions-heading app-muted">{m.run.integration(a.integration)}</p> : null}
+                {heading ? <p className="sdd-actions-heading app-muted">{a.integration}</p> : null}
                 <button
                   type="button"
                   role="menuitem"

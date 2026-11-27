@@ -1,10 +1,9 @@
 import type { DelegationStrategyDescriptor } from "@agent-console/contracts";
 import { KNOWN_DELEGATION_SESSIONS as SESSIONS } from "@agent-console/contracts/constants";
-import { SessionChip, attributeRows } from "../delegation";
-import { teamMessages } from "./messages";
+import { SessionChip, attributeRows, useDelegationMessages } from "../delegation";
+import { useTeamMessages } from "./messages";
 import type { NodeSessionMode } from "./sessionView";
 
-const m = teamMessages.sessions;
 
 export interface SessionWhereProps {
   mode: NodeSessionMode;
@@ -18,6 +17,8 @@ export interface SessionWhereProps {
  * 같은 세션과 다른 세션이 섞였으면 연결별 세션 목록. 별도 세션뿐이면 아무것도 그리지 않는다. 문구는 모두 메시지 표와 디스크립터 값이다.
  */
 export function SessionWhere({ mode, strategies, onViewEdge }: SessionWhereProps) {
+  const m = useTeamMessages().sessions;
+  const dm = useDelegationMessages();
   if (mode.mode === "none") return null;
   if (mode.mode === "mixed") {
     return (
@@ -39,7 +40,7 @@ export function SessionWhere({ mode, strategies, onViewEdge }: SessionWhereProps
   const first = mode.delegators[0] ?? "";
   const line = mode.delegators.length > 1 ? m.nodeRoleMore(first, mode.delegators.length - 1) : m.nodeRole(first);
   const strategy = mode.strategyId === undefined ? undefined : strategies.find((s) => s.id === mode.strategyId);
-  const backend = attributeRows(strategy, first).find((r) => r.key === "backend");
+  const backend = attributeRows(strategy, dm, first).find((r) => r.key === "backend");
   return (
     <section className="ses-where" data-session-where="same" aria-label={m.nodeRole(first)}>
       <p className="ses-where-line">

@@ -8,8 +8,8 @@ import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { Button } from "@agent-console/ui";
 import { resolveRef, unwrapNullable, type SchemaNode } from "../../../lib/schemaTools";
 import { useConfigIssuesUnder, type ConfigIssue } from "../../delegation";
-import { sddMessages as m } from "../messages";
 import "./sddWidgets.css";
+import { useT } from "@agent-console/i18n";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -81,6 +81,7 @@ function useOwnLabelDrawn() {
 }
 
 export function ShapedField({ field, renderItem, itemNote, footer }: ShapedFieldProps) {
+  const t = useT("sdd");
   const wrapRef = useOwnLabelDrawn();
   const { id, value, onChange, label, disabled, readonly } = field;
   const locked = disabled || readonly;
@@ -126,10 +127,10 @@ export function ShapedField({ field, renderItem, itemNote, footer }: ShapedField
               {list.map((v, i) => (
                 <div className="sdd-w-line" key={i}>
                   {row(`${id}-${i}`, `${label} ${i + 1}`, v, String(i), (next) => onChange(list.map((x, j) => (j === i ? next : x))))}
-                  <Button size="sm" disabled={locked} aria-label={m.widgets.removeItem(`${label} ${i + 1}`)} onClick={() => { const next = list.filter((_, j) => j !== i); onChange(next.length === 0 ? null : next); }}>{m.widgets.remove}</Button>
+                  <Button size="sm" disabled={locked} aria-label={t("widgets.removeItem", { label: `${label} ${i + 1}` })} onClick={() => { const next = list.filter((_, j) => j !== i); onChange(next.length === 0 ? null : next); }}>{t("widgets.remove")}</Button>
                 </div>
               ))}
-              <div><Button size="sm" disabled={locked} onClick={() => onChange([...list, ""])}>{m.widgets.add}</Button></div>
+              <div><Button size="sm" disabled={locked} onClick={() => onChange([...list, ""])}>{t("widgets.add")}</Button></div>
             </>
           )
           : (
@@ -137,12 +138,12 @@ export function ShapedField({ field, renderItem, itemNote, footer }: ShapedField
               {map.map(([k, v]) => (
                 <div className="sdd-w-line" key={k}>
                   {row(`${id}-${k}`, `${label} ${k}`, v, segEscape(k), (next) => onChange(Object.fromEntries(map.map(([kk, vv]) => [kk, kk === k ? next : vv]))), <span className="sdd-w-key sdd-mono">{k}</span>)}
-                  <Button size="sm" disabled={locked} aria-label={m.widgets.removeItem(k)} onClick={() => { const next = Object.fromEntries(map.filter(([kk]) => kk !== k)); onChange(Object.keys(next).length === 0 ? null : next); }}>{m.widgets.remove}</Button>
+                  <Button size="sm" disabled={locked} aria-label={t("widgets.removeItem", { label: k })} onClick={() => { const next = Object.fromEntries(map.filter(([kk]) => kk !== k)); onChange(Object.keys(next).length === 0 ? null : next); }}>{t("widgets.remove")}</Button>
                 </div>
               ))}
               <div className="sdd-w-line">
-                <input className="ac-input sdd-mono" aria-label={m.widgets.newKey} placeholder={m.widgets.newKey} value={newKey} disabled={locked} onChange={(e) => setNewKey(e.target.value)} />
-                <Button size="sm" disabled={locked || newKey.trim() === "" || map.some(([k]) => k === newKey.trim())} onClick={() => { onChange(Object.fromEntries([...map, [newKey.trim(), ""]])); setNewKey(""); }}>{m.widgets.addEntry}</Button>
+                <input className="ac-input sdd-mono" aria-label={t("widgets.newKey")} placeholder={t("widgets.newKey")} value={newKey} disabled={locked} onChange={(e) => setNewKey(e.target.value)} />
+                <Button size="sm" disabled={locked || newKey.trim() === "" || map.some(([k]) => k === newKey.trim())} onClick={() => { onChange(Object.fromEntries([...map, [newKey.trim(), ""]])); setNewKey(""); }}>{t("widgets.addEntry")}</Button>
               </div>
             </>
           )}

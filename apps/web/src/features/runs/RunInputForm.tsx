@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef } from "react";
 import type { PortDef } from "@agent-console/contracts";
 import { SchemaForm, type JsonSchema } from "@agent-console/schema-form";
 import { portKind, portLabel, portRequired, type InputValues } from "./runInputLib";
-import { runStartMessages as t } from "./runStartMessages";
+import { useRunStartMessages } from "./runStartMessages";
 
 export interface RunInputFormProps {
   /** 구성의 입력 포트 목록(`Graph.inputs`). 칸은 이것에서만 만든다 */
@@ -53,6 +53,7 @@ function GrowTextarea({ id, value, onChange, onBlur, disabled, invalid, describe
  * 그릴 수 없는 스키마 = JSON 직접 입력. 포트 0개면 안내 한 줄. 값·오류는 모두 props(API 호출 없음).
  */
 export function RunInputForm({ ports, values, onChange, errors = {}, onBlurPort, disabled = false, idPrefix }: RunInputFormProps) {
+  const t = useRunStartMessages();
   const auto = useId();
   const uid = idPrefix ?? auto;
   if (ports.length === 0) return <p className="app-muted run-input-none">{t.inputNone}</p>;

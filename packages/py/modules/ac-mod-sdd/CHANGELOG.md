@@ -2,6 +2,7 @@
 
 ## 미출시 (0.2.0)
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-mod-sdd`, so the web can show the module description and settings in English (data only, no API change). Log lines are now English.
 - P1.19: The kind contributions carry `open_role` (spec `sdd`, document template `sdd:templates`, `SPEC_OPEN_ROLE` and `TEMPLATE_OPEN_ROLE`), so the copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) can offer "Open" for these rows.
 - P1.17: Added template version comparison: `GET /sdd/templates/{id}/versions/{a}/diff` (version → current) and `GET /sdd/templates/{id}/versions/{a}/diff/{b}`. Both return the existing contract `DefinitionDiff` and take `?project=<space>` like the other version routes. The calculation is the shared `agent_console_store.diff_versions` (same as `mod-versions`); locations that look like secrets (`secrets.document_secret_paths`, the rules used by restore) are masked as `***`. New public helper `secrets.document_secret_paths`. Consumer range: `agent-console-mod-sdd>=0.2,<0.3`; requires `agent-console-store>=0.2,<0.3`.
 - P1.5: `GET /sdd/info`가 `SddInfo.reserved_template_ids`(= `TEMPLATE_ROUTE_WORDS`, 계약 `sdd` 1.4.0)를 낸다 — 화면이 새 틀 id 칸에서 미리 안내한다. `SddService.info(scope, *, reserved_template_ids=())`.

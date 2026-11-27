@@ -33,6 +33,8 @@ export interface PageTreeProps {
   rowHeight?: number;
   height?: number | string;
   messages?: Readonly<Record<string, string>>;
+  /** 이름 정렬 로캘(BCP 47, 보통 화면 언어). 생략하면 "en". */
+  locale?: string;
   className?: string;
 }
 
@@ -45,18 +47,18 @@ function toggled(set: ReadonlySet<string>, key: string): ReadonlySet<string> {
 }
 
 /**
- * 페이지 트리(가상 목록, `role="tree"`). 폴더 먼저·한국어 숫자 정렬, 끊긴 링크·고아·저장 안 됨·첫 페이지는 아이콘 + 이름(`aria-label`)이다.
+ * 페이지 트리(가상 목록, `role="tree"`). 폴더 먼저·숫자 자연 정렬(`locale`), 끊긴 링크·고아·저장 안 됨·첫 페이지는 아이콘 + 이름(`aria-label`)이다.
  * 키보드: ↑↓ Home End 이동, → 펼침/자식으로, ← 접힘/부모로, Enter 선택, F2 이름 바꾸기, Delete 지우기, Shift+F10 메뉴.
  */
 export function PageTree({
   pages, selectedPath = null, expanded, onExpandedChange, filter = "", titleMode = "title", dirtyPaths, onSelect, onRename, onDelete, onContextMenu,
-  truncated = false, total = null, maxPages = null, rowHeight = 28, height, messages, className,
+  truncated = false, total = null, maxPages = null, rowHeight = 28, height, messages, locale, className,
 }: PageTreeProps) {
   const t = resolveMessages(messages);
   const base = useDomId();
   const rows = useMemo(
-    () => buildTree(pages, { expanded, filter, titleMode, ...(selectedPath ? { revealPath: selectedPath } : {}) }),
-    [pages, expanded, filter, titleMode, selectedPath],
+    () => buildTree(pages, { expanded, filter, titleMode, ...(selectedPath ? { revealPath: selectedPath } : {}), ...(locale === undefined ? {} : { locale }) }),
+    [pages, expanded, filter, titleMode, selectedPath, locale],
   );
   const selectedIndex = rows.findIndex((r) => r.kind === "page" && r.key === selectedPath);
   const [active, setActive] = useState<number>(-1);

@@ -118,7 +118,7 @@ def _close_entry(entry: _Entry) -> None:
         try:
             store.close()
         except Exception:  # pragma: no cover - 닫기 실패는 기록만
-            _log.exception("프로젝트 메모리 DB를 닫지 못함: %s", entry.space.path.name)
+            _log.exception("Couldn't close project memory database: %s", entry.space.path.name)
 
 
 def folder_id(space: Any) -> str | None:
@@ -246,7 +246,7 @@ class ProjectMemoryPool:
                 if found.config_writable and Path(found.memory_db_path).is_file():
                     out.append(pid)
             except Exception as exc:
-                _log.debug("자동 정리 대상에서 뺌(%s): %s", type(exc).__name__, pid)
+                _log.debug("Left out of auto-cleanup (%s): %s", type(exc).__name__, pid)
         return out
 
     def close(self, space: str) -> None:

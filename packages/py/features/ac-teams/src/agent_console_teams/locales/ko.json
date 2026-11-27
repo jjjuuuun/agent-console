@@ -1,0 +1,28 @@
+{
+  "codes": {
+    "delegation.invalid_config_schema": "위임 방식의 설정 스키마가 잘못되어 설정을 검사하지 못했습니다.",
+    "flow.loop_invoked_only": "이 노드는 위임으로만 불려서 반복 영역 안에서 실행되지 않습니다. 반복 영역 밖으로 옮기거나 이 노드로 들어오는 흐름 연결을 추가하세요.",
+    "interaction.kinds_not_allowed": "연결 종류가 허용하지 않는 상호작용 종류는 무시됩니다.",
+    "interaction.no_path": "권한 모드 {permission_mode}는 실행 중 도구 승인을 묻지만 응답 경로(도구 승인 상호작용 연결)가 없어 묻는 요청은 {unmatched_permission}(으)로 자동 처리됩니다.",
+    "interaction.unsupported_by_backend": "이 노드의 백엔드가 일부 상호작용 종류를 받을 수 없습니다.",
+    "interaction.unsupported_in_delegate": "위임받는 이 노드는 이 위임 방식에서 일부 상호작용을 열 수 없습니다.",
+    "review.dead_end": "검토 결정이 아무 데도 이어지지 않습니다. 이 결정을 고르면 흐름이 끝납니다.",
+    "settings.invalid_value": "설정의 형식이 맞지 않아 적용하지 않았습니다.",
+    "settings.widened": "아래 층이 위 층보다 범위를 넓혔습니다.",
+    "team.agent_not_found": "노드의 에이전트 정의 {agent}를 찾을 수 없습니다.",
+    "team.backend_capability_missing": "위임자의 백엔드가 이 위임 방식에 필요한 능력을 지원하지 않습니다.",
+    "team.connects_mismatch": "이 연결 종류는 이 노드끼리 이을 수 없습니다.",
+    "team.delegation_cycle": "위임 연결이 순환합니다.",
+    "team.entry_not_executable": "입구 연결이 실행되지 않는 노드로 갑니다.",
+    "team.flow_from_delegate": "위임받는 노드는 이 위임 방식에서 흐름 연결을 내보낼 수 없습니다(결과는 위임자 안으로만 돌아갑니다).",
+    "team.lookup_unavailable": "팀 구성 조회 수단이 없어 중첩 팀 노드를 실행할 수 없습니다.",
+    "team.member_field_ignored": "위임받는 노드의 이 설정은 이 위임 방식에서 적용되지 않습니다(위임자의 값을 씁니다).",
+    "team.mixed_invocation": "이 노드는 흐름·입구로 받으면서 위임으로도 불립니다. 같은 에이전트를 노드 두 개로 나눠 주세요.",
+    "team.no_entry": "입구가 없습니다. 사용자 메시지를 받을 노드로 입구 연결을 그려 주세요.",
+    "team.no_reply": "답변 연결이 없습니다. 실행은 되지만 채팅에 답변이 나오지 않습니다.",
+    "team.resource_not_found": "노드의 리소스 {resource}를 찾을 수 없습니다.",
+    "team.unknown_strategy": "등록되지 않은 위임 방식입니다: {strategy}",
+    "team.unreachable": "이 노드는 들어오는 흐름·입구·위임 연결이 없어 실행되지 않습니다.",
+    "team.validator_failed": "백엔드 {backend}의 미리보기 안내를 계산하지 못했습니다."
+  }
+}

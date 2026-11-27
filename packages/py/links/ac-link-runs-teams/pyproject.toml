@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-runs-teams"
 version = "0.2.0"
-description = "Agent Console — 실행·팀 연동 모듈: 팀 규칙 검증·실행 준비·노드 서비스, 팀 구성 검증 요약·검증 경로"
+description = "Agent Console — runs and teams link module: team rule validation, run preparation, node services, team validation summary and routes"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -21,6 +21,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-runs-teams = "agent_console_link_runs_teams.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-runs-teams = "agent_console_link_runs_teams"
 
 [dependency-groups]
 dev = [

@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 import { Button, Icon, Menu, type MenuItemDef } from "@agent-console/ui";
 import type { MemoryScopeSummary } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { formatDateTime } from "../../lib/format";
-import { sizeMessages } from "./format";
-import { memoryMessages as t } from "./messages";
+import { useViewMessages } from "./format";
+import { useT } from "@agent-console/i18n";
+import { useFormat } from "../../i18n";
 
 export interface PaneSeparatorProps {
   /** 조절되는 칸의 현재 폭 */
@@ -106,18 +106,21 @@ export interface ScopeSummaryPanelProps {
 
 /** 3칸에서 항목을 고르지 않았을 때 상세 칸에 보이는 범위 요약. 범위를 고르지 않았으면 안내 한 줄. */
 export function ScopeSummaryPanel({ summary, label, onNew }: ScopeSummaryPanelProps) {
+  const fmt = useFormat();
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
   if (label === null) {
-    return <p className="mem-muted mem-detail-hint">{t.detail.emptyHint}</p>;
+    return <p className="mem-muted mem-detail-hint">{t("detail.emptyHint")}</p>;
   }
   return (
-    <section className="mem-summary" aria-label={t.detail.summaryTitle}>
+    <section className="mem-summary" aria-label={t("detail.summaryTitle")}>
       <h2 className="mem-summary-title ac-ellipsis" title={label}>{label}</h2>
       <dl className="mem-summary-grid">
-        <div><dt>{t.detail.summaryTitle}</dt><dd>{t.detail.scopeEntries(summary?.entries ?? 0)} · {t.detail.scopeArchived(summary?.archived ?? 0)}</dd></div>
-        <div><dt>{t.detail.scopeBytes}</dt><dd>{formatBytes(summary?.bytes ?? 0, sizeMessages)}</dd></div>
-        <div><dt>{t.detail.scopeUpdated}</dt><dd>{summary?.updated_at == null ? "–" : formatDateTime(summary.updated_at)}</dd></div>
+        <div><dt>{t("detail.summaryTitle")}</dt><dd>{t("detail.scopeEntries", { n: summary?.entries ?? 0 })} · {t("detail.scopeArchived", { n: summary?.archived ?? 0 })}</dd></div>
+        <div><dt>{t("detail.scopeBytes")}</dt><dd>{formatBytes(summary?.bytes ?? 0, viewMessages)}</dd></div>
+        <div><dt>{t("detail.scopeUpdated")}</dt><dd>{summary?.updated_at == null ? "–" : fmt.dateTimeFull(summary.updated_at)}</dd></div>
       </dl>
-      <Button onClick={onNew} icon={<Icon name="plus" />}>{t.actions.new}</Button>
+      <Button onClick={onNew} icon={<Icon name="plus" />}>{t("actions.new")}</Button>
     </section>
   );
 }

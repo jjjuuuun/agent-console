@@ -1,6 +1,6 @@
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
-import { sddMessages as m } from "./messages";
+import type { Translate } from "@agent-console/i18n";
 
 /** 스펙 요청 실패를 화면이 다루는 종류로 나눈 것. 서버 코드는 화면에 노출하지 않는다. */
 export type SddFailure =
@@ -13,7 +13,7 @@ export type SddFailure =
   | { kind: "generic"; message: string; code?: string };
 
 /** 오류를 화면 종류로 분류한다. `fallback`은 서버 문장도 없을 때 쓴다. */
-export function classifySddError(error: unknown, fallback: string): SddFailure {
+export function classifySddError(error: unknown, fallback: string, t: Translate): SddFailure {
   if (!(error instanceof ApiError)) return { kind: "generic", message: error instanceof Error && error.message !== "" ? error.message : fallback };
   switch (error.code) {
     case ERROR_CODES.SDD_SPACES_UNAVAILABLE:
@@ -21,19 +21,24 @@ export function classifySddError(error: unknown, fallback: string): SddFailure {
     case ERROR_CODES.SDD_NOT_FOUND:
       return { kind: "notFound" };
     case ERROR_CODES.PROJECT_FOLDER_MISSING:
-      return { kind: "problem", message: m.problem.folderMissing };
+      return { kind: "problem", message: t("problem.folderMissing") };
     case ERROR_CODES.PROJECT_MANIFEST_INVALID:
-      return { kind: "problem", message: m.problem.manifestInvalid };
+      return { kind: "problem", message: t("problem.manifestInvalid") };
     case ERROR_CODES.PROJECT_CONFIG_READONLY:
     case ERROR_CODES.SDD_CONFIG_READONLY:
-      return { kind: "problem", message: m.problem.configReadonly };
+      return { kind: "problem", message: t("problem.configReadonly") };
     case ERROR_CODES.PROJECT_NOT_FOUND:
-      return { kind: "problem", message: m.problem.notFound };
+      return { kind: "problem", message: t("problem.notFound") };
     case ERROR_CODES.FOLDERS_INVALID_PATH:
-      return { kind: "problem", message: m.problem.invalidPath(typeof error.details["reason"] === "string" ? error.details["reason"] : "") };
+      return { kind: "problem", message: invalidPathText(error.details["reason"], t) };
     default:
       return { kind: "generic", message: error.message !== "" ? error.message : fallback, code: error.code };
   }
+}
+
+/** 허용되지 않는 경로 문구(사유는 서버 문장이고 없으면 사유 없는 문구). */
+function invalidPathText(reason: unknown, t: Translate): string {
+  return typeof reason === "string" && reason !== "" ? t("problem.invalidPathWith", { reason }) : t("problem.invalidPath");
 }
 
 /** 오류가 서버 코드 `code`인가. */

@@ -9,16 +9,15 @@ import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { ShapedField, type ItemRenderArgs } from "../sdd";
 import { resolveRef, unwrapNullable, type SchemaNode } from "../../lib/schemaTools";
 import { variableToken, xuiVariables } from "./rulesSchema";
-import { wikiRulesMessages } from "./rulesScreenMessages";
-
-const w = wikiRulesMessages.widgets;
+import { useT } from "@agent-console/i18n";
 
 /** 글롭 칸(mono). 문자열 목록. */
 export function GlobField(p: SchemaFormFieldProps) {
+  const t = useT("wiki");
   return (
     <ShapedField
       field={p}
-      footer={<p className="app-muted wiki-hint">{w.globHint}</p>}
+      footer={<p className="app-muted wiki-hint">{t("rules.widgets.globHint")}</p>}
       renderItem={(a: ItemRenderArgs) => (
         <input
           id={a.id}
@@ -28,7 +27,7 @@ export function GlobField(p: SchemaFormFieldProps) {
           aria-label={a.label}
           aria-invalid={a.invalid || undefined}
           aria-describedby={a.describedBy}
-          placeholder={w.globPlaceholder}
+          placeholder={t("rules.widgets.globPlaceholder")}
           value={a.value}
           disabled={a.disabled}
           onChange={(e) => a.onChange(e.target.value)}
@@ -39,6 +38,7 @@ export function GlobField(p: SchemaFormFieldProps) {
 }
 
 function TemplateItem({ a, variables }: { a: ItemRenderArgs; variables: readonly { name: string; description?: string }[] }) {
+  const t = useT("wiki");
   const ref = useRef<HTMLTextAreaElement>(null);
   const insert = (name: string) => {
     const el = ref.current;
@@ -55,9 +55,9 @@ function TemplateItem({ a, variables }: { a: ItemRenderArgs; variables: readonly
     <>
       <textarea ref={ref} id={a.id} className="ac-input wiki-mono" rows={2} aria-label={a.label} aria-invalid={a.invalid || undefined} aria-describedby={a.describedBy} value={a.value} disabled={a.disabled} onChange={(e) => a.onChange(e.target.value)} />
       {variables.length > 0 ? (
-        <div className="wiki-var-chips" role="group" aria-label={w.variablesLabel}>
+        <div className="wiki-var-chips" role="group" aria-label={t("rules.widgets.variablesLabel")}>
           {variables.map((v) => (
-            <button key={v.name} type="button" className="wiki-var-chip" disabled={a.disabled} title={v.description} aria-label={w.insertVariable(v.name)} onClick={() => insert(v.name)}>{variableToken(v.name)}</button>
+            <button key={v.name} type="button" className="wiki-var-chip" disabled={a.disabled} title={v.description} aria-label={t("rules.widgets.insertVariable", { token: variableToken(v.name) })} onClick={() => insert(v.name)}>{variableToken(v.name)}</button>
           ))}
         </div>
       ) : null}

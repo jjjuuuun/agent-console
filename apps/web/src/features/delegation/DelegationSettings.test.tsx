@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, NodeSpec } from "@agent-console/contracts";

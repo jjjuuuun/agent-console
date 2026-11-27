@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineMarkdown, type UiSchema } from "@agent-console/schema-form";
-import { AppSchemaForm } from "../../../../i18n";
+import { AppSchemaForm, useFormat } from "../../../../i18n";
 import { Button, ConfirmDialog, Disclosure, Icon, StatusChip, useToast } from "@agent-console/ui";
 import type { LogSourceInfo, LogSourceSetting, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
-import { messages as m } from "../../../../app/messages";
+import { useAppMessages } from "../../../../app/appMessages";
+import { createToastText } from "../../../../app/ToastText";
 import { useNow } from "../../../../app/useNow";
-import { describeSourceStatus, logsMessages as t, useLogClassifiers, useLogScan, useLogSources } from "../../../logs";
+import { describeSourceStatus, useLogClassifiers, useLogScan, useLogSources, useLogsMessages } from "../../../logs";
 import { CHOICE_SELECT_WIDGET, ChoiceSelectWidget } from "../../widgets/ChoiceSelectWidget";
 import { errorsUnder, messagesAt } from "../../errorPaths";
 import { Skeleton } from "../../Skeleton";
 import { isHttpUrl, patchLogs, without } from "./helpers";
+
+const LogsToast = createToastText(useLogsMessages);
 import type { SectionEditProps } from "../FormSections";
 
 const CUSTOM_WIDGETS = { [CHOICE_SELECT_WIDGET]: ChoiceSelectWidget };
@@ -39,6 +42,9 @@ export function effectiveEnabled(info: LogSourceInfo, s: LogSourceSetting | unde
 
 /** 수집 출처: 서버 디스크립터 카드(스위치·상태·[지금 수집]·설정 폼). 출처 이름을 코드에 두지 않는다. */
 export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, focusSource, observeHref }: LogsSourcesBlockProps) {
+  const m = useAppMessages();
+  const fmt = useFormat();
+  const t = useLogsMessages();
   const sources = useLogSources();
   const classifiers = useLogClassifiers();
   const toast = useToast();
@@ -95,8 +101,9 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
     setScanningId(null);
     const mine = report?.sources?.find((s) => s.source_id === info.descriptor.id);
     if (mine === undefined) return;
-    if (mine.error_code != null) toast({ tone: "warning", text: t.settings.sources.scanError(mine.message ?? mine.error_code) });
-    else toast({ tone: "success", text: t.settings.sources.scanNew(mine.new_events ?? 0) });
+    const detail = mine.message ?? mine.error_code ?? "";
+    if (mine.error_code != null) toast({ tone: "warning", text: <LogsToast render={(l) => l.settings.sources.scanError(detail)} /> });
+    else toast({ tone: "success", text: <LogsToast render={(l) => l.settings.sources.scanNew(mine.new_events ?? 0)} /> });
   };
 
   if (sources.isPending) return <Skeleton rows={3} />;
@@ -132,7 +139,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
               const autoOn = defaultOn && d.default_enabled !== true;
               const unsaved = enabled !== info.enabled;
               const expanded = open.has(d.id) || focusSource === d.id;
-              const view = describeSourceStatus({ info, enabled, dirty: unsaved, scanning: scanningId === d.id, nowMs });
+              const view = describeSourceStatus({ info, enabled, dirty: unsaved, scanning: scanningId === d.id, nowMs, t, fmt });
               const at = `/logs/sources/${index}`;
               const cfgErrors = index < 0 ? [] : errorsUnder(errors, `${at}/config`);
               const ownErrors = index < 0 ? [] : [...messagesAt(errors, at), ...messagesAt(errors, `${at}/config`), ...messagesAt(errors, `${at}/enabled`)];
@@ -170,7 +177,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                   ) : null}
                   {d.description ? <p className={`app-muted app-wrap ${expanded ? "" : "logs-clamp-2"}`}><InlineMarkdown text={d.description} /></p> : null}
                   <div className="logs-source-status" data-kind={view.kind}>
-                    <span className="app-muted">{view.kind === "off" ? null : "상태"}</span>
+                    <span className="app-muted">{view.kind === "off" ? null : m.settings.sourceStatus}</span>
                     {view.chip ? <StatusChip status={view.kind === "error" ? "failed" : view.kind === "ok" ? "succeeded" : "pending"} label={view.chip} /> : null}
                     {view.code ? <code className="logs-mono">{view.code}</code> : null}
                     {view.errorText ? <span className="app-wrap">{view.errorText}</span> : null}

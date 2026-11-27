@@ -3,18 +3,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES, type BackendDescriptor, type BackendLoginSession, type BackendLogoutResult, type LoginMethodInfo, type ReadinessAction } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
+import { raised, useDescribeError, useErrorState, type RaisedError } from "../../app/errors";
 import { useNow } from "../../app/useNow";
 import { LoginBusyDialog, LoginConfirmDialog, LoginSessionDialog, LogoutDialog } from "./LoginDialogs";
-import { loginMessages as t } from "./messages";
+import { useLoginMessages } from "./messages";
 import { isTerminalPhase } from "./types";
 
 type Flow =
   | { kind: "idle" }
-  | { kind: "confirm"; backendId: string; methodId: string | null; starting: boolean; error?: string }
+  | { kind: "confirm"; backendId: string; methodId: string | null; starting: boolean; error?: RaisedError }
   | { kind: "busy"; backendId: string; methodId: string | null; sessionId: string; working: boolean }
   | { kind: "session"; sessionId: string; backendId: string; methodId: string | null }
-  | { kind: "logout"; backendId: string; running: boolean; result: BackendLogoutResult | null; error?: string };
+  | { kind: "logout"; backendId: string; running: boolean; result: BackendLogoutResult | null; error?: RaisedError };
 
 export interface UseBackendLoginOptions {
   backends: readonly BackendDescriptor[];
@@ -43,11 +43,14 @@ function findMethod(backends: readonly BackendDescriptor[], backendId: string, m
  * 폴링은 세션 대화상자가 열린 동안만 1초 간격(하트비트 겸용). 붙여 넣은 코드는 상태·캐시·로그에 남기지 않는다.
  */
 export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: UseBackendLoginOptions): BackendLoginController {
+  const describeError = useDescribeError();
+  const t = useLoginMessages();
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const [flow, setFlow] = useState<Flow>({ kind: "idle" });
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | undefined>(undefined);
+  // 오류는 문구가 아니라 일어난 오류로 들고 있다가 그릴 때 화면 언어로 바꾼다(언어를 바꿔도 이전 언어가 남지 않게)
+  const [sendError, setSendError] = useErrorState(t.codeSendFailed);
   const settledRef = useRef<string | null>(null);
   const onSettledRef = useRef(onSettled);
   useEffect(() => {
@@ -93,9 +96,9 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
   }, [session]);
 
   const close = useCallback(() => {
-    setSendError(undefined);
+    setSendError(null);
     setFlow({ kind: "idle" });
-  }, []);
+  }, [setSendError]);
 
   const start = useCallback(
     async (backendId: string, methodId: string | null) => {
@@ -109,7 +112,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
           setFlow({ kind: "busy", backendId, methodId, sessionId: e.details["session_id"], working: false });
           return;
         }
-        setFlow({ kind: "confirm", backendId, methodId, starting: false, error: describeError(e, t.startFailed).message });
+        setFlow({ kind: "confirm", backendId, methodId, starting: false, error: raised(e) });
       }
     },
     [rest, queryClient],
@@ -121,42 +124,42 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
       const done = await rest.cancelBackendLogin(sessionId);
       queryClient.setQueryData(sessionKey(sessionId), done);
     } catch (e) {
-      setSendError(describeError(e, t.lost).message);
+      setSendError(raised(e, t.lost));
     }
-  }, [rest, queryClient, sessionId]);
+  }, [rest, queryClient, sessionId, t, setSendError]);
 
   const sendText = useCallback(
     async (text: string) => {
       if (!sessionId) return;
       setSending(true);
-      setSendError(undefined);
+      setSendError(null);
       try {
         await rest.sendBackendLoginInput(sessionId, { text });
         await query.refetch();
       } catch (e) {
-        setSendError(describeError(e, t.codeSendFailed).message);
+        setSendError(raised(e));
       } finally {
         setSending(false);
       }
     },
-    [rest, sessionId, query],
+    [rest, sessionId, query, setSendError],
   );
 
   const sendKey = useCallback(
     async (key: string) => {
       if (!sessionId) return;
       setSending(true);
-      setSendError(undefined);
+      setSendError(null);
       try {
         await rest.sendBackendLoginInput(sessionId, { key });
         await query.refetch();
       } catch (e) {
-        setSendError(describeError(e, t.codeSendFailed).message);
+        setSendError(raised(e));
       } finally {
         setSending(false);
       }
     },
-    [rest, sessionId, query],
+    [rest, sessionId, query, setSendError],
   );
 
   const logout = useCallback(
@@ -167,7 +170,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
         setFlow({ kind: "logout", backendId, running: false, result });
         onSettledRef.current(backendId);
       } catch (e) {
-        setFlow({ kind: "logout", backendId, running: false, result: null, error: describeError(e, t.logoutFailed).message });
+        setFlow({ kind: "logout", backendId, running: false, result: null, error: raised(e) });
       }
     },
     [rest],
@@ -178,6 +181,8 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
     else if (action.kind === "logout") setFlow({ kind: "logout", backendId, running: false, result: null });
   }, []);
 
+  /** 담아 둔 오류를 지금 화면 언어 문구로 바꾼다 */
+  const textOf = (e: RaisedError | undefined, fallback: string): string | undefined => (e === undefined ? undefined : describeError(e.raised.error, e.raised.fallback ?? fallback).message);
   const titleOf = (backendId: string, methodId: string | null) => findMethod(backends, backendId, methodId)?.label || t.titleFallback;
 
   let dialogs: ReactNode = null;
@@ -188,7 +193,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
         title={titleOf(flow.backendId, flow.methodId)}
         method={findMethod(backends, flow.backendId, flow.methodId)}
         starting={flow.starting}
-        error={flow.error}
+        error={textOf(flow.error, t.startFailed)}
         onCancel={close}
         onStart={() => void start(flow.backendId, flow.methodId)}
       />
@@ -220,7 +225,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
           session={session}
           nowMs={nowMs}
           sending={sending}
-          sendError={sendError}
+          sendError={sendError ?? undefined}
           method={findMethod(backends, session.backend_id, session.method_id)}
           successExtra={(() => {
             const b = backends.find((x) => x.id === session.backend_id);
@@ -256,7 +261,7 @@ export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: Use
         title={`${backends.find((b) => b.id === id)?.title ?? ""} ${t.logoutTitle}`.trim()}
         running={flow.running}
         result={flow.result}
-        error={flow.error}
+        error={textOf(flow.error, t.logoutFailed)}
         onCancel={close}
         onConfirm={() => void logout(id)}
         onClose={close}

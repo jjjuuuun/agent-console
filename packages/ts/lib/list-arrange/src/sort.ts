@@ -1,13 +1,16 @@
 import type { GroupByDef, SortDef, Usable } from "./types";
 
+/** 로캘을 안 주었을 때 글자 정렬에 쓰는 기본값(환경 로캘에 기대지 않아 결과가 일정하다). 앱은 화면 언어를 넘긴다. */
+export const DEFAULT_LOCALE = "en";
+
 /** 로케일 문자열 비교기(숫자는 자연 정렬). */
-export function textCompare(locale = "ko"): (a: string, b: string) => number {
+export function textCompare(locale = DEFAULT_LOCALE): (a: string, b: string) => number {
   const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
   return (a, b) => collator.compare(a, b);
 }
 
 /** 문자열 필드(읽기 함수)로 비교하는 `compare`를 만든다. */
-export function byText<T>(read: (item: T) => string, locale = "ko"): (a: T, b: T) => number {
+export function byText<T>(read: (item: T) => string, locale = DEFAULT_LOCALE): (a: T, b: T) => number {
   const cmp = textCompare(locale);
   return (a, b) => cmp(read(a), read(b));
 }

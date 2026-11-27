@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { lookupMessage } from "../app/messages";
+import { useLookupMessage } from "../app/shellMessages";
 import { useRequires } from "./ModulesContext";
 
 /**
@@ -53,6 +53,7 @@ const ON: LinkPartState = { visible: true, disabled: false, off: false, note: un
  * (조건부 렌더 컴포넌트 안에 두고 `enabled` 옵션으로 막는다).
  */
 export function useLinkPart(id: string): LinkPartState {
+  const lookupMessage = useLookupMessage();
   const def = useContext(PartsContext).byId.get(id);
   const r = useRequires(def?.requires ?? []);
   return useMemo<LinkPartState>(() => {
@@ -64,7 +65,7 @@ export function useLinkPart(id: string): LinkPartState {
       off: r.phase === "unmet",
       note: r.phase === "unmet" && def.noteKey !== undefined ? lookupMessage(`linkPart.note.${def.noteKey}`) : undefined,
     };
-  }, [def, r.phase]);
+  }, [def, r.phase, lookupMessage]);
 }
 
 export interface LinkPartProps {

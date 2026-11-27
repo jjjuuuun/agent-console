@@ -1,0 +1,162 @@
+{
+  "title": "Usage",
+  "hint": "The 5-hour and weekly usage only apply when you run with a subscription sign-in. These windows may not exist when you run with an API key.",
+  "refresh": "Refresh",
+  "refreshing": "Refreshing",
+  "lastUpdated": "Last updated {when}",
+  "loading": "Loading usage…",
+  "loadFailed": "Couldn't load usage",
+  "staleData": "Showing the previously received values dimmed",
+  "status": {
+    "allowed": {
+      "label": "Allowed"
+    },
+    "allowed_warning": {
+      "label": "Allowed (warning)"
+    },
+    "rejected": {
+      "label": "Rejected"
+    },
+    "idle": {
+      "label": "No usage",
+      "aria": "No usage in the last {window}"
+    }
+  },
+  "trust": {
+    "official": "Official",
+    "observed": "Observed",
+    "estimated": "Estimated",
+    "unofficial": "Unofficial"
+  },
+  "cards": {
+    "region": "Usage windows",
+    "empty": "No values yet",
+    "emptyBody": "Values appear here once an enabled source reports them.",
+    "howToConnect": "How to connect",
+    "headline": "{pct} used",
+    "tokens": "Tokens {n}",
+    "noRatio": "No usage rate",
+    "noRatioHeadline": "No usage rate",
+    "noValue": "No observed value",
+    "resets": "Resets in {rel}",
+    "resetsLine": "Resets in {rel} · {abs}",
+    "resetsAt": "({abs})",
+    "resetsOnDate": "Resets {date}",
+    "resetsPassed": "The reset time has passed — the value may be from the previous window.",
+    "resetsPassedShort": "Reset time passed",
+    "observedAt": "Observed {rel}",
+    "staleChip": "Stale",
+    "otherSources": "Other sources ({n})",
+    "info": "Details",
+    "hidden": {
+      "noLimit": "No limit information",
+      "resetsUnknown": "No reset time information",
+      "statusOnly": "No usage rate — this source reports status only",
+      "ruleFallback": "No value from the sources in your order, so the default rule was used"
+    },
+    "ariaLabel": "{name}, {value}, {resets}",
+    "gaugeLabel": "{name} usage rate",
+    "resetsUnderMinute": "Under 1 min"
+  },
+  "group": {
+    "title": {
+      "observed": "Observed values",
+      "estimated": "Log estimates",
+      "unofficial": "Unofficial values"
+    },
+    "titleFallback": "{trust} values",
+    "basisPrimary": "These values are the basis until official values are connected",
+    "basisReference": "Official values exist, so these are for reference",
+    "noValueRow": "–"
+  },
+  "basis": {
+    "recentOfficial": "Each window shows the most recent official source",
+    "configured": "Each window follows your source order",
+    "recent": "Each window shows the most recent value"
+  },
+  "nestedNote": "Child runs of nested teams are included in the parent run and counted once.",
+  "rollup": {
+    "title": "Token totals",
+    "titleProject": "Token totals for this project",
+    "scopeProject": "Only run history of this project is totaled. The 5-hour and weekly windows above are not split by project and cover the whole account.",
+    "period": "Period",
+    "periods": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "view": "View",
+    "views": {
+      "agent_id": "Agent",
+      "graph_id": "Team",
+      "model": "Model",
+      "day": "Day"
+    },
+    "unnamed": "(not set)",
+    "empty": "No runs to total in this period",
+    "input": "Input",
+    "output": "Output",
+    "noSplit": "–",
+    "totalOnly": "Total tokens only",
+    "totalOnlyTitle": "Subagents report total tokens only, without an input/output split or cost",
+    "costSession": "Session total",
+    "cost": "${usd}",
+    "asTable": "View as table",
+    "asBars": "View as bars",
+    "tableLabel": "Token totals table",
+    "note": "Per-agent values are not added together. Whether a delegator's value includes subagent tokens depends on the backend, so the screen shows the values the server gives as they are.",
+    "columns": {
+      "name": "Name",
+      "total": "Total",
+      "input": "Input",
+      "output": "Output",
+      "cost": "Cost",
+      "note": "Note"
+    },
+    "inOut": "Input {i} · Output {o}",
+    "barsLabel": "Token totals bars"
+  },
+  "sources": {
+    "title": "Sources",
+    "empty": "No usage sources are configured",
+    "enableInSettings": "Turn on sources in settings",
+    "changeInSettings": "Change in settings",
+    "enabled": "On",
+    "disabled": "Off",
+    "noValue": "No value",
+    "ok": "OK",
+    "lastSeen": "Last {rel}",
+    "neverSeen": "Not observed",
+    "errorLine": "Error: {msg}",
+    "setup": "How to set up",
+    "setupNote": "This app doesn't change your user-wide settings. Add it yourself.",
+    "docs": "View docs",
+    "copy": "Copy",
+    "loadFailed": "Couldn't load the source list",
+    "summary": "{enabled} of {total} sources on",
+    "devOnly": "For development ({n})",
+    "setupInGuide": "The connection steps are in the guide above."
+  },
+  "setup": {
+    "region": "Status line setup guide",
+    "summaryEmpty": "Connect the Claude Code status line to see measured 5-hour and weekly usage",
+    "summaryMissing": "Measured 5-hour and weekly usage needs the Claude Code status line connection. Local log estimates already show without setup.",
+    "summaryConnected": "Status line connected · last received {when}",
+    "toggle": "How to connect",
+    "tabsLabel": "Situation",
+    "shell": "Shell",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy. Select the text and copy it yourself",
+    "codeLabel": "{title} code",
+    "lastReceived": "Last received {when}",
+    "neverReceived": "Nothing received yet",
+    "recheck": "Check again",
+    "rechecking": "Checking"
+  },
+  "common": {
+    "none": "–",
+    "unknown": "Unknown"
+  },
+  "compactTokens": "Tokens {n}"
+}

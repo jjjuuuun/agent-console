@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-resources"
 version = "0.1.0"
-description = "Agent Console — 리소스 기능 모듈: 리소스 라이브러리 CRUD·본문·여러 파일, 리소스 종류 목록, 리소스 조회·종류 포트"
+description = "Agent Console — resources feature module: resource library CRUD, content, multiple files, resource kind list, resource lookup and kind ports"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -21,6 +21,9 @@ mod-resources = "agent_console_mod_resources.module:module"
 
 [project.entry-points."agent_console.host_plugin_loaders"]
 resources = "agent_console_mod_resources.plugins:load_plugins"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-resources = "agent_console_mod_resources"
 
 [dependency-groups]
 dev = [

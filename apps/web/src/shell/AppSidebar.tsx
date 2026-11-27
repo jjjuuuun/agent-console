@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon, IconButton, Sidebar, Tooltip, nextTheme, useTheme, type SidebarGroup, type SidebarItem } from "@agent-console/ui";
-import { lookupMessage, messages as m } from "../app/messages";
+import { useLookupMessage, useShellMessages } from "../app/shellMessages";
 import { gotoCommandId, homeRoute, type RouteDef, type RouteGroupDef } from "./routeConfig";
 
 export interface SidebarBadge {
@@ -28,10 +28,14 @@ export interface AppSidebarProps {
   loadingItems?: boolean;
   /** 푸터 맨 위에 끼울 요소. 주 메뉴 `nav` 밖이다 */
   footerSlot?: ReactNode;
+  /** 도구줄 맨 앞(도움말 앞)에 끼울 요소. 없으면 줄은 원래 모양 그대로다 */
+  toolsLeading?: ReactNode;
 }
 
 /** 사이드바 조립: 라우트 설정 데이터 → `Sidebar` 항목. 라우터를 모르고 콜백만 부른다. */
-export function AppSidebar({ routes, groups = [], shortcutHint, activeId, badges, collapsed, onCollapsedChange, onNavigate, onOpenQuickNav, onOpenHelp, headerSlot, footerSlot, loadingItems = false }: AppSidebarProps) {
+export function AppSidebar({ routes, groups = [], shortcutHint, activeId, badges, collapsed, onCollapsedChange, onNavigate, onOpenQuickNav, onOpenHelp, headerSlot, footerSlot, toolsLeading, loadingItems = false }: AppSidebarProps) {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
   const { theme, setTheme } = useTheme();
   const next = nextTheme(theme);
   const items: SidebarItem[] = routes.map((route) => {
@@ -103,6 +107,7 @@ export function AppSidebar({ routes, groups = [], shortcutHint, activeId, badges
       }
       tools={
         <>
+          {toolsLeading}
           <Tooltip placement="top" align="start" content={withHint(m.shortcuts.helpOpen, "help.open")}>
             <IconButton label={m.shortcuts.helpOpen} title="" icon={<Icon name="help" />} size="md" onClick={onOpenHelp} />
           </Tooltip>

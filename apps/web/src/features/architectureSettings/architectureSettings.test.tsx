@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, type RenderOptions, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ArchitectureProfileList, Issue, ModuleInfo } from "@agent-console/contracts";
 import { createFakeClients } from "../../testing/fakes";
@@ -10,6 +10,11 @@ import { createAppQueryClient } from "../../app/queries";
 import { QueryClientProvider } from "@tanstack/react-query";
 import "./index";
 import { withViewportWidth } from "../../testing/viewport";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
 
 afterEach(cleanup);
 const LONG = { timeout: 15_000 };

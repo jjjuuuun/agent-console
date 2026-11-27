@@ -8,16 +8,17 @@ import { Banner, Button, Disclosure, Icon, IconButton, Menu, Popover, Spinner, S
 import type { MemoryEntry, MemoryScopeKindInfo, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryEntryEditor, MemoryEntryMeta, scopeLabel, type MemoryEntryEditorHandle, type ScopeLabel } from "@agent-console/memory-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { useStorage } from "../../app/StorageContext";
-import { relativeTime, viewMessages } from "./format";
+import { useRelativeTime, useViewMessages } from "./format";
 import { MEMORY_LIMITS, MEMORY_STORAGE } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { SecretBand } from "./SecretBand";
 import { ConflictDialog } from "./ConflictDialog";
 import { useEntryEditor } from "./useEntryEditor";
 import type { MemoryContext } from "./useMemoryContext";
 import type { MemoryLimits } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
+import { useLanguageCode } from "../../i18n";
 
 /** 밖에서 부르는 동작: 저장(이탈 확인의 "저장하고 이동"), 초안 버리기. */
 export interface EntryDetailHandle {
@@ -56,8 +57,13 @@ export interface EntryDetailProps {
 }
 
 export function EntryDetail(props: EntryDetailProps) {
+  const describeError = useDescribeError();
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
+  const language = useLanguageCode();
+  const relativeTime = useRelativeTime();
   const { id, knownKey, kinds, ctx, limits, inFilter, closable, contentTypeSuggestions, onOpenRun, onClose, onDirtyChange, onHistory, onMove, extraMenuItems, onArchive, onDelete, onPurge, onRestore, onSaveAsNew } = props;
-  const editor = useEntryEditor(id, t.detail.saveFailedNote);
+  const editor = useEntryEditor(id, t("detail.saveFailedNote"));
   const storage = useStorage();
   const editorHandle = useRef<MemoryEntryEditorHandle>(null);
   const [attachMeta, metaMore] = useScrollCue<HTMLDivElement>();
@@ -77,19 +83,19 @@ export function EntryDetail(props: EntryDetailProps) {
 
   if (editor.status === "loading") {
     return (
-      <section className="mem-detail" aria-busy="true" aria-label={knownKey ?? t.detail.loadingEntry}>
+      <section className="mem-detail" aria-busy="true" aria-label={knownKey ?? t("detail.loadingEntry")}>
         <div className="mem-detail-head">
           <h2 className="mem-detail-title ac-ellipsis" title={knownKey}>{knownKey ?? ""}</h2>
         </div>
-        <div className="mem-skeleton" role="status" aria-label={t.detail.loadingEntry}><Spinner /></div>
+        <div className="mem-skeleton" role="status" aria-label={t("detail.loadingEntry")}><Spinner /></div>
       </section>
     );
   }
   if (editor.status === "notfound") {
     return (
       <section className="mem-detail">
-        <ErrorBlock title={t.detail.notFoundTitle} message={t.detail.notFoundBody}>
-          <Button onClick={onClose}>{t.detail.toList}</Button>
+        <ErrorBlock title={t("detail.notFoundTitle")} message={t("detail.notFoundBody")}>
+          <Button onClick={onClose}>{t("detail.toList")}</Button>
         </ErrorBlock>
       </section>
     );
@@ -97,7 +103,7 @@ export function EntryDetail(props: EntryDetailProps) {
   if (editor.status === "error" || entry === null || editor.draft === null) {
     return (
       <section className="mem-detail">
-        <ErrorBlock title={t.detail.loadFailed} message={describeError(editor.error, t.detail.loadFailed).message} retryLabel={t.retry} onRetry={editor.reload} />
+        <ErrorBlock title={t("detail.loadFailed")} message={describeError(editor.error, t("detail.loadFailed")).message} retryLabel={t("retry")} onRetry={editor.reload} />
       </section>
     );
   }
@@ -125,18 +131,18 @@ export function EntryDetail(props: EntryDetailProps) {
     <Menu
       onClose={() => setMenuOpen(false)}
       items={[
-        { id: "move", label: t.menu.move, disabled: deleted, onSelect: () => onMove(entry, dirty) },
-        { id: "history", label: t.menu.history, onSelect: () => onHistory(entry, dirty) },
+        { id: "move", label: t("menu.move"), disabled: deleted, onSelect: () => onMove(entry, dirty) },
+        { id: "history", label: t("menu.history"), onSelect: () => onHistory(entry, dirty) },
         ...(extraMenuItems?.(entry) ?? []),
         {
           id: "archive",
-          label: entry.archived === true ? t.menu.unarchive : t.menu.archive,
+          label: entry.archived === true ? t("menu.unarchive") : t("menu.archive"),
           icon: "archive",
           disabled: deleted,
           onSelect: () => void onArchive(entry, entry.archived !== true).then((e) => e && editor.rebase(e)),
         },
-        { id: "delete", label: t.menu.delete, disabled: deleted, onSelect: () => onDelete(entry) },
-        { id: "purge", label: t.menu.purge, danger: true, onSelect: () => onPurge(entry) },
+        { id: "delete", label: t("menu.delete"), disabled: deleted, onSelect: () => onDelete(entry) },
+        { id: "purge", label: t("menu.purge"), danger: true, onSelect: () => onPurge(entry) },
       ]}
     />
   );
@@ -145,43 +151,43 @@ export function EntryDetail(props: EntryDetailProps) {
     <section className="mem-detail" aria-label={entry.key}>
       <div className="mem-detail-head">
         <h2 className="mem-detail-title ac-ellipsis" title={entry.key}>{entry.key}</h2>
-        <IconButton label={t.detail.copyKey} size="sm" icon={<Icon name="copy" />} onClick={() => void navigator.clipboard?.writeText(entry.key)} />
+        <IconButton label={t("detail.copyKey")} size="sm" icon={<Icon name="copy" />} onClick={() => void navigator.clipboard?.writeText(entry.key)} />
         <span className="mem-save-state" role="status" data-state={editor.saveState} title={savedAgo}>
           {editor.saveState === "failed" ? <StatusIcon status="failed" kind="run" size={14} /> : null}
           {saveText}
         </span>
         {editor.saveState === "failed" && editor.dirty ? (
-          <button type="button" className="mem-linkbtn" onClick={() => editorHandle.current?.requestSave()}>{t.retry}</button>
+          <button type="button" className="mem-linkbtn" onClick={() => editorHandle.current?.requestSave()}>{t("retry")}</button>
         ) : null}
         <div className="mem-detail-actions">
           <Button variant="primary" size="sm" disabled={!editor.dirty || deleted || editor.saveState === "saving"} loading={editor.saveState === "saving"} onClick={() => editorHandle.current?.requestSave()} title="Ctrl+S">
-            {t.detail.save}
+            {t("detail.save")}
           </Button>
-          <Button size="sm" onClick={() => onHistory(entry, dirty)}>{t.detail.history}</Button>
+          <Button size="sm" onClick={() => onHistory(entry, dirty)}>{t("detail.history")}</Button>
           <Popover
             open={menuOpen}
             onOpenChange={setMenuOpen}
             align="end"
             panelRole="menu"
-            panelLabel={t.menu.label(entry.key)}
+            panelLabel={t("menu.label", { key: entry.key })}
             renderTrigger={(p) => (
-              <button {...p} type="button" className="mem-iconbtn" aria-label={t.detail.more} title={t.detail.more}>
+              <button {...p} type="button" className="mem-iconbtn" aria-label={t("detail.more")} title={t("detail.more")}>
                 <Icon name="more" />
               </button>
             )}
           >
             {menu}
           </Popover>
-          {closable ? <IconButton label={t.detail.close} size="sm" icon={<Icon name="close" />} onClick={onClose} /> : null}
+          {closable ? <IconButton label={t("detail.close")} size="sm" icon={<Icon name="close" />} onClick={onClose} /> : null}
         </div>
       </div>
-      {!inFilter ? <p className="mem-note" role="status">{t.detail.notInFilter}</p> : null}
+      {!inFilter ? <p className="mem-note" role="status">{t("detail.notInFilter")}</p> : null}
       <div className="mem-bands">
         {editor.secret !== null ? <SecretBand field={editor.secret.field} onGo={() => goField(editor.secret?.field ?? null)} /> : null}
         {editor.failure !== null ? <Banner tone="danger" className="mem-band">{editor.failure}</Banner> : null}
         {editor.band?.kind === "deleted" ? (
-          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={() => void onRestore(entry).then((e) => e && editor.rebase(e))}>{t.band.restore}</Button>}>
-            {t.band.deleted}
+          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={() => void onRestore(entry).then((e) => e && editor.rebase(e))}>{t("band.restore")}</Button>}>
+            {t("band.deleted")}
           </Banner>
         ) : null}
         {editor.band?.kind === "deletedNow" ? (
@@ -190,17 +196,17 @@ export function EntryDetail(props: EntryDetailProps) {
             className="mem-band"
             actions={
               <>
-                <Button size="sm" onClick={() => void onRestore(entry).then((e) => e && editor.rebase(e))}>{t.band.restore}</Button>
-                <Button size="sm" onClick={() => onSaveAsNew({ content: draft.content, entry })}>{t.band.saveAsNew}</Button>
+                <Button size="sm" onClick={() => void onRestore(entry).then((e) => e && editor.rebase(e))}>{t("band.restore")}</Button>
+                <Button size="sm" onClick={() => onSaveAsNew({ content: draft.content, entry })}>{t("band.saveAsNew")}</Button>
               </>
             }
           >
-            {t.band.deletedNow}
+            {t("band.deletedNow")}
           </Banner>
         ) : null}
         {editor.band?.kind === "moved" ? (
-          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={editor.followMove}>{t.band.followMove}</Button>}>
-            {t.band.movedNow(`${label(editor.band.to.scope).text}/${editor.band.to.key}`)}
+          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={editor.followMove}>{t("band.followMove")}</Button>}>
+            {t("band.movedNow", { to: `${label(editor.band.to.scope).text}/${editor.band.to.key}` })}
           </Banner>
         ) : null}
         {editor.band?.kind === "newer" ? (
@@ -209,21 +215,21 @@ export function EntryDetail(props: EntryDetailProps) {
             className="mem-band"
             actions={
               <>
-                <Button size="sm" onClick={() => void editor.openCompare()}>{t.band.compare}</Button>
-                <Button size="sm" onClick={editor.loadServer}>{t.band.loadServer}</Button>
+                <Button size="sm" onClick={() => void editor.openCompare()}>{t("band.compare")}</Button>
+                <Button size="sm" onClick={editor.loadServer}>{t("band.loadServer")}</Button>
               </>
             }
           >
-            {t.band.newerVersion(editor.band.server.version, serverAuthor(editor.band.server, ctx), relativeTime(editor.band.server.updated_at))}
+            {t("band.newerVersion", { n: editor.band.server.version, who: serverAuthor(editor.band.server, ctx), when: relativeTime(editor.band.server.updated_at) })}
           </Banner>
         ) : null}
         {editor.redacted ? (
-          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={editor.dismissRedacted}>{t.close}</Button>}>
-            {t.band.redacted}
+          <Banner tone="info" className="mem-band" actions={<Button size="sm" onClick={editor.dismissRedacted}>{t("close")}</Button>}>
+            {t("band.redacted")}
           </Banner>
         ) : null}
       </div>
-      <div className="mem-meta-scroll" ref={attachMeta} tabIndex={0} role="region" aria-label={t.detail.infoRegion}>
+      <div className="mem-meta-scroll" ref={attachMeta} tabIndex={0} role="region" aria-label={t("detail.infoRegion")}>
       <Disclosure
         className="mem-meta"
         summary={viewMessages["detail.info"]}
@@ -233,7 +239,7 @@ export function EntryDetail(props: EntryDetailProps) {
           storage.set(MEMORY_STORAGE.metaOpen, open ? "1" : "0");
         }}
       >
-        <MemoryEntryMeta
+        <MemoryEntryMeta messages={viewMessages} locale={language}
           entry={entry}
           scope={scope}
           draft={{ tags: draft.tags, contentType: draft.contentType, pinned: draft.pinned }}
@@ -250,7 +256,7 @@ export function EntryDetail(props: EntryDetailProps) {
       {metaMore ? <div className="mem-scroll-cue" aria-hidden="true" /> : null}
       </div>
       <div className="mem-detail-editor" data-ac-editable>
-        <MemoryEntryEditor
+        <MemoryEntryEditor messages={viewMessages}
           value={draft.content}
           onChange={editor.setContent}
           entryKey={entry.key}

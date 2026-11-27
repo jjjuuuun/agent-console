@@ -14,7 +14,6 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
 import { useReportUnsaved } from "../../definition/unsaved";
 import { useNow } from "../../app/useNow";
-import { formatRelative } from "../../lib/format";
 import { usePageTitle } from "../../shell/titles";
 import { GuardedButton, MenuButton } from "../../app/menuParts";
 import { ProjectChip } from "../projects";
@@ -32,8 +31,12 @@ import { DEFAULT_TAB, WIKI_PARAMS, WIKI_STORAGE, WIKI_TAB_DEFS, buildWikiDisplay
 import { wikiListPath, wikiPagePath, wikiPath } from "./wikiPaths";
 import { useWikiShortcuts } from "./wikiShortcuts";
 import type { NewPagePrefill, WikiTabPanels, WikiTabProps } from "./wikiTabs";
-import { wikiMessages as m } from "./messages";
 import "./wiki.css";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useUiLibMessages } from "../../i18n/useViewLibMessages";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useFormat } from "../../i18n";
 
 const P = WIKI_PARAMS;
 
@@ -58,6 +61,11 @@ export function lintBadge(counts: Readonly<Record<string, number>> | undefined):
 }
 
 export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
+  const fmt = useFormat();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const uiMessages = useUiLibMessages();
+  const tm = useMaybeT("wiki");
   const { wiki: wikiId = "" } = useParams();
   const navigate = useNavigate();
   const [params, setSearch] = useSearchParams();
@@ -77,7 +85,7 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
       setTimeout(() => setSyncing(false), 1200);
     }
   });
-  const display = useMemo(() => buildWikiDisplay(), []);
+  const display = useMemo(() => buildWikiDisplay(tm), [tm]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [newPage, setNewPage] = useState<{ prefill: NewPagePrefill | undefined } | null>(null);
   const [dirtyTabs, setDirtyTabs] = useState<ReadonlySet<string>>(new Set());
@@ -99,7 +107,7 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
   const versionHash = viewQ.data?.version_hash ?? view?.version_hash ?? "";
   const summary: WikiSummary | undefined = listQ.data?.find((w) => w.id === wikiId);
   const name = wikiName(view?.wiki ?? summary, wikiId);
-  usePageTitle(view === undefined ? m.title : name);
+  usePageTitle(view === undefined ? t("title") : name);
 
   const importer = useImportDialog();
   const exporter = useExportDialog();
@@ -137,18 +145,18 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
     try {
       const r = await space.client.scanWiki(wikiId);
       const n = (r.external ?? []).length + (r.imported ?? []).length + (r.deleted ?? []).length;
-      toast({ tone: "info", text: n > 0 ? m.rescanDone(n) : m.rescanNone, durationMs: 4000 });
+      toast({ tone: "info", text: n > 0 ? t("rescanDone", { count: n }) : t("rescanNone"), durationMs: 4000 });
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : m.problem.generic });
+      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("problem.generic") });
     }
     await invalidate();
   };
 
-  const backLink = <Button onClick={() => void navigate(wikiListPath())}>{m.backToList}</Button>;
+  const backLink = <Button onClick={() => void navigate(wikiListPath())}>{t("backToList")}</Button>;
   if (viewQ.isPending) {
     return (
       <div className="app-screen-frame wiki-screen">
-        <PageHeader title={m.title} />
+        <PageHeader title={t("title")} />
         <div className="wiki-screen-body"><ListSkeleton rows={8} /></div>
       </div>
     );
@@ -156,8 +164,8 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
   if (viewQ.isError || view === undefined) {
     return (
       <div className="app-screen-frame wiki-screen">
-        <PageHeader title={m.title} />
-        <div className="wiki-screen-body"><FailureBlock error={viewQ.error} title={m.loadFailed} onRetry={() => void viewQ.refetch()} backTo={backLink} /></div>
+        <PageHeader title={t("title")} />
+        <div className="wiki-screen-body"><FailureBlock error={viewQ.error} title={t("loadFailed")} onRetry={() => void viewQ.refetch()} backTo={backLink} /></div>
       </div>
     );
   }
@@ -170,7 +178,7 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
   const others = (listQ.data ?? []).filter((w) => w.id !== wikiId);
   const copyDirectory = () => {
     void navigator.clipboard?.writeText(directory);
-    toast({ tone: "success", text: m.copied });
+    toast({ tone: "success", text: t("copied") });
   };
   const currentSummary: WikiSummary = summary ?? { id: wikiId, name };
 
@@ -190,13 +198,13 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
     openNewPage,
     hasTab: (tab) => tabs.some((t) => t.id === tab),
   };
-  const items: TabItem[] = tabs.map((t) => {
-    const Panel = panels[t.id];
-    const label = m.tabs[t.labelKey] ?? t.id;
-    const badge = t.id === "lint" ? lint : 0;
+  const items: TabItem[] = tabs.map((tab) => {
+    const Panel = panels[tab.id];
+    const label = tm(`tabs.${tab.labelKey}`) ?? tab.id;
+    const badge = tab.id === "lint" ? lint : 0;
     return {
-      id: t.id,
-      label: badge > 0 ? <>{label} <span className="wiki-badge" aria-label={m.lintBadge(badge)}>{badge}</span></> : label,
+      id: tab.id,
+      label: badge > 0 ? <>{label} <span className="wiki-badge" aria-label={t("lintBadge", { count: badge })}>{badge}</span></> : label,
       title: label,
       content: Panel === undefined ? null : <Panel {...tabProps} />,
     };
@@ -207,44 +215,44 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
       <PageHeader
         title={name}
         leading={
-          <nav className="wiki-crumb" aria-label={m.header.crumbLabel}>
-            <Link to={wikiListPath()} className="app-back">← {m.back}</Link>
+          <nav className="wiki-crumb" aria-label={t("header.crumbLabel")}>
+            <Link to={wikiListPath()} className="app-back">← {t("back")}</Link>
             <span className="ac-breadcrumb-sep" aria-hidden="true">/</span>
           </nav>
         }
         status={
           <span className="wiki-crumb">
             <MenuButton
-              label={<><span aria-hidden="true">▾</span><span className="ac-sr-only">{m.header.switchLabel}</span></>}
-              panelLabel={m.header.switchLabel}
+              label={<><span aria-hidden="true">▾</span><span className="ac-sr-only">{t("header.switchLabel")}</span></>}
+              panelLabel={t("header.switchLabel")}
               align="start"
               items={[
                 ...others.map((w) => ({ id: `w:${w.id}`, label: wikiName(w, w.id), onSelect: () => void navigate(wikiPath(w.id)) })),
-                { id: "new", label: m.list.new, disabled: writeBlock !== undefined, onSelect: creator.open },
-                { id: "list", label: m.header.list, onSelect: () => void navigate(wikiListPath()) },
+                { id: "new", label: t("list.new"), disabled: writeBlock !== undefined, onSelect: creator.open },
+                { id: "list", label: t("header.list"), onSelect: () => void navigate(wikiListPath()) },
               ]}
             />
-            {syncing || viewQ.isFetching ? <span className="wiki-spinner" role="status" aria-label={m.refreshing} /> : null}
+            {syncing || viewQ.isFetching ? <span className="wiki-spinner" role="status" aria-label={t("refreshing")} /> : null}
           </span>
         }
         actions={
           <>
             <WikiSearch wikiId={wikiId} pages={pagesQ.data?.items ?? []} onOpen={(path) => void navigate(wikiPagePath(wikiId, path))} inputRef={searchRef} />
             <ProjectChip />
-            <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => openNewPage()}>{m.header.newPage}</GuardedButton>
+            <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => openNewPage()}>{t("header.newPage")}</GuardedButton>
             <MenuButton
-              label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{m.header.more}</span></>}
-              panelLabel={m.header.more}
+              label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{t("header.more")}</span></>}
+              panelLabel={t("header.more")}
               items={[
-                ...(tabs.some((t) => t.id === "rules") ? [{ id: "edit", label: m.header.editInfo, onSelect: () => goTab("rules") }] : []),
-                { id: "copy", label: m.copyDirectory, disabled: directory === "", onSelect: copyDirectory },
+                ...(tabs.some((t) => t.id === "rules") ? [{ id: "edit", label: t("header.editInfo"), onSelect: () => goTab("rules") }] : []),
+                { id: "copy", label: t("copyDirectory"), disabled: directory === "", onSelect: copyDirectory },
                 ...(ctx.capabilities.import_export
                   ? [
-                      { id: "export", label: m.list.export, onSelect: () => exporter.open(currentSummary) },
-                      { id: "import", label: m.header.importZip, disabled: writeBlock !== undefined, onSelect: () => importer.open(wikiId) },
+                      { id: "export", label: t("list.export"), onSelect: () => exporter.open(currentSummary) },
+                      { id: "import", label: t("header.importZip"), disabled: writeBlock !== undefined, onSelect: () => importer.open(wikiId) },
                     ]
                   : []),
-                { id: "delete", label: m.list.delete, danger: true, disabled: writeBlock !== undefined, onSelect: () => remover.open(currentSummary) },
+                { id: "delete", label: t("list.delete"), danger: true, disabled: writeBlock !== undefined, onSelect: () => remover.open(currentSummary) },
               ]}
             />
           </>
@@ -254,30 +262,30 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
         {directory === "" ? null : (
           <>
             <span className="ac-mono-wrap ac-ellipsis wiki-mono" title={directory}>{directory}</span>
-            <button type="button" className="app-link-btn" onClick={copyDirectory}>{m.copy}</button>
+            <button type="button" className="app-link-btn" onClick={copyDirectory}>{t("copy")}</button>
           </>
         )}
-        {summary?.pages === undefined ? null : <span>{m.header.pages(summary.pages)}</span>}
-        {broken > 0 ? <ToneChip label={m.header.broken(broken)} tone="warning" /> : null}
-        {rules.length === 0 ? <span className="app-muted">{m.header.noRules}</span> : <ChipRow chips={rules.map((r) => ({ id: r.id, label: r.name !== undefined && r.name !== "" ? r.name : r.id, ...(r.missing === true ? { tone: "danger" } : {}) }))} ariaLabel={m.header.rules} />}
-        {summary?.updated_at === undefined || summary.updated_at === null ? null : <span className="app-muted">{m.header.updated(formatRelative(summary.updated_at, now))}</span>}
-        {summary?.updated_by === undefined || summary.updated_by === null ? null : <AuthorChip author={summary.updated_by} display={display} size="dense" />}
+        {summary?.pages === undefined ? null : <span>{t("header.pages", { n: summary.pages })}</span>}
+        {broken > 0 ? <ToneChip label={t("header.broken", { n: broken })} tone="warning" /> : null}
+        {rules.length === 0 ? <span className="app-muted">{t("header.noRules")}</span> : <ChipRow messages={uiMessages} chips={rules.map((r) => ({ id: r.id, label: r.name !== undefined && r.name !== "" ? r.name : r.id, ...(r.missing === true ? { tone: "danger" } : {}) }))} ariaLabel={t("header.rules")} />}
+        {summary?.updated_at === undefined || summary.updated_at === null ? null : <span className="app-muted">{t("header.updated", { time: fmt.relative(summary.updated_at, now) })}</span>}
+        {summary?.updated_by === undefined || summary.updated_by === null ? null : <AuthorChip messages={wikiViewMessages} author={summary.updated_by} display={display} size="dense" />}
         <span className="wiki-spacer" />
-        <button type="button" className="app-link-btn" onClick={() => void rescan()}>{m.rescan}</button>
+        <button type="button" className="app-link-btn" onClick={() => void rescan()}>{t("rescan")}</button>
       </div>
       {ctx.readOnly ? (
         <div className="wiki-banner-row">
-          <div className="wiki-readonly-note" role="status" data-testid="wiki-readonly"><strong>{m.readonly.title}</strong> <span>{m.readonly.body}</span></div>
+          <div className="wiki-readonly-note" role="status" data-testid="wiki-readonly"><strong>{t("readonly.title")}</strong> <span>{t("readonly.body")}</span></div>
         </div>
       ) : null}
       {errorCount > 0 && active !== "rules" ? (
         <div className="wiki-banner-row">
-          <Banner tone="warning" actions={tabs.some((t) => t.id === "rules") ? <Button size="sm" onClick={() => goTab("rules")}>{m.header.issuesOpen}</Button> : undefined}>{m.header.issues(errorCount)}</Banner>
+          <Banner tone="warning" actions={tabs.some((t) => t.id === "rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t("header.issuesOpen")}</Button> : undefined}>{t("header.issues", { count: errorCount })}</Banner>
         </div>
       ) : null}
       <div className="wiki-screen-body wiki-screen-body-tabs">
-        {tabs.length === 0 || active === undefined ? <ErrorBlock title={m.loadFailed} /> : (
-          <Tabs tabs={items} activeId={active} onChange={(next) => goTab(next)} ariaLabel={m.tabsLabel} lazy />
+        {tabs.length === 0 || active === undefined ? <ErrorBlock title={t("loadFailed")} /> : (
+          <Tabs tabs={items} activeId={active} onChange={(next) => goTab(next)} ariaLabel={t("tabsLabel")} lazy />
         )}
       </div>
       {newPage === null ? null : (
@@ -304,7 +312,7 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
       {importer.dialog}
       {exporter.dialog}
       {remover.dialog}
-      <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
+      <ConfirmDialog open={blocker.state === "blocked"} title={t("leave.title")} confirmLabel={t("leave.leave")} cancelLabel={t("leave.stay")} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{t("leave.body")}</ConfirmDialog>
     </div>
   );
 }

@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { regionProjects } from "./projectRegionLib";
 import { NoProjectState } from "./NoProjectState";
-import { scopeMessages } from "./scopeMessages";
+import { useScopeMessages } from "./scopeMessages";
 import { useProjects } from "./ProjectsContext";
 
 /** 게이트가 보는 상태. `ready`·`off`는 화면 본문을 그대로 그린다. */
@@ -18,7 +17,7 @@ export function useProjectGateState(): ProjectGateState {
   if (!p.enabled) return "off";
   if (p.loadFailed && !p.loaded) return "error";
   if (!p.loaded) return "loading";
-  return regionProjects(p.projects).length === 0 ? "none" : "ready";
+  return p.projects.every((x) => x.archived === true) ? "none" : "ready";
 }
 
 export interface ProjectGateProps {
@@ -37,6 +36,7 @@ export interface ProjectGateProps {
  * 기능 이름을 모르므로 어떤 화면이든 감쌀 수 있다.
  */
 export function ProjectGate({ title, libraryHref, none, children }: ProjectGateProps) {
+  const scopeMessages = useScopeMessages();
   const p = useProjects();
   const state = useProjectGateState();
   if (state === "off" || state === "ready" || (state === "none" && none === "pass")) return <>{children}</>;

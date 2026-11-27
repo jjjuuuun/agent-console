@@ -9,9 +9,10 @@ import { KNOWN_WIKI_IMPORT_STATUSES } from "@agent-console/contracts/constants";
 import { ToneChip } from "@agent-console/markdown-doc";
 import { VirtualList } from "@agent-console/wiki-view";
 import type { WikiImportItem, WikiImportResult, WikiSummary } from "@agent-console/contracts/wiki";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { IMPORT_POLICIES, importStatusDisplay } from "./wikiConfig";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 export interface ExportDialogProps {
   open: boolean;
@@ -23,8 +24,9 @@ export interface ExportDialogProps {
 }
 
 export function WikiExportDialog({ open, onClose, name, pages, onDownload }: ExportDialogProps) {
+  const t = useT("wiki");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("transfer.exportFailed"));
   const go = async () => {
     setBusy(true);
     setError(null);
@@ -32,14 +34,14 @@ export function WikiExportDialog({ open, onClose, name, pages, onDownload }: Exp
       await onDownload();
       onClose();
     } catch (e) {
-      setError(describeError(e, m.transfer.exportFailed).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }
   };
   return (
-    <Dialog open={open} title={m.transfer.exportTitle} onClose={onClose} actions={<><Button onClick={onClose}>{m.cancel}</Button><Button variant="primary" aria-disabled={busy || undefined} onClick={() => void go()}>{m.transfer.download}</Button></>}>
-      <p>{m.transfer.exportBody(name, pages)}</p>
+    <Dialog open={open} title={t("transfer.exportTitle")} onClose={onClose} actions={<><Button onClick={onClose}>{t("cancel")}</Button><Button variant="primary" aria-disabled={busy || undefined} onClick={() => void go()}>{t("transfer.download")}</Button></>}>
+      <p>{pages === null ? t("transfer.exportBody", { name: name }) : t("transfer.exportBodyPages", { name: name, count: pages })}</p>
       {error === null ? null : <p className="app-field-error" role="alert">{error}</p>}
     </Dialog>
   );
@@ -62,13 +64,15 @@ export interface ImportDialogProps {
 const ok = (i: WikiImportItem) => i.status !== KNOWN_WIKI_IMPORT_STATUSES.REJECTED && i.status !== KNOWN_WIKI_IMPORT_STATUSES.SKIPPED;
 
 export function WikiImportDialog({ open, onClose, wikis, initialWiki, blockedReason, run, onDone }: ImportDialogProps) {
+  const t = useT("wiki");
+  const tm = useMaybeT("wiki");
   const [wiki, setWiki] = useState(initialWiki ?? wikis[0]?.id ?? "");
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [policy, setPolicy] = useState(IMPORT_POLICIES[0]?.id ?? "");
   const [result, setResult] = useState<WikiImportResult | null>(null);
   const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("transfer.failed"));
   const input = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
   const blocked = blockedReason !== undefined && blockedReason !== "";
@@ -87,7 +91,7 @@ export function WikiImportDialog({ open, onClose, wikis, initialWiki, blockedRea
       } catch (e) {
         if (!cancelled && mine === seq.current) {
           setResult(null);
-          setError(describeError(e, m.transfer.failed).message);
+          setError(raised(e));
         }
       } finally {
         if (mine === seq.current) setChecking(false);
@@ -96,7 +100,7 @@ export function WikiImportDialog({ open, onClose, wikis, initialWiki, blockedRea
     return () => {
       cancelled = true;
     };
-  }, [open, file, wiki, policy, run]);
+  }, [open, file, wiki, policy, run, t, setError]);
 
   const items = result?.items ?? [];
   const counts = { ok: items.filter(ok).length, skip: items.filter((i) => i.status === KNOWN_WIKI_IMPORT_STATUSES.SKIPPED).length, reject: items.filter((i) => i.status === KNOWN_WIKI_IMPORT_STATUSES.REJECTED).length };
@@ -113,7 +117,7 @@ export function WikiImportDialog({ open, onClose, wikis, initialWiki, blockedRea
       const r = await run(wiki, file.bytes, policy, false);
       onDone(wiki, (r.items ?? []).filter(ok).length);
     } catch (e) {
-      setError(describeError(e, m.transfer.failed).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }
@@ -125,60 +129,60 @@ export function WikiImportDialog({ open, onClose, wikis, initialWiki, blockedRea
   return (
     <Dialog
       open={open}
-      title={m.transfer.importTitle}
+      title={t("transfer.importTitle")}
       size="lg"
       onClose={() => {
         if (!busy) onClose();
       }}
       actions={
         <>
-          <Button onClick={onClose} disabled={busy}>{m.cancel}</Button>
+          <Button onClick={onClose} disabled={busy}>{t("cancel")}</Button>
           <Button variant="primary" aria-disabled={file === null || checking || busy || blocked || counts.ok === 0 || undefined} title={blocked ? blockedReason : undefined} onClick={() => void confirm()}>
-            {m.transfer.submit}
+            {t("transfer.submit")}
           </Button>
         </>
       }
     >
       <div className="wiki-form">
-        {wikis.length === 0 ? <p className="app-muted">{m.transfer.noWiki}</p> : (
+        {wikis.length === 0 ? <p className="app-muted">{t("transfer.noWiki")}</p> : (
           <label className="wiki-field">
-            <span className="wiki-label">{m.transfer.importWiki}</span>
+            <span className="wiki-label">{t("transfer.importWiki")}</span>
             <select className="wiki-input" value={wiki} disabled={wikis.length === 1} onChange={(e) => setWiki(e.target.value)}>
               {wikis.map((w) => <option key={w.id} value={w.id}>{w.name && w.name !== "" ? w.name : w.id}</option>)}
             </select>
           </label>
         )}
         <div className="wiki-drop">
-          <span>{file === null ? m.transfer.drop : m.transfer.chosen(file.name)}</span>
-          <input ref={input} type="file" accept=".zip,application/zip" className="ac-sr-only" tabIndex={-1} aria-label={m.transfer.pick} onChange={(e) => void pick(e.target.files?.[0])} />
-          <Button size="sm" onClick={() => input.current?.click()}>{m.transfer.pick}</Button>
+          <span>{file === null ? t("transfer.drop") : t("transfer.chosen", { name: file.name })}</span>
+          <input ref={input} type="file" accept=".zip,application/zip" className="ac-sr-only" tabIndex={-1} aria-label={t("transfer.pick")} onChange={(e) => void pick(e.target.files?.[0])} />
+          <Button size="sm" onClick={() => input.current?.click()}>{t("transfer.pick")}</Button>
         </div>
         <fieldset className="wiki-field">
-          <legend className="wiki-label">{m.transfer.policy}</legend>
+          <legend className="wiki-label">{t("transfer.policy")}</legend>
           <div className="wiki-radio-row">
             {IMPORT_POLICIES.map((p) => (
               <label key={p.id} className="ac-choice">
                 <input type="radio" name="wiki-import-policy" checked={policy === p.id} onChange={() => setPolicy(p.id)} />
-                <span>{m.transfer.policies[p.labelKey] ?? p.id}</span>
+                <span>{tm(`transfer.policies.${p.labelKey}`) ?? p.id}</span>
               </label>
             ))}
           </div>
-          {IMPORT_POLICIES.find((p) => p.id === policy)?.destructive === true ? <span className="wiki-hint wiki-danger-text">{m.transfer.overwriteWarn}</span> : null}
+          {IMPORT_POLICIES.find((p) => p.id === policy)?.destructive === true ? <span className="wiki-hint wiki-danger-text">{t("transfer.overwriteWarn")}</span> : null}
         </fieldset>
         {error === null ? null : <p className="app-field-error" role="alert">{error}</p>}
-        {checking ? <p className="app-muted" role="status">{m.transfer.checking}</p> : null}
+        {checking ? <p className="app-muted" role="status">{t("transfer.checking")}</p> : null}
         {result === null ? null : (
           <>
-            <p role="status" data-testid="wiki-import-summary">{m.transfer.summary(counts.ok, counts.skip, counts.reject)}</p>
-            <div className="wiki-import-head" aria-hidden="true"><span>{m.transfer.colPath}</span><span>{m.transfer.colStatus}</span><span>{m.transfer.colReason}</span></div>
+            <p role="status" data-testid="wiki-import-summary">{t("transfer.summary", { ok: counts.ok, skip: counts.skip, reject: counts.reject })}</p>
+            <div className="wiki-import-head" aria-hidden="true"><span>{t("transfer.colPath")}</span><span>{t("transfer.colStatus")}</span><span>{t("transfer.colReason")}</span></div>
             <VirtualList
               items={items}
               rowHeight={32}
               height={Math.min(240, Math.max(32, items.length * 32))}
               getKey={(i, n) => `${n}:${i.path}`}
-              ariaLabel={m.transfer.importTitle}
+              ariaLabel={t("transfer.importTitle")}
               renderRow={(i, ctx) => {
-                const d = importStatusDisplay(i.status);
+                const d = importStatusDisplay(i.status, tm);
                 return (
                   <div key={ctx.index} className="wiki-import-row" role="listitem" style={ctx.style}>
                     <span className="ac-mono-wrap ac-ellipsis" title={i.path}>{i.path}</span>

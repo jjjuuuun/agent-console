@@ -3,7 +3,15 @@ import { ApiError } from "@agent-console/api-client";
 import type { Resource, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { PartialSaveResult } from "../../definition/useDefinitionEditor";
 import { checkPath, decodeUtf8, languageForFile, planFileChanges, removeEntries, renameEntries, totalSize, type FileEntry } from "./fileTreeLogic";
-import { isMultiFile, loadResource, saveResource } from "./resourceLogic";
+import { isMultiFile, loadResource, saveResource as saveResourceWith, type ResourceDoc } from "./resourceLogic";
+import { koMessages } from "../../testing/messageTables";
+import type { RestClient } from "@agent-console/api-client";
+import { createResourceMessages } from "./messages";
+
+const rm = koMessages("resources", createResourceMessages);
+type SaveArgs = [RestClient, ResourceDoc, string | undefined, readonly ResourceTypeDescriptor[]];
+const saveResource = (...a: SaveArgs) => saveResourceWith(...a, rm);
+
 
 const f = (path: string, text: string | null = ""): FileEntry => ({ path, text, size: text?.length ?? 3 });
 

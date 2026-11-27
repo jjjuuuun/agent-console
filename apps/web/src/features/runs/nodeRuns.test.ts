@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { NodeRun } from "@agent-console/contracts";
+import { koT } from "../../testing/koText";
+import { createDelegationMessages } from "../delegation";
 import { compareNodeRuns, groupNodeRuns, nodeRunKey, runBadge, runDimensions, runOrdinalText, visibleRun, visibleRuns } from "./nodeRuns";
 
+const dm = createDelegationMessages(koT("delegation"));
 const nr = (extra: Partial<NodeRun> & { started_at?: number | null }): NodeRun => ({ run_id: "r", node_id: "n1", status: "succeeded", attempt: 1, iteration: 0, call: 0, ...extra }) as NodeRun;
 
 describe("노드 실행 정렬·고르기", () => {
@@ -39,35 +42,35 @@ describe("실행 열 문구와 배지 (화면 번호는 값 + 1)", () => {
   it("회차만", () => {
     const list = [nr({ iteration: 0 }), nr({ iteration: 1 }), nr({ iteration: 2 })];
     expect(runDimensions(list)).toEqual({ iterations: true, calls: false });
-    expect(runOrdinalText(list[2]!, list)).toBe("3회차");
+    expect(runOrdinalText(list[2]!, list, dm)).toBe("3회차");
   });
   it("호출만", () => {
     const list = [nr({ call: 0, started_at: 1 }), nr({ call: 1, started_at: 2 })];
-    expect(runOrdinalText(list[1]!, list)).toBe("호출 2");
+    expect(runOrdinalText(list[1]!, list, dm)).toBe("호출 2");
   });
   it("둘 다", () => {
     const list = [nr({ iteration: 0, call: 0 }), nr({ iteration: 1, call: 1 })];
-    expect(runOrdinalText(list[1]!, list)).toBe("2회차 · 호출 2");
+    expect(runOrdinalText(list[1]!, list, dm)).toBe("2회차 · 호출 2");
   });
   it("시도가 1보다 크면 뒤에 붙이고, 갈리는 축이 없으면 시도 번호만", () => {
     const list = [nr({ iteration: 0, attempt: 1 }), nr({ iteration: 1, attempt: 2 })];
-    expect(runOrdinalText(list[1]!, list)).toBe("2회차 · 시도 2");
+    expect(runOrdinalText(list[1]!, list, dm)).toBe("2회차 · 시도 2");
     const retry = [nr({ attempt: 1 }), nr({ attempt: 2 })];
-    expect(runOrdinalText(retry[1]!, retry)).toBe("시도 2");
+    expect(runOrdinalText(retry[1]!, retry, dm)).toBe("시도 2");
   });
   it("배지: 실행이 1개면 없고, 회차 #n / 호출 ×n / 둘 다 #n · ×m", () => {
     const one = [nr({})];
-    expect(runBadge(one, visibleRun(one, undefined)!, "작성자", "완료")).toBeUndefined();
+    expect(runBadge(one, visibleRun(one, undefined)!, "작성자", "완료", dm)).toBeUndefined();
     const iters = [nr({ iteration: 0 }), nr({ iteration: 1 }), nr({ iteration: 2 })];
-    expect(runBadge(iters, visibleRun(iters, undefined)!, "작성자", "완료")).toMatchObject({ text: "#3", picked: false });
+    expect(runBadge(iters, visibleRun(iters, undefined)!, "작성자", "완료", dm)).toMatchObject({ text: "#3", picked: false });
     const calls = [nr({ call: 0 }), nr({ call: 1 }), nr({ call: 2 }), nr({ call: 3 })];
-    expect(runBadge(calls, visibleRun(calls, undefined)!, "작성자", "완료")?.text).toBe("×4");
+    expect(runBadge(calls, visibleRun(calls, undefined)!, "작성자", "완료", dm)?.text).toBe("×4");
     const both = [nr({ iteration: 0, call: 0 }), nr({ iteration: 1, call: 1 })];
-    expect(runBadge(both, visibleRun(both, undefined)!, "작성자", "완료")?.text).toBe("#2 · ×2");
+    expect(runBadge(both, visibleRun(both, undefined)!, "작성자", "완료", dm)?.text).toBe("#2 · ×2");
   });
   it("접근성 이름에 노드·회차·호출·상태·위치가 들어가고 고른 실행은 (고름)이 붙는다", () => {
     const both = [nr({ iteration: 0, call: 0 }), nr({ iteration: 1, call: 1 })];
-    const b = runBadge(both, visibleRun(both, nodeRunKey(both[0]!))!, "작성자", "완료")!;
+    const b = runBadge(both, visibleRun(both, nodeRunKey(both[0]!))!, "작성자", "완료", dm, (o) => `${o}번째`)!;
     expect(b.ariaLabel).toBe("작성자, 1회차, 호출 1번째, 완료. 실행 2개 중 1번째 (고름)");
   });
 });

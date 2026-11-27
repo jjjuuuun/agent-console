@@ -115,7 +115,7 @@ class FolderWriter:
             if reason is None:
                 usable.append(root)
             else:
-                _log.warning("내보내기 루트 %s를 쓸 수 없습니다: %s", root.id, reason)
+                _log.warning("Export root %s is not writable: %s", root.id, reason)
         return usable
 
     def root_infos(self, *, expose_paths: bool = True) -> list[ExportRootInfo]:

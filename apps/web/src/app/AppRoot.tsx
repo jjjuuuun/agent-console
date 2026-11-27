@@ -8,15 +8,17 @@ import { ApiProvider } from "./ApiContext";
 import { DEFAULT_CONFIG_WIDGETS, DEFAULT_LINK_PARTS } from "../links";
 import { ConfigWidgetsProvider, type ConfigWidgetTable } from "./ConfigWidgets";
 import { LinkPartsProvider, ModulesProvider, type LinkPartDef } from "../modules";
-import { AppI18nProvider, LanguageProvider, createAppI18n } from "../i18n";
+import { AppI18nProvider, createAppI18n } from "../i18n";
+import { LanguageProvider } from "./LanguageProvider";
 import type { ApiClients, FeatureSignal } from "./apiClients";
 import { AppStatusProvider } from "./AppStatus";
 import { BootError } from "./boot";
 import { BOOT_RETRY, bootRetryDelay, classifyBootFailure, shouldGiveUp, type BootFailureKind, type BootRetryPolicy } from "./bootRetry";
 import { ErrorBlock, errorDetails, LoadingBlock } from "./ErrorBlock";
-import { describeError } from "./errors";
+import { useDescribeError } from "./errors";
 import { appIcons } from "./icons";
-import { messages as m } from "./messages";
+import { useAppMessages } from "./appMessages";
+import { createToastText } from "./ToastText";
 import { createAppQueryClient } from "./queries";
 import { appSessionStorage, appStorage, type SafeStorage } from "./storage";
 import { SessionStorageProvider, StorageProvider } from "./StorageContext";
@@ -56,6 +58,8 @@ export interface AppRootProps {
   i18n?: Console18n;
   /** 부팅 자동 재시도 정책(기본 `BOOT_RETRY`). 서버가 켜지는 중이면 기다렸다가 저절로 붙는다 */
   bootRetry?: BootRetryPolicy;
+  /** 첫 화면 언어가 정해질 때까지 본문을 보류하는 최대 시간(ms, 기본 `LanguageProvider`의 3000). 테스트는 0으로 바로 그린다 */
+  languageHoldMs?: number;
 }
 
 type Boot =
@@ -65,16 +69,17 @@ type Boot =
 
 const BACKGROUND_ERROR = "background-error";
 
+const useBootT = () => useT("boot");
+const BootToast = createToastText(useBootT);
+
 /** 갱신 실패를 한 번만 토스트로 알린다(데이터가 있을 때의 백그라운드 갱신 오류). */
 function BackgroundErrorBridge({ bus }: { bus: EventTarget }) {
   const toast = useToast();
-  const t = useT("boot");
-  const text = t("refreshFailed");
   useEffect(() => {
-    const onError = () => toast({ tone: "danger", text });
+    const onError = () => toast({ tone: "danger", text: <BootToast render={(t) => t("refreshFailed")} /> });
     bus.addEventListener(BACKGROUND_ERROR, onError);
     return () => bus.removeEventListener(BACKGROUND_ERROR, onError);
-  }, [bus, toast, text]);
+  }, [bus, toast]);
   return null;
 }
 
@@ -101,7 +106,9 @@ export function AppRoot(props: AppRootProps) {
   );
 }
 
-function AppRootBody({ createClients, router, storage = appStorage, sessionStorage: tabStorage = appSessionStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY, i18n }: AppRootProps & { i18n: Console18n }) {
+function AppRootBody({ createClients, router, storage = appStorage, sessionStorage: tabStorage = appSessionStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY, languageHoldMs, i18n }: AppRootProps & { i18n: Console18n }) {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
   const t = useT("boot");
   // 첫 화면 언어의 나머지 앱 묶음(부팅 묶음은 이미 동기로 들어 있다). 준비되기 전에는 본문을 그리지 않는다.
   const [bundleReady, setBundleReady] = useState(false);
@@ -220,7 +227,7 @@ function AppRootBody({ createClients, router, storage = appStorage, sessionStora
           <ModulesProvider subscribeSignals={signals.subscribe}>
             <LinkPartsProvider parts={linkParts}>
               <ConfigWidgetsProvider widgets={configWidgets}>
-                <LanguageProvider i18n={i18n} storage={storage}>
+                <LanguageProvider i18n={i18n} storage={storage} {...(languageHoldMs === undefined ? {} : { holdMs: languageHoldMs })}>
                   <AppStatusProvider value={status}>
                     <RouterProvider router={router} />
                   </AppStatusProvider>

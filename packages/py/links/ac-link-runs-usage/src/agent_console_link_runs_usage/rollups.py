@@ -209,7 +209,7 @@ class IncrementalTokenRollups:
             except Exception:
                 if source is self._base:
                     raise
-                _log.warning("토큰 집계 출처를 읽지 못했습니다: %s", source.key, exc_info=True)
+                _log.warning("Couldn't read token rollup source: %s", source.key, exc_info=True)
                 continue
             for run in listed:
                 if not counts_toward_usage(run):
@@ -239,7 +239,7 @@ class IncrementalTokenRollups:
             except Exception:
                 if source is self._base:
                     raise
-                _log.warning("토큰 집계 출처를 읽지 못했습니다: %s", source.key, exc_info=True)
+                _log.warning("Couldn't read token rollup source: %s", source.key, exc_info=True)
                 refreshed = [entry for _, entry in items]  # 있던 값은 남긴다
             for (run, _), entry in zip(items, refreshed, strict=True):
                 if entry is not None:
@@ -275,7 +275,7 @@ class IncrementalTokenRollups:
         try:
             return [s for s in self._extra(project_id) if s.key != APP_SOURCE_KEY]
         except Exception:
-            _log.warning("토큰 집계 추가 출처 목록을 읽지 못했습니다", exc_info=True)
+            _log.warning("Couldn't read the extra token rollup sources", exc_info=True)
             return []
 
     def _refresh_many(

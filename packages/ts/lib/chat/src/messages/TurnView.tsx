@@ -39,6 +39,8 @@ export interface TurnViewProps {
   continuation?: boolean;
   /** 내 메시지 아래 시각 문구(epoch 초 -> 문자열). 기본은 24시간 `HH:mm`(로캘 무관). */
   formatTime?: (epochSeconds: number) => string;
+  /** 시각 툴팁·토큰 수 자릿수 표기에 쓰는 로캘(BCP 47, 보통 화면 언어). 생략하면 "en-US". */
+  locale?: string;
   messages?: Partial<ChatMessages>;
 }
 
@@ -80,7 +82,7 @@ export function TurnView(props: TurnViewProps) {
         </button>
       ) : null}
       {turn.started_at != null ? (
-        <time dateTime={new Date(turn.started_at * 1000).toISOString()} title={new Date(turn.started_at * 1000).toLocaleString()}>
+        <time dateTime={new Date(turn.started_at * 1000).toISOString()} title={new Date(turn.started_at * 1000).toLocaleString(props.locale ?? "en-US")}>
           {(props.formatTime ?? defaultFormatTime)(turn.started_at)}
         </time>
       ) : null}
@@ -186,7 +188,7 @@ export function TurnView(props: TurnViewProps) {
         {props.footerNote ? <span data-part="footer-note">· {props.footerNote}</span> : null}
         {tokens != null ? (
           <span className="ac-num">
-            · {fill(m.tokens, { n: tokens.toLocaleString("en-US") })}
+            · {fill(m.tokens, { n: tokens.toLocaleString(props.locale ?? "en-US") })}
             {totalOnly ? ` (${m.someTokensTotalOnly})` : ""}
           </span>
         ) : null}

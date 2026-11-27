@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { createMemoryRouter } from "react-router";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import type { Interaction, Run, RunEvent } from "@agent-console/contracts";
+import { applyServerCatalog, type Console18n } from "@agent-console/i18n";
+import { createAppI18n } from "../../i18n";
 import { AppRoot } from "../../app/AppRoot";
 import { createAppQueryClient } from "../../app/queries";
 import { createSafeStorage } from "../../app/storage";
@@ -13,6 +15,8 @@ import { createFakeClients } from "../../testing/fakes";
 
 // 캔버스(React Flow)는 레이아웃 API가 필요해 happy-dom에서 돌지 않는다. 실행 상태가 어떤 props로 내려가는지만 확인한다.
 vi.mock("@agent-console/graph-editor", () => ({
+  BUILTIN_EDGE_SHAPES: [],
+  localizeEdgeShapes: (shapes: unknown) => shapes,
   // 팀 편집 화면이 모듈 수준에서 만드는 자동 배치 엔진(이 테스트에서는 쓰이지 않는다)
   createElkEngine: () => ({ id: "fake", title: "fake", options: [], run: async () => ({ positions: {} }) }),
   GraphEditor: (props: Record<string, unknown>) => (
@@ -24,7 +28,10 @@ vi.mock("@agent-console/graph-editor", () => ({
   ),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  serverI18n = undefined;
+});
 
 const now = Math.floor(Date.now() / 1000);
 const run = (id: string, status: Run["status"], extra: Partial<Run> = {}): Run => ({ id, graph_id: "g1", graph_version: "v1", status, input: { text: `입력 ${id}` }, origin: "chat", created_at: now - 120, started_at: now - 100, ...extra });
@@ -38,9 +45,12 @@ function mount(path: string, overrides: Record<string, unknown> = {}, setup?: (c
   });
   setup?.({ clients, rest, ws } as ReturnType<typeof createFakeClients>);
   const router = createMemoryRouter(buildAppRoutes({ platform: "other" }), { initialEntries: [path] });
-  render(<AppRoot createClients={async () => clients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} />);
+  render(<AppRoot createClients={async () => clients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} {...(serverI18n ? { i18n: serverI18n } : {})} />);
   return { router, rest, ws, clients };
 }
+
+/** 서버 묶음(ko codes)을 받은 i18n(위키 사유 코드 문구 테스트용). */
+let serverI18n: Console18n | undefined;
 
 describe("실행 기록 목록", () => {
   const runs = [run("r-wait", "waiting", { conversation_id: "c1", totals: { input_tokens: 3000, output_tokens: 1100 } }), run("r-run", "running", { origin: "api" }), run("r-done", "completed", { started_at: now - 90, ended_at: now - 40 })];
@@ -206,6 +216,8 @@ describe("실행 상세", () => {
   });
 
   it("에이전트 탭: 위키 접근 이벤트는 사유 코드 표 문구로, 모르는 코드는 기본 요약으로 보인다", async () => {
+    serverI18n = createAppI18n({ storage: createSafeStorage(null), browser: ["ko-KR"] });
+    applyServerCatalog(serverI18n, { language: "ko", text: {}, codes: { "wiki.redacted_content": "가린 줄을 직접 고치세요" }, ns: {} });
     mount("/runs/r1?tab=agents", detailOverrides({
       listRunEvents: async () => [
         ev(1, "wiki.access", { actor: "pl", node_path: ["n-lead"], payload: { op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" } }),

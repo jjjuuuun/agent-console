@@ -2,7 +2,7 @@ import { Banner, Button } from "@agent-console/ui";
 import { CONTRACTS_VERSION } from "@agent-console/contracts";
 import { useApi } from "../app/ApiContext";
 import { useAppStatus } from "../app/AppStatus";
-import { messages as m } from "../app/messages";
+import { useShellMessages } from "../app/shellMessages";
 import { contractsCompat } from "./contractsCompat";
 
 /**
@@ -11,6 +11,7 @@ import { contractsCompat } from "./contractsCompat";
  * 새로고침 버튼은 서버가 낡았다고 판정되면 효과가 없으므로 그때는 두지 않는다.
  */
 export function GlobalBanners() {
+  const m = useShellMessages();
   const { authRejected, reload } = useAppStatus();
   const { meta } = useApi();
   const compat = contractsCompat(meta.contractsVersion, CONTRACTS_VERSION);

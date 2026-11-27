@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-usage"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 직접 적는 사용량 출처(example.manual_count)"
+description = "Agent Console example extension — a usage source you fill in by hand (example.manual_count)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

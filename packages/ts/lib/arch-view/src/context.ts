@@ -9,6 +9,8 @@ export interface DiagramContextValue {
   level: ArchLevel;
   mode: "live" | "layout";
   messages: ArchViewMessages;
+  /** 숫자 표기 로캘(BCP 47). */
+  locale?: string;
   tones: Readonly<Record<string, string>>;
   metricKinds: Readonly<Record<string, MetricKindSpec>>;
   cellRenderers: Readonly<Record<string, CellRenderer>>;

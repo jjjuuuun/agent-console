@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `agent-console-example-transfer`, so the web can show the `example_transfer.*` warnings in English (data only, no API change).
 - REL.20: 개발 의존 범위를 `agent-console-server>=1.0,<2`로 올렸다(서버 표시 버전 1.0.0). 코드 변경 없음.
 - REL.8: 통합 서버 시험 — 팀 구성 하나만 골라 내보내면 프로젝트 설정 층의 공통 첨부(리소스)도 담기고, 같은 첨부를 쓰는 프로젝트로 가져와 실행하면 리소스 없음 경고 없이 끝난다.
 - FU.22: 통합 서버 시험이 에이전트 하나만 고른다 — 프로젝트 공간에서 내보낼 때 쓰는 리소스가 그 공간에서 함께 담긴다.

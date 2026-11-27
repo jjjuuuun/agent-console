@@ -1,5 +1,9 @@
 # 변경 기록
 
+## Unreleased
+
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-projects-wiki`, so the web can show the link module description and settings in English (data only, no API change).
+
 ## 0.1.0
 
 - 처음 만듦(scripts/pkgkit 템플릿 `link`, 작업 7R.13): `projects.spaces` → `wiki.spaces`(`ProjectWikiSpaces`·

@@ -50,7 +50,7 @@ def replies_from_events(events: Iterable[RunEvent]) -> list[ChatReply]:
         try:
             payload = RunReplyPayload.model_validate(event.payload)
         except ValidationError:
-            _log.warning("형식이 틀린 run.reply 건너뜀: run=%s seq=%s", event.run_id, event.seq)
+            _log.warning("Skipped malformed run.reply: run=%s seq=%s", event.run_id, event.seq)
             continue
         replies.append(
             ChatReply(
@@ -78,7 +78,7 @@ def sessions_from_events(events: Iterable[RunEvent]) -> dict[str, SessionRef]:
         try:
             payload = AgentSessionStartedPayload.model_validate(event.payload)
         except ValidationError:
-            _log.warning("형식이 틀린 세션 이벤트 건너뜀: run=%s seq=%s", event.run_id, event.seq)
+            _log.warning("Skipped malformed session event: run=%s seq=%s", event.run_id, event.seq)
             continue
         sessions[event.node_path[0]] = SessionRef(
             backend=payload.backend, session_id=payload.session_id

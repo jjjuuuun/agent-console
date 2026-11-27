@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendDescriptor, BackendProbeResult, BackendReadiness } from "@agent-console/contracts";
@@ -10,7 +11,8 @@ import { createSafeStorage } from "../../app/storage";
 import { createFakeClients } from "../../testing/fakes";
 import { ConnectedBackendChooserCard } from "../backendChoice";
 import { BackendReadinessSection } from "./BackendReadinessSection";
-import { resolveTone } from "./tones";
+import { READINESS_TONES, resolveTone } from "./tones";
+import { readinessShownBackends } from "./shown";
 
 afterEach(cleanup);
 
@@ -138,5 +140,43 @@ describe("ConnectedBackendChooserCard", () => {
     expect((screen.getByRole("button", { name: /선택하고 계속/ }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole("button", { name: "연결 테스트" })).toBeTruthy();
     expect(rest.probeBackend).not.toHaveBeenCalled();
+  });
+});
+
+describe("선택 prop(heading·defaultBackendId·titleExtra·footer)", () => {
+  it("heading=hidden이면 제목·안내 머리를 그리지 않고 섹션 이름은 유지한다. 기본값(shown)은 앵커 제목이 있다", async () => {
+    setup((b) => <BackendReadinessSection backends={b} heading="hidden" />);
+    await screen.findByText("서버가 준 문구 A");
+    expect(screen.getByTestId("backend-readiness-section").getAttribute("aria-label")).toBe("백엔드 인증·실행 준비");
+    expect(screen.queryByRole("heading", { level: 3, name: "백엔드 인증·실행 준비" })).toBeNull();
+    cleanup();
+    setup((b) => <BackendReadinessSection backends={b} />);
+    const h = await screen.findByRole("heading", { level: 3, name: "백엔드 인증·실행 준비" });
+    expect(h.id).toBe("backend-readiness");
+    expect(h.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("defaultBackendId가 보이는 목록에 있으면 맨 위로, 없으면 서버 순서. titleExtra·footer는 카드마다 불린다", async () => {
+    setup((b) => <BackendReadinessSection backends={b} defaultBackendId="be-b" titleExtra={(x) => <i data-testid={`extra-${x.id}`} />} footer={(x) => (x.id === "be-a" ? <p data-testid="foot-a">아래 줄</p> : null)} />);
+    await screen.findByText("서버가 준 문구 A");
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent).slice(1)).toEqual(["백엔드 비", "백엔드 에이"]);
+    expect(screen.getByTestId("extra-be-a")).toBeTruthy();
+    expect(screen.getByTestId("foot-a")).toBeTruthy();
+    cleanup();
+    setup((b) => <BackendReadinessSection backends={b} defaultBackendId="없는-id" />);
+    await screen.findByText("서버가 준 문구 A");
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent).slice(1)).toEqual(["백엔드 에이", "백엔드 비"]);
+  });
+});
+
+describe("readinessShownBackends (섹션과 바로가기가 같이 쓰는 판정)", () => {
+  it("보이는 백엔드 중 status·probe 능력이 있거나 응답이 있는 것만", () => {
+    const hidden = { ...supported, id: "be-h", ui_hints: { hidden: true } } as BackendDescriptor;
+    const withResponse = { id: "be-r", title: "응답만", capabilities: {} } as BackendDescriptor;
+    expect(readinessShownBackends([supported, plain, hidden, withResponse], { "be-r": statuses[0] }).map((b) => b.id)).toEqual(["be-a", "be-r"]);
+    expect(readinessShownBackends([plain], {})).toEqual([]);
+  });
+  it("warn과 unknown은 아이콘 모양이 다르다(색에만 기대지 않는다)", () => {
+    expect(READINESS_TONES.warn.icon).not.toBe(READINESS_TONES.unknown.icon);
   });
 });

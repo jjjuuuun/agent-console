@@ -3,11 +3,12 @@
  * 세션 상세 흐름 패널, 실행 상세 탭, 크게 보기 대화상자가 같은 훅으로 같은 동작을 얻는다.
  * 이 폴더는 로그 화면(`features/logs`)을 import하지 않는다: 범위·강조할 이벤트·수집 알림은 호출하는 쪽이 넘긴다.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type LogQueryParams } from "@agent-console/api-client";
 import type { ArchitectureMembership, ArchitectureProfileList, ArchitectureView } from "@agent-console/contracts";
 import { useToast } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
+import { createToastText } from "../../app/ToastText";
 import { ARCH_LIMITS, ARCH_QUERY, ARCH_STORAGE } from "./archConfig";
 import {
   classifyArchError,
@@ -22,7 +23,9 @@ import {
   type DrillStep,
   type ResolvedTarget,
 } from "./archLib";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
+
+const ArchToast = createToastText(useArchMessages);
 import { useArchitectureProfiles, useArchitectureRows, useArchitectureView, useEventMembership, type ArchitectureRows } from "./useArchitectureApi";
 
 export interface ArchitectureControllerOptions {
@@ -97,6 +100,7 @@ export interface ArchitectureController {
 
 /** 구조도 컨트롤러. */
 export function useArchitectureController(opts: ArchitectureControllerOptions): ArchitectureController {
+  const t = useArchMessages();
   const { scope, enabled, highlightUid = null, filterTitle } = opts;
   const storage = useStorage();
   const toast = useToast();
@@ -117,7 +121,7 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
   const view = viewQ.data;
 
   // ---- 선택 → 표 질의
-  const target = useMemo(() => (view === undefined || picked === null ? undefined : resolveTarget(view, picked, t.noName)), [view, picked]);
+  const target = useMemo(() => (view === undefined || picked === null ? undefined : resolveTarget(view, picked, t.noName)), [view, picked, t]);
   // 새 그림에 고른 대상이 없으면(프로필·범위가 바뀜) 선택이 없는 것으로 본다.
   const selection = picked !== null && view !== undefined && target === undefined && !viewQ.isFetching ? null : picked;
   const rowsParams = useMemo<LogQueryParams | null>(() => {
@@ -135,7 +139,8 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
   useEffect(() => {
     const error = rows.error;
     if (error === null) return;
-    toast({ tone: "danger", text: t.toast.rejected(error instanceof ApiError || error instanceof Error ? error.message : String(error)) });
+    const detail = error instanceof ApiError || error instanceof Error ? error.message : String(error);
+    toast({ tone: "danger", text: createElement(ArchToast, { render: (a) => a.toast.rejected(detail) }) });
     setSelection(good.current.selection);
     setDrill(good.current.drill);
   }, [rows.error, toast]);
@@ -161,7 +166,7 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
     setDrill(state.drill);
   }, []);
   const blocked = useCallback(
-    (_target: ArchTarget, reason: "not_collected" | "structural") => toast({ tone: "info", text: reason === "structural" ? t.toast.structural : t.toast.notCollected }),
+    (_target: ArchTarget, reason: "not_collected" | "structural") => toast({ tone: "info", text: createElement(ArchToast, { render: (a) => (reason === "structural" ? a.toast.structural : a.toast.notCollected) }) }),
     [toast],
   );
   const drillInto = useCallback(
@@ -169,13 +174,13 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
       if (view === undefined) return;
       const step = drillStepFor(view, cellId, group, t.noName);
       if (step === undefined) {
-        if (group === undefined && view.cells?.find((c) => c.id === cellId)?.drillable) toast({ tone: "info", text: t.toast.pickGroup });
+        if (group === undefined && view.cells?.find((c) => c.id === cellId)?.drillable) toast({ tone: "info", text: createElement(ArchToast, { render: (a) => a.toast.pickGroup }) });
         return;
       }
       setDrill((prev) => [...prev, step]);
       setSelection(null);
     },
-    [view, toast],
+    [view, toast, t],
   );
   const goTo = useCallback((index: number) => {
     setDrill((prev) => dropAfter(prev, index));
@@ -201,7 +206,7 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
         lastAnnounce.current = now;
       }
     },
-    [refetch],
+    [refetch, t],
   );
 
   const chips = useMemo<ArchitectureChip[]>(() => {
@@ -219,7 +224,7 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
       out.push({ id: "arch", kind: "arch", label, removeLabel: t.chip.clear, onRemove: () => setSelection(null) });
     }
     return out;
-  }, [drill, selection, target, filterTitle, goTo]);
+  }, [drill, selection, target, filterTitle, goTo, t]);
 
   const error: ArchErrorInfo | null = enabled && noRules ? { kind: "rules", message: "" } : viewQ.isError && view === undefined ? classifyArchError(viewQ.error) : null;
   return {

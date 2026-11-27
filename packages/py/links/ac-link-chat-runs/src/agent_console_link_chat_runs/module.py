@@ -112,7 +112,10 @@ class ChatRunsLink:
         async def start() -> None:
             applied = await chat.apply_restart_policy()
             if applied:
-                _log.info("재시작 전 대기열이 남은 대화 %d개를 처리했습니다", len(applied))
+                _log.info(
+                    "Handled %d conversations with a queue left from before the restart",
+                    len(applied),
+                )
 
         async def stop() -> None:
             chat.stop_dispatch()  # 끊기는 턴 뒤에 대기열을 꺼내지 않는다(다음 시작 때 처리)
@@ -120,7 +123,7 @@ class ChatRunsLink:
                 # 실행 정리(한 번만 — 실행 모듈 종료는 같은 결과를 기다린다)
                 await starter.shutdown()
             except Exception:
-                _log.exception("실행 정리 실패")
+                _log.exception("Run cleanup failed")
 
         return ModuleParts(startup=[start], shutdown=[stop])
 

@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button } from "@agent-console/ui";
-import { messages } from "../app/messages";
+import { useShellMessages } from "../app/shellMessages";
 
 export interface ScreenBoundaryProps {
   children: ReactNode;
@@ -38,17 +38,23 @@ export class ScreenBoundary extends Component<ScreenBoundaryProps, State> {
   override render() {
     if (!this.state.failed) return this.props.children;
     const load = this.props.isLoadError?.(this.state.error) === true;
-    return (
-      <div className="app-error-block" role="alert">
-        <h2 className="app-block-title">{load ? messages.common.screenLoadFailed : messages.common.screenCrashed}</h2>
-        {load ? <p className="ac-text app-wrap">{messages.common.screenLoadFailedBody}</p> : null}
-        <div className="app-inline-actions">
-          <Button variant="primary" onClick={this.retry}>
-            {messages.common.retry}
-          </Button>
-          <Button onClick={() => window.location.reload()}>{messages.common.reload}</Button>
-        </div>
-      </div>
-    );
+    return <ScreenFailure load={load} onRetry={this.retry} />;
   }
+}
+
+/** 화면 불러오기 실패·오류 안내(문구는 현재 화면 언어). */
+function ScreenFailure({ load, onRetry }: { load: boolean; onRetry: () => void }) {
+  const messages = useShellMessages();
+  return (
+    <div className="app-error-block" role="alert">
+      <h2 className="app-block-title">{load ? messages.common.screenLoadFailed : messages.common.screenCrashed}</h2>
+      {load ? <p className="ac-text app-wrap">{messages.common.screenLoadFailedBody}</p> : null}
+      <div className="app-inline-actions">
+        <Button variant="primary" onClick={onRetry}>
+          {messages.common.retry}
+        </Button>
+        <Button onClick={() => window.location.reload()}>{messages.common.reload}</Button>
+      </div>
+    </div>
+  );
 }

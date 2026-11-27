@@ -4,12 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@agent-console/api-client";
 import { ApiProvider } from "../../app/ApiContext";
 import { createFakeClients, pendingInteraction } from "../../testing/fakes";
+import { TestI18n } from "../../testing/TestI18n";
 import { useInteractionRespond } from "./useInteractionRespond";
 
 // 채팅 카드·입력창·실행 상세가 함께 쓰는 응답 훅의 오류 경로(409·404·422·오프라인·기타)를 앱 없이 확인한다.
 function setup(respond: () => Promise<unknown>) {
   const { clients } = createFakeClients({ respondInteraction: respond });
-  const wrapper = ({ children }: { children: ReactNode }) => <ApiProvider clients={clients}>{children}</ApiProvider>;
+  const wrapper = ({ children }: { children: ReactNode }) => <TestI18n><ApiProvider clients={clients}>{children}</ApiProvider></TestI18n>;
   const spies = { applyInteraction: vi.fn(), refresh: vi.fn(), notify: vi.fn() };
   const { result } = renderHook(() => useInteractionRespond(spies), { wrapper });
   return { result, spies, target: pendingInteraction("i1") };

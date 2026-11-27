@@ -2,9 +2,9 @@ import { useState } from "react";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Button, Dialog } from "@agent-console/ui";
 import { ResourceTypeGrid } from "./ResourceTypeGrid";
-import { DEFINITION_KINDS, DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, libraryMessages as lm } from "../library";
+import { DEFINITION_KINDS, DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, useLibraryMessages } from "../library";
 import { useNewScope } from "../projects";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 
 export interface CreateResourceDialogProps {
   types: readonly ResourceTypeDescriptor[];
@@ -19,6 +19,8 @@ export interface CreateResourceDialogProps {
 
 /** 새 리소스: ① 종류 고르기(카드 격자, 디스크립터) ② 이름·id·설명. 종류가 많으면 검색한다. */
 export function CreateResourceDialog({ types, existingIds, initialTypeId, busy, error, onCreate, onClose }: CreateResourceDialogProps) {
+  const lm = useLibraryMessages();
+  const t = useResourceMessages();
   const [typeId, setTypeId] = useState<string | null>(initialTypeId ?? (types.length === 1 ? (types[0]?.id ?? null) : null));
   const chosen = types.find((x) => x.id === typeId);
   const scope = useNewScope();

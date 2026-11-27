@@ -155,11 +155,14 @@ export interface ScopeGroups {
 }
 
 export interface GroupScopesOptions {
-  /** 한 범위의 정렬 라벨. 없으면 범위 id를 한국어 로케일로 비교. */
+  /** 한 범위의 정렬 라벨. 없으면 범위 id를 `locale`로 비교. */
   labelOf?: (scope: MemoryScopeSummary, kind: MemoryScopeKindInfo | undefined) => string;
+  /** 라벨을 비교할 로캘(BCP 47, 보통 화면 언어). 생략하면 `DEFAULT_LOCALE`("en"). */
+  locale?: string;
 }
 
-const collator = new Intl.Collator("ko");
+/** 로캘을 안 주었을 때의 정렬 기준(환경 로캘에 기대지 않는다). */
+export const DEFAULT_LOCALE = "en";
 
 /**
  * 범위 요약을 종류별로 묶는다(나무의 층: 종류 → 범위). 범위 종류 이름은 어디에서도 비교하지 않는다.
@@ -168,6 +171,7 @@ const collator = new Intl.Collator("ko");
 export function groupScopes(kinds: readonly MemoryScopeKindInfo[], scopes: readonly MemoryScopeSummary[], options: GroupScopesOptions = {}): ScopeGroups {
   const byKind = new Map<string, MemoryScopeKindInfo>();
   for (const k of kinds) byKind.set(k.kind, k);
+  const collator = new Intl.Collator(options.locale ?? DEFAULT_LOCALE);
   const labelOf = options.labelOf ?? ((s: MemoryScopeSummary) => s.scope.id ?? "");
   const known = new Map<string, MemoryScopeSummary[]>();
   const orphan = new Map<string, MemoryScopeSummary[]>();

@@ -1,6 +1,6 @@
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages, type TeamTexts } from "./messages";
 import { incomingInvocations, nodeLabel, nodesOf, strategyOfInvocation } from "./teamsLogic";
 
 /**
@@ -14,6 +14,7 @@ export function ignoredFieldReasons(
   graph: Graph,
   edgeTypes: readonly EdgeTypeDescriptor[],
   strategies: readonly DelegationStrategyDescriptor[],
+  t: TeamTexts,
 ): Record<string, string> {
   const first = incomingInvocations(nodeId, graph, edgeTypes)[0];
   const strategy = first === undefined ? undefined : strategies.find((s) => s.id === strategyOfInvocation(first.edge, first.kind));
@@ -46,6 +47,7 @@ export interface IgnoredValueClearProps {
 
 /** 무시되지만 노드에 값이 남은 필드 목록과 [비우기] 버튼(노드 덮어쓰기 값일 때만). 없으면 아무것도 그리지 않는다. */
 export function IgnoredValueClear({ reasons, ownValue, labelOf, disabled, onClear }: IgnoredValueClearProps) {
+  const t = useTeamMessages();
   const paths = Object.keys(reasons).filter((p) => hasPointer(ownValue, p));
   if (paths.length === 0) return null;
   return (

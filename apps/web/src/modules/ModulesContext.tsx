@@ -5,7 +5,7 @@ import type { ModuleInfo } from "@agent-console/contracts";
 import { useToast } from "@agent-console/ui";
 import { useApi } from "../app/ApiContext";
 import type { FeatureSignal } from "../app/apiClients";
-import { messages as m } from "../app/messages";
+import { ToastText } from "../app/ToastText";
 import { knownNames, resolveRequires, type UnmetItem } from "./resolve";
 
 /** `GET /modules` 질의 키. 서버가 진실이므로 저장소에 쓰지 않는다. */
@@ -99,7 +99,7 @@ export function ModulesProvider({ children, subscribeSignals }: ModulesProviderP
   useEffect(() => {
     if (subscribeSignals === undefined) return;
     return subscribeSignals((signal) => {
-      if (signal.kind === "unavailable") toast({ tone: "warning", text: m.modules.featureUnavailable(signal.module, signal.port) });
+      if (signal.kind === "unavailable") toast({ tone: "warning", text: <ToastText render={({ app }) => app.modules.featureUnavailable(signal.module, signal.port)} /> });
       const now = Date.now();
       if (now - lastSignal.current < SIGNAL_MIN_GAP_MS) return;
       lastSignal.current = now;
@@ -142,7 +142,7 @@ function warnUnknown(requires: readonly string[], modules: readonly ModuleInfo[]
   for (const item of requires) {
     if (known.has(item) || warned.has(item)) continue;
     warned.add(item);
-    console.warn(`[modules] requires "${item}"가 서버 모듈 목록의 id·역할 어디에도 없습니다`);
+    console.warn(`[modules] requires "${item}" is in neither the id nor the role of any module in the server list`);
   }
 }
 

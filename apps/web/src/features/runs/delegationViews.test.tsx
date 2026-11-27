@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, type RenderOptions, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { NodeRun, Run } from "@agent-console/contracts";
@@ -7,6 +7,11 @@ import { EdgeJudgementView, type EdgeJudgementViewProps } from "./EdgeJudgementV
 import { NodeRunList } from "./NodeRunList";
 import { nodeRunKey } from "./nodeRuns";
 import { RunBreadcrumb } from "./RunBreadcrumb";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
 
 afterEach(cleanup);
 

@@ -19,6 +19,9 @@ function files(dir: string, out: string[] = []): string[] {
 const EVENT_TYPES = ["loop.iteration", "loop.exhausted", "run.child_started", "run.child_finished"];
 const MAP_FILE = join("features", "delegation", "eventSummaryMap.ts");
 
+/** 소스 전체를 훑는 테스트의 시간 한도(부하가 있으면 기본 5초를 넘는다). */
+const SCAN_TIMEOUT = 60_000;
+
 describe("이벤트 타입 문자열은 매핑 표 한 파일에만 있다", () => {
   it("앱 소스(매핑 표 제외)에 반복·자식 실행 이벤트 타입 문자열이 없다", () => {
     const hits: string[] = [];
@@ -28,7 +31,7 @@ describe("이벤트 타입 문자열은 매핑 표 한 파일에만 있다", () 
       for (const type of EVENT_TYPES) if (new RegExp(`["'\`]${type.replace(".", "\\.")}["'\`]`).test(text)) hits.push(`${relative(SRC, f)}: ${type}`);
     }
     expect(hits).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
   it("패키지(graph-editor·trace-view·chat) 소스에는 이벤트 타입도 payload 키도 없다", () => {
     const hits: string[] = [];
     for (const pkg of ["graph-editor", "trace-view", "chat"]) {
@@ -39,7 +42,7 @@ describe("이벤트 타입 문자열은 매핑 표 한 파일에만 있다", () 
       }
     }
     expect(hits).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
   it("검사 대상이 있다", () => {
     expect(files(SRC).length).toBeGreaterThan(50);
     expect(files(join(PKGS, "graph-editor", "src")).length).toBeGreaterThan(10);

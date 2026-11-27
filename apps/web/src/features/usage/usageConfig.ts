@@ -29,8 +29,6 @@ export const DEFAULT_ROLLUP_PERIOD = "7d";
  */
 export const RESET_DATE_AFTER_SECONDS = 30 * 86_400;
 
-/** 사이드바 초기화 줄의 시각·요일 표기 언어(`Intl` 로케일). */
-export const RESET_CLOCK_LOCALE = "ko-KR";
 /** 초기화가 이 일수 안이면 요일("(일요일)"), 더 멀면 날짜("(11월 30일)")로 보인다. */
 export const RESET_WEEKDAY_WITHIN_DAYS = 7;
 

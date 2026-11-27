@@ -2,7 +2,7 @@ import { useId } from "react";
 import { DECISION_COLOR_TOKENS, decisionButtonStyle } from "@agent-console/chat";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { Button, Disclosure, useIconRegistry } from "@agent-console/ui";
-import { teamMessages as t } from "../messages";
+import { useTeamMessages } from "../messages";
 
 /** `ui:field` 이름. */
 export const REVIEW_DECISIONS_FIELD = "review-decisions";
@@ -40,6 +40,7 @@ export function nextDecisionId(decisions: readonly { id: string }[]): string {
  * 결정 id는 출력 포트 이름이라 중복·형식 오류를 즉시 알린다. 색은 토큰 이름만 고를 수 있다(자유 입력 없음).
  */
 export function ReviewDecisionsField({ id, value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const t = useTeamMessages();
   const opts = options as unknown as DecisionsOptions;
   const rows: Decision[] = Array.isArray(value) ? (value as Decision[]) : [];
   const uid = useId();

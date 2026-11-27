@@ -103,6 +103,13 @@ describe("buildTree", () => {
     const names = open.filter((r) => r.depth === 1 && r.key.startsWith("notes/")).map((r) => r.name);
     expect(names).toEqual(["둘째", "첫째", "페이지 2", "페이지 10"]);
   });
+  it("정렬은 넘긴 로캘을 따르고 생략하면 en이다", () => {
+    const base = samplePages()[0]!;
+    const custom = ["z", "ä", "b"].map((d) => ({ ...base, path: `${d}/p`, title: d }));
+    const folders = (locale?: string) => buildTree(custom, { expanded: new Set(), ...(locale === undefined ? {} : { locale }) }).map((r) => r.key);
+    expect(folders()).toEqual(["ä", "b", "z"]);
+    expect(folders("sv")).toEqual(["b", "z", "ä"]);
+  });
   it("선택한 페이지의 상위 폴더는 항상 펼친다", () => {
     const rows = buildTree(pages, { expanded: new Set(), revealPath: "deep/er/x" });
     expect(rows.map((r) => r.key)).toContain("deep/er/x");

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 export interface HintOneLineProps {
   /** 한 줄 요약(넘치면 말줄임) */
@@ -10,6 +10,7 @@ export interface HintOneLineProps {
 
 /** 안내 배너 안 내용: 한 줄 + [더 보기](펼치면 전문). 배너 틀(닫기)은 호출자(`HintBanner`)가 그린다. */
 export function HintOneLine({ short, full }: HintOneLineProps) {
+  const t = useTeamMessages();
   const [open, setOpen] = useState(false);
   return (
     <span className="team-hint-line" data-open={open ? "true" : undefined}>

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-usage`, so the web can show the usage sources, window names and setup help and the usage source errors in English (data only, no API change). The comments in the statusline setup snippets are now in English (they are pasted into your own script). Internal log messages are now in English.
 - 5.2R.27: 적지 않은 출처는 `auto_enable`이고 `test_only`가 아니면 켠다(`auto_enabled`, 이전: 전부 켬 — 외부 출처는 `auto_enable=True`로 기본 켜짐 유지). 기본 출처 데이터 `data/sources.json`(자동 켜기·창 이름·연결 안내 `setup_help`·`setup_snippets`, README 조각은 doctest로 같은 데이터). `UsageService(setup_values=)`·출처 선택 메서드 `setup_values(ctx)`·`received_at(ctx)`, `fill_setup_snippets`·`fill_setup_text`(셸·언어별 따옴표), `UsageSourceInfo.last_received_at`. `statusline-file`이 statusLine 입력 원문 파일도 읽는다(`load_statusline_windows`), `default_window_labels`.
 - 5R.13: `counts_toward_usage(run)`(루트 Run만 집계), `load_usage_records`가 자식 Run을 건너뛴다.
 

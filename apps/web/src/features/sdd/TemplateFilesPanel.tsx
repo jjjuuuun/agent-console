@@ -5,7 +5,7 @@
 import { Button } from "@agent-console/ui";
 import type { SpecDocument } from "@agent-console/contracts/sdd";
 import { MultiFileTab, sortEntries, type FileEntry } from "../resources";
-import { templateMessages as t } from "./templateMessages";
+import { useT } from "@agent-console/i18n";
 
 export interface TemplateFilesPanelProps {
   documents: readonly SpecDocument[];
@@ -21,15 +21,16 @@ export interface TemplateFilesPanelProps {
 }
 
 export function TemplateFilesPanel({ documents, files, originFiles, onChange, errors, onDismissError, onSave, disabled }: TemplateFilesPanelProps) {
+  const t = useT("sdd");
   const have = new Set(files.map((f) => f.path));
   const linked = new Set(documents.map((d) => d.file));
   const unlinked = files.filter((f) => !linked.has(f.path));
   return (
     <div className="sdd-template-files">
-      <section aria-label={t.files.links}>
-        <h3 className="sdd-label">{t.files.links}</h3>
+      <section aria-label={t("template.files.links")}>
+        <h3 className="sdd-label">{t("template.files.links")}</h3>
         {documents.length === 0 ? (
-          <p className="app-muted">{t.files.noDocuments}</p>
+          <p className="app-muted">{t("template.files.noDocuments")}</p>
         ) : (
           <ul className="sdd-template-links">
             {documents.map((d) => (
@@ -38,8 +39,8 @@ export function TemplateFilesPanel({ documents, files, originFiles, onChange, er
                 {have.has(d.file) ? null : (
                   <>
                     {" "}
-                    <span data-tone="danger" role="status">{t.files.missing}</span>{" "}
-                    <Button size="sm" disabled={disabled} aria-label={t.files.createFile(d.file)} onClick={() => onChange(sortEntries([...files, { path: d.file, text: "", size: 0 }]))}>{t.files.create}</Button>
+                    <span data-tone="danger" role="status">{t("template.files.missing")}</span>{" "}
+                    <Button size="sm" disabled={disabled} aria-label={t("template.files.createFile", { file: d.file })} onClick={() => onChange(sortEntries([...files, { path: d.file, text: "", size: 0 }]))}>{t("template.files.create")}</Button>
                   </>
                 )}
               </li>
@@ -48,7 +49,7 @@ export function TemplateFilesPanel({ documents, files, originFiles, onChange, er
         )}
         {unlinked.length === 0 ? null : (
           <p className="app-muted" data-testid="sdd-template-unlinked">
-            {t.files.unlinked}: {unlinked.map((f) => f.path).join(", ")}
+            {t("template.files.unlinked")}: {unlinked.map((f) => f.path).join(", ")}
           </p>
         )}
       </section>

@@ -4,10 +4,12 @@ import { Button, ChipRow, EmptyState, ListPane, type ChipItem } from "@agent-con
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { Skeleton } from "../settings";
-import { DescriptorIcon, libraryMessages as lm, ROUTE_ROLES, routeIconNode, useListShortcuts, useListView, useDefinitionEdits, ListEditDialogs } from "../library";
-import { resourceMessages as t } from "./messages";
+import { DescriptorIcon, useLibraryMessages, ROUTE_ROLES, routeIconNode, useListShortcuts, useListView, useDefinitionEdits, ListEditDialogs } from "../library";
+import { useResourceMessages } from "./messages";
 import { countByType, filterResources } from "./resourceLogic";
 import { resourceGroupDefs, resourceSortDefs } from "./arrange";
+import { useLanguageCode } from "../../i18n";
+import { useUiLibMessages } from "../../i18n/useViewLibMessages";
 
 export interface ResourceListProps {
   resources: readonly ResourceSummary[] | undefined;
@@ -36,6 +38,9 @@ export interface ResourceListProps {
 
 /** 리소스 목록 패널: 종류 칩(디스크립터), 검색, 이름순. 종류 이름은 코드에 없고 디스크립터에서 온다. */
 export function ResourceList(props: ResourceListProps) {
+  const lm = useLibraryMessages();
+  const uiMessages = useUiLibMessages();
+  const t = useResourceMessages();
   const { resources, types, typesFailed, loading, error, onRetry, selectedId, onSelect, onNew, onImport, onRename, onDelete, onlyIds, onClearOnlyIds, scopeBar, selectTool, rowExtra } = props;
   const [query, setQuery] = useState("");
   const [typeId, setTypeId] = useState<string | null>(null);
@@ -52,10 +57,12 @@ export function ResourceList(props: ResourceListProps) {
       ...(onlyIds === null ? [] : [{ id: "\u0000imported", label: `${t.list.justImported} ×`, active: true, onSelect: () => onClearOnlyIds() }]),
       ...ordered.map((id): ChipItem => ({ id: `t:${id}`, label: `${typeById.get(id)?.title ?? id} ${counts.get(id) ?? 0}`, active: typeId === id, onSelect: () => setTypeId(typeId === id ? null : id) })),
     ];
-  }, [chipIds, counts, resources, typeId, onlyIds, onClearOnlyIds, typeById]);
+  }, [chipIds, counts, resources, typeId, onlyIds, onClearOnlyIds, typeById, t]);
   const filtered = useMemo(() => filterResources(resources ?? [], { typeId, query, onlyIds }), [resources, typeId, query, onlyIds]);
   // 묶는 기준·정렬은 데이터다. 종류별이 기본이고, 종류 칩은 빠른 거르기로 남는다.
-  const groupDefs = useMemo(() => resourceGroupDefs((id) => typeById.get(id)?.title ?? id, t.arrange.noProjects), [typeById]);
+  const groupDefs = useMemo(() => resourceGroupDefs((id) => typeById.get(id)?.title ?? id, t.arrange.noProjects), [typeById, t]);
+  const language = useLanguageCode();
+  const sortDefs = useMemo(() => resourceSortDefs(language), [language]);
   const [moving, setMoving] = useState<ResourceSummary | undefined>(undefined);
   const [labeling, setLabeling] = useState<ResourceSummary | undefined>(undefined);
   // 폴더 이동·라벨은 최신 원문을 읽어 해당 필드만 바꿔 `If-Match`로 저장한다(5.2R.63).
@@ -72,7 +79,7 @@ export function ResourceList(props: ResourceListProps) {
     listId: "resources",
     items: filtered,
     groupDefs,
-    sortDefs: resourceSortDefs,
+    sortDefs,
     defaultView: { groupBy: "type", sort: "name" },
     messages: t.arrange,
     searching: query.trim() !== "",
@@ -119,7 +126,7 @@ export function ResourceList(props: ResourceListProps) {
     <div ref={root} className="lib-split-list">
       {scopeBar}
       {typesFailed ? <p className="app-muted lib-field-note app-pad" role="status">{t.list.typesFailed}</p> : null}
-      <ChipRow className="lib-typechips" ariaLabel={t.list.typeFilter} chips={typeChips} />
+      <ChipRow className="lib-typechips" messages={uiMessages} ariaLabel={t.list.typeFilter} chips={typeChips} />
       <ListPane<ResourceSummary>
         items={rows}
         {...(view.paneGroups === undefined ? {} : { groups: view.paneGroups, onToggleGroup: view.arranged.toggle })}

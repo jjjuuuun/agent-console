@@ -85,8 +85,8 @@ def run_retention_cycle(
         except Exception as exc:
             failed[name] = _code_of(exc)
             _log.warning(
-                "메모리 자동 정리: %s 건너뜀(%s)",
-                "공용" if name is None else f"공간 {name!r}",
+                "Memory auto-cleanup: skipped %s (%s)",
+                "shared" if name is None else f"space {name!r}",
                 failed[name],
                 exc_info=True,
             )

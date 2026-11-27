@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { ApiError } from "@agent-console/api-client";
 import type { SddAutomationOp } from "@agent-console/api-client";
-import { sddMessages as m } from "./messages";
 import { useInvalidateSdd, useSddSpace } from "./useSddApi";
+import { useT } from "@agent-console/i18n";
 
 export interface AutomationControl {
   control: (op: SddAutomationOp) => Promise<void>;
@@ -12,6 +12,7 @@ export interface AutomationControl {
 }
 
 export function useAutomationControl(specId: string): AutomationControl {
+  const t = useT("sdd");
   const space = useSddSpace();
   const invalidate = useInvalidateSdd();
   const [busy, setBusy] = useState(false);
@@ -23,7 +24,7 @@ export function useAutomationControl(specId: string): AutomationControl {
       await space.client.controlAutomation(specId, op);
       await invalidate();
     } catch (e) {
-      setError(e instanceof ApiError && e.message !== "" ? e.message : m.automation.stopFailed);
+      setError(e instanceof ApiError && e.message !== "" ? e.message : t("automation.stopFailed"));
     } finally {
       setBusy(false);
     }

@@ -4,8 +4,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button, ConfirmDialog, Dialog, useShortcuts, useToast } from "@agent-console/ui";
 import type { ConversationSummary, Interaction } from "@agent-console/contracts";
-import { describeError } from "../../app/errors";
-import { messages as appMessages } from "../../app/messages";
+import { useDescribeError, useErrorState, raised } from "../../app/errors";
+import { ToastText } from "../../app/ToastText";
+import { useShellMessages } from "../../app/shellMessages";
 import { useApi } from "../../app/ApiContext";
 import { useProjectId } from "../../app/projectScope";
 import { useNow } from "../../app/useNow";
@@ -16,7 +17,7 @@ import { ChatPane } from "./ChatPane";
 import { useWorkspaceSettings } from "../../app/queries";
 import { useDebouncedValue } from "../../app/useDebouncedValue";
 import { chatKeys, useAgentList, useConversationList, useChatGraph, useGraphList } from "./chatData";
-import { chatMessages } from "./chatMessages";
+import { useChatMessages } from "./chatMessages";
 import { ConversationList } from "./ConversationList";
 import { chatPaths } from "./paths";
 import { lastUsedByGraph, pendingSinceOf, sortConversations, patchConversationCache } from "./lib/conversations";
@@ -32,7 +33,6 @@ import "@agent-console/chat/styles.css";
 import "./chat.css";
 import { useImeGuard } from "../../lib/ime";
 
-const t = chatMessages;
 /** 목록에서 요약을 실시간으로 받을 대화 수(앞쪽 = 정렬 전 서버 순서의 최근 갱신순) */
 const WATCH_LIMIT = 30;
 /** 대화 갱신 알림 뒤 목록을 다시 읽기까지 모으는 시간(ms) */
@@ -41,6 +41,10 @@ const CONVERSATION_REREAD_MS = 300;
 /** 채팅 화면(라우트 `/chat`, `/chat/:conversationId`): 대화 목록 + 열린 대화. 데이터는 훅이, 표현은 chat 패키지가 맡는다. */
 
 export function ChatScreen() {
+  const describeError = useDescribeError();
+  const shell = useShellMessages();
+  const m = useChatMessages();
+  const t = m;
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -74,7 +78,7 @@ export function ChatScreen() {
   const projectDialog = projects.enabled && projects.views.some((v) => v.project.archived !== true);
   const projectsPending = projects.enabled && !projects.loaded;
   const [newBusy, setNewBusy] = useState(false);
-  const [newError, setNewError] = useState<string | null>(null);
+  const [newError, setNewError] = useErrorState(t.newDialog.createFailed);
   const [renameTarget, setRenameTarget] = useState<ConversationSummary | null>(null);
   const [renameText, setRenameText] = useState("");
   const renameIme = useImeGuard();
@@ -119,14 +123,14 @@ export function ChatScreen() {
     () => sortConversations(conversations.data ?? [], sortValue, since),
     [conversations.data, sortValue, since],
   );
-  const sourceLabel = useCallback((source: string) => appMessages.common.recordSources[source] ?? source, []);
+  const sourceLabel = useCallback((source: string) => shell.common.recordSources[source] ?? source, [shell.common.recordSources]);
   const teamNames = useMemo(() => new Map((graphs.data ?? []).map((g) => [g.id, g.name])), [graphs.data]);
   const teamName = useCallback((graphId: string) => (graphs.data === undefined ? "…" : teamNames.get(graphId)), [graphs.data, teamNames]);
 
   const openNew = useCallback((preselected?: string, project?: string) => {
     setNewError(null);
     setNewDialog({ preselected: preselected ?? storage.get(LAST_GRAPH_KEY) ?? undefined, ...(project === undefined ? {} : { project }) });
-  }, [storage]);
+  }, [storage, setNewError]);
 
   // 새 대화 질의는 한 번 읽고 지운다(새로고침해도 다시 열리지 않게)
   const wantsNew = searchParams.get(NEW_PARAM) === "1";
@@ -162,7 +166,7 @@ export function ChatScreen() {
         }
         const oldest = pending.items.find((i) => i.conversation_id != null);
         if (oldest?.conversation_id) goTo(oldest.conversation_id);
-        else toast({ tone: "info", text: appMessages.pending.none });
+        else toast({ tone: "info", text: <ToastText render={({ shell: s }) => s.pending.none} /> });
       },
     },
     { id: "chat.prev", scope: "chat", keys: "Alt+ArrowUp", titleKey: "shortcuts.chatPrev", modifierRequired: true, run: () => step(-1) },
@@ -178,7 +182,7 @@ export function ChatScreen() {
     try {
       await fn();
     } catch (e) {
-      toast({ tone: "danger", text: describeError(e, appMessages.common.requestFailed).message });
+      toast({ tone: "danger", text: <ToastText render={({ shell: s }, d) => d(e, s.common.requestFailed).message} /> });
     }
   };
 
@@ -192,7 +196,7 @@ export function ChatScreen() {
         setNewDialog(null);
         goTo(created.id);
       })
-      .catch((e: unknown) => setNewError(describeError(e, t.newDialog.createFailed).message))
+      .catch((e: unknown) => setNewError(raised(e)))
       .finally(() => setNewBusy(false));
   };
 
@@ -203,7 +207,7 @@ export function ChatScreen() {
   const listEmpty = conversationId === undefined && conversations.data !== undefined && conversations.data.length === 0 && debouncedQuery.trim() === "" && startBlock === null && recordsState.banners.length === 0;
   return (
     <div className="chat-screen" data-screen="chat" data-list={listOpen ? "open" : "closed"} data-empty={listEmpty ? "true" : undefined} data-loading={listLoading ? "true" : undefined}>
-      <div className="ac-sr-only" role="status" aria-live="polite" aria-label={appMessages.pending.none}>{live}</div>
+      <div className="ac-sr-only" role="status" aria-live="polite" aria-label={shell.pending.none}>{live}</div>
       {conversationId === undefined ? <h1 className="ac-sr-only">{t.list.label}</h1> : null}
       <aside className="chat-list-pane" aria-label={t.list.label}>
         <ConversationList
@@ -289,7 +293,7 @@ export function ChatScreen() {
         onClose={() => setRenameTarget(null)}
         actions={
           <>
-            <Button onClick={() => setRenameTarget(null)}>{appMessages.common.cancel}</Button>
+            <Button onClick={() => setRenameTarget(null)}>{shell.common.cancel}</Button>
             <Button
               variant="primary"
               onClick={() => {
@@ -327,7 +331,7 @@ export function ChatScreen() {
         danger
         title={t.remove.title}
         confirmLabel={t.remove.confirm}
-        cancelLabel={appMessages.common.cancel}
+        cancelLabel={shell.common.cancel}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {
           const target = deleteTarget;

@@ -213,7 +213,7 @@ class SpaceRecorder:
                 store = self.records.reader(project_id)
                 found = {} if store is None else store.runs.project_id_counts()
             except (RecordsUnavailable, StoreError, LookupError):
-                _log.debug("기록 DB를 셀 수 없음: %s", project_id, exc_info=True)
+                _log.debug("Couldn't count the records database: %s", project_id, exc_info=True)
                 continue
             total = sum(int(n) for n in found.values())
             if total:
@@ -304,11 +304,11 @@ class SpaceRecorder:
             first = run_id not in self._lost
             self._lost.setdefault(run_id, reason)
         if first:
-            _log.warning("실행 기록 DB를 잃어 Run을 멈춥니다: %s (%s)", run_id, reason)
+            _log.warning("Lost the run records database; stopping run %s (%s)", run_id, reason)
             try:
                 self._on_lost(run_id, reason)
             except Exception:
-                _log.exception("기록 DB 잃음 알림 실패: %s", run_id)
+                _log.exception("Lost records database notification failed: %s", run_id)
 
     def lost_reason(self, run_id: str) -> str | None:
         """그 Run이 기록 DB를 잃었으면 이유(아니면 None)."""
@@ -321,7 +321,7 @@ class SpaceRecorder:
         try:
             self.records.handle(project_id).spool(run_id, kind, payload)
         except Exception:  # 대기 파일까지 못 쓰면 기록을 잃는다 - 적어 둔다
-            _log.exception("실행 기록 대기 파일 쓰기 실패: %s/%s", run_id, kind)
+            _log.exception("Writing the run records pending file failed: %s/%s", run_id, kind)
 
     def _stamp(self, run: Run, project_id: str) -> Run:
         """공간에 쓰는 Run: ``host_id``를 적고, 잃은 Run의 끝 상태는 오류 코드를 바꾼다."""
@@ -824,7 +824,7 @@ def recover_space(
     own: Any = _OwnRecorder(writer, targets)
     done = recover_unfinished_runs(own, clock=clock, ids=ids)
     if done:
-        _log.info("프로젝트 기록의 끝나지 않은 Run %d개를 끊김으로 정리했습니다", len(done))
+        _log.info("Marked %d unfinished runs in project records as interrupted", len(done))
     return True
 
 

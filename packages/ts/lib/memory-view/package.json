@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/memory-view",
-  "version": "0.2.0",
-  "description": "공유 메모리 표현 컴포넌트(범위 나무·항목 표·편집기·기록 비교·정리 미리보기)",
+  "version": "0.2.1",
+  "description": "Shared memory presentation components (scope tree, item table, editor, history comparison, cleanup preview)",
   "private": true,
   "license": "MIT",
   "type": "module",

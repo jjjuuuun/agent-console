@@ -294,9 +294,8 @@ class MessageEdgeConfig(BaseModel):
         default=None,
         min_length=1,
         title="입력 키",
-        description=(
-            f"실행 입력에서 꺼낼 키입니다. 비우면 메시지 본문({DEFAULT_MESSAGE_KEY!r})입니다."
-        ),
+        # 고정 문구(화면 번역 키). 'text' = DEFAULT_MESSAGE_KEY(locales 테스트가 맞춰 본다).
+        description="실행 입력에서 꺼낼 키입니다. 비우면 메시지 본문('text')입니다.",
         json_schema_extra=x_ui(tier="advanced", example="question"),
     )
     template: str | None = Field(

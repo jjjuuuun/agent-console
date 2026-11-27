@@ -122,9 +122,9 @@ def load_dialog_providers(
         try:
             out.append(as_folder_dialog_provider(ep.load()))
         except TypeError:
-            _log.warning("폴더 선택 창 제공자 모양이 아닙니다: %s", ep.name)
+            _log.warning("Not a folder picker provider: %s", ep.name)
         except Exception:
-            _log.exception("폴더 선택 창 제공자를 불러오지 못했습니다: %s", ep.name)
+            _log.exception("Couldn't load folder picker provider: %s", ep.name)
     return out
 
 
@@ -409,7 +409,10 @@ class FolderPicker:
                 if provider.available(self._environ):
                     return provider, None
             except Exception:
-                _log.exception("폴더 선택 창 제공자 판정 실패: %s", getattr(provider, "id", "?"))
+                _log.exception(
+                    "Folder picker provider availability check failed: %s",
+                    getattr(provider, "id", "?"),
+                )
         availability = probe_dialogs(
             self._dialog_specs(), platform=self._platform, which=self._which, environ=self._environ
         )
@@ -480,7 +483,7 @@ class FolderPicker:
         except TimeoutError:
             return FolderPickResult(status=KnownFolderPickStatuses.TIMEOUT, provider=chosen.id)
         except Exception:
-            _log.exception("폴더 선택 창 제공자 실패: %s", chosen.id)
+            _log.exception("Folder picker provider failed: %s", chosen.id)
             return FolderPickResult(status=KnownFolderPickStatuses.FAILED, provider=chosen.id)
         if not path:
             return FolderPickResult(status=KnownFolderPickStatuses.CANCELLED, provider=chosen.id)

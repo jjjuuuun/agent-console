@@ -46,6 +46,9 @@ function hitsIn(file: string, strings: readonly string[]): string[] {
 
 const files = messageTables(SRC);
 
+/** 소스 전체를 훑는 테스트의 시간 한도(부하가 있으면 기본 5초를 넘는다). */
+const SCAN_TIMEOUT = 60_000;
+
 describe("앱 메시지 표에 폐기어(U-16)가 없다", () => {
   it("검사 대상과 목록이 있다", () => {
     expect(RETIRED_TERMS.length).toBeGreaterThan(0);
@@ -54,7 +57,7 @@ describe("앱 메시지 표에 폐기어(U-16)가 없다", () => {
   });
   it("모든 메시지 표 문자열", () => {
     expect(files.flatMap((f) => hitsIn(f, literals(f)))).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
   it("폐기어를 넣으면 잡고, 프로젝트 맥락 말은 프로젝트 기능 표에서만 잡는다", () => {
     const general = RETIRED_TERMS.find((t) => !PROJECT_CONTEXT_RETIRED_TERMS.includes(t));
     const contextual = PROJECT_CONTEXT_RETIRED_TERMS[0];

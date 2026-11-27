@@ -60,7 +60,7 @@ export function createRestIo(options: RestClientOptions): RestIo {
     try {
       response = await doFetch(base + path, init);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "네트워크 오류";
+      const message = cause instanceof Error ? cause.message : "Network error";
       throw new ApiError(0, { code: NETWORK_ERROR_CODE, message }, { cause });
     }
 

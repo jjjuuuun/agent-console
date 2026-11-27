@@ -128,7 +128,7 @@ def test_missing_file_is_a_single_warning_then_picks_up_the_file(
         assert provider.get_secret("EXAMPLE_TOKEN") is None
         assert provider.get_secret("EXAMPLE_TOKEN") is None
     assert len(caplog.records) == 1
-    assert "비밀 파일이 없습니다" in caplog.records[0].getMessage()
+    assert "Secret file not found" in caplog.records[0].getMessage()
     path.write_text(f"EXAMPLE_TOKEN={VALUE}\n", encoding="utf-8")
     assert provider.get_secret("EXAMPLE_TOKEN") == VALUE  # 재시작 없이
 
@@ -153,7 +153,7 @@ def test_values_never_appear_in_logs_repr_or_errors(
         with pytest.raises(SecretNotFoundError) as caught:
             resolver.resolve("secret://not_there")
     logs = _all_logs(caplog)
-    assert "2번째 줄을 건너뜁니다" in logs
+    assert "Skipping line 2 of the secret file" in logs
     for text in (logs, repr(provider), str(caught.value)):
         assert VALUE not in text
         assert "EXAMPLE_TOKEN" not in text  # 이름도 로그에 넣지 않는다
@@ -164,7 +164,7 @@ def test_too_large_file_is_not_read(tmp_path: Path, caplog: pytest.LogCaptureFix
     provider = FileSecretProvider(path, settings=load_settings({"max_file_bytes": 5}))
     with caplog.at_level(logging.WARNING):
         assert provider.get_secret("EXAMPLE_TOKEN") is None
-    assert "너무 커서" in _all_logs(caplog)
+    assert "too large" in _all_logs(caplog)
     assert VALUE not in _all_logs(caplog)
 
 

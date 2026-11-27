@@ -50,14 +50,14 @@ function CellBody({ cell, level, mode }: { cell: ArchitectureCellView; level: Ar
   const { messages } = ctx;
   const notCollected = cell.status === "not_collected";
   if (level === "summary" && mode === "live") {
-    const pieces = metricPieces(cell.metrics, messages, { compact: true, kinds: ctx.metricKinds });
+    const pieces = metricPieces(cell.metrics, messages, { compact: true, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) });
     return (
       <span className="ac-arch-cell-sum" aria-hidden="true">
         {summaryText(cell, pieces, messages)}
       </span>
     );
   }
-  const pieces = metricPieces(cell.metrics, messages, { kinds: ctx.metricKinds });
+  const pieces = metricPieces(cell.metrics, messages, { kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) });
   const highlighted = ctx.highlight.cells.has(cell.id);
   return (
     <>
@@ -111,7 +111,7 @@ export const CellNode = memo(function CellNode({ data }: NodeProps<Node<CellNode
       data-highlighted={highlighted && mode === "live" ? "" : undefined}
       data-errors={mode === "live" && cellHasErrors(cell) ? "" : undefined}
       aria-pressed={selected}
-      aria-label={mode === "live" ? cellAriaLabel(cell, messages, { highlighted, kinds: ctx.metricKinds }) : cell.label}
+      aria-label={mode === "live" ? cellAriaLabel(cell, messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) }) : cell.label}
       title={tip}
       style={{ ["--cell-tone" as string]: `var(${tone})` }}
       onClick={() => ctx.activate({ kind: "cell", id: cell.id })}

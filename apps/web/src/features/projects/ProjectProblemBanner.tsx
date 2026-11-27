@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { Banner, Button } from "@agent-console/ui";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { MAX_VISIBLE_BANNERS, type BannerAction, type BannerSpec } from "./projectHomeLib";
 
 export interface ProjectProblemBannerProps {
@@ -13,24 +13,24 @@ export interface ProjectProblemBannerProps {
   note?: string | null | undefined;
 }
 
-const LABELS: Readonly<Record<BannerAction, string>> = {
-  recheck: m.problem.recheck,
-  repath: m.problem.repath,
-  setFolder: m.problem.setFolder,
-  unregister: m.problem.unregister,
-  copyManifestPath: m.problem.manifestCopyPath,
-  recreateManifest: m.problem.manifestRecreate,
-  copyRecordsPath: m.problem.recordsCopyPath,
-  copyBackupPath: m.problem.recordsCopyBackup,
-  appendGitignore: m.problem.gitignoreAppend,
-  reregister: m.problem.reregister,
-};
-
 /**
  * 프로젝트 문제 배너 묶음(표현 전용, screen-projects §6.1). 한 번에 3개까지 펼치고 나머지는 "외 n건 [모두 보기]".
  * `role="alert"`를 쓰지 않는다(화면 진입 시 읽히는 정적 문서 흐름): 영역 `aria-label`=제목.
  */
 export function ProjectProblemBanner({ banners, onAction, busy, note }: ProjectProblemBannerProps) {
+  const m = useFolderHomeMessages();
+  const LABELS: Readonly<Record<BannerAction, string>> = {
+    recheck: m.problem.recheck,
+    repath: m.problem.repath,
+    setFolder: m.problem.setFolder,
+    unregister: m.problem.unregister,
+    copyManifestPath: m.problem.manifestCopyPath,
+    recreateManifest: m.problem.manifestRecreate,
+    copyRecordsPath: m.problem.recordsCopyPath,
+    copyBackupPath: m.problem.recordsCopyBackup,
+    appendGitignore: m.problem.gitignoreAppend,
+    reregister: m.problem.reregister,
+  };
   const [all, setAll] = useState(false);
   const uid = useId();
   if (banners.length === 0) return null;

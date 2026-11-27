@@ -388,6 +388,10 @@ export interface GraphEditorProps {
   /** 삭제 후 되돌리기 제한 시간(ms). 기본 5000 */
   undoWindowMs?: number;
   messages?: Partial<GraphEditorMessages>;
+  /** 팔레트 정렬·검색에 쓰는 로캘(BCP 47, 보통 화면 언어). 생략하면 "en" */
+  locale?: string;
+  /** 팔레트 그룹 이름 표시용 변환(보통 서버 원문 category를 화면 언어로). 그룹 묶음·분류색은 원래 category 기준이라 언어를 바꿔도 같다. 생략하면 그대로 */
+  categoryLabel?: (category: string) => string;
   className?: string;
   style?: CSSProperties;
 }

@@ -25,11 +25,11 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
-import { ARCH_SCOPE_KIND, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
+import { ARCH_SCOPE_KIND, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitecturePanel, observedValue, useArchitectureController, useArchMessages } from "../architecture";
 import type { ActionMenuEntry } from "./ActionMenu";
 import { useColumnChoice } from "./ColumnsMenu";
 import { LogDetailPanel } from "./LogDetailPanel";
-import { LogFilters, buildFilterFields } from "./LogFilters";
+import { LogFilters, useFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
 import { useLogTimeMode } from "./useLogTimeMode";
 import { useDetailLink } from "./useDetailLink";
@@ -47,18 +47,19 @@ import { FlowSegments, SessionFlow, type FlowView } from "./SessionFlow";
 import { SplitHandle } from "./SplitHandle";
 import { archiveFilterFor, useArchiveDownload } from "./archive";
 import { CELL_IDS, SETTINGS_TAXONOMY_HASH, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_STORAGE, NOTICE_PRIORITY, SCREEN_PARAMS, SEARCH_FIELD, SESSION_EVENT_COLUMNS_DEFAULT, SESSION_VIEWS, SUGGEST_FROM } from "./logsConfig";
-import { errorBlockOf } from "./logsErrors";
+import { useErrorBlockOf } from "./logsErrors";
 import { categoryItems, enabledCount, filterSessionEvents, laneLabels, laneOf, originOf, paramsKey, suggestionsFor, eventFieldValues, toLaneEvents, shouldAutoFoldFlow, defaultFlowCollapsed, archDefaultHeight, clampOr, valuesOf, withValues } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
+import { LogsToast } from "./LogsToast";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
 import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState, useSelectedUid } from "./useLogFilterState";
 import { logKeys, useLogSchema, useLogSources, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
 import { useLogScan } from "./useLogScan";
-import { messages as appMessages } from "../../app/messages";
+import { useFormat } from "../../i18n";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
-const FIELDS = buildFilterFields();
 const NO_PARAMS = {} as const;
 const NO_STRINGS: readonly string[] = [];
 const REAL_CLOCK: PlaybackClock = {
@@ -78,6 +79,13 @@ function readNumber(raw: string | null, fallback: number): number {
  * 구조도 컨트롤러·분리 창 호스트·`useArchSync`는 이 컴포넌트 최상위에 있어 뷰를 바꿔도 언마운트되지 않는다(칸 선택·칩·분리 창 연동 유지).
  */
 export function SessionDetailPage() {
+  const errorBlockOf = useErrorBlockOf();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const am = useArchMessages();
+  const fmt = useFormat();
+  const FIELDS = useFilterFields();
+  const t = useLogsMessages();
   const { session = "" } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -269,7 +277,7 @@ export function SessionDetailPage() {
 
   // ---- 열 구성 / 메뉴
   const [cols, setCols] = useColumnChoice(LOGS_STORAGE.colsSession, EVENT_COLUMN_IDS, SESSION_EVENT_COLUMNS_DEFAULT);
-  const columns = useMemo(() => eventColumns(cols, undefined, time.widths), [cols, time.widths]);
+  const columns = useMemo(() => eventColumns(cols, lv, time.widths), [lv, cols, time.widths]);
   const [menu, setMenu] = useState<{ items: readonly LogMenuItem[]; anchor: RowMenuAnchor; note?: string } | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const tableH = useElementHeight(tableWrapRef, 360);
@@ -277,7 +285,7 @@ export function SessionDetailPage() {
   const { tableRef: eventTableRef, panelRef: detailPanelRef, onActivate: activateEvent, reveal: revealEvent } = useDetailLink(selectedUid);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast({ tone: "success", text: t.copied, durationMs: 2000 }));
+  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast({ tone: "success", text: <LogsToast render={(l) => l.copied} />, durationMs: 2000 }));
   const setLane = (id: string) => url.setScreen({ [SCREEN_PARAMS.lane]: laneFilter.includes(id) ? laneFilter.filter((x) => x !== id) : [...laneFilter, id] });
   const openRowMenu = (uid: string, anchor: RowMenuAnchor) => {
     const hit = byUid.get(uid);
@@ -353,7 +361,7 @@ export function SessionDetailPage() {
   const hasHiddenCategories = hiddenIds.length > 0;
   // 세션의 프로젝트 = `project_id`, 이름은 등록 프로젝트에서(없으면 id)
   const projectName = summary?.project_id ? (projects.names.get(summary.project_id) ?? summary.project_id) : null;
-  const summaryText = [projectName, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString(appMessages.locale)}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
+  const summaryText = [projectName, `${t.detail.events} ${fmt.number(summary?.events ?? all.length)}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
   const emptyRows = rows.length === 0;
   const detailOpen = selectedUid !== null;
   const durationMs = summary?.first_time != null && summary?.last_time != null ? Math.max(0, (summary.last_time - summary.first_time) * 1000) : null;
@@ -401,11 +409,11 @@ export function SessionDetailPage() {
         <p className="logs-empty">{hasHiddenCategories && !includeHidden ? `${t.detail.onlyHidden}` : t.detail.noEvents}{hasHiddenCategories && !includeHidden ? <Button size="sm" onClick={() => setIncludeHidden(true)}>{t.view.includeHidden}</Button> : null}</p>
       ) : emptyRows ? (
         <div className="logs-empty">
-          <p>{archCount === 0 && arch.targetTitle !== "" ? archMessages.table.zero(arch.targetTitle) : t.detail.noMatch(visible.length)}</p>
+          <p>{archCount === 0 && arch.targetTitle !== "" ? am.table.zero(arch.targetTitle) : t.detail.noMatch(visible.length)}</p>
           <Button size="sm" onClick={clearFilters}>{t.clearFilters}</Button>
         </div>
       ) : (
-        <LogEventTable
+        <LogEventTable messages={lv} formatters={lvFormatters}
           ref={eventTableRef}
           onActivate={activateEvent}
           rows={rows}
@@ -483,7 +491,7 @@ export function SessionDetailPage() {
               ) : (
                 <span className="logs-summary ac-ellipsis" title={summaryText}>
                   <span className="logs-summary-project">{projectName ? `${projectName} · ` : null}</span>
-                  {`${t.detail.events} ${(summary.events ?? all.length).toLocaleString(appMessages.locale)} · ${t.detail.errors} ${errorCount}`}
+                  {`${t.detail.events} ${fmt.number(summary.events ?? all.length)} · ${t.detail.errors} ${errorCount}`}
                 </span>
               )}
               <span className="logs-spacer" />
@@ -491,7 +499,7 @@ export function SessionDetailPage() {
             </div>
           </header>
 
-          <PlaybackBar
+          <PlaybackBar messages={lv} formatters={lvFormatters}
             events={all}
             index={index}
             onIndexChange={playback.seek}
@@ -599,13 +607,13 @@ export function SessionDetailPage() {
                 groupResponses={{ checked: grouped, onChange: setGrouped }}
                 includeHidden={hasHiddenCategories ? { checked: includeHidden, onChange: setIncludeHidden } : undefined}
                 time={{ mode: time.mode, onChange: time.setMode }}
-                columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id])[0]?.header?.toString() ?? id, onChange: setCols }}
+                columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id], lv)[0]?.header?.toString() ?? id, onChange: setCols }}
                 onEditTaxonomy={() => void navigate(`${pathForRole(LINK_ROLES.settings)}#${SETTINGS_TAXONOMY_HASH}`)}
               />
             </div>
             {archView ? null : (
               <div className="logs-filterline">
-                <CategoryChips
+                <CategoryChips messages={lv}
                   items={chipItems}
                   taxonomy={taxonomy}
                   slotFor={slotFor}
@@ -620,7 +628,7 @@ export function SessionDetailPage() {
 
           {archCount === undefined ? null : (
             <p className="arch-table-note" role="status">
-              {archOthers ? archMessages.table.partial(arch.targetTitle, archCount, rows.length) : archMessages.table.only(arch.targetTitle, archCount)}
+              {archOthers ? am.table.partial(arch.targetTitle, archCount, rows.length) : am.table.only(arch.targetTitle, archCount)}
             </p>
           )}
 

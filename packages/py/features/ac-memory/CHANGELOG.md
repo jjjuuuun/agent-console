@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-memory`, so the web can show the default memory scope kinds and the `memory.import_*` issues in English (data only, no API change).
 - FU.12: 검색어 해셔(`query_hasher`·`QueryHasher`·`QueryHashModes`·`QUERY_HASH_MODES`)는 기반 패키지
   `agent-console-query-hash`로 옮겨 다시 내보낸다(공개 이름 그대로, 위키와 같은 객체). `query_hasher_from_env`를
   더했다. 검색어 인코딩은 `surrogatepass`(짝 없는 서로게이트도 예외 없이 해시).

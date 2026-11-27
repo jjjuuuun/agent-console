@@ -221,7 +221,7 @@ class FileSecretProvider:
             st = path.stat()
         except FileNotFoundError:
             self._stamp, self._values = None, {}
-            self._warn_once("missing", "비밀 파일이 없습니다(값을 주지 않음): %s", path)
+            self._warn_once("missing", "Secret file not found (no values given): %s", path)
             return
         except OSError as exc:
             self._stamp, self._values = None, {}
@@ -234,7 +234,7 @@ class FileSecretProvider:
             return
         self._stamp, self._values = stamp, {}
         if st.st_size > self._settings.max_file_bytes:
-            self._warn_once("large", "비밀 파일이 너무 커서 읽지 않습니다: %s", path)
+            self._warn_once("large", "Secret file is too large and is not read: %s", path)
             return
         try:
             text = path.read_text(encoding="utf-8")
@@ -247,7 +247,7 @@ class FileSecretProvider:
         self._problem = None
         if skipped:
             lines = ", ".join(str(n) for n in skipped)
-            _log.warning("비밀 파일의 %s번째 줄을 건너뜁니다(KEY=VALUE 형식 아님): %s", lines, path)
+            _log.warning("Skipping line %s of the secret file (not KEY=VALUE): %s", lines, path)
 
     def get_secret(self, name: str) -> str | None:
         """이름의 값(없으면 None). 파일이 바뀌었으면 다시 읽는다."""
@@ -287,7 +287,8 @@ class EnvFileSecretProvider(FileSecretProvider):
         if self.path is None:  # 처음 쓸 때 한 번만 알린다(설정 훅으로 바뀌기 전에 알리지 않게)
             self._warn_once(
                 "unset",
-                "비밀 파일 경로가 설정되지 않아 이 공급자(%s)는 값을 주지 않습니다(환경변수 %s)",
+                "No secret file path is set, so provider %s gives no values "
+                "(environment variable %s)",
                 PROVIDER_ID,
                 self._path_env,
             )

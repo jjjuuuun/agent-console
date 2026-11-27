@@ -11,7 +11,8 @@ import { classifyWikiError, failureText } from "./wikiErrors";
 import { ROUTE_WORDS, WIKI_LIMITS } from "./wikiConfig";
 import { useWikiInfo, useWikiSpace, useWikiTemplates } from "./useWikiApi";
 import type { NewPagePrefill } from "./wikiTabs";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
 
 const lastSegment = (path: string): string => path.split("/").pop() ?? path;
 
@@ -43,6 +44,8 @@ export interface NewPageDialogProps {
 }
 
 export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existingPaths, directory, blockedReason, onWritten, onCreated, onOpenExisting, header }: NewPageDialogProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const space = useWikiSpace();
   const templates = useWikiTemplates(wikiId, open);
   const prefilled = prefill?.content !== undefined && prefill.content !== "";
@@ -69,7 +72,7 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
     const path = value.path.trim();
     if (path === "") return;
     if (word !== undefined) {
-      setPathError(m.newPage.routeWord(word));
+      setPathError(t("newPage.routeWord", { word }));
       return;
     }
     setBusy(true);
@@ -85,9 +88,9 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
       onWritten([path]);
       onCreated(saved.value.page.path || path);
     } catch (e) {
-      const f = classifyWikiError(e, m.newPage.failed);
+      const f = classifyWikiError(e, t("newPage.failed"), t);
       if (f.kind === "pageExists" || f.kind === "invalidPath") setPathError(f.message);
-      else setError(failureText(e, m.newPage.failed));
+      else setError(failureText(e, t("newPage.failed"), t));
     } finally {
       setBusy(false);
     }
@@ -96,14 +99,14 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
   return (
     <Dialog
       open={open}
-      title={m.newPage.title}
+      title={t("newPage.title")}
       onClose={() => {
         if (!busy) onClose();
       }}
     >
-      <p className="app-muted wiki-hint">{m.newPage.wiki}: <strong>{wikiName}</strong></p>
+      <p className="app-muted wiki-hint">{t("newPage.wiki")}: <strong>{wikiName}</strong></p>
       {header}
-      <NewPageForm
+      <NewPageForm messages={wikiViewMessages}
         value={value}
         onChange={(next) => {
           if (next.path !== value.path) touched.current = true;
@@ -118,7 +121,7 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
           onOpenExisting(p);
         }}
         prefilledChars={prefilled ? (prefill?.content ?? "").length : null}
-        pathError={pathError ?? (word === undefined ? null : m.newPage.routeWord(word))}
+        pathError={pathError ?? (word === undefined ? null : t("newPage.routeWord", { word }))}
         error={error}
         pathPreview={preview}
         submitting={busy}
@@ -149,6 +152,8 @@ export interface MovePageDialogProps {
 }
 
 export function MovePageDialog({ wikiId, from, open, onClose, blockedReason, readOnly = false, readOnlyReason, onWritten, onMoved, onOpenPage }: MovePageDialogProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const space = useWikiSpace();
   const [to, setTo] = useState(from);
   const [rewrite, setRewrite] = useState(true);
@@ -178,8 +183,8 @@ export function MovePageDialog({ wikiId, from, open, onClose, blockedReason, rea
           if (controller.signal.aborted) return;
           setPreview(null);
           setLoading(false);
-          const f = classifyWikiError(e, m.move.failed);
-          setToError(f.kind === "pageExists" ? m.move.exists : failureText(e, m.move.failed));
+          const f = classifyWikiError(e, t("move.failed"), t);
+          setToError(f.kind === "pageExists" ? t("move.exists") : failureText(e, t("move.failed"), t));
         },
       );
     }, WIKI_LIMITS.moveDebounceMs);
@@ -187,7 +192,7 @@ export function MovePageDialog({ wikiId, from, open, onClose, blockedReason, rea
       clearTimeout(timer);
       controller.abort();
     };
-  }, [open, to, rewrite, from, wikiId, space, result]);
+  }, [open, to, rewrite, from, wikiId, space, result, t]);
 
   const submit = async () => {
     const target = to.trim();
@@ -204,15 +209,15 @@ export function MovePageDialog({ wikiId, from, open, onClose, blockedReason, rea
         onMoved(r.to || target, links);
       }
     } catch (e) {
-      const f = classifyWikiError(e, m.move.failed);
-      setToError(f.kind === "pageExists" ? m.move.exists : failureText(e, m.move.failed));
+      const f = classifyWikiError(e, t("move.failed"), t);
+      setToError(f.kind === "pageExists" ? t("move.exists") : failureText(e, t("move.failed"), t));
     } finally {
       setBusy(false);
     }
   };
   return (
-    <Dialog open={open} title={m.move.title} size="lg" onClose={() => { if (!busy) onClose(); }}>
-      <MovePageForm
+    <Dialog open={open} title={t("move.title")} size="lg" onClose={() => { if (!busy) onClose(); }}>
+      <MovePageForm messages={wikiViewMessages}
         from={from}
         to={to}
         onToChange={(v) => {
@@ -261,18 +266,19 @@ export interface DeletePageDialogProps {
 const BACKLINK_SHOWN = 5;
 
 export function DeletePageDialog({ open, title, backlinks, recoverable, onConfirm, onCancel }: DeletePageDialogProps) {
+  const t = useT("wiki");
   return (
-    <ConfirmDialog open={open} title={m.delete.title(title)} confirmLabel={m.delete.confirm} cancelLabel={m.cancel} danger onConfirm={onConfirm} onCancel={onCancel}>
+    <ConfirmDialog open={open} title={t("delete.title", { title })} confirmLabel={t("delete.confirm")} cancelLabel={t("cancel")} danger onConfirm={onConfirm} onCancel={onCancel}>
       {backlinks.length === 0 ? null : (
         <div className="wiki-warn-block" role="note" data-testid="wiki-delete-backlinks">
-          <p>{m.delete.backlinks(backlinks.length)}</p>
+          <p>{t("delete.backlinks", { count: backlinks.length })}</p>
           <ul>
             {backlinks.slice(0, BACKLINK_SHOWN).map((b) => <li key={b.path} className="ac-ellipsis" title={b.path}>{b.title !== undefined && b.title !== "" ? b.title : b.path}</li>)}
-            {backlinks.length > BACKLINK_SHOWN ? <li className="app-muted">{m.delete.more(backlinks.length - BACKLINK_SHOWN)}</li> : null}
+            {backlinks.length > BACKLINK_SHOWN ? <li className="app-muted">{t("delete.more", { n: backlinks.length - BACKLINK_SHOWN })}</li> : null}
           </ul>
         </div>
       )}
-      <p className={recoverable ? "app-muted wiki-hint" : "wiki-hint wiki-danger-text"}>{recoverable ? m.delete.recoverable : m.delete.unrecoverable}</p>
+      <p className={recoverable ? "app-muted wiki-hint" : "wiki-hint wiki-danger-text"}>{recoverable ? t("delete.recoverable") : t("delete.unrecoverable")}</p>
     </ConfirmDialog>
   );
 }
@@ -289,16 +295,17 @@ export interface RestoreDialogProps {
 }
 
 export function RestoreDialog({ open, path, version, authorText, timeText, onConfirm, onCancel }: RestoreDialogProps) {
+  const t = useT("wiki");
   return (
     <ConfirmDialog
       open={open && version !== null}
-      title={version === null ? "" : m.history.restoreTitle(path, version.version, timeText, authorText)}
-      confirmLabel={m.history.restoreConfirm}
-      cancelLabel={m.cancel}
+      title={version === null ? "" : t("history.restoreTitle", { path, v: version.version, time: timeText, author: authorText })}
+      confirmLabel={t("history.restoreConfirm")}
+      cancelLabel={t("cancel")}
       onConfirm={onConfirm}
       onCancel={onCancel}
     >
-      <p>{m.history.restoreBody}</p>
+      <p>{t("history.restoreBody")}</p>
     </ConfirmDialog>
   );
 }

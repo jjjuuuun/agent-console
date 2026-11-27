@@ -1,14 +1,15 @@
 import { useMemo } from "react";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, InteractionKindDescriptor, NodeTypeDescriptor } from "@agent-console/contracts";
-import { SchemaForm, type FormError, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
+import { type FormError, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
 import { Button, Disclosure } from "@agent-console/ui";
 import type { ComponentType } from "react";
 import { deepMerge, getAt, setAt } from "../../lib/jsonPointer";
 import { applyFormEdit } from "../../lib/formEdit";
 import { resolveRef, unwrapNullable, type SchemaNode } from "../../lib/schemaTools";
 import { CONFIG_FIELDS, CONFIG_WIDGETS, ConfigIssuesProvider, DEFAULT_TEAM_CONVENTIONS, bridgeWidgetUi, type ConfigIssue } from "../delegation";
-import { SETTINGS_FIELDS, SETTINGS_WIDGETS, CHOICE_SELECT_WIDGET, buildUserSettingsUi } from "../settings";
-import { teamMessages as t } from "./messages";
+import { SETTINGS_FIELDS, SETTINGS_WIDGETS, CHOICE_SELECT_WIDGET, buildUserSettingsUi, useUserSettingsText, type UserSettingsText } from "../settings";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
+import { useTeamMessages, type TeamTexts } from "./messages";
 import { CHOICE_MULTI_FIELD, ChoiceMultiField } from "./widgets/ChoiceMultiWidget";
 import { DELEGATION_STRATEGY_FIELD, DelegationStrategyField, type DelegationStrategyOptions, type StrategiesStatus } from "./widgets/DelegationStrategyField";
 import { REVIEW_DECISIONS_FIELD, ReviewDecisionsField, nextDecisionId } from "./widgets/ReviewDecisionsField";
@@ -65,8 +66,8 @@ export function splitConfigSchema(descriptor: Pick<NodeTypeDescriptor, "config_s
 }
 
 /** 섹션 안 필드의 위젯 지정(설정 키 -> 위젯 이름 데이터). 스키마에 그 경로가 있을 때만 적용한다. */
-function sectionUi(section: SchemaNode, kinds: readonly InteractionKindDescriptor[]): UiSchema {
-  let ui = buildUserSettingsUi(section) as Obj;
+function sectionUi(section: SchemaNode, kinds: readonly InteractionKindDescriptor[], t: TeamTexts, text: UserSettingsText): UiSchema {
+  let ui = buildUserSettingsUi(section, undefined, text) as Obj;
   if (hasPath(section, "/decisions")) {
     const idSchema = (() => {
       const items = getAt(section, "/properties/decisions/items") as SchemaNode | undefined;
@@ -124,6 +125,8 @@ function pickKeys(source: Obj, keys: readonly string[]): Obj {
  * 단순 값은 한 폼으로, 객체 섹션(예: 중간 검토)은 접힘 블록 + 켜기/끄기로. 속성 이름·타입 이름은 코드에 없다.
  */
 export function NodeConfigForm({ descriptor, config, onChange, interactionKinds = [], errors = [], disabled }: NodeConfigFormProps) {
+  const t = useTeamMessages();
+  const settingsText = useUserSettingsText();
   const { scalars, sections, root } = useMemo(() => splitConfigSchema(descriptor), [descriptor]);
   const scalarSchema = useMemo(() => {
     const props = (root["properties"] ?? {}) as Record<string, SchemaNode>;
@@ -159,7 +162,7 @@ export function NodeConfigForm({ descriptor, config, onChange, interactionKinds 
                 <>
                   <SchemaForm
                     schema={{ ...s.schema, title: undefined, description: undefined }}
-                    uiSchema={sectionUi(s.schema, interactionKinds)}
+                    uiSchema={sectionUi(s.schema, interactionKinds, t, settingsText)}
                     value={current}
                     onChange={(next) => onChange({ ...config, [s.key]: applyFormEdit(s.schema, current as Obj, next, { unsetOnDefault: true }) })}
                     customWidgets={WIDGETS}
@@ -212,10 +215,12 @@ export interface EdgeConfigFormProps {
 
 /** 연결 종류의 `config_schema`를 그대로 그리는 폼(종류별 전용 화면 없음). 종류가 말하는 선택지는 디스크립터 데이터로 채운다. */
 export function EdgeConfigForm({ kind, config, onChange, interactionKinds = [], strategies = [], strategiesStatus, delegatorLabel, onPickStrategy, errors, issues = NO_ISSUES, disabled }: EdgeConfigFormProps) {
+  const t = useTeamMessages();
+  const settingsText = useUserSettingsText();
   const schema = kind.config_schema as SchemaNode | undefined;
   const bridged = useMemo(() => {
     if (schema === undefined) return undefined;
-    let out = buildUserSettingsUi(schema) as Obj;
+    let out = buildUserSettingsUi(schema, undefined, settingsText) as Obj;
     const allowed = kind.interaction?.["kinds"];
     if (Array.isArray(allowed) && hasPath(schema, "/kinds")) {
       const titles = new Map(interactionKinds.map((k) => [k.id, k]));
@@ -230,7 +235,7 @@ export function EdgeConfigForm({ kind, config, onChange, interactionKinds = [], 
     }
     // 서버 `ui_schema`의 위젯 이름(예: 조건 목록)을 앱이 아는 필드로 잇는다. 모르는 이름이 구조화 필드에 있으면 JSON 폴백
     return bridgeWidgetUi(deepMerge(kind.ui_schema ?? {}, out), schema, CONFIG_WIDGETS, Object.keys(WIDGETS));
-  }, [schema, kind, interactionKinds, strategies, strategiesStatus, delegatorLabel, onPickStrategy]);
+  }, [schema, kind, interactionKinds, strategies, strategiesStatus, delegatorLabel, onPickStrategy, t, settingsText]);
   const ui = bridged?.uiSchema;
   const props = isObj(schema?.["properties"]) ? Object.keys(schema!["properties"] as Obj) : [];
   if (schema === undefined || props.length === 0) return <p className="app-muted">{t.edge.noSettings}</p>;

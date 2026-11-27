@@ -128,7 +128,7 @@ describe("새 대화 대화상자(프로젝트 홈의 [채팅 시작] → ?new=1
     const dialog = await screen.findByRole("dialog", { name: "새 대화" });
     await within(dialog).findAllByRole("radio");
     fireEvent.click(within(dialog).getByRole("button", { name: "대화 시작" }));
-    expect(await within(dialog).findByText("‘리뷰 팀’은(는) 이 프로젝트에 없고 공용 구성에만 있습니다")).toBeTruthy();
+    expect(await within(dialog).findByText("‘리뷰 팀’은 이 프로젝트에 없고 공용 구성에만 있습니다")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "가져와서 실행" }));
     const copyDialog = await screen.findByRole("dialog", { name: "공용에서 가져오기 — 프로젝트 a" });
     expect(planCopy.mock.calls[0]?.[0]).toMatchObject({ items: [{ kind: DEFINITION_KINDS.graph, id: "g1" }] });
@@ -142,7 +142,7 @@ describe("새 대화 대화상자(프로젝트 홈의 [채팅 시작] → ?new=1
     const dialog = await screen.findByRole("dialog", { name: "새 대화" });
     await within(dialog).findAllByRole("radio");
     fireEvent.click(within(dialog).getByRole("button", { name: "대화 시작" }));
-    expect(await within(dialog).findByText("‘리뷰 팀’을(를) 찾을 수 없습니다")).toBeTruthy();
+    expect(await within(dialog).findByText("‘리뷰 팀’을 찾을 수 없습니다")).toBeTruthy();
     expect(within(dialog).getByRole("link", { name: "구성 화면으로" })).toBeTruthy();
     expect(within(dialog).queryByRole("button", { name: "가져와서 실행" })).toBeNull();
   });

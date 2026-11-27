@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-safe-regex"
 version = "0.1.0"
-description = "Agent Console — 사용자 정규식 검증·컴파일과 시간 제한 실행(ReDoS 대비)"
+description = "Agent Console — validates and compiles user regular expressions and runs them with a time limit (ReDoS protection)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

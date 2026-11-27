@@ -1,11 +1,11 @@
 
 import { Link } from "react-router";
+import { useT } from "@agent-console/i18n";
 import { Button, EmptyState, type MenuItemDef } from "@agent-console/ui";
 import { MenuPopover } from "./MenuPopover";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { relativeTime } from "./projectHomeLib";
 import type { ConfigRow } from "./useProjectHomeData";
-import { messages as appMessages } from "../../app/messages";
 
 export interface ProjectConfigCardProps {
   rows: readonly ConfigRow[];
@@ -36,6 +36,8 @@ export interface ProjectConfigCardProps {
  * 가져오기·행 동작의 실제 대화상자는 슬롯으로 받는다.
  */
 export function ProjectConfigCard(p: ProjectConfigCardProps) {
+  const m = useFolderHomeMessages();
+  const { language } = useT("projectsFolder");
   const blocked = p.blockedReason;
   const importBtn = (primary: boolean) => p.onImport === undefined ? null : (
     <Button
@@ -96,7 +98,7 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
                 <tr key={r.key} data-highlight={p.highlightKey === r.key ? "true" : undefined}>
                   <td className="prj-cell-name">{r.href === undefined ? <span className="ac-ellipsis" title={r.name}>{r.name}</span> : <Link className="ac-ellipsis" to={r.href} title={r.name}>{r.name}</Link>}</td>
                   <td><span className="prj-kind-chip ac-ellipsis" title={r.kindTitle}>{r.kindTitle}</span></td>
-                  <td className="app-muted" title={r.modifiedAt === undefined ? undefined : new Date(r.modifiedAt * 1000).toLocaleString(appMessages.locale)}>{relativeTime(p.nowMs, r.modifiedAt)}</td>
+                  <td className="app-muted" title={r.modifiedAt === undefined ? undefined : new Date(r.modifiedAt * 1000).toLocaleString(language)}>{relativeTime(p.nowMs, r.modifiedAt, m, language)}</td>
                   <td>
                     {p.rowMenu === undefined && r.href === undefined ? null : (
                       <MenuPopover

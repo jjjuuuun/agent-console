@@ -19,34 +19,48 @@ export interface NodePaletteProps {
   error?: string | null;
   onRetry?: () => void;
   messages?: GraphEditorMessages;
+  /** 그룹·항목 정렬과 검색의 대소문자 비교에 쓰는 로캘(BCP 47, 보통 화면 언어). 기본 `DEFAULT_PALETTE_LOCALE`("en") */
+  locale?: string;
+  /** 그룹 이름 표시용 변환(보통 서버 원문 category를 화면 언어로). 그룹 묶음·색은 원래 category 기준이라 언어를 바꿔도 같다. 기본: 그대로 */
+  categoryLabel?: (category: string) => string;
 }
 
+/** 팔레트 정렬·검색 로캘의 기본값(환경 로캘에 기대지 않는다). */
+export const DEFAULT_PALETTE_LOCALE = "en";
+
 export interface PaletteGroup {
+  /** 그룹 키: 원래 category 문자열(없으면 `uncategorized` 문구) */
   category: string;
+  /** 화면에 보일 이름(`categoryLabel`을 거친 값, 정렬 기준) */
+  label: string;
+  /** 분류색을 고르는 키: 원래 category, 없으면 빈 문자열(중립색) */
+  colorKey: string;
   items: NodeTypeDescriptor[];
 }
 
 /**
- * 팔레트 그룹 계산(순수 함수): 그룹 = category 문자열 그대로, 한국어 로케일 정렬, 그룹 안은 title 정렬.
- * 빈 category는 `uncategorized` 이름의 그룹. 검색은 title·id·description·category 부분 일치.
+ * 팔레트 그룹 계산(순수 함수): 그룹 = category 문자열 그대로(키·색), 보이는 이름은 `categoryLabel`을 거친 `label`, `locale`로 label 정렬, 그룹 안은 title 정렬.
+ * 빈 category는 `uncategorized` 이름의 그룹. 검색은 title·id·description·category·label 부분 일치.
  */
-export function groupNodeTypes(types: readonly NodeTypeDescriptor[], query: string, uncategorized: string): PaletteGroup[] {
-  const q = query.trim().toLocaleLowerCase();
-  const groups = new Map<string, NodeTypeDescriptor[]>();
+export function groupNodeTypes(types: readonly NodeTypeDescriptor[], query: string, uncategorized: string, locale: string = DEFAULT_PALETTE_LOCALE, categoryLabel?: (category: string) => string): PaletteGroup[] {
+  const q = query.trim().toLocaleLowerCase(locale);
+  const groups = new Map<string, { colorKey: string; label: string; items: NodeTypeDescriptor[] }>();
   for (const t of latestVersions(types)) {
     if (isHiddenType(t)) continue;
-    const cat = (t.category ?? "").trim() === "" ? uncategorized : (t.category as string);
+    const raw = (t.category ?? "").trim() === "" ? "" : (t.category as string);
+    const cat = raw === "" ? uncategorized : raw;
+    const label = raw === "" ? uncategorized : (categoryLabel?.(raw) ?? raw);
     if (q !== "") {
-      const hay = [t.title, t.id, t.description ?? "", t.category ?? ""].join("\n").toLocaleLowerCase();
+      const hay = [t.title, t.id, t.description ?? "", t.category ?? "", label].join("\n").toLocaleLowerCase(locale);
       if (!hay.includes(q)) continue;
     }
-    const list = groups.get(cat) ?? [];
-    list.push(t);
-    groups.set(cat, list);
+    const group = groups.get(cat) ?? { colorKey: raw, label, items: [] };
+    group.items.push(t);
+    groups.set(cat, group);
   }
   return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, "ko"))
-    .map(([category, items]) => ({ category, items: items.sort((a, b) => a.title.localeCompare(b.title, "ko")) }));
+    .sort(([, a], [, b]) => a.label.localeCompare(b.label, locale))
+    .map(([category, g]) => ({ category, label: g.label, colorKey: g.colorKey, items: g.items.sort((a, b) => a.title.localeCompare(b.title, locale)) }));
 }
 
 /** 노드 타입 팔레트. 그룹·항목은 전부 nodeTypes에서 생성하며 이름 고정이 없다. */
@@ -54,7 +68,8 @@ export function NodePalette(props: NodePaletteProps) {
   const m = props.messages ?? defaultMessages;
   const [inner, setInner] = useState("");
   const query = props.searchValue ?? inner;
-  const groups = useMemo(() => groupNodeTypes(props.nodeTypes, query, m.paletteUncategorized), [props.nodeTypes, query, m.paletteUncategorized]);
+  const locale = props.locale ?? DEFAULT_PALETTE_LOCALE;
+  const groups = useMemo(() => groupNodeTypes(props.nodeTypes, query, m.paletteUncategorized, locale, props.categoryLabel), [props.nodeTypes, query, m.paletteUncategorized, locale, props.categoryLabel]);
 
   let body;
   if (props.loading) body = <div className="ac-ge-palette-note" role="status">{m.paletteLoading}</div>;
@@ -73,10 +88,10 @@ export function NodePalette(props: NodePaletteProps) {
   else if (groups.length === 0) body = <div className="ac-ge-palette-note">{m.paletteNoMatch}</div>;
   else
     body = groups.map((g) => (
-      <section key={g.category} className="ac-ge-palette-group" aria-label={g.category}>
-        <h3 className="ac-ge-palette-group-title ac-ellipsis" title={g.category}>
-          <span className="ac-ge-dot" style={{ background: categoryColorVar(g.category === m.paletteUncategorized ? "" : g.category) }} aria-hidden="true" />
-          {g.category} ({g.items.length})
+      <section key={g.category} className="ac-ge-palette-group" aria-label={g.label}>
+        <h3 className="ac-ge-palette-group-title ac-ellipsis" title={g.label}>
+          <span className="ac-ge-dot" style={{ background: categoryColorVar(g.colorKey) }} aria-hidden="true" />
+          {g.label} ({g.items.length})
         </h3>
         <ul className="ac-ge-palette-list">
           {g.items.map((t) => {

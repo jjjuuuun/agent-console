@@ -2,6 +2,7 @@
 
 ## 미출시 (0.3.0)
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-mod-projects`, so the web can show the module description and settings in English (data only, no API change). Log lines are now English.
 - P1.19: `GET /projects/copy/kinds` fills `CopyKindInfo.open_role` (contracts 0.16.0, `projects` 4.1.0): the kind contribution `open_role` first, then the kind data `DefinitionKind.open_role`, otherwise null. New public helper `definitions.contribution_open_roles` and `CopyService(kind_open_roles=)`.
 - P1.5: `GET /projects/copy/kinds`가 `CopyKindInfo.reserved_ids`(종류 데이터 `DefinitionKind.reserved_ids`, 기여 종류 포함, 계약 `projects` 4.1.0)를 채운다 — 복사 대화상자가 새 이름 칸에서 적용 전에 안내한다.
 - REL.14 — BREAKING CHANGE: Removed POST /projects/move-plan, /move, /scope-issues and ScopeService, DefinitionSnapshot. The snapshot_ttl_seconds option is accepted but no longer read.

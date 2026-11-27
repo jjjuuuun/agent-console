@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: The conversation locator log label is English (`conversation`).
 - I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-chat`, so the web can show the module description, chat settings and the `chat.storage_memory` warning in English (data only, no API change).
 - 등록이 풀린 프로젝트(모르는 기록 공간)에서 다른 곳에서 도는 턴 확인(`busy_elsewhere`)과 재시작 대기열 정책 적용이 `UnknownSpace`를 잡지 않아 예외 로그로 새던 것을 고쳤다. 읽을 수 없는 공간은 `mod-runs`와 같은 정책(`RecordsUnavailable`·`UnknownSpace`·`LookupError`)으로 조용히 "없음"이다.
 

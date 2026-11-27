@@ -1,9 +1,7 @@
 import { Button } from "@agent-console/ui";
-import { StartGuide, startMessages } from "../start";
-import { chatMessages } from "./chatMessages";
+import { StartGuide, useStartMessages } from "../start";
+import { useChatMessages } from "./chatMessages";
 import type { TeamSummary } from "./lib/team";
-
-const te = chatMessages.empty;
 
 export interface EmptyConversationProps {
   teamName: string | undefined;
@@ -17,6 +15,7 @@ export interface EmptyConversationProps {
 }
 
 function Line({ label, names }: { label: string; names: readonly string[] }) {
+  const te = useChatMessages().empty;
   return (
     <div className="chat-empty-line">
       <dt>{label}</dt>
@@ -27,6 +26,8 @@ function Line({ label, names }: { label: string; names: readonly string[] }) {
 
 /** 턴이 하나도 없는 대화: 팀 구성이 무엇을 받고 무엇을 답하는지 요약한다(그래프에서 계산한 값을 받는다). */
 export function EmptyConversation({ teamName, description, summary, summaryLoading, summaryFailed, onRetrySummary }: EmptyConversationProps) {
+  const m = useChatMessages();
+  const te = m.empty;
   return (
     <section className="chat-empty-card" aria-label={teamName ?? te.teamUnknown}>
       <h2 className="app-block-title">{teamName ?? te.teamUnknown}</h2>
@@ -58,6 +59,7 @@ export interface StartCardProps {
 
 /** 시작하기 카드: 제목 + 닫기 + 공용 첫 단계 안내(`StartGuide`: 바로 시작 줄 + 직접 만들기 3단계). */
 export function StartCard({ onNew, onDismiss }: StartCardProps) {
+  const startMessages = useStartMessages();
   return (
     <section className="chat-start" aria-label={startMessages.title}>
       <div className="chat-start-head">

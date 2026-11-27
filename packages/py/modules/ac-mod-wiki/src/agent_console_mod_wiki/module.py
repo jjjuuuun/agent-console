@@ -216,7 +216,7 @@ async def scan_periodically(service: WikiService, interval: float) -> None:
         except asyncio.CancelledError:
             raise
         except Exception:
-            _log.exception("위키 외부 변경 확인 실패")
+            _log.exception("Checking for external wiki changes failed")
 
 
 async def open_standalone_once(service: WikiService) -> None:
@@ -226,7 +226,7 @@ async def open_standalone_once(service: WikiService) -> None:
     except asyncio.CancelledError:
         raise
     except Exception:
-        _log.exception("위키 검색 색인 준비 실패")
+        _log.exception("Preparing the wiki search index failed")
 
 
 class WikiModule:
@@ -355,7 +355,7 @@ class WikiModule:
             try:
                 return service.warnings()
             except Exception:  # 설정을 읽지 못해도 서버 정보는 답한다
-                _log.exception("위키 설정 문제를 읽지 못했습니다")
+                _log.exception("Couldn't read wiki settings problems")
                 return []
 
         ctx.provide(SERVER_WARNINGS, warnings)

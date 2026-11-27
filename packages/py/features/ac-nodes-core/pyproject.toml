@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-nodes-core"
 version = "0.1.0"
-description = "Agent Console — 기본 노드(agent, user, resource, team)·연결 종류(subagent, delegate, handoff, uses, message, reply, ask_user, when, on_error, loop)·상호작용 종류(question, tool_permission, review)·위임 방식(sdk-subagents) 플러그인"
+description = "Agent Console — default node types (agent, user, resource, team), edge types (subagent, delegate, handoff, uses, message, reply, ask_user, when, on_error, loop), interaction types (question, tool_permission, review), and delegation method (sdk-subagents) plugins"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -44,6 +44,9 @@ review = "agent_console_nodes_core.interactions:REVIEW"
 
 [project.entry-points."agent_console.delegation_strategies"]
 sdk-subagents = "agent_console_nodes_core.delegation:SdkSubagentsStrategy"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-nodes-core = "agent_console_nodes_core"
 
 # 테스트 전용: fake 백엔드로 그래프를 끝까지 실행하고 기본 리소스 종류로 묶음을 만든다(패키지 코드는 import하지 않음).
 [dependency-groups]

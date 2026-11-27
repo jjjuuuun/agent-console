@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { RunEvent } from "@agent-console/contracts";
 import { Button, Tag } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { messages as appMessages } from "../../app/messages";
-import { formatCount } from "../../lib/format";
-import { runsMessages as t } from "./messages";
+
+import { useRunsMessages } from "./messages";
 import { EVENT_PAGE_SIZE, TEXT_DELTA_EVENT } from "./runsConfig";
 import { NO_SESSION, sessionOfEvent, type RunSessions } from "./runSessions";
 import { SessionBadge } from "./RunSessionsChip";
 import { buildEventRows, collectPrefixes, isErrorEvent, summarizeActors, summarizeEvent, type EventRow } from "./runsLib";
 import { matchesTypePrefix } from "../../lib/typePrefix";
+import { useFormat } from "../../i18n";
 
 export interface AgentsTabProps {
   events: readonly RunEvent[];
@@ -67,6 +67,8 @@ function relTime(ts: number, start: number | undefined): string {
 
 /** 탭 ② 에이전트: 왼쪽 actor 목록, 오른쪽 이벤트 목록(필터·합친 텍스트 행·JSON 펼침). 데이터는 props. */
 export function AgentsTab(p: AgentsTabProps) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const [localPrefix, setLocalPrefix] = useState("");
   const prefix = p.typePrefix ?? localPrefix;
   const setPrefix = (next: string) => {
@@ -113,7 +115,7 @@ export function AgentsTab(p: AgentsTabProps) {
   };
 
   if (p.status === "loading" && p.events.length === 0) return <div className="app-loading" role="status">{t.agents.loading}</div>;
-  if (p.status === "error" && p.events.length === 0) return <ErrorBlock title={t.agents.loadFailed} retryLabel={appMessages.common.retry} onRetry={p.onRetry} />;
+  if (p.status === "error" && p.events.length === 0) return <ErrorBlock title={t.agents.loadFailed} retryLabel={t.shared.retry} onRetry={p.onRetry} />;
 
   const toggleActor = (actor: string | null, additive: boolean) => {
     if (actor === null) return p.onActorsChange([]);
@@ -146,13 +148,13 @@ export function AgentsTab(p: AgentsTabProps) {
         <ul aria-label={t.agents.listLabel}>
           <li>
             <button type="button" aria-pressed={p.actors.length === 0} onClick={() => toggleActor(null, false)}>
-              {t.agents.all} <span className="ac-num app-muted">({formatCount(p.events.length)})</span>
+              {t.agents.all} <span className="ac-num app-muted">({fmt.number(p.events.length)})</span>
             </button>
           </li>
           {runWide > 0 ? (
             <li>
               <button type="button" aria-pressed={p.actors.includes(RUN_WIDE_ACTOR)} onClick={(e) => toggleActor(RUN_WIDE_ACTOR, e.ctrlKey || e.metaKey)}>
-                {t.agents.runWide} <span className="ac-num app-muted">({formatCount(runWide)})</span>
+                {t.agents.runWide} <span className="ac-num app-muted">({fmt.number(runWide)})</span>
               </button>
             </li>
           ) : null}
@@ -161,7 +163,7 @@ export function AgentsTab(p: AgentsTabProps) {
             return (
               <li key={a.actor} className={sub ? "runs-actor-sub" : undefined}>
                 <button type="button" aria-pressed={p.actors.includes(a.actor)} onClick={(e) => toggleActor(a.actor, e.ctrlKey || e.metaKey)}>
-                  <span className="ac-ellipsis">{p.agentName(a.actor)}{p.actorNote?.(a.actor) ? ` ${p.actorNote(a.actor)}` : ""}</span> <span className="ac-num app-muted">({formatCount(a.count)})</span>
+                  <span className="ac-ellipsis">{p.agentName(a.actor)}{p.actorNote?.(a.actor) ? ` ${p.actorNote(a.actor)}` : ""}</span> <span className="ac-num app-muted">({fmt.number(a.count)})</span>
                 </button>
                 {sub ? <Tag title={t.agents.totalOnlyTitle}>{t.agents.subagentChip}</Tag> : null}
                 {sub ? <Tag title={t.agents.totalOnlyTitle}>{t.agents.totalOnlyChip}</Tag> : null}
@@ -221,6 +223,7 @@ export function AgentsTab(p: AgentsTabProps) {
 }
 
 function EventRowView({ row, start, agentName, summaryOf, open, onToggle }: { row: EventRow; start: number | undefined; agentName(id: string): string; summaryOf: ((event: RunEvent) => string | undefined) | undefined; open: boolean; onToggle(): void }) {
+  const t = useRunsMessages();
   const e = row.event;
   const isText = e.type === TEXT_DELTA_EVENT;
   const summary = isText ? t.agents.textRow((row.text ?? "").length) : (summaryOf?.(e) ?? summarizeEvent(e));
@@ -239,6 +242,7 @@ function EventRowView({ row, start, agentName, summaryOf, open, onToggle }: { ro
 
 /** `에이전트별 | 세션별` 전환(라디오 그룹, ←→ 이동). */
 function GroupToggle({ view }: { view: AgentsSessionsView }) {
+  const t = useRunsMessages();
   const options = [
     { value: "by-actor" as const, label: t.sessions.byAgent },
     { value: "by-session" as const, label: t.sessions.bySession },
@@ -258,6 +262,8 @@ function GroupToggle({ view }: { view: AgentsSessionsView }) {
 
 /** 세션별 보기: 세션 행(번호 배지·이름·백엔드·토큰·소요)과 그 아래 들여쓴 서브에이전트 행. 세션 id를 모르는 이벤트는 맨 아래 묶음. */
 function SessionList({ view, events, agentName }: { view: AgentsSessionsView; events: readonly RunEvent[]; agentName(id: string): string }) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const { data } = view;
   const subsOf = useMemo(() => {
     const out = new Map<string, Map<string, number>>();
@@ -293,7 +299,7 @@ function SessionList({ view, events, agentName }: { view: AgentsSessionsView; ev
       {noInfo > 0 ? (
         <li>
           <button type="button" className="runs-session-row" aria-pressed={view.selectedId === NO_SESSION} onClick={() => pick(NO_SESSION)}>
-            <span className="ac-ellipsis">{t.sessions.noInfo}</span> <span className="ac-num app-muted">({formatCount(noInfo)})</span>
+            <span className="ac-ellipsis">{t.sessions.noInfo}</span> <span className="ac-num app-muted">({fmt.number(noInfo)})</span>
           </button>
         </li>
       ) : null}

@@ -2,15 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Button, Dialog, nextTheme, splitKeySequence, useEffectiveShortcuts, useTheme, type KeyPlatform, type ShortcutDef, useToast, formatKeyCombo } from "@agent-console/ui";
 import { useApi } from "../app/ApiContext";
+import { ToastText } from "../app/ToastText";
 import { useConnectionStatus } from "../app/useConnectionStatus";
 import { resetHints } from "../app/hints";
-import { lookupMessage, messages as m } from "../app/messages";
+import { useLookupMessage, useShellMessages } from "../app/shellMessages";
 import { useWorkspaceSettings } from "../app/queries";
 import { readJson } from "../app/storage";
 import { useStorage } from "../app/StorageContext";
 import { UnsavedProvider, useHasUnsaved } from "../definition/unsaved";
 import { detectPlatform } from "../lib/keybindings";
-import { AppShortcutProvider } from "../i18n";
+import { AppShortcutProvider, useLanguage } from "../i18n";
 import { usePwaUpdate } from "../pwa/PwaContext";
 import { AppSidebar, type SidebarBadge } from "./AppSidebar";
 import { CommandsProvider, useRegisterCommands, type CommandDef } from "./commands";
@@ -20,6 +21,7 @@ import { useConnectionBanner } from "../app/connectionBanner";
 import { GlobalBanners } from "./GlobalBanners";
 import { HelpDialog } from "./HelpDialog";
 import { StartGuideDialog } from "../features/start";
+import { BackendConnectButton, BackendConnectProvider, SETTINGS_BACKEND_READINESS_HASH } from "../features/backendConnect";
 import { UsageIndicator, INDICATOR_HOSTS } from "../features/usage";
 import { createBrowserPorts, NotificationsProvider, type NotificationPorts } from "../features/notifications";
 import { isViewingTarget, targetPath, type TargetRoutes } from "../features/notifications/routing";
@@ -29,7 +31,7 @@ import { LINK_PART_IDS, ModuleNotices, useLinkPart, useModules, useRequiresParti
 import { routeServing } from "./routeConfig";
 import { PendingInteractionsProvider, usePendingInteractions } from "./pending";
 import { ShortcutEnvironmentContext } from "./shortcutDefaults";
-import { QuickNav } from "./QuickNav";
+import { QuickNav, type QuickNavMode } from "./QuickNav";
 import { activeRoute, DEFAULT_ROUTE_GROUPS, gotoCommandId, gotoShortcuts, type RouteDef, type RouteGroupDef } from "./routeConfig";
 import { composeDocumentTitle, PageTitleProvider, usePageTitleOverride, usePageTitleSuffix } from "./titles";
 import { useSidebarState } from "./useSidebarState";
@@ -38,6 +40,9 @@ const RECENT_KEY = "ac.recent";
 const RECENT_MAX = 5;
 /** 닫을 때까지 남는 토스트(타이머 한도 안의 큰 값) */
 const TOAST_FOREVER_MS = 2_000_000_000;
+
+/** 빠른 이동 "언어 바꾸기…" 명령 id(`ui.keybindings`에서 사용자가 키를 지정할 수 있는 이름, screen-i18n §2.4). */
+export const LANGUAGE_COMMAND_ID = "language.choose";
 
 export interface ShellProps {
   /** 라우트 설정 데이터(사이드바·빠른 이동·`g` 단축키·문서 제목의 원천) */
@@ -77,6 +82,8 @@ export function Shell({ routes, groups = DEFAULT_ROUTE_GROUPS, platform, notific
 }
 
 function ShellInner({ routes, groups, platform, ports }: { routes: readonly RouteDef[]; groups: readonly RouteGroupDef[]; platform: KeyPlatform; ports: NotificationPorts }) {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
   const navigate = useNavigate();
   // 서버 모듈이 꺼서 쓸 수 없는 화면: 사이드바·빠른 이동에서 빼고, `g` 키는 이동 대신 안내만 한다.
   const { met: openRoutes, unmet: offRoutes } = useRequiresPartition(routes);
@@ -90,6 +97,8 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
   const pending = usePendingInteractions();
   const sidebar = useSidebarState(useStorage());
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteMode, setPaletteMode] = useState<QuickNavMode>("commands");
+  const language = useLanguage();
   const [helpOpen, setHelpOpen] = useState(false);
   const settings = useWorkspaceSettings();
   const projects = useProjects();
@@ -98,12 +107,12 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
   const pendingRoute = routes.find((r) => r.badgeSource === "pendingInteractions");
   const jumpToPending = useCallback(() => {
     if (!interactions.visible) {
-      toast({ tone: "info", text: m.linkPart.interactionsOff });
+      toast({ tone: "info", text: <ToastText render={({ app }) => app.linkPart.interactionsOff} /> });
       return;
     }
     const oldest = pending.items.find((i) => i.conversation_id != null);
     if (oldest === undefined || pendingRoute === undefined) {
-      toast({ tone: "info", text: m.pending.none });
+      toast({ tone: "info", text: <ToastText render={({ shell }) => shell.pending.none} /> });
       return;
     }
     void navigate(`${pendingRoute.path}/${encodeURIComponent(oldest.conversation_id as string)}`);
@@ -112,6 +121,12 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
   const cycleTheme = useCallback(() => {
     setTheme(nextTheme(theme));
   }, [theme, setTheme]);
+
+  // 빠른 이동은 먼저 닫힌 뒤 명령이 불리므로, 여기서 다시 연다(같은 일괄 처리 안에서 마지막 값이 이긴다)
+  const openLanguagePalette = useCallback(() => {
+    setPaletteMode("language");
+    setPaletteOpen(true);
+  }, []);
 
   const openSwitcher = useCallback(() => {
     if (projects.enabled) projects.setSwitcherOpen(true);
@@ -128,12 +143,14 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
       // 프로젝트 전환기 단축키(키는 데이터). 프로젝트 기능이 꺼져 있으면 아무 일도 하지 않는다.
       ...(projects.enabled ? PROJECT_SHORTCUT_DEFS.map((d): ShortcutDef => ({ ...d, scope: "global", modifierRequired: true, run: openSwitcher })) : []),
     ],
-    [navigable, offRoutes, navigate, toast, jumpToPending, sidebar.toggle, openSwitcher, projects.enabled],
+    [navigable, offRoutes, navigate, toast, jumpToPending, sidebar.toggle, openSwitcher, projects.enabled, m.nav, lookupMessage],
   );
 
   const commands = useMemo<CommandDef[]>(
     () => [
       { id: "theme.cycle", titleKey: "palette.actions.themeCycle", run: cycleTheme },
+      // 언어 바꾸기(빠른 이동이 언어 목록으로 바뀐다). 언어 기능(공급자)이 없으면 명령도 없다. 기본 단축키는 없다.
+      ...(language === null ? [] : [{ id: LANGUAGE_COMMAND_ID, titleKey: "palette.actions.languageChoose", run: openLanguagePalette }]),
       { id: "sidebar.toggle", titleKey: "palette.actions.sidebarToggle", run: sidebar.toggle, shortcut: formatKeyCombo("Mod+Shift+B", platform) },
       { id: "pending.jump", titleKey: "palette.actions.jumpPending", run: jumpToPending, shortcut: formatKeyCombo("Alt+J", platform) },
       ...(projects.enabled
@@ -144,7 +161,7 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
           ]
         : []),
     ],
-    [cycleTheme, sidebar.toggle, jumpToPending, platform, projects, openSwitcher, navigate, routes],
+    [cycleTheme, sidebar.toggle, jumpToPending, platform, projects, openSwitcher, navigate, routes, language, openLanguagePalette],
   );
   useRegisterCommands(commands);
 
@@ -170,6 +187,8 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
         sidebar={sidebar}
         paletteOpen={paletteOpen}
         setPaletteOpen={setPaletteOpen}
+        paletteMode={paletteMode}
+        setPaletteMode={setPaletteMode}
         helpOpen={helpOpen}
         setHelpOpen={setHelpOpen}
       />
@@ -190,11 +209,15 @@ interface FrameProps {
   sidebar: ReturnType<typeof useSidebarState>;
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
+  paletteMode: QuickNavMode;
+  setPaletteMode: (mode: QuickNavMode) => void;
   helpOpen: boolean;
   setHelpOpen: (open: boolean) => void;
 }
 
-function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, paletteOpen, setPaletteOpen, helpOpen, setHelpOpen }: FrameProps) {
+function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, paletteOpen, setPaletteOpen, paletteMode, setPaletteMode, helpOpen, setHelpOpen }: FrameProps) {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -219,7 +242,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
   const screenTitle = titleOverride ?? (active === undefined ? m.app.name : lookupMessage(active.titleKey));
   useEffect(() => {
     document.title = composeDocumentTitle({ screen: screenTitle, app: m.app.name, pending: pending.count, suffix: titleSuffix });
-  }, [screenTitle, pending.count, titleSuffix]);
+  }, [screenTitle, pending.count, titleSuffix, m.app.name]);
 
   // 최근 이동(빠른 이동의 빈 질의 상태)
   useEffect(() => {
@@ -228,7 +251,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
     const entry = { path: location.pathname, label: rest === "" ? lookupMessage(active.titleKey) : `${lookupMessage(active.titleKey)} / ${decodeURIComponent(rest)}` };
     const cur = readJson<{ path: string; label: string }[]>(storage, RECENT_KEY, []);
     storage.set(RECENT_KEY, JSON.stringify([entry, ...cur.filter((r) => r.path !== entry.path)].slice(0, RECENT_MAX)));
-  }, [location.pathname, active, offRoutes, storage]);
+  }, [location.pathname, active, offRoutes, storage, lookupMessage]);
   // 팔레트를 열 때 저장된 목록을 읽는다(꺼진 화면의 항목은 뺀다)
   const recent = useMemo(
     () => readJson<{ path: string; label: string }[]>(storage, RECENT_KEY, []).filter((r) => !offRoutes.some((off) => off === activeRoute(r.path, routes))),
@@ -250,11 +273,13 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
       durationMs: TOAST_FOREVER_MS,
       action: { label: m.pwa.updateNow, onClick: () => (hasUnsavedRef.current ? setConfirmUpdate(true) : applyUpdate()) },
     });
+    // 새 버전 알림은 한 번만 띄운다: 언어가 바뀌어도 다시 띄우지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pwaUpdate.available, toast, applyUpdate]);
 
   const badgeSources = useMemo<Record<string, SidebarBadge>>(
     () => ({ pendingInteractions: { count: pending.count, label: m.sidebar.pendingBadge(pending.count) } }),
-    [pending.count],
+    [pending.count, m.sidebar],
   );
   const badges = useMemo(() => {
     const out: Record<string, SidebarBadge | undefined> = {};
@@ -278,6 +303,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
   );
 
   return (
+    <BackendConnectProvider settingsHref={settingsRoute === undefined ? undefined : `${settingsRoute.path}${SETTINGS_BACKEND_READINESS_HASH}`}>
     <div className="app-shell" data-collapsed={sidebar.collapsed ? "true" : "false"} data-drawer={sidebar.drawer ? "true" : "false"}>
       <a
         className="app-skip"
@@ -305,6 +331,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
           }}
           onOpenQuickNav={() => setPaletteOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
+          toolsLeading={<BackendConnectButton />}
           headerSlot={<UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.sidebarHeader} collapsed={sidebar.collapsed} />}
           footerSlot={
             <>
@@ -324,7 +351,17 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
         </main>
       </div>
       <UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.float} />
-      <QuickNav open={paletteOpen} onClose={() => setPaletteOpen(false)} routes={openRoutes} recent={recent} go={go} />
+      <QuickNav
+        open={paletteOpen}
+        onClose={() => {
+          setPaletteOpen(false);
+          setPaletteMode("commands");
+        }}
+        routes={openRoutes}
+        recent={recent}
+        go={go}
+        mode={paletteMode}
+      />
       <ModuleNotices modulesHref={modulesHref} navigate={go} />
       <HelpDialog
         open={helpOpen}
@@ -340,7 +377,7 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
         }}
         onReplayHints={() => {
           resetHints(storage);
-          toast({ tone: "success", text: m.shortcuts.replayHintsDone });
+          toast({ tone: "success", text: <ToastText render={({ shell }) => shell.shortcuts.replayHintsDone} /> });
         }}
       />
       <StartGuideDialog open={startOpen} onClose={() => setStartOpen(false)} />
@@ -366,11 +403,13 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
         <p className="ac-text">{m.pwa.updateConfirmBody}</p>
       </Dialog>
     </div>
+    </BackendConnectProvider>
   );
 }
 
 /** 응답 대기 건수 변화를 스크린리더에 알린다(polite). 화면에는 보이지 않는다. */
 function PendingAnnouncer({ count }: { count: number }): ReactNode {
+  const m = useShellMessages();
   return (
     <div className="ac-sr-only" role="status" aria-live="polite">
       {count > 0 ? m.pending.live(count) : ""}

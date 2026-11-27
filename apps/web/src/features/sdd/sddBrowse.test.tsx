@@ -1,4 +1,5 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderWithI18n as render } from "../../testing/TestI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@agent-console/api-client";
 import type { ModuleInfo, Project, ProjectView } from "@agent-console/contracts";
@@ -117,10 +118,10 @@ describe("스펙 목록 정렬 순수 함수", () => {
     { id: "c", name: "나", updated_at: 2 },
   ];
   it("기본은 갱신 내림차순, 이름 오름·내림", () => {
-    expect(filterSpecs(specs, "", new Set(), false).map((s) => s.id)).toEqual(["b", "c", "a"]);
-    expect(filterSpecs(specs, "", new Set(), false, { id: "name", direction: "asc" }).map((s) => s.id)).toEqual(["b", "c", "a"]);
-    expect(filterSpecs(specs, "", new Set(), false, { id: "name", direction: "desc" }).map((s) => s.id)).toEqual(["a", "c", "b"]);
-    expect(filterSpecs(specs, "", new Set(), false, { id: "updated", direction: "asc" }).map((s) => s.id)).toEqual(["a", "c", "b"]);
+    expect(filterSpecs(specs, "", new Set(), false, { id: "updated", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["b", "c", "a"]);
+    expect(filterSpecs(specs, "", new Set(), false, { id: "name", direction: "asc" }, "ko").map((s) => s.id)).toEqual(["b", "c", "a"]);
+    expect(filterSpecs(specs, "", new Set(), false, { id: "name", direction: "desc" }, "ko").map((s) => s.id)).toEqual(["a", "c", "b"]);
+    expect(filterSpecs(specs, "", new Set(), false, { id: "updated", direction: "asc" }, "ko").map((s) => s.id)).toEqual(["a", "c", "b"]);
   });
   it("주소 값 해석: 모르는 열·방향은 기본으로", () => {
     expect(parseSort("name:asc")).toEqual({ id: "name", direction: "asc" });

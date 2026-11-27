@@ -2,7 +2,7 @@ import "./teams.css";
 import type { GraphValidationSummary, Issue } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { sortIssues } from "../../lib/issues";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 export type ValidationChipKind = "blocked" | "errors" | "warnings";
 
@@ -38,6 +38,7 @@ export interface ValidationChipProps {
 
 /** 검증 요약 칩: 아이콘 + 텍스트(색 단독 금지). 표시할 것이 없으면 아무것도 그리지 않는다. */
 export function ValidationChip({ summary }: ValidationChipProps) {
+  const t = useTeamMessages();
   const info = validationChipOf(summary);
   if (info === undefined) return null;
   const text = info.kind === "blocked" ? t.validation.blocked(info.count) : info.kind === "errors" ? t.validation.errors(info.count) : t.validation.warnings(info.count);
@@ -69,6 +70,7 @@ export interface IssuePreviewProps {
 
 /** 팀 구성 행 아래 펼침: 서버 메시지 그대로 최대 5개 + "외 N건" + 코드(mono muted). */
 export function IssuePreview({ issues, loading, failed, blocked, onRetry }: IssuePreviewProps) {
+  const t = useTeamMessages();
   if (loading) return <p className="app-muted" role="status">{t.validation.loadingIssues}</p>;
   if (failed) {
     return (

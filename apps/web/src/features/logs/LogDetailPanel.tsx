@@ -5,12 +5,13 @@ import { useMediaQuery } from "../../lib/useMediaQuery";
 import { Drawer } from "./Drawer";
 import { JsonView } from "./JsonView";
 import { LOGS_LIMITS } from "./logsConfig";
-import { errorBlockOf } from "./logsErrors";
+import { useErrorBlockOf } from "./logsErrors";
 import { isTypingTarget } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { slotFor } from "./slots";
 import { useLogEventDetail } from "./useLogsApi";
 import { useLogLinks } from "./useLogLinks";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
 /** 상세 패널의 명령형 API. 표에서 `Enter`를 다시 누르면 앱이 패널로 포커스를 옮길 때 쓴다. */
 export interface LogDetailPanelHandle {
@@ -42,6 +43,10 @@ export interface LogDetailPanelProps {
 
 /** 선택한 이벤트의 상세 패널(`GET /logs/events/{uid}`) — 넓은 화면은 옆 패널, 좁으면 드로어. `1`~`5`로 탭 전환, `Esc`로 닫기. */
 export function LogDetailPanel({ ref, ...p }: LogDetailPanelProps) {
+  const errorBlockOf = useErrorBlockOf();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const t = useLogsMessages();
   const wide = useMediaQuery(`(min-width: ${LOGS_LIMITS.drawerBelow}px)`);
   const asDrawer = p.drawer ?? !wide;
   const q = useLogEventDetail(p.uid);
@@ -64,7 +69,7 @@ export function LogDetailPanel({ ref, ...p }: LogDetailPanelProps) {
   };
   const body = useMemo(
     () => (
-      <LogEventDetail
+      <LogEventDetail messages={lv} formatters={lvFormatters}
         ref={detailRef}
         {...(q.data === undefined ? {} : { detail: q.data })}
         {...(p.preview === undefined ? {} : { preview: p.preview })}

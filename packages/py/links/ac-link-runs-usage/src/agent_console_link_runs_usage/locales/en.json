@@ -1,0 +1,8 @@
+{
+  "text": {
+    "앱에서 한 실행의 토큰 사용량을 사용량 화면에 더한다": "Adds the token usage of runs made in the app to the usage screen",
+    "실행·사용량 연동 설정.": "Runs and usage integration settings.",
+    "프로젝트 기록 DB 공간 이름 = 이 접두 + 프로젝트 id(기록 연동 설정 space_prefix를 이어받는다). 계정 사용량 창을 프로젝트 기록에서도 찾을 때 쓴다.": "Project records database space name = this prefix + project id (inherits space_prefix from the records integration settings). Used to find account usage windows in project records too.",
+    "기록 공간 이름 접두": "Records space name prefix"
+  }
+}

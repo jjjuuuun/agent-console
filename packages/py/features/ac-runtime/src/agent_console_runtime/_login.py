@@ -605,7 +605,8 @@ class BackendLoginService:
         if self._active is rec:
             self._active = None
         _log.info(
-            "백엔드 로그인 끝: session=%s backend=%s method=%s phase=%s reason=%s elapsed_ms=%s",
+            "Backend login finished: session=%s backend=%s method=%s phase=%s reason=%s "
+            "elapsed_ms=%s",
             rec.session_id,
             rec.backend_id,
             rec.method_id,
@@ -683,7 +684,7 @@ class BackendLoginService:
             self._sessions[rec.session_id] = rec
             self._active = rec
             _log.info(
-                "백엔드 로그인 시작: session=%s backend=%s method=%s timeout_s=%s",
+                "Backend login started: session=%s backend=%s method=%s timeout_s=%s",
                 rec.session_id,
                 backend_id,
                 method,
@@ -695,7 +696,7 @@ class BackendLoginService:
                 del self._sessions[rec.session_id]
                 self._active = None
                 _log.info(
-                    "백엔드 로그인 거절: session=%s backend=%s code=%s",
+                    "Backend login refused: session=%s backend=%s code=%s",
                     rec.session_id,
                     backend_id,
                     exc.code,
@@ -771,7 +772,7 @@ class BackendLoginService:
                 await asyncio.wait_for(driver.cancel(), DEFAULT_DRIVER_CANCEL_TIMEOUT_S)
             except Exception as exc:
                 _log.warning(
-                    "백엔드 로그인 드라이버 취소 실패: session=%s error=%s",
+                    "Cancelling the backend login driver failed: session=%s error=%s",
                     rec.session_id,
                     type(exc).__name__,
                 )
@@ -836,7 +837,9 @@ class BackendLoginService:
             await rec.driver.send_text(value)
         except Exception as exc:  # 예외 문장에 값이 섞일 수 있다 → 형식 이름만
             _log.warning(
-                "백엔드 로그인 입력 실패: session=%s error=%s", rec.session_id, type(exc).__name__
+                "Backend login input failed: session=%s error=%s",
+                rec.session_id,
+                type(exc).__name__,
             )
             raise LoginInputError(LoginInputError.SESSION_FINISHED) from None
 
@@ -916,7 +919,7 @@ class BackendLoginService:
                 finished_at=self._clock(),
             )
             _log.warning(
-                "백엔드 로그아웃 실패: backend=%s error=%s", backend_id, type(exc).__name__
+                "Backend logout failed: backend=%s error=%s", backend_id, type(exc).__name__
             )
         try:
             dumped = result.model_copy(update={"backend_id": backend_id}).model_dump(mode="json")
@@ -932,7 +935,7 @@ class BackendLoginService:
                 finished_at=self._clock(),
             )
         _log.info(
-            "백엔드 로그아웃: backend=%s ok=%s reason=%s elapsed_ms=%s",
+            "Backend logout: backend=%s ok=%s reason=%s elapsed_ms=%s",
             backend_id,
             result.ok,
             result.reason,

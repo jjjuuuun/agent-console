@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { type JsonSchema, type UiSchema } from "@agent-console/schema-form";
 import { AppSchemaForm } from "../../../i18n";
 import { getContractSchema, type VersionUiSettings, type WorkspaceSettings } from "@agent-console/contracts";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { DEFAULT_DIFF_LABEL_KEYS } from "../../../lib/itemLabelKeys";
 import { STRING_TAGS_FIELD, StringTagsField } from "../widgets/StringTagsField";
 import type { SectionEditProps } from "./FormSections";
@@ -22,6 +22,7 @@ export interface VersionsUiEditorProps {
  * 목록을 비우면 키를 지워 기본값(상속)으로 돌아간다.
  */
 export function VersionsUiEditor({ value, onChange, errors, disabled }: VersionsUiEditorProps) {
+  const m = useAppMessages();
   const schema = useMemo(() => {
     const copy: Record<string, unknown> = { ...(getContractSchema("VersionUiSettings") as Record<string, unknown>), additionalProperties: false };
     delete copy["title"];
@@ -35,7 +36,7 @@ export function VersionsUiEditor({ value, onChange, errors, disabled }: Versions
         "ui:options": { suggestions: DEFAULT_DIFF_LABEL_KEYS, emptyNote: m.settings.versionsUi.inherit(DEFAULT_DIFF_LABEL_KEYS.join(", ")), removeLabel: m.settings.versionsUi.remove },
       },
     }),
-    [],
+    [m],
   );
   const shown = { item_label_keys: value?.item_label_keys ?? [] };
   return (

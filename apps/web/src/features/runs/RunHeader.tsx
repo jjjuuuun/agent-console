@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { Run } from "@agent-console/contracts";
 import { Banner, Button, MiddleEllipsis, StatusChip } from "@agent-console/ui";
-import { formatCount, formatElapsed, formatDuration } from "../../lib/format";
-import { runStatusLabels, runsMessages as t } from "./messages";
+import { formatElapsed } from "../../lib/format";
+import { useRunsMessages } from "./messages";
 import { CANCELLABLE_RUN_STATUSES, EVENT_IDLE_SECONDS, INTERRUPTED_RUN_STATUS, WAITING_RUN_STATUS } from "./runsConfig";
 import { formatTokensShort, runDurationMs, totalTokens } from "./runsLib";
+import { useFormat } from "../../i18n";
 
 export interface RunHeaderProps {
   run: Run;
@@ -53,14 +54,16 @@ export interface RunHeaderProps {
 
 /** 실행 상세 헤더(2줄) + 상태별 배너. 데이터·콜백은 props. */
 export function RunHeader(p: RunHeaderProps) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const { run } = p;
   const cancellable = CANCELLABLE_RUN_STATUSES.includes(run.status);
   const waiting = run.status === WAITING_RUN_STATUS;
-  const statusLabel = runStatusLabels[run.status] ?? run.status;
+  const statusLabel = t.runStatus[run.status] ?? run.status;
   const elapsed = runDurationMs(run, p.nowSec);
   const totals = run.totals;
   const tokenText = totals && (totals.input_tokens != null || totals.output_tokens != null)
-    ? t.detail.tokens(formatCount(totals.input_tokens), formatCount(totals.output_tokens))
+    ? t.detail.tokens(fmt.number(totals.input_tokens), fmt.number(totals.output_tokens))
     : totalTokens(totals) !== undefined
       ? t.detail.tokensTotalOnly(formatTokensShort(totalTokens(totals)))
       : undefined;
@@ -95,7 +98,7 @@ export function RunHeader(p: RunHeaderProps) {
       <div className="runs-header-line app-muted">
         <span className="ac-num">
           {t.detail.elapsed(elapsed === undefined ? "–" : formatElapsed(elapsed))}
-          {p.userWaitSeconds > 0 ? ` ${t.detail.elapsedWait(formatDuration(p.userWaitSeconds * 1000))}` : ""}
+          {p.userWaitSeconds > 0 ? ` ${t.detail.elapsedWait(fmt.duration(p.userWaitSeconds * 1000))}` : ""}
         </span>
         <span className="ac-num">{t.detail.nodes(p.nodeProgress.done, p.nodeProgress.total)}</span>
         {p.sessionsSlot}

@@ -4,17 +4,18 @@ import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { EmptyState, Icon, PageHeader } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useErrorState, raised } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
 import { useRegisterCommands } from "../../shell/commands";
-import { useResourceList, useResourceTypes } from "../settings";
+import { useResourceList } from "../settings";
+import { useLocalizedResourceTypes } from "./useLocalizedResourceTypes";
 import { DEFINITION_KINDS, useInvalidateLists, type DetailRequest } from "../library";
 import { SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { CreateResourceDialog } from "./CreateResourceDialog";
 import { ImportDialog } from "./ImportDialog";
 import { ResourceDetail } from "./ResourceDetail";
 import { ResourceList } from "./ResourceList";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 const idOfResource = (r: ResourceSummary) => r.id;
 const nameOfResource = (r: ResourceSummary) => r.name;
 
@@ -29,18 +30,20 @@ interface CreateState {
 
 /** 리소스 라이브러리 화면(`/resources`, `/resources/:id`): 종류별 목록 + 상세 + `.claude` 가져오기. */
 export function ResourcesScreen({ basePath }: ResourcesScreenProps) {
+  const m = useAppMessages();
+  const t = useResourceMessages();
   const { id } = useParams();
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const { rest } = useApi();
   const resources = useResourceList();
-  const types = useResourceTypes();
+  const types = useLocalizedResourceTypes();
   const invalidate = useInvalidateLists();
   // 다른 화면의 "새 리소스 만들기 →" 링크(`?new=1`)로 들어오면 만들기 창을 연다
   const [creating, setCreating] = useState<CreateState | null>(search.get("new") !== null ? {} : null);
   const [importing, setImporting] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.create.failed);
   const [request, setRequest] = useState<DetailRequest | undefined>(undefined);
   const [onlyIds, setOnlyIds] = useState<ReadonlySet<string> | null>(null);
   const scoped = useConfigTransfer(resources.data, { kind: DEFINITION_KINDS.resource, idOf: idOfResource, nameOf: nameOfResource });
@@ -69,7 +72,7 @@ export function ResourcesScreen({ basePath }: ResourcesScreenProps) {
       setCreating(null);
       go(v.id);
     } catch (e) {
-      setError(describeError(e, t.create.failed).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }

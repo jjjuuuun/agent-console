@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from "react";
 import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph } from "@agent-console/contracts";
 import type { ProgressStep, StepAvatar } from "@agent-console/chat";
-import { SessionChip, delegationMessages as dm, edgeSessionOf, formatRunOrdinal } from "../../delegation";
+import { SessionChip, edgeSessionOf, formatRunOrdinal, type DelegationMessages } from "../../delegation";
 import type { LiveRun } from "./liveRun";
 import { resolveAvatar } from "../../library";
 import { agentOfNode, nodeName, type NamingContext } from "./team";
@@ -34,6 +34,8 @@ export interface ProgressInput {
   graph: Graph | undefined;
   kinds: ReadonlyMap<string, EdgeTypeDescriptor>;
   naming: NamingContext;
+  /** 위임 문구 표(화면 언어) */
+  delegation: DelegationMessages;
   /** 위임 방식 목록. 주면 위임 단계의 세션 칩을 연결의 방식·종류 디스크립터의 세션 값으로만 그린다(값이 없으면 칩 없음). 없으면 이전 문구 */
   strategies?: readonly DelegationStrategyDescriptor[];
   /** 단계 칩 링크(`/runs/:id#node=…`) 생성기. 없으면 링크 없음. */
@@ -61,6 +63,7 @@ export interface ProgressInput {
  */
 export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
   const { live, graph, kinds, naming, hrefFor, skippedWith } = input;
+  const dm = input.delegation;
   const base = input.baseIndent ?? 0;
   const nodes = new Map((graph?.nodes ?? []).map((n) => [n.id, n]));
   const edgesById = new Map((graph?.edges ?? []).map((e) => [e.id, e]));
@@ -110,7 +113,7 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
         ...(kind.ui_hints?.dashed ? { methodDashed: true } : {}),
         ...(duration !== undefined ? { durationMs: duration } : {}),
         indent: base,
-        ...(count > 0 ? { iterationLabel: formatRunOrdinal(count, "iteration") } : {}),
+        ...(count > 0 ? { iterationLabel: formatRunOrdinal(count, "iteration", dm) } : {}),
         ...(hrefFor ? { href: hrefFor(t.to) } : {}),
         ...target(t.to),
       },
@@ -165,8 +168,8 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
         ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}),
         indent: base + Math.max(1, c.path.length - 1),
         ...(input.strategies === undefined ? { badge: dm.chat.separateSession } : callSession !== undefined ? { badgeNode: callSession } : {}),
-        ...((callsPerTarget.get(c.target) ?? 0) > 1 ? { callLabel: formatRunOrdinal(c.call, "call") } : {}),
-        ...(c.iteration > 0 ? { iterationLabel: formatRunOrdinal(c.iteration, "iteration") } : {}),
+        ...((callsPerTarget.get(c.target) ?? 0) > 1 ? { callLabel: formatRunOrdinal(c.call, "call", dm) } : {}),
+        ...(c.iteration > 0 ? { iterationLabel: formatRunOrdinal(c.iteration, "iteration", dm) } : {}),
         ...(hrefFor ? { href: hrefFor(c.target) } : {}),
         ...target(c.target),
       },
@@ -187,7 +190,7 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
         methodLabel: `↻ ${kind?.title ?? ""}`.trim(),
         ...(kind?.ui_hints?.dashed ? { methodDashed: true } : {}),
         indent: base,
-        iterationLabel: formatRunOrdinal(it.iteration, "iteration"),
+        iterationLabel: formatRunOrdinal(it.iteration, "iteration", dm),
         statusLabel: dm.chat.loopStarted,
         ...(input.runId === undefined ? {} : { openTarget: { runId: input.runId, edgeId: it.edgeId } }),
       },

@@ -1,0 +1,8 @@
+{
+  "text": {
+    "프로젝트 폴더 안에 그 프로젝트의 스펙과 문서 틀을 둔다": "Keeps each project's specs and document templates inside its project folder",
+    "프로젝트 스펙 공간 연동 설정.": "Project specs integration settings.",
+    "프로젝트 폴더 기준 상대 경로. 이 폴더 아래는 스펙 가져오기·내보내기·파일 목록에서 읽지도 쓰지도 않는다. 앱 구성 폴더는 적지 않아도 늘 막는다.": "Paths relative to the project folder. Spec import, export and file lists never read or write below these folders. The app config folder is always blocked even if not listed.",
+    "가져오기·내보내기 금지 폴더": "Folders blocked for import and export"
+  }
+}

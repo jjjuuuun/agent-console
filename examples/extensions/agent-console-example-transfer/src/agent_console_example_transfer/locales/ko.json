@@ -1,0 +1,10 @@
+{
+  "codes": {
+    "example_transfer.duplicate_entry": "같은 종류·id 항목이 또 있어 뒤 것은 건너뜁니다.",
+    "example_transfer.invalid_entry": "정의 항목 모양이 틀려 건너뜁니다.",
+    "example_transfer.invalid_file": "파일을 JSON 객체로 읽을 수 없습니다.",
+    "example_transfer.too_large": "파일이 너무 커서 읽지 않습니다.",
+    "example_transfer.unknown_format": "형식 이름이나 판이 설정과 다릅니다(다른 도구의 파일일 수 있습니다).",
+    "example_transfer.unreadable": "파일을 열 수 없습니다."
+  }
+}

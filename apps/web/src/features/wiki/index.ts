@@ -4,11 +4,10 @@
  * 위키 이름·페이지 경로·링크 패턴·머리말 키·규칙 id·쓰기 규칙 동작은 이 폴더에 없다(서버 데이터).
  */
 export { WIKI_ROLE, WIKI_RULES_ROLE, WIKI_PARAMS, buildWikiDisplay } from "./wikiConfig";
-export { wikiMessages } from "./messages";
 export { wikiListPath, wikiPath, wikiPagePath, wikiRulesPath } from "./wikiPaths";
 export { wikiKeys, useWikiSpace, useWikiInfo, useWikiList, useWikiView, usePageList, usePage, useWikiLive, useInvalidateWiki } from "./useWikiApi";
 export { useWikiContext, type WikiContext } from "./useWikiContext";
-export { wikiIssueTexts, wikiIssueText, localizeIssue, wikiEventSummary } from "../../app/wikiIssueMessages";
+export { wikiIssueText, localizeIssue, wikiEventSummary } from "./wikiIssueText";
 export { classifyWikiError, type WikiFailure } from "./wikiErrors";
 export type { WikiTabProps, WikiTabPanels, NewPagePrefill } from "./wikiTabs";
 export { useNewWikiDialog, useImportDialog, useExportDialog, useDeleteWikiDialog, useRulesScreenOn } from "./wikiDialogs";
@@ -16,4 +15,3 @@ export { NewPageDialog, type NewPageDialogProps } from "./PageDialogs";
 export { WikiRefWidget } from "./WikiRefWidget";
 export { RunWikiChanges, changeCountText, type RunWikiChangesProps } from "./RunWikiChanges";
 export { usePromoteToWiki, titleFromContent, type PromoteSource, type PromoteToWiki } from "./usePromoteToWiki";
-export { wikiLinkMessages } from "./integrationMessages";

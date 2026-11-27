@@ -1,0 +1,33 @@
+{
+  "text": {
+    "스펙 작업을 팀 구성으로 실행하고 결과를 작업 표시와 추적 표에 반영한다": "Runs spec tasks with teams and reflects the results in task status and the trace table",
+    "스펙 작업을 팀 구성 실행으로 돌리는 연동의 이름·결과 표·한도(설치자 값).": "Name, result table and limits of the integration that runs spec tasks as team runs (server administrator values).",
+    "작업 동작 주소와 실행 메뉴 항목이 쓰는 연동 이름입니다. 바꾸면 화면이 기억한 동작 이름도 바뀝니다.": "Integration name used by task action addresses and run menu items. Changing it also changes the action names the screen remembers.",
+    "연동 이름": "Integration name",
+    "다른 작업 연동 플러그인과 이름이 겹칠 때만 바꾸세요.": "Change this only if the name clashes with another task integration plugin.",
+    "검증 목적 실행의 결과를 추적 표에 넣는 검증 출처의 이름입니다. 스펙 설정의 검증 출처 목록에서 이 이름으로 끄고 켭니다.": "Name of the verification source that puts the results of verification runs into the trace table. Turn it on or off by this name in the verification source list of the spec settings.",
+    "검증 출처 이름": "Verification source name",
+    "다른 검증 출처 플러그인과 이름이 겹칠 때만 바꾸세요.": "Change this only if the name clashes with another verification source plugin.",
+    "작업에서 시작한 실행의 시작 경로(Run origin)로 남길 이름입니다.": "Name recorded as the run origin of runs started from a task.",
+    "실행 시작 경로 이름": "Run origin name",
+    "실행 목록에서 작업 실행을 다른 이름으로 구분하고 싶을 때 바꾸세요.": "Change this when you want task runs labeled differently in the run list.",
+    "실행 상태(예: completed)를 스펙 규칙이 쓰는 결과 이름(예: succeeded)으로 바꿉니다. 표에 없는 상태는 그 이름을 그대로 씁니다.": "Maps run statuses (for example completed) to the result names spec rules use (for example succeeded). Statuses not in the table keep their own name.",
+    "실행 상태 → 결과 이름": "Run status → result name",
+    "스펙 규칙에서 다른 결과 이름을 쓰고 싶을 때 고치세요.": "Change this when you want spec rules to use different result names.",
+    "이 실행 이벤트가 오면 실행 프로필 status_on대로 작업 상태를 바꿉니다. 비우면 상태를 바꾸지 않습니다(실행 연결 칩은 그대로 보입니다).": "When these run events arrive, the task status changes as the run profile's status_on says. Leave empty to never change the status (the run chip still shows).",
+    "상태 반영 이벤트": "Status update events",
+    "실행이 끝날 때만 상태를 바꾸고 싶으면 시작 이벤트를 빼세요.": "Remove the start event if you want the status to change only when the run ends.",
+    "작업 실행 칩·추적 표를 만들 때 스펙 하나에서 읽는 최근 실행 수의 상한입니다. 넘으면 오래된 실행은 보이지 않습니다.": "Upper limit on recent runs read per spec to build task run chips and the trace table. Above it, older runs don't show.",
+    "스펙당 읽을 실행 수": "Runs read per spec",
+    "실행이 아주 많은 스펙에서 화면이 느릴 때 줄이세요.": "Lower this when the screen is slow for specs with a great many runs.",
+    "실행 기록을 읽을 때 한 쪽에 담는 실행 수입니다.": "Number of runs per page when reading run history.",
+    "한 번에 읽을 실행 수": "Runs per read",
+    "보통은 바꾸지 않아도 됩니다.": "You usually don't need to change this.",
+    "자동 진행이 이 결과 이름으로 끝난 실행을 실패로 셉니다. 같은 작업이 스펙 규칙의 실패 상한만큼 연달아 실패하면 그 작업을 건너뜁니다.": "Auto-advance counts runs that end with these result names as failures. If the same task fails as many times in a row as the spec rule's failure limit, the task is skipped.",
+    "자동 진행: 실패로 셀 결과": "Auto-advance: results counted as failures",
+    "취소한 실행도 실패로 세고 싶으면 cancelled를 더하세요.": "Add cancelled if you want canceled runs counted as failures too.",
+    "이 결과 이름으로 끝난 작업은 실패로 세지 않고 다시 시작합니다(예: 끊긴 실행). 다른 결과로 끝난 작업은 작업 줄이 바뀔 때까지 다시 시작하지 않습니다.": "Tasks that end with these result names restart without counting as failures (for example interrupted runs). Tasks that end with other results don't restart until the task line changes.",
+    "자동 진행: 다시 시작할 결과": "Auto-advance: results to restart",
+    "끊긴 실행을 자동으로 다시 돌리지 않으려면 비우세요.": "Leave empty if you don't want interrupted runs restarted automatically."
+  }
+}

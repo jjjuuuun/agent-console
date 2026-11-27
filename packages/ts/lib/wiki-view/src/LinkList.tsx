@@ -21,6 +21,8 @@ export interface LinkListProps {
   rowHeightChild?: number;
   height?: number | string;
   messages?: Readonly<Record<string, string>>;
+  /** 이름 정렬 로캘(BCP 47, 보통 화면 언어). 생략하면 "en". */
+  locale?: string;
   className?: string;
 }
 
@@ -28,16 +30,16 @@ type Row =
   | { kind: "group"; key: string; node: WikiGraphNode; open: boolean; outCount: number; inCount: number }
   | { kind: "out" | "in"; key: string; node: WikiGraphNode; other: WikiGraphNode | undefined; otherPath: string; count: number; parent: string };
 
-const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
 
 /**
  * 연결 목록 = 그래프와 같은 정보를 글로 보이는 가상 목록. 노드마다 접히는 그룹(제목 + 현재·고아·끊긴 칩), 아래에 `→ 나가는`·`← 들어오는` 행.
  * 중심 먼저, 나머지 제목 오름차순. 거르기는 제목·경로 부분 일치(클라이언트). 잘렸으면 맨 아래 안내.
  */
 export function LinkList({
-  graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, filter, onFilterChange, rowHeightGroup = 32, rowHeightChild = 28, height, messages, className,
+  graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, filter, onFilterChange, rowHeightGroup = 32, rowHeightChild = 28, height, messages, locale, className,
 }: LinkListProps) {
   const t = resolveMessages(messages);
+  const collator = useMemo(() => new Intl.Collator(locale ?? "en", { numeric: true, sensitivity: "base" }), [locale]);
   const base = useDomId();
   const [innerFilter, setInnerFilter] = useState("");
   const query = (filter ?? innerFilter).trim().toLowerCase();
@@ -68,7 +70,7 @@ export function LinkList({
       for (const e of i) out.push({ kind: "in", key: `i:${n.path}<${e.from}`, node: n, other: byPath.get(e.from), otherPath: e.from, count: e.count, parent: n.path });
     }
     return out;
-  }, [graph, centerPath, query, closed]);
+  }, [graph, centerPath, query, closed, collator]);
 
   const heightOf = useCallback((r: Row) => (r.kind === "group" ? rowHeightGroup : rowHeightChild), [rowHeightGroup, rowHeightChild]);
   const shown = Math.min(Math.max(active, 0), Math.max(rows.length - 1, 0));

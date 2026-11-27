@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { archSettingsMessages as t } from "./messages";
+import { useArchSettingsMessages } from "./messages";
 
 export interface IdDialogProps {
   title: string;
@@ -16,6 +16,7 @@ export interface IdDialogProps {
 
 /** 새 id와 제목을 묻는 작은 다이얼로그(새 프로필·복제). id 글자 규칙은 서버 검사가 알린다. */
 export function IdDialog({ title, defaultId, defaultTitle, baseIds, userIds, onConfirm, onCancel }: IdDialogProps) {
+  const t = useArchSettingsMessages();
   const [id, setId] = useState(defaultId);
   const [name, setName] = useState(defaultTitle);
   const idRef = useRef<HTMLInputElement>(null);

@@ -28,7 +28,7 @@ const summary = groups.map((g) => `${g.key}:${g.count}`);
 | --- | --- |
 | `groupItems(items, def, options?)` | Groups by a `GroupByDef`. Supports `multi` (an item appears in several groups), `tree` (`/` hierarchy), and empty values (a "None" group at the bottom). Returns a flat `GroupNode[]` |
 | `visibleGroups(nodes, collapsed)` · `revealGroup` · `groupKeysOf` · `hasNamedGroups` · `uniqueCount` | Collapse handling, flat-list detection, and de-duplicated counts |
-| `sortItems(items, sortDef)` · `byText` · `byNumber` · `textCompare` | Stable sort, with Korean as the default locale |
+| `sortItems(items, sortDef)` · `byText` · `byNumber` · `textCompare` | Stable sort. Pass the display language as `locale` (default `DEFAULT_LOCALE`, `"en"`, so results never depend on the host locale) |
 | `resolveGroupBy` · `checkUsable` · `usableUnlessAllDistinct` | Whether a criterion is usable (for example, it is not when every value is different) |
 | `resolveSort` · `availableSorts` | Only the sorts that can be used |
 | `folderOf(attributes)` · `withFolder(attributes, folder)` | The folder is `attributes.ui.folder` (a string with a `/` hierarchy). Other attributes are preserved |

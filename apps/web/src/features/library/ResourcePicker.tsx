@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import type { ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Button, Dialog } from "@agent-console/ui";
 import { DescriptorIcon } from "./DescriptorIcon";
-import { libraryMessages as t } from "./messages";
+import { useLibraryMessages } from "./messages";
 
 export interface ResourcePickerProps {
   open: boolean;
@@ -18,6 +18,7 @@ export interface ResourcePickerProps {
 
 /** 리소스 고르기 다이얼로그(검색 + 종류 필터 칩). 종류 목록·아이콘·이름은 모두 디스크립터 데이터. */
 export function ResourcePicker({ open, resources, types, exclude, onPick, onCreateNew, onClose }: ResourcePickerProps) {
+  const t = useLibraryMessages();
   const [query, setQuery] = useState("");
   const [typeId, setTypeId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);

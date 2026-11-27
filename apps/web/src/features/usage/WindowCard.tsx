@@ -1,11 +1,12 @@
 import { useId, useState } from "react";
 import { Badge, Gauge, TrustBadge } from "@agent-console/ui";
-import { formatDateTime, formatRelative } from "../../lib/format";
+
 import { InfoHint, describeValue } from "./cardParts";
 import { formatResetLine } from "./resetDisplay";
-import { usageMessages as t } from "./messages";
+import { useUsageMessages, type UsageMessages } from "./messages";
 import { formatRatio, isStaleObservation, resetState, type WindowGroup } from "./usageLib";
 import type { UsageWindowSnapshot } from "@agent-console/contracts";
+import { useFormat } from "../../i18n";
 
 export interface WindowCardProps {
   /** 표시 이름(호출자가 `windowDisplayName`으로 해석: 사용자 → 출처 → 폴백) */
@@ -20,13 +21,15 @@ export interface WindowCardProps {
 }
 
 /** 다른 출처 목록 한 줄의 값 글자. */
-function otherValueText(o: UsageWindowSnapshot, name: string): string {
-  const v = describeValue(o, name);
+function otherValueText(o: UsageWindowSnapshot, name: string, x: { t: UsageMessages; language: string }): string {
+  const v = describeValue(o, name, x);
   return v.tokensLine && v.kind !== "tokens" ? `${v.headline} · ${v.tokensLine}` : v.kind === "tokens" ? v.tokensLine ?? v.headline : v.headline;
 }
 
 /** 공식 값을 가진 창 하나의 카드. 헤드라인은 `N% 사용` 하나이고, 값이 없는 쪽은 그리지 않는다(지어내지 않음). */
 export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }: WindowCardProps) {
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const s = group.primary;
   const nowSec = nowMs / 1000;
   const src = sourceInfo(s.source);
@@ -35,8 +38,8 @@ export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }
   const reset = resetState(s.resets_at, nowSec);
   const stale = isStaleObservation(s.observed_at, nowSec, staleAfterSeconds);
   const oldValue = reset === "passed";
-  const v = describeValue(s, name, group.fellBack);
-  const resetLine = reset === "future" ? formatResetLine(s.resets_at as number, nowSec, { line: t.cards.resetsLine }) : undefined;
+  const v = describeValue(s, name, { t, language: fmt.language }, group.fellBack);
+  const resetLine = reset === "future" ? formatResetLine(s.resets_at as number, nowSec, { line: t.cards.resetsLine }, fmt, t.cards.resetsUnderMinute) : undefined;
   const label = t.cards.ariaLabel(name, v.aria, reset === "passed" ? t.cards.resetsPassed : (resetLine?.text ?? ""));
 
   return (
@@ -52,7 +55,7 @@ export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }
           {v.chip ? <Badge tone={v.chip.tone}>{v.chip.label}</Badge> : null}
         </div>
         {s.used_ratio != null ? <Gauge value={s.used_ratio} stale={stale || oldValue} label={t.cards.gaugeLabel(name)} noValueLabel={t.cards.noRatio} valueText={formatRatio(s.used_ratio)} /> : null}
-        {v.tokensLine ? <span className="usage-tokens app-muted ac-num" title={s.used_tokens != null ? s.used_tokens.toLocaleString("ko-KR") : undefined}>{v.tokensLine}</span> : null}
+        {v.tokensLine ? <span className="usage-tokens app-muted ac-num" title={s.used_tokens != null ? fmt.number(s.used_tokens) : undefined}>{v.tokensLine}</span> : null}
       </div>
       {reset === "passed" ? (
         <p className="usage-reset usage-warn">▲ {t.cards.resetsPassed}</p>
@@ -61,7 +64,7 @@ export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }
       ) : null}
       <p className="usage-source app-muted">
         <span className="usage-oneline">
-          {t.cards.sourceLine(src.title)} · <span title={formatDateTime(s.observed_at)}>{t.cards.observedAt(formatRelative(s.observed_at, nowMs))}</span>
+          {t.cards.sourceLine(src.title)} · <span title={fmt.dateTimeFull(s.observed_at)}>{t.cards.observedAt(fmt.relative(s.observed_at, nowMs))}</span>
         </span>
         <InfoHint lines={v.hidden} />
       </p>
@@ -76,8 +79,8 @@ export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }
                 const info = sourceInfo(o.source);
                 return (
                   <li key={o.source}>
-                    <TrustBadge trust={info.trust} label={t.trust[info.trust] ?? info.trust} /> <span>{info.title}</span> · <span className="ac-num">{otherValueText(o, name)}</span> ·{" "}
-                    <span className="app-muted" title={formatDateTime(o.observed_at)}>{t.cards.observedAt(formatRelative(o.observed_at, nowMs))}</span>
+                    <TrustBadge trust={info.trust} label={t.trust[info.trust] ?? info.trust} /> <span>{info.title}</span> · <span className="ac-num">{otherValueText(o, name, { t, language: fmt.language })}</span> ·{" "}
+                    <span className="app-muted" title={fmt.dateTimeFull(o.observed_at)}>{t.cards.observedAt(fmt.relative(o.observed_at, nowMs))}</span>
                   </li>
                 );
               })}

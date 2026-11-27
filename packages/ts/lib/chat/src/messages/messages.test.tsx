@@ -121,6 +121,15 @@ describe("ProgressStrip", () => {
 });
 
 describe("TurnView / MessageList", () => {
+  it("locale prop formats the token count and the time tooltip", () => {
+    const turn = makeTurn({ started_at: 100, usage: { total_tokens: 1204567 }, status: "completed" });
+    const { container, unmount } = render(<TurnView turn={turn} replyDisplay="separate" agentView={agentView} locale="de" />);
+    expect(screen.getByText(/1\.204\.567/)).toBeTruthy();
+    expect(container.querySelector("time")?.getAttribute("title")).toBe(new Date(100_000).toLocaleString("de"));
+    unmount();
+    render(<TurnView turn={turn} replyDisplay="separate" agentView={agentView} />);
+    expect(screen.getByText(/1,204,567/)).toBeTruthy();
+  });
   it("턴 구조: 사용자 메시지, 답변, 상호작용 카드(created_at 순), 푸터", () => {
     const turn = makeTurn({
       status: "waiting",

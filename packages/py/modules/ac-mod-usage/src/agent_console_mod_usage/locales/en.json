@@ -1,0 +1,18 @@
+{
+  "text": {
+    "구독 사용률과 토큰 사용량을 보여 준다": "Shows subscription usage rates and token usage",
+    "사용량 수집·보존(설치자 값).": "Usage collection and retention (server administrator values).",
+    "이보다 오래된 사용량 기록을 지운다. 비우면 지우지 않는다.": "Deletes usage records older than this. Leave empty to never delete.",
+    "사용량 기록을 더 오래 보거나 저장 공간을 줄일 때.": "Use this to keep usage records longer or to use less storage.",
+    "오래된 사용량 기록을 지우는 주기. 시작할 때 한 번, 이후 이 간격.": "Interval for deleting old usage records. Once at startup, then at this interval.",
+    "토큰 집계에 쓰는 최근 실행 수.": "Number of recent runs used for token totals.",
+    "집계할 최근 실행 수": "Recent runs to total",
+    "사용량 출처 하나를 기다리는 최대 시간. 비우면 무기한.": "Maximum time to wait for one usage source. Leave empty to wait without limit.",
+    "출처 응답 한도": "Source response limit",
+    "연결 안내 조각에 넣을 agent-console 명령. 이름만 주면 찾은 절대 경로로 바꾼다.": "agent-console command to put in the connection snippet. A bare name is replaced with the absolute path found.",
+    "agent-console 명령": "agent-console command"
+  },
+  "codes": {
+    "usage.source_conflict": "Usage source id {source} overlaps another source, so only one is used (plugin sources first, then the module connected first)"
+  }
+}

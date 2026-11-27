@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "example.invalid_config": "config가 유효하지 않습니다.",
+    "example.noop": "이 설정은 입력을 바꾸지 않습니다."
+  }
+}

@@ -1678,6 +1678,8 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
             {...(props.definitionKindTitles !== undefined ? { definitionKindTitles: props.definitionKindTitles } : {})}
             onAdd={(spec) => addByType(spec.typeId, undefined, spec.definition)}
             messages={m}
+            {...(props.locale !== undefined ? { locale: props.locale } : {})}
+            {...(props.categoryLabel !== undefined ? { categoryLabel: props.categoryLabel } : {})}
             {...(props.palette ?? {})}
           />
         </aside>

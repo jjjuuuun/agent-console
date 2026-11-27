@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-hook-probe"
 version = "0.1.0"
-description = "Agent Console — hook 명령 감싸기 실행 파일(입출력·결정·소요 시간 jsonl 기록, 기록 형식 hook-probe/1)과 그 기록을 읽는 로그 출처·분류기(X5 hook-probe-jsonl, X6 hook-probe)"
+description = "Agent Console — a hook command wrapper executable (records input, output, decision, and duration as jsonl, format hook-probe/1) and the log source and classifier that read those records (X5 hook-probe-jsonl, X6 hook-probe)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -22,6 +22,9 @@ hook-probe-jsonl = "agent_console_hook_probe.plugins:HookProbeSource"
 
 [project.entry-points."agent_console.log_classifiers"]
 hook-probe = "agent_console_hook_probe.plugins:HookProbeClassifier"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-hook-probe = "agent_console_hook_probe"
 
 [dependency-groups]
 dev = [

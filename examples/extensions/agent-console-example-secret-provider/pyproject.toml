@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-secret-provider"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 지정한 로컬 파일의 KEY=VALUE 줄에서 비밀 값을 읽는 공급자(example-file)"
+description = "Agent Console example extension — a secret provider that reads KEY=VALUE lines from a given local file (example-file)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

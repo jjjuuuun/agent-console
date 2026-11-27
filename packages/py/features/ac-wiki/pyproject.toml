@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-wiki"
 version = "0.2.0"
-description = "Agent Console — 위키 핵심: 문법·페이지 파싱·링크 해석·색인·페이지 파일"
+description = "Agent Console — wiki core: syntax, page parsing, link resolution, index, page files"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

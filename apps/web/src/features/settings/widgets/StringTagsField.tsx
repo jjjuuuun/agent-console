@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Button } from "@agent-console/ui";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { useImeGuard } from "../../../lib/ime";
 
 /** `ui:field` 이름. */
@@ -19,6 +19,7 @@ export interface StringTagsOptions {
 
 /** 문자열 목록 편집기(태그). 값은 `string[]`이며 중복은 무시한다. Enter 또는 [추가]로 확정(IME 조합 중 Enter 제외). */
 export function StringTagsField({ id, value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const m = useAppMessages();
   const opts = options as StringTagsOptions;
   const listId = useId();
   const ime = useImeGuard();

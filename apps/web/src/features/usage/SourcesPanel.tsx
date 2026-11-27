@@ -3,8 +3,9 @@ import { Link } from "react-router";
 import type { UsageSourceInfo } from "@agent-console/contracts";
 import { Markdown } from "@agent-console/chat";
 import { Disclosure, TrustBadge } from "@agent-console/ui";
-import { formatDateTime, formatRelative } from "../../lib/format";
-import { usageMessages as t } from "./messages";
+
+import { useUsageMessages } from "./messages";
+import { useFormat, useChatLocale } from "../../i18n";
 
 export interface SourcesPanelProps {
   sources: readonly UsageSourceInfo[];
@@ -18,6 +19,7 @@ export interface SourcesPanelProps {
 
 /** 출처 목록: 디스크립터 title·id·신뢰 등급·사용 여부·마지막 관측·오류. 켜고 끄는 일은 설정 화면에서 한다. */
 export function SourcesPanel({ sources, nowMs, settingsHref, hasObservation, latestObservedAt }: SourcesPanelProps) {
+  const t = useUsageMessages();
   if (sources.length === 0) {
     return (
       <p className="app-muted" role="status">
@@ -44,6 +46,9 @@ export function SourcesPanel({ sources, nowMs, settingsHref, hasObservation, lat
 }
 
 function SourceRow({ info, nowMs, settingsHref, observed, lastSeen }: { info: UsageSourceInfo; nowMs: number; settingsHref: string; observed: boolean; lastSeen: number | undefined }) {
+  const chat = useChatLocale();
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const d = info.descriptor;
   // 연결 조각이 있는 출처의 안내는 화면 위쪽 연결 안내 패널이 맡는다(같은 글을 두 번 보이지 않는다).
   const guided = (d.setup_snippets?.length ?? 0) > 0;
@@ -58,8 +63,8 @@ function SourceRow({ info, nowMs, settingsHref, observed, lastSeen }: { info: Us
         <code className="app-mono app-muted">{d.id}</code>
         <TrustBadge trust={d.trust} label={t.trust[d.trust] ?? d.trust} />
         <span>{enabled ? t.sources.enabled : t.sources.disabled}</span>
-        <span className="app-muted" title={formatDateTime(lastSeen)}>
-          {lastSeen == null ? t.sources.neverSeen : t.sources.lastSeen(formatRelative(lastSeen, nowMs))}
+        <span className="app-muted" title={fmt.dateTimeFull(lastSeen)}>
+          {lastSeen == null ? t.sources.neverSeen : t.sources.lastSeen(fmt.relative(lastSeen, nowMs))}
         </span>
         <span className={info.error ? "runs-result-error" : "app-muted"}>{state}</span>
         <Link to={settingsHref}>{t.sources.changeInSettings}</Link>
@@ -75,7 +80,7 @@ function SourceRow({ info, nowMs, settingsHref, observed, lastSeen }: { info: Us
           ) : null}
           {open && hasHelp && d.setup_help ? (
             <div className="usage-setup-body">
-              <Markdown text={d.setup_help} />
+              <Markdown text={d.setup_help} messages={chat.markdown} />
               <p className="app-muted">{t.sources.setupNote}</p>
             </div>
           ) : null}

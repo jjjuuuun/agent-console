@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import type { Agent, EdgeTypeDescriptor, EffectiveSettings, Graph, NodeSpec, NodeTypeDescriptor, ResourceAttachment } from "@agent-console/contracts";
-import { NodeLayoutPanel, RoleToggleRow, IssueSuggestionButtons, canHaveResources, defaultMessages, getRoleToggleInfo, type NodeLayoutPanelProps, type RoleToggle } from "@agent-console/graph-editor";
+import { NodeLayoutPanel, RoleToggleRow, IssueSuggestionButtons, canHaveResources, getRoleToggleInfo, type NodeLayoutPanelProps, type RoleToggle } from "@agent-console/graph-editor";
 import { Banner, Button, Dialog, Tabs } from "@agent-console/ui";
-import { messages as appMessages } from "../../app/messages";
-import { issueMessage, splitNodeIssues } from "../../lib/issues";
+import { useAppMessages, useIssueMessage } from "../../app/appMessages";
+import { splitNodeIssues } from "../../lib/issues";
 import { Skeleton, useDelegationStrategies } from "../settings";
 import { AgentSettingsForm, ATTACHMENT_MODES, Avatar, DescriptorIcon, Field, editLayerOf, inheritedProvenance, inheritedValue, toFormLayers, toUiLayers, DEFINITION_KINDS, LayeredAttachments, layerSourcePath, routePath, ROUTE_ROLES } from "../library";
-import { DelegationSettings, stringAt, delegationMessages } from "../delegation";
+import { DelegationSettings, stringAt, useDelegationMessages } from "../delegation";
 import { NodeConfigForm } from "./forms";
 import { DraftNotice } from "./DraftNotice";
 import { ignoredFieldReasons, IgnoredValueClear } from "./ignoredFields";
@@ -14,7 +14,10 @@ import { useDraftPreview } from "./useDraftPreview";
 import { useCanvasToast } from "./canvasToast";
 import { SessionWhere } from "./SessionWhere";
 import { incomingSessions, nodeSessionMode } from "./sessionView";
-import { teamMessages as t } from "./messages";
+import { useServerTranslate, useUiLibMessages } from "../../i18n";
+import { useTeamMessages } from "./messages";
+import { TeamToast } from "./TeamToast";
+import { useGraphEditorLocale } from "./useGraphEditorLocale";
 import { attachmentErrorsAt } from "../../lib/attachmentProblems";
 import { diffNodeLayer, nodeLayerAttachments, ownAttachments, reorderLinkEdges, replaceNode, withLinkMode, withNodeOwnAttachments } from "./nodeResources";
 import type { TeamPanelContext } from "./panelContext";
@@ -57,6 +60,11 @@ function agentOf(ctx: TeamPanelContext, node: NodeSpec): Agent | undefined {
 // ---------------------------------------------------------------- 역할 탭
 
 function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
+  const issueMessage = useIssueMessage();
+  const t = useTeamMessages();
+  const tr = useServerTranslate();
+  const geMessages = useGraphEditorLocale().messages;
+  const dm = useDelegationMessages();
   const toast = useCanvasToast();
   const d = descriptorOf(node, ctx.nodeTypes);
   const nestedCtx = ctx.nested;
@@ -72,7 +80,7 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
   const sessionIn = nodeSessionMode(incomingSessions(node.id, ctx.graph, ctx.edgeTypes, ctx.strategies));
   const mine = issuesOfNode(ctx.issues, node.id, ctx.graph);
   const bindsLink = agent === undefined ? undefined : `${routePath(ROUTE_ROLES.agent)}/${encodeURIComponent(agent.id)}`;
-  const layers = toFormLayers(eff.data);
+  const layers = toFormLayers(eff.data, tr);
   const nestedId = nested && d?.binds != null ? stringAt(node.config, `/${d.binds.field}`) : undefined;
   const nestedInfo = nestedId === undefined ? undefined : nestedCtx?.infos?.find((x) => x.id === nestedId);
   const openNested = nested && nestedId !== undefined && nestedInfo !== undefined ? nestedCtx?.open : undefined;
@@ -80,10 +88,10 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
   const onToggle = (toggle: RoleToggle, on: boolean, options?: { kindId?: string; userNodeId?: string }) => {
     const res = toggleRoleOnGraph(ctx.graph, node.id, toggle, toggleCtx, on, options);
     if (!res.changed) {
-      if (res.ambiguous) toast({ tone: "warning", text: t.node.toggleAmbiguous });
+      if (res.ambiguous) toast({ tone: "warning", text: <TeamToast render={(m) => m.node.toggleAmbiguous} /> });
       return;
     }
-    if (!on && res.removed >= 2) ctx.onUndoableChange(res.graph, t.node.toggleRemoved(res.removed));
+    if (!on && res.removed >= 2) ctx.onUndoableChange(res.graph, (m) => m.node.toggleRemoved(res.removed));
     else ctx.onGraphChange(res.graph);
   };
 
@@ -114,7 +122,7 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
         <section className="lib-fieldset" aria-label={t.nested.definitionInfo}>
           <span className="lib-field-label">{t.nested.definitionInfo}</span>
           <span className="lib-row-main">
-            <span>{delegationMessages.nested.infoLine(nestedCtx?.kindTitle ?? d?.title ?? "", nestedInfo?.name ?? nestedId)}</span>
+            <span>{dm.nested.infoLine(nestedCtx?.kindTitle ?? d?.title ?? "", nestedInfo?.name ?? nestedId)}</span>
             {openNested === undefined ? null : (
               <a
                 href="#"
@@ -123,12 +131,12 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
                   openNested(nestedId);
                 }}
               >
-                {delegationMessages.nested.open} →
+                {dm.nested.open} →
               </a>
             )}
           </span>
           {nestedInfo?.nodeCount === undefined ? null : (
-            <span className="app-muted lib-field-note">{delegationMessages.nested.infoMeta(nestedInfo.nodeCount, nestedInfo.entries?.join(", ") ?? "")}</span>
+            <span className="app-muted lib-field-note">{dm.nested.infoMeta(nestedInfo.nodeCount, nestedInfo.entries?.join(", ") ?? "")}</span>
           )}
         </section>
       ) : null}
@@ -147,14 +155,14 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
           if (info.kinds.length === 0 && !info.on) return null;
           return (
             <div key={toggle}>
-              <RoleToggleRow info={info} label={defaultMessages.toggleLabels[toggle] ?? toggle} onToggle={(on, options) => onToggle(toggle, on, options)} />
+              <RoleToggleRow info={info} label={geMessages.toggleLabels[toggle] ?? toggle} onToggle={(on, options) => onToggle(toggle, on, options)} />
               {info.reasonIfUnavailable === "no-counterpart" && info.kinds[0] !== undefined && !ctx.disabled ? (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => {
                     const res = addCounterpartAndToggle(ctx.graph, node.id, toggle, info.kinds[0]!.id, toggleCtx);
-                    if (res !== undefined) ctx.onUndoableChange(res.graph, t.node.toggleAddedUser);
+                    if (res !== undefined) ctx.onUndoableChange(res.graph, (m) => m.node.toggleAddedUser);
                   }}
                 >
                   {t.node.addUserAndToggle}
@@ -190,6 +198,7 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
 
 /** 필드 경고 요약 줄: 서버가 필드(path)에 붙인 경고 개수 + 첫 경고 필드로 이동. 경고의 의미(코드)는 해석하지 않는다. */
 function FieldWarningSummary({ count }: { count: number }) {
+  const t = useTeamMessages();
   return (
     <p className="app-sev" data-severity="warning" role="status">
       <span aria-hidden="true">▲ </span>
@@ -213,11 +222,13 @@ function FieldWarningSummary({ count }: { count: number }) {
 }
 
 function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: NodeSpec; focusPath?: string | null | undefined }) {
+  const t = useTeamMessages();
+  const tr = useServerTranslate();
   const eff = useNodeEffective(ctx, node.id);
   const strategies = useDelegationStrategies();
   const saved = ctx.savedNodeIds.has(node.id);
   const own = (node.config?.["settings"] ?? {}) as Record<string, unknown>;
-  const layers = toFormLayers(eff.data);
+  const layers = toFormLayers(eff.data, tr);
   const fallbackLayer = { id: "node", label: t.resources.layerNode };
   const formLayers = layers.length > 0 ? layers : [fallbackLayer];
   const editLayerId = layers.length > 0 ? (editLayerOf(eff.data) ?? fallbackLayer.id) : fallbackLayer.id;
@@ -227,8 +238,8 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
 
   const allStrategies = useMemo(() => (ctx.strategies.length > 0 ? ctx.strategies : (strategies.data ?? [])), [ctx.strategies, strategies.data]);
   const disabledPaths = useMemo(
-    () => ignoredFieldReasons(eff.data?.inapplicable ?? [], node.id, ctx.graph, ctx.edgeTypes, allStrategies),
-    [eff.data, node.id, ctx.graph, ctx.edgeTypes, allStrategies],
+    () => ignoredFieldReasons(eff.data?.inapplicable ?? [], node.id, ctx.graph, ctx.edgeTypes, allStrategies, t),
+    [eff.data, node.id, ctx.graph, ctx.edgeTypes, allStrategies, t],
   );
   const clearIgnored = (path: string) => {
     const next = structuredClone(own);
@@ -243,7 +254,7 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
     const config = { ...(node.config ?? {}) };
     if (Object.keys(next).length === 0) delete config["settings"];
     else config["settings"] = next;
-    ctx.onUndoableChange(withNodeConfig(ctx.graph, node.id, config), t.settings.ignoredClearDone);
+    ctx.onUndoableChange(withNodeConfig(ctx.graph, node.id, config), (m) => m.settings.ignoredClearDone);
   };
 
   const fieldWarnings = useMemo(() => Object.fromEntries((eff.data?.warnings ?? []).filter((w) => typeof w.path === "string").map((w) => [w.path as string, `${w.message} (${w.code})`])), [eff.data]);
@@ -285,7 +296,7 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
         {...(focusPath ? { focusPath } : {})}
         disabledPaths={disabledPaths}
         fieldWarnings={fieldWarnings}
-        mergeNotes={Object.fromEntries(Object.entries(mergeNotes).map(([k, v]) => [k, `병합: ${v}`]))}
+        mergeNotes={Object.fromEntries(Object.entries(mergeNotes).map(([k, v]) => [k, t.settings.mergeNote(v)]))}
         onOpenLayer={(layerId) => {
           const to = layerSourcePath(sourceByLayer.get(layerId));
           if (to !== undefined && layerId !== editLayerId) ctx.navigateTo(to);
@@ -296,6 +307,7 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
 }
 
 function SettingsTab({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: NodeSpec; focusPath?: string | null | undefined }) {
+  const { issueValidators: validatorText } = useAppMessages();
   const d = descriptorOf(node, ctx.nodeTypes);
   if (d === undefined) return <pre className="ac-pre app-json">{JSON.stringify(node, null, 2)}</pre>;
   if (isBoundExecutable(d) && !isNestedNode(d, ctx.nested?.currentKind)) {
@@ -312,7 +324,7 @@ function SettingsTab({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: No
       config={(node.config ?? {}) as Record<string, unknown>}
       onChange={(config) => ctx.onGraphChange(withNodeConfig(ctx.graph, node.id, config))}
       interactionKinds={ctx.interactionKinds}
-      errors={splitNodeIssues(ctx.issues as never, node.id).fieldErrors}
+      errors={splitNodeIssues(ctx.issues as never, node.id, validatorText).fieldErrors}
       disabled={ctx.disabled}
     />
   );
@@ -321,6 +333,9 @@ function SettingsTab({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: No
 // ---------------------------------------------------------------- 리소스 탭
 
 function ResourcesTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
+  const appMessages = useAppMessages();
+  const t = useTeamMessages();
+  const tr = useServerTranslate();
   const toast = useCanvasToast();
   const eff = useNodeEffective(ctx, node.id);
   const modes = ATTACHMENT_MODES;
@@ -328,7 +343,7 @@ function ResourcesTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) 
   const agent = agentOf(ctx, node);
   const links = resourceLinks(node.id, ctx.graph, ctx.nodeTypes, defaultMode);
   const own = ownAttachments(node);
-  const ui = toUiLayers(eff.data);
+  const ui = toUiLayers(eff.data, tr);
   // 층 id는 서버 데이터(있으면), 이 탭의 구역 이름은 화면 문구("팀 공용" 등)를 쓴다
   const layer = (index: number, id: string, label: string) => ({ id: ui.length === 4 ? (ui[index]?.id ?? id) : id, label, index });
   const commonAtt = (ctx.workspace?.agent_defaults?.resources ?? []) as ResourceAttachment[];
@@ -368,7 +383,7 @@ function ResourcesTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) 
       edge: freshId("e", edgesOf(ctx.graph).map((e) => e.id)),
     });
     if (result === undefined) {
-      toast({ tone: "warning", text: t.resources.noConnectKind });
+      toast({ tone: "warning", text: <TeamToast render={(m) => m.resources.noConnectKind} /> });
       return;
     }
     ctx.onGraphChange(att.mode !== undefined && att.mode !== defaultMode ? withLinkMode(result.graph, result.edgeId, att.mode, defaultMode) : result.graph);
@@ -381,7 +396,7 @@ function ResourcesTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) 
     const kinds = resourceEdgeKinds(node, rtype, ctx.nodeTypes, ctx.edgeTypes);
     const first = kinds[0];
     if (first === undefined) {
-      toast({ tone: "warning", text: t.resources.noConnectKind });
+      toast({ tone: "warning", text: <TeamToast render={(m) => m.resources.noConnectKind} /> });
       return;
     }
     if (kinds.length === 1) attachWith(att, first);
@@ -509,6 +524,8 @@ export interface NodePanelProps {
 
 /** 노드 패널: 탭 [역할][설정][리소스][배치]. 리소스 탭은 이 노드가 리소스를 받을 수 있을 때만(디스크립터 `connects`·`executable`로 판단). */
 export function NodePanel({ ctx, node, tab, onTab, layout, focusPath }: NodePanelProps) {
+  const t = useTeamMessages();
+  const ui = useUiLibMessages();
   const d = descriptorOf(node, ctx.nodeTypes);
   const hasResources = canHaveResources(node, ctx.nodeTypes, ctx.edgeTypes);
   const active: NodeTab = (["role", "settings", "resources", "layout"] as const).find((x) => x === tab && (x !== "resources" || hasResources)) ?? "role";
@@ -529,7 +546,7 @@ export function NodePanel({ ctx, node, tab, onTab, layout, focusPath }: NodePane
         <span className="app-muted ac-ellipsis">{d?.title ?? t.panel.unknownType(node.type)}</span>
       </header>
       {d === undefined ? <Banner tone="warning">{t.panel.unknownType(node.type)}</Banner> : null}
-      <Tabs lazy tabs={items} activeId={active} onChange={onTab} ariaLabel={t.node.tabsLabel} />
+      <Tabs messages={ui} lazy tabs={items} activeId={active} onChange={onTab} ariaLabel={t.node.tabsLabel} />
     </div>
   );
 }

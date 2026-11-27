@@ -16,13 +16,15 @@ export interface ArchitectureInfoBarProps {
   selection?: ArchSelection | null;
   messages?: Partial<ArchViewMessages>;
   metricKinds?: Readonly<Record<string, MetricKindSpec>>;
+  /** 숫자 자릿수 표기 로캘(BCP 47). 생략하면 "en-US". */
+  locale?: string;
   onSelect?: (selection: ArchSelection | null) => void;
   onDrill?: (cellId: string, group?: string | null) => void;
   className?: string;
 }
 
-function Longs({ metrics, messages, kinds }: { metrics: Readonly<Record<string, ArchitectureMetric>> | undefined; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>> }) {
-  const pieces = metricPieces(metrics, messages, { kinds });
+function Longs({ metrics, messages, kinds, locale }: { metrics: Readonly<Record<string, ArchitectureMetric>> | undefined; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>>; locale?: string | undefined }) {
+  const pieces = metricPieces(metrics, messages, { kinds, ...(locale === undefined ? {} : { locale }) });
   return (
     <>
       {pieces.map((p) => {
@@ -52,7 +54,7 @@ const groupLabel = (g: ArchitectureGroupView, m: ArchViewMessages): string => g.
 /**
  * 선택 정보 줄(§5.4). 칸·연결·묶음·분류 안 됨 하나를 풀어 쓴다. 지표는 관측/추정/수집 안 됨을 글자로 구분하고 0으로 채우지 않는다.
  */
-export function ArchitectureInfoBar({ view, target, preview, selection, messages: partial, metricKinds, onSelect, onDrill, className }: ArchitectureInfoBarProps) {
+export function ArchitectureInfoBar({ view, target, preview, selection, messages: partial, metricKinds, locale, onSelect, onDrill, className }: ArchitectureInfoBarProps) {
   const messages = resolveMessages(partial);
   const kinds = metricKinds ?? defaultMetricKinds;
   const cell = target && (target.kind === "cell" || target.kind === "group") ? (view.cells ?? []).find((c) => c.id === target.id) : undefined;
@@ -60,15 +62,15 @@ export function ArchitectureInfoBar({ view, target, preview, selection, messages
   const labels = Object.fromEntries((view.cells ?? []).map((c) => [c.id, c.label]));
   let body: React.ReactNode = <span className="ac-arch-info-hint">{messages.hintEmpty}</span>;
 
-  if (target?.kind === "cell" && cell) body = <CellInfo cell={cell} view={view} messages={messages} kinds={kinds} selection={selection ?? null} onSelect={onSelect} onDrill={onDrill} />;
-  else if (target?.kind === "edge" && edge) body = <EdgeInfo edge={edge} labels={labels} messages={messages} kinds={kinds} />;
+  if (target?.kind === "cell" && cell) body = <CellInfo cell={cell} view={view} messages={messages} kinds={kinds} locale={locale} selection={selection ?? null} onSelect={onSelect} onDrill={onDrill} />;
+  else if (target?.kind === "edge" && edge) body = <EdgeInfo edge={edge} labels={labels} messages={messages} kinds={kinds} locale={locale} />;
   else if (target?.kind === "group" && cell) {
     const g = (cell.groups ?? []).find((x) => x.key === target.group);
     if (g) {
       body = (
         <>
           <strong className="ac-arch-info-name">{`${cell.label} › ${groupLabel(g, messages)}`}</strong>
-          <span className="ac-arch-info-metrics"><Longs metrics={g.metrics} messages={messages} kinds={kinds} /></span>
+          <span className="ac-arch-info-metrics"><Longs metrics={g.metrics} messages={messages} kinds={kinds} locale={locale} /></span>
         </>
       );
     }
@@ -76,7 +78,7 @@ export function ArchitectureInfoBar({ view, target, preview, selection, messages
     body = (
       <>
         <strong className="ac-arch-info-name">{messages.listUnassigned}</strong>
-        <span className="ac-arch-info-metrics"><Longs metrics={view.unassigned.metrics} messages={messages} kinds={kinds} /></span>
+        <span className="ac-arch-info-metrics"><Longs metrics={view.unassigned.metrics} messages={messages} kinds={kinds} locale={locale} /></span>
       </>
     );
   }
@@ -99,14 +101,14 @@ function Unavailable({ items, messages }: { items: readonly ArchitectureUnavaila
   );
 }
 
-function CellInfo({ cell, view, messages, kinds, selection, onSelect, onDrill }: { cell: ArchitectureCellView; view: ArchitectureView; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>>; selection: ArchSelection | null; onSelect?: (s: ArchSelection | null) => void; onDrill?: (cellId: string, group?: string | null) => void }) {
+function CellInfo({ cell, view, messages, kinds, locale, selection, onSelect, onDrill }: { locale?: string | undefined; cell: ArchitectureCellView; view: ArchitectureView; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>>; selection: ArchSelection | null; onSelect?: (s: ArchSelection | null) => void; onDrill?: (cellId: string, group?: string | null) => void }) {
   const own = [...(cell.unavailable ?? []), ...(view.unavailable ?? []).filter((u) => u.cell === cell.id && !(cell.unavailable ?? []).some((x) => x.item === u.item))];
   return (
     <>
       <strong className="ac-arch-info-name">{cell.label}</strong>
       {cell.description ? <span className="ac-arch-info-desc">{cell.description}</span> : null}
       <span className="ac-arch-info-metrics">
-        {cell.status === "not_collected" ? <span className="ac-arch-info-metric" data-status="not_collected">{`${messages.metricNotCollected} — ${messages.notCollectedHelp}`}</span> : <Longs metrics={cell.metrics} messages={messages} kinds={kinds} />}
+        {cell.status === "not_collected" ? <span className="ac-arch-info-metric" data-status="not_collected">{`${messages.metricNotCollected} — ${messages.notCollectedHelp}`}</span> : <Longs metrics={cell.metrics} messages={messages} kinds={kinds} locale={locale} />}
       </span>
       {cell.status === "partial" && cell.partial_reason ? <span className="ac-arch-info-partial">{formatMessage(messages.ariaPartial, { reason: cell.partial_reason })}</span> : null}
       <Unavailable items={own} messages={messages} />
@@ -142,7 +144,7 @@ function CellInfo({ cell, view, messages, kinds, selection, onSelect, onDrill }:
   );
 }
 
-function EdgeInfo({ edge, labels, messages, kinds }: { edge: ArchitectureEdgeView; labels: Record<string, string>; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>> }) {
+function EdgeInfo({ edge, labels, messages, kinds, locale }: { locale?: string | undefined; edge: ArchitectureEdgeView; labels: Record<string, string>; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>> }) {
   return (
     <>
       <strong className="ac-arch-info-name">{edge.label || edge.id}</strong>
@@ -150,7 +152,7 @@ function EdgeInfo({ edge, labels, messages, kinds }: { edge: ArchitectureEdgeVie
       <span className="ac-arch-info-kind">{edge.kind === "structural" ? messages.edgeStructural : messages.edgeObserved}</span>
       {edge.kind === "observed" ? (
         <span className="ac-arch-info-metrics">
-          {edge.status === "not_collected" ? <span className="ac-arch-info-metric" data-status="not_collected">{`${messages.metricNotCollected} — ${messages.notCollectedHelp}`}</span> : <Longs metrics={edge.metrics} messages={messages} kinds={kinds} />}
+          {edge.status === "not_collected" ? <span className="ac-arch-info-metric" data-status="not_collected">{`${messages.metricNotCollected} — ${messages.notCollectedHelp}`}</span> : <Longs metrics={edge.metrics} messages={messages} kinds={kinds} locale={locale} />}
         </span>
       ) : null}
     </>

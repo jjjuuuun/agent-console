@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { koT } from "../../testing/koText";
+import { createDelegationMessages } from "./messages";
 import type { EdgeSpec, EdgeTypeDescriptor, NodeSpec, NodeTypeDescriptor } from "@agent-console/contracts";
 import { buildBindSummary, deriveBindSummaries, nestedDefinitionList } from "./bindSummary";
 import { actualPreview, conditionShape, formatConditionValue, mapConditionOutcome, summarizeConditions, switchMode, valueKindOf, withItems, withNegate, type ConditionSpec } from "./conditions";
@@ -15,16 +17,18 @@ const ops = [
   { id: "op-bb", title: "같음" },
 ];
 
+const dm = createDelegationMessages(koT("delegation"));
+
 describe("formatRunOrdinal: 화면 번호는 값 + 1 (D1)", () => {
   it("회차·호출을 1부터 센다", () => {
-    expect(formatRunOrdinal(0, "iteration")).toBe("1회차");
-    expect(formatRunOrdinal(2, "iteration")).toBe("3회차");
-    expect(formatRunOrdinal(0, "call")).toBe("호출 1");
+    expect(formatRunOrdinal(0, "iteration", dm)).toBe("1회차");
+    expect(formatRunOrdinal(2, "iteration", dm)).toBe("3회차");
+    expect(formatRunOrdinal(0, "call", dm)).toBe("호출 1");
     expect(displayNumber(4)).toBe(5);
   });
   it("음수·소수는 0으로 맞춘다", () => {
-    expect(formatRunOrdinal(-3, "iteration")).toBe("1회차");
-    expect(formatRunOrdinal(1.9, "call")).toBe("호출 2");
+    expect(formatRunOrdinal(-3, "iteration", dm)).toBe("1회차");
+    expect(formatRunOrdinal(1.9, "call", dm)).toBe("호출 2");
   });
 });
 
@@ -52,33 +56,33 @@ describe("summarizeConditions", () => {
   const it2 = { path: "/b", op: "op-bb", value: 3 };
   const it3 = { path: "/c", op: "op-zz", value: ["x", "y", "z", "w"] };
   it("두 항목까지는 접속사로 잇는다(모두 = 그리고, 하나라도 = 또는)", () => {
-    expect(summarizeConditions({ all: [it1, it2] }, ops, undefined).text).toBe("/a 포함 ‘PASS’ 그리고 /b 같음 3");
-    expect(summarizeConditions({ any: [it1, it2] }, ops, undefined).text).toBe("/a 포함 ‘PASS’ 또는 /b 같음 3");
+    expect(summarizeConditions({ all: [it1, it2] }, ops, undefined, dm.condition.summary).text).toBe("/a 포함 ‘PASS’ 그리고 /b 같음 3");
+    expect(summarizeConditions({ any: [it1, it2] }, ops, undefined, dm.condition.summary).text).toBe("/a 포함 ‘PASS’ 또는 /b 같음 3");
   });
   it("세 항목 이상이면 첫 두 개 + 외 N개, full은 전문", () => {
-    const s = summarizeConditions({ all: [it1, it2, it3] }, ops, undefined);
+    const s = summarizeConditions({ all: [it1, it2, it3] }, ops, undefined, dm.condition.summary);
     expect(s.text.endsWith(" 외 1개")).toBe(true);
     expect(s.full).toContain("/c op-zz [x, y, z, 외 1개]");
     expect(s.empty).toBe(false);
   });
   it("negate는 앞에 붙는다", () => {
-    expect(summarizeConditions({ all: [it1], negate: true }, ops, undefined).text.startsWith("아닌 경우: ")).toBe(true);
+    expect(summarizeConditions({ all: [it1], negate: true }, ops, undefined, dm.condition.summary).text.startsWith("아닌 경우: ")).toBe(true);
   });
   it("빈 조건·모르는 연산자·경로 제목·36자 말줄임", () => {
-    expect(summarizeConditions({}, ops, undefined)).toEqual({ text: "조건 없음", full: "조건 없음", empty: true });
-    expect(summarizeConditions(undefined, null, undefined).empty).toBe(true);
-    expect(summarizeConditions({ all: [{ path: "/a", op: "op-zz" }] }, ops, { "/a": "출력" }).text).toBe("출력 op-zz");
-    const long = summarizeConditions({ all: [{ path: "/a", op: "op-aa", value: "가".repeat(60) }] }, ops, undefined);
+    expect(summarizeConditions({}, ops, undefined, dm.condition.summary)).toEqual({ text: "조건 없음", full: "조건 없음", empty: true });
+    expect(summarizeConditions(undefined, null, undefined, dm.condition.summary).empty).toBe(true);
+    expect(summarizeConditions({ all: [{ path: "/a", op: "op-zz" }] }, ops, { "/a": "출력" }, dm.condition.summary).text).toBe("출력 op-zz");
+    const long = summarizeConditions({ all: [{ path: "/a", op: "op-aa", value: "가".repeat(60) }] }, ops, undefined, dm.condition.summary);
     expect(long.text.length).toBeLessThanOrEqual(37);
     expect(long.text.endsWith("…")).toBe(true);
     expect(long.full).toContain("가".repeat(60));
   });
   it("값 표시: 문자열·숫자·불리언·배열·객체·없음", () => {
-    expect(formatConditionValue("a")).toBe("‘a’");
-    expect(formatConditionValue(3)).toBe("3");
-    expect(formatConditionValue(false)).toBe("false");
-    expect(formatConditionValue({ k: 1 })).toBe('{"k":1}');
-    expect(formatConditionValue(undefined)).toBe("");
+    expect(formatConditionValue("a", dm.condition.summary)).toBe("‘a’");
+    expect(formatConditionValue(3, dm.condition.summary)).toBe("3");
+    expect(formatConditionValue(false, dm.condition.summary)).toBe("false");
+    expect(formatConditionValue({ k: 1 }, dm.condition.summary)).toBe('{"k":1}');
+    expect(formatConditionValue(undefined, dm.condition.summary)).toBe("");
   });
 });
 
@@ -138,7 +142,7 @@ describe("mapConditionOutcome: 판정 근거 어댑터(S1)", () => {
 });
 
 describe("이벤트 매핑 표 (eventSummaryMap)", () => {
-  const ctx = { nodeLabel: (id: string) => `N-${id}`, edgeLabel: () => "칩", teamName: (id: string) => (id === "c1" ? "팀가" : undefined), statusLabel: (s: string) => `상태:${s}`, shortId: (id: string) => id.slice(0, 4) };
+  const ctx = { messages: dm, nodeLabel: (id: string) => `N-${id}`, edgeLabel: () => "칩", teamName: (id: string) => (id === "c1" ? "팀가" : undefined), statusLabel: (s: string) => `상태:${s}`, shortId: (id: string) => id.slice(0, 4) };
   it("반복 시작은 서버 값 + 1 회차로 보인다", () => {
     const s = summarizeDelegationEvent({ type: "loop.iteration", payload: { edge_id: "e", iteration: 1, nodes: ["a", "b"] } }, ctx);
     expect(s?.text).toBe("↻ 반복 2회차 시작 · N-a, N-b");
@@ -169,7 +173,7 @@ describe("위젯 레지스트리", () => {
     expect(widgetFieldsOf(ui, registry, true).map((f) => f.pointer)).toEqual(["/alpha"]);
   });
   it("summary가 있는 위젯이 쓰인 필드 값으로 칩이 생긴다", () => {
-    const chips = chipsFromWidgets(ui, { alpha: { q: 1 } }, registry, (f) => ({ operators: null, options: f.options }));
+    const chips = chipsFromWidgets(ui, { alpha: { q: 1 } }, registry, (f) => ({ operators: null, options: f.options, messages: dm }));
     expect(chips).toEqual([{ key: "w:/alpha", title: '값:{"q":1}', iconName: "ic" }]);
   });
   it("레지스트리 이름은 ui:field로 옮기고, 구조화 필드의 모르는 이름은 JSON 폴백으로 바꾼다", () => {
@@ -195,35 +199,35 @@ describe("연결 칩 (deriveEdgeChips)", () => {
   const registry: WidgetRegistry = { "w-one": { Component: () => null, summary: () => ({ title: "요약", tone: "neutral" }) } };
   it("cycle 속성이 있으면 한도 칩, 상속이면 점선·전문에 출처", () => {
     const type = { id: "k-x", title: "T", cycle: { max_iterations: 3 } } as EdgeTypeDescriptor;
-    expect(deriveEdgeChips(edge(), type)[0]).toMatchObject({ key: "cycle-limit", title: "최대 3회", dashed: true });
-    expect(deriveEdgeChips(edge(), type)[0]?.fullTitle).toContain("연결 종류 기본값에서 옴");
-    expect(deriveEdgeChips(edge({ max_iterations: 2 }), type)[0]).toMatchObject({ title: "최대 2회" });
-    expect(deriveEdgeChips(edge({ max_iterations: 2 }), type)[0]?.dashed).toBeUndefined();
+    expect(deriveEdgeChips(edge(), type, { messages: dm })[0]).toMatchObject({ key: "cycle-limit", title: "최대 3회", dashed: true });
+    expect(deriveEdgeChips(edge(), type, { messages: dm })[0]?.fullTitle).toContain("연결 종류 기본값에서 옴");
+    expect(deriveEdgeChips(edge({ max_iterations: 2 }), type, { messages: dm })[0]).toMatchObject({ title: "최대 2회" });
+    expect(deriveEdgeChips(edge({ max_iterations: 2 }), type, { messages: dm })[0]?.dashed).toBeUndefined();
   });
   it("반복 한도 칩은 콜백이 있을 때만 단추(onActivate)이고 연결 id를 넘긴다", () => {
     const type = { id: "k-x", title: "T", cycle: { max_iterations: 3 } } as EdgeTypeDescriptor;
-    expect(deriveEdgeChips(edge(), type)[0]?.onActivate).toBeUndefined();
+    expect(deriveEdgeChips(edge(), type, { messages: dm })[0]?.onActivate).toBeUndefined();
     const seen: string[] = [];
-    const chip = deriveEdgeChips(edge(), type, { onLimitChipActivate: (id) => seen.push(id) })[0];
+    const chip = deriveEdgeChips(edge(), type, { messages: dm, onLimitChipActivate: (id) => seen.push(id) })[0];
     chip?.onActivate?.();
     expect(seen).toEqual(["e1"]);
   });
   it("한도를 알 수 없으면 한도 없음 danger 칩", () => {
     const type = { id: "k-x", title: "T", cycle: { max_iterations: 0 } } as EdgeTypeDescriptor;
-    expect(deriveEdgeChips(edge(), type)[0]).toMatchObject({ title: "한도 없음 ▲", tone: "danger" });
+    expect(deriveEdgeChips(edge(), type, { messages: dm })[0]).toMatchObject({ title: "한도 없음 ▲", tone: "danger" });
   });
   it("위임 방식 칩은 종류 기본과 다를 때만", () => {
     const type = { id: "k-x", title: "T", invocation: { strategy: "s1" } } as EdgeTypeDescriptor;
     const strategies = [{ id: "s1", title: "방식1" }, { id: "s2", title: "방식2" }];
-    expect(deriveEdgeChips(edge(), type, { strategies })).toEqual([]);
-    expect(deriveEdgeChips(edge({ strategy: "s2" }), type, { strategies })[0]).toMatchObject({ key: "strategy", title: "방식: 방식2" });
+    expect(deriveEdgeChips(edge(), type, { messages: dm, strategies })).toEqual([]);
+    expect(deriveEdgeChips(edge({ strategy: "s2" }), type, { messages: dm, strategies })[0]).toMatchObject({ key: "strategy", title: "방식: 방식2" });
     expect(edgeStrategyIds({ edges: [edge({ strategy: "s2" })] }, [type])).toEqual({ e1: "s2" });
   });
   it("위젯 summary가 있는 필드는 칩을 만들고 종류 id는 쓰지 않는다", () => {
     const type = { id: "k-x", title: "T", ui_schema: { cfg: { "ui:widget": "w-one" } } } as EdgeTypeDescriptor;
-    expect(deriveEdgeChips(edge(), type, { widgets: registry })).toEqual([{ key: "w:/cfg", title: "요약", tone: "neutral" }]);
-    expect(deriveEdgeChips(edge(), type, {})).toEqual([]);
-    expect(deriveEdgeChips(edge(), undefined, { widgets: registry })).toEqual([]);
+    expect(deriveEdgeChips(edge(), type, { messages: dm, widgets: registry })).toEqual([{ key: "w:/cfg", title: "요약", tone: "neutral" }]);
+    expect(deriveEdgeChips(edge(), type, { messages: dm })).toEqual([]);
+    expect(deriveEdgeChips(edge(), undefined, { messages: dm, widgets: registry })).toEqual([]);
   });
 });
 
@@ -231,7 +235,7 @@ describe("중첩 노드 요약 (buildBindSummary)", () => {
   const nodeType = (kind: string) => ({ id: "t-n", title: "T", binds: { kind, field: "ref" } }) as NodeTypeDescriptor;
   const node = (config: Record<string, unknown>): NodeSpec => ({ id: "n1", type: "t-n", label: "검토", config }) as NodeSpec;
   const infos = [{ id: "g2", name: "검토 파이프라인", nodeCount: 5, entries: ["입구"] }];
-  const base = { currentKind: "kind-q", currentId: "g1", infos, kindTitle: "팀 구성", open: () => {} };
+  const base = { messages: dm, currentKind: "kind-q", currentId: "g1", infos, kindTitle: "팀 구성", open: () => {} };
   it("현재 정의 종류와 같은 binds.kind만 요약한다", () => {
     expect(buildBindSummary(node({ ref: "g2" }), nodeType("kind-other"), base)).toBeUndefined();
     expect(buildBindSummary(node({ ref: "g2" }), undefined, base)).toBeUndefined();
@@ -260,7 +264,7 @@ describe("중첩 노드 요약 (buildBindSummary)", () => {
   it("전체 표와 팔레트 목록: 이름 오름차순, 자기 자신 비활성", () => {
     const all = deriveBindSummaries([node({ ref: "g2" }), { id: "n2", type: "other" } as NodeSpec], [nodeType("kind-q")], base);
     expect(Object.keys(all)).toEqual(["n1"]);
-    const list = nestedDefinitionList([{ id: "g1", name: "나" }, { id: "g2", name: "가" }], "g1");
+    const list = nestedDefinitionList([{ id: "g1", name: "나" }, { id: "g2", name: "가" }], "g1", dm, "ko");
     expect(list.map((i) => i.id)).toEqual(["g2", "g1"]);
     expect(list[1]?.disabledReason).toBe("자기 자신은 넣을 수 없습니다");
     expect(list[0]?.disabledReason).toBeUndefined();

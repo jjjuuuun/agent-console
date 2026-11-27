@@ -61,7 +61,9 @@ def definition_check_issues(
             else:
                 found = list(check.issues(kind, document))
         except Exception:  # 제공 모듈의 오류 타입을 모른다 — 검증 경로는 계속 응답한다
-            _log.exception("저장 전 정의 검사 실패(검증 경로): %s", type(check).__name__)
+            _log.exception(
+                "Pre-save definition check failed (validation path): %s", type(check).__name__
+            )
             continue
         for issue in found:
             if issue.severity not in severities or _key(issue) in seen:

@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Button } from "@agent-console/ui";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { useImeGuard } from "../../../lib/ime";
 
 /** `ui:field` 이름. */
@@ -26,6 +26,7 @@ export interface KeyValueMapOptions {
  * 값은 `{키: 값}` 객체이며 행 추가·삭제·키 바꾸기를 지원한다. 키가 겹치면 그 행에 오류를 보인다.
  */
 export function KeyValueMapField({ id, value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const m = useAppMessages();
   const opts = options as KeyValueMapOptions;
   const listId = useId();
   const entries = Object.entries(value !== null && typeof value === "object" ? (value as Record<string, string>) : {});

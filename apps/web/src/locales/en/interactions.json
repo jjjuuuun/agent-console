@@ -1,0 +1,8 @@
+{
+  "closed": "This request was already answered or closed. Refreshed to the latest state.",
+  "notFound": "Couldn't find this request. Refreshed to the latest state.",
+  "offline": "Couldn't send because the connection dropped. Your input is kept.",
+  "failed": "Couldn't send the reply",
+  "payload": "Request details",
+  "send": "Send"
+}

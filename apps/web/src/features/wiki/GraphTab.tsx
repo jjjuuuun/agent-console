@@ -19,10 +19,10 @@ import { GRAPH_LIST_ONLY_KEY, WIKI_GRAPH, WIKI_PARAMS, WIKI_STORAGE } from "./wi
 import { schemeTargetHref } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
 import { classifyWikiError } from "./wikiErrors";
-import { wikiMessages as m } from "./messages";
-import { wikiTabMessages } from "./tabMessages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useLanguageCode } from "../../i18n";
 
-const g = wikiTabMessages.graph;
 const GAP_TOKEN = "--ac-wiki-graph-gap";
 
 /** 디자인 토큰(px 길이)을 읽는다. 읽을 수 없으면(문서 밖·테스트) undefined — 그래프가 기본 간격을 쓴다. */
@@ -44,6 +44,9 @@ export function filterGraph(graph: WikiGraph, showBroken: boolean, showOrphan: b
 }
 
 export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasTab, openNewPage, ctx }: WikiTabProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const language = useLanguageCode();
+  const t = useT("wiki");
   const navigate = useNavigate();
   const routeOn = useRoutesOn();
   const storage = useStorage();
@@ -81,7 +84,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : (depth ?? WIKI_GRAPH_DEPTH_ALL) }, !noSyntax && !waitingFallback);
   const firstMissing =
     wanted !== undefined &&
-    ((firstQ.data !== undefined && !(firstQ.data.nodes ?? []).some((n) => n.path === wanted && n.broken !== true)) || (firstQ.isError && classifyWikiError(firstQ.error, "").kind === "pageNotFound"));
+    ((firstQ.data !== undefined && !(firstQ.data.nodes ?? []).some((n) => n.path === wanted && n.broken !== true)) || (firstQ.isError && classifyWikiError(firstQ.error, "", t).kind === "pageNotFound"));
   const allQ = useWikiGraph(wikiId, {}, !noSyntax && firstMissing);
   const q = firstMissing ? allQ : firstQ;
   const center = firstMissing ? undefined : wanted;
@@ -103,7 +106,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const openNode = (node: Pick<GraphNodeData, "path" | "broken" | "scheme">) => {
     if (node.broken) {
       // 끊긴 대상: 만들기 대화상자(§6.5). 읽기 전용이면 이유를 알린다(조용히 끝내지 않는다).
-      if (ctx.readOnly) toast({ tone: "info", text: ctx.readOnlyReason ?? g.createBlocked });
+      if (ctx.readOnly) toast({ tone: "info", text: ctx.readOnlyReason ?? t("tab.graph.createBlocked") });
       else openNewPage({ path: node.path });
       return;
     }
@@ -112,7 +115,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
       const target = (q.data?.nodes ?? []).find((n) => n.path === node.path)?.scheme_target;
       const href = target === undefined || target === null ? undefined : schemeTargetHref(target, target.id_from, routeOn);
       if (href !== undefined) void navigate(href);
-      else toast({ tone: "info", text: target === undefined || target === null ? g.schemeNoTarget : g.schemeOff });
+      else toast({ tone: "info", text: target === undefined || target === null ? t("tab.graph.schemeNoTarget") : t("tab.graph.schemeOff") });
       return;
     }
     goTab("page", { [P.path]: node.path });
@@ -141,31 +144,31 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   if (noSyntax) {
     body = (
       <div className="wiki-state" data-testid="wiki-graph-nosyntax" role="note">
-        <h2 className="wiki-state-title">{m.page.noSyntaxTitle}</h2>
-        <p className="app-muted">{m.page.noSyntaxBody}</p>
+        <h2 className="wiki-state-title">{t("page.noSyntaxTitle")}</h2>
+        <p className="app-muted">{t("page.noSyntaxBody")}</p>
         <div className="wiki-toolbar">
-          {hasTab("rules") ? <Button onClick={() => goTab("rules")}>{g.openRules}</Button> : null}
-          <Button onClick={openSettings}>{g.openSettings}</Button>
+          {hasTab("rules") ? <Button onClick={() => goTab("rules")}>{t("tab.graph.openRules")}</Button> : null}
+          <Button onClick={openSettings}>{t("tab.graph.openSettings")}</Button>
         </div>
       </div>
     );
   } else if (q.isPending) {
     body = <ListSkeleton rows={6} />;
   } else if (q.isError || graph === undefined) {
-    body = <FailureBlock error={q.error} title={g.loadFailed} onRetry={() => void q.refetch()} />;
+    body = <FailureBlock error={q.error} title={t("tab.graph.loadFailed")} onRetry={() => void q.refetch()} />;
   } else if ((q.data?.nodes ?? []).length === 0 && summary?.pages === 0) {
-    body = <div className="wiki-state" data-testid="wiki-graph-empty"><EmptyState title={g.empty} /></div>;
+    body = <div className="wiki-state" data-testid="wiki-graph-empty"><EmptyState title={t("tab.graph.empty")} /></div>;
   } else {
     const noLinks = (graph.edges ?? []).length === 0 && (graph.nodes ?? []).length > 0;
     body = (
       <>
-        {firstMissing && wanted !== undefined ? <Banner tone="info" data-testid="wiki-graph-center-missing">{g.centerMissing(wanted)}</Banner> : null}
-        {fallbackPath !== undefined && !firstMissing ? <Banner tone="info" data-testid="wiki-graph-big-fallback">{g.bigFallback(fallbackPath)}</Banner> : null}
-        {noLinks ? <Banner tone="info">{g.noLinks}</Banner> : null}
+        {firstMissing && wanted !== undefined ? <Banner tone="info" data-testid="wiki-graph-center-missing">{t("tab.graph.centerMissing", { path: wanted })}</Banner> : null}
+        {fallbackPath !== undefined && !firstMissing ? <Banner tone="info" data-testid="wiki-graph-big-fallback">{t("tab.graph.bigFallback", { path: fallbackPath })}</Banner> : null}
+        {noLinks ? <Banner tone="info">{t("tab.graph.noLinks")}</Banner> : null}
         <div className="wiki-graph-body" data-list-only={listOnly || undefined}>
           {listOnly ? null : (
             <div className="wiki-graph-canvas" data-testid="wiki-graph-canvas">
-              <LinkGraph
+              <LinkGraph messages={wikiViewMessages}
                 graph={graph}
                 centerPath={center ?? null}
                 selectedPath={selected}
@@ -180,7 +183,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
             </div>
           )}
           <div className="wiki-graph-list">
-            <LinkList
+            <LinkList messages={wikiViewMessages} locale={language}
               graph={graph}
               centerPath={center ?? null}
               selectedPath={selected}
@@ -208,9 +211,9 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   return (
     <div className="wiki-graph" data-testid="wiki-graph" onKeyDown={onKeyDown}>
       {toolbarOff ? null : (
-        <div className="wiki-graph-toolbar" role="group" aria-label={g.toolbar}>
+        <div className="wiki-graph-toolbar" role="group" aria-label={t("tab.graph.toolbar")}>
           <label className="wiki-inline">
-            <span className="wiki-label">{g.center}</span>
+            <span className="wiki-label">{t("tab.graph.center")}</span>
             <select
               className="wiki-input wiki-select"
               value={firstMissing ? ALL : mode}
@@ -222,9 +225,9 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
                 else if (centerParam === null || centerParam === "") setPicking(true);
               }}
             >
-              <option value={CURRENT}>{g.centerCurrent}{effectiveCurrent === undefined ? "" : ` · ${effectiveCurrent}`}</option>
-              <option value={ALL}>{g.centerAll}</option>
-              <option value={PICK}>{mode === PICK && centerParam !== null ? centerParam : g.centerPick}</option>
+              <option value={CURRENT}>{t("tab.graph.centerCurrent")}{effectiveCurrent === undefined ? "" : ` · ${effectiveCurrent}`}</option>
+              <option value={ALL}>{t("tab.graph.centerAll")}</option>
+              <option value={PICK}>{mode === PICK && centerParam !== null ? centerParam : t("tab.graph.centerPick")}</option>
             </select>
           </label>
           {picking ? (
@@ -232,8 +235,8 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
               <input
                 className="wiki-input wiki-pick"
                 list={pickListId}
-                aria-label={g.pickLabel}
-                placeholder={g.pickPlaceholder}
+                aria-label={t("tab.graph.pickLabel")}
+                placeholder={t("tab.graph.pickPlaceholder")}
                 onChange={(e) => {
                   const hit = pages.find((p) => p.path === e.target.value);
                   if (hit !== undefined) {
@@ -247,19 +250,19 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
               </datalist>
             </>
           ) : null}
-          <div role="group" aria-label={g.depth} className="wiki-segment">
+          <div role="group" aria-label={t("tab.graph.depth")} className="wiki-segment">
             {WIKI_GRAPH.depths.map((n) => (
               <button key={n} type="button" className="wiki-segment-btn" aria-pressed={depthValue === String(n)} disabled={center === undefined} onClick={() => setDepth(String(n))}>{n}</button>
             ))}
-            <button type="button" className="wiki-segment-btn" aria-pressed={depthValue === WIKI_GRAPH_DEPTH_ALL} disabled={center === undefined} onClick={() => setDepth(WIKI_GRAPH_DEPTH_ALL)}>{g.depthAll}</button>
+            <button type="button" className="wiki-segment-btn" aria-pressed={depthValue === WIKI_GRAPH_DEPTH_ALL} disabled={center === undefined} onClick={() => setDepth(WIKI_GRAPH_DEPTH_ALL)}>{t("tab.graph.depthAll")}</button>
           </div>
-          <label className="wiki-inline"><input type="checkbox" checked={showBroken} onChange={(e) => setShowBroken(e.target.checked)} />{g.showBroken}</label>
-          <label className="wiki-inline"><input type="checkbox" checked={showOrphan} onChange={(e) => setShowOrphan(e.target.checked)} />{g.showOrphan}</label>
-          <label className="wiki-inline"><input type="checkbox" checked={listOnly} onChange={(e) => setListOnly(e.target.checked)} />{g.listOnly}</label>
+          <label className="wiki-inline"><input type="checkbox" checked={showBroken} onChange={(e) => setShowBroken(e.target.checked)} />{t("tab.graph.showBroken")}</label>
+          <label className="wiki-inline"><input type="checkbox" checked={showOrphan} onChange={(e) => setShowOrphan(e.target.checked)} />{t("tab.graph.showOrphan")}</label>
+          <label className="wiki-inline"><input type="checkbox" checked={listOnly} onChange={(e) => setListOnly(e.target.checked)} />{t("tab.graph.listOnly")}</label>
           <span className="wiki-spacer" />
-          {nodeCount === undefined ? null : <span className="app-muted" role="status">{g.count(nodeCount)}</span>}
-          {nodeCount !== undefined && nodeCount > WIKI_GRAPH.bigNodes ? <ToneChip tone="info" label={g.big} title={g.bigTitle} /> : null}
-          {truncated ? <ToneChip tone="warning" label={typeof total === "number" && nodeCount !== undefined ? g.truncated(nodeCount, total) : g.truncatedNoTotal} /> : null}
+          {nodeCount === undefined ? null : <span className="app-muted" role="status">{t("tab.graph.count", { n: nodeCount })}</span>}
+          {nodeCount !== undefined && nodeCount > WIKI_GRAPH.bigNodes ? <ToneChip tone="info" label={t("tab.graph.big")} title={t("tab.graph.bigTitle")} /> : null}
+          {truncated ? <ToneChip tone="warning" label={typeof total === "number" && nodeCount !== undefined ? t("tab.graph.truncated", { n: nodeCount, total }) : t("tab.graph.truncatedNoTotal")} /> : null}
         </div>
       )}
       <div className="wiki-graph-main">{body}</div>

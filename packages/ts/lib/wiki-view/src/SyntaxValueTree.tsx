@@ -51,7 +51,7 @@ export function SyntaxValueTree({ syntax, display, titles, onOpenSource, message
     const label = source.startsWith(rules) && !d.known ? formatMessage(t["syntax.source.rules"], { id: source.slice(rules.length) }) : d.label;
     return (
       <span className="ac-wk-inline">
-        <RulesSourceBadge source={source} messages={{ [`source.${source}`]: label }} />
+        <RulesSourceBadge source={source} messages={{ "source.label": t["syntax.source.label"], "source.tip": t["syntax.source.tip"], [`source.${source}`]: label }} />
         {onOpenSource ? <button type="button" className="ac-wk-linkbtn" onClick={() => onOpenSource(source)}>{t["syntax.source.open"]}</button> : null}
       </span>
     );

@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent } from "@testing-library/react";
+import { renderWithI18n as render } from "../../testing/TestI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ShortcutProvider, computeEffectiveKeys, type ShortcutDef } from "@agent-console/ui";
 import { DEFAULT_ROUTES, gotoShortcuts } from "../../shell/routeConfig";

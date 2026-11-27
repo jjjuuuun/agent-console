@@ -1,0 +1,10 @@
+{
+  "codes": {
+    "example_transfer.duplicate_entry": "Another entry has the same kind and id; the later one is skipped.",
+    "example_transfer.invalid_entry": "Skipped a definition entry with the wrong shape.",
+    "example_transfer.invalid_file": "Couldn't read the file as a JSON object.",
+    "example_transfer.too_large": "The file is too large, so it isn't read.",
+    "example_transfer.unknown_format": "The format name or version differs from the settings (it may be a file from another tool).",
+    "example_transfer.unreadable": "Couldn't open the file."
+  }
+}

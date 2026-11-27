@@ -26,7 +26,7 @@ OPTIONS_KEY_PATH: tuple[str, ...] = ("modules", "options")
 NOT_FOUND = "not_found"
 
 
-MASKED_LINE_NOTE = "<가린 값 — secret://이름으로 넣으세요>"
+MASKED_LINE_NOTE = "<masked value: set it as secret://name>"
 """조각에서 가린 줄 뒤에 붙는 안내(그 줄은 주석이다)."""
 
 _SENTINEL = "__agent_console_masked_{}__"
@@ -80,10 +80,10 @@ def options_yaml_snippet(
 ) -> str:
     """설정 파일에 붙일 YAML 조각(``modules: options: <id>: …``, 들여쓰기 2칸).
 
-    가린 위치(``masked``)의 줄은 **주석**으로 낸다(``# token: <가린 값 — secret://이름으로
-    넣으세요>``). 그대로 붙여 넣어도 비밀 원문이나 가림 문자열이 설정 값이 되지 않는다(그 키는 빠져
-    기본값이 된다). 가린 줄만 남은 객체·목록은 그 키 줄도 주석으로 바꾼다(빈 값·null로 조용히
-    바뀌지 않게). 모듈 값 전체가 가려지면 ``<id>: {}``(모두 기본값)다.
+    가린 위치(``masked``)의 줄은 **주석**으로 낸다(``# token: <masked value: set it as
+    secret://name>``). 그대로 붙여 넣어도 비밀 원문이나 가림 문자열이 설정 값이 되지 않는다
+    (그 키는 빠져 기본값이 된다). 가린 줄만 남은 객체·목록은 그 키 줄도 주석으로 바꾼다
+    (빈 값·null로 조용히 바뀌지 않게). 모듈 값 전체가 가려지면 ``<id>: {}``(모두 기본값)다.
 
     Args:
         module_id: 모듈 id.

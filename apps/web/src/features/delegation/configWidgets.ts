@@ -1,6 +1,5 @@
 import { ConditionListField, UnknownWidgetField, pathTitlesOf } from "./ConditionListField";
 import { summarizeConditions, type ConditionSpec } from "./conditions";
-import { delegationMessages } from "./messages";
 import { UNKNOWN_WIDGET_FIELD, type WidgetRegistry } from "./widgetRegistry";
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -17,8 +16,8 @@ export const CONFIG_WIDGETS: WidgetRegistry = {
     Component: ConditionListField,
     summary: (value, ctx) => {
       const spec = isObj(value) ? (value as ConditionSpec) : undefined;
-      const s = summarizeConditions(spec, ctx.operators, pathTitlesOf(ctx.options));
-      if (s.empty) return { title: delegationMessages.edge.conditionEmpty, fullTitle: delegationMessages.condition.emptySummary, iconName: "filter", tone: "warning" };
+      const s = summarizeConditions(spec, ctx.operators, pathTitlesOf(ctx.options), ctx.messages.condition.summary);
+      if (s.empty) return { title: ctx.messages.edge.conditionEmpty, fullTitle: ctx.messages.condition.emptySummary, iconName: "filter", tone: "warning" };
       return { title: s.text, fullTitle: s.full, iconName: "filter", tone: "neutral" };
     },
   },

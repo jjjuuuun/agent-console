@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-definitions-resources"
 version = "0.1.0"
-description = "Agent Console — 정의·리소스 연동 모듈: 저장 전 리소스 종류 검사·첨부 검사(definitions.checks), 평문 점검 기여"
+description = "Agent Console — definitions and resources link module: resource kind and attachment checks before save (definitions.checks), plain-text check contributions"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -19,6 +19,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-definitions-resources = "agent_console_link_definitions_resources.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-definitions-resources = "agent_console_link_definitions_resources"
 
 [dependency-groups]
 dev = [

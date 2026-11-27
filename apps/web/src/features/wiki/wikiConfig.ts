@@ -7,7 +7,7 @@ import { KNOWN_ISSUE_CODES, KNOWN_WIKI_LINT_CODES } from "@agent-console/contrac
 import type { DisplayEntry, WikiDisplay } from "@agent-console/wiki-view";
 import data from "./wikiData.json";
 import display from "./wikiDisplay.json";
-import { wikiMessages } from "./messages";
+import type { MaybeTranslate } from "../../i18n/useMaybeT";
 
 /** 이 화면이 맡는 역할(라우트 `serves`·`requires`와 같은 값). 모듈 id가 아니다. */
 export const WIKI_ROLE = "wiki";
@@ -53,15 +53,16 @@ interface TableEntry {
   hintKey?: string;
 }
 
-function table(entries: Readonly<Record<string, TableEntry>>, labels: Readonly<Record<string, string>>, hints?: Readonly<Record<string, string>>): Readonly<Record<string, DisplayEntry>> {
+/** 표시 데이터 항목 → 표시 항목. `group`·`hintGroup`은 묶음 `display.<그룹>`의 이름이고 문구는 `tm`이 현재 언어로 준다. */
+function table(entries: Readonly<Record<string, TableEntry>>, tm: MaybeTranslate, group: string, hintGroup?: string): Readonly<Record<string, DisplayEntry>> {
   const out: Record<string, DisplayEntry> = {};
   for (const [id, e] of Object.entries(entries)) {
     const entry: DisplayEntry = {};
-    const label = e.labelKey === undefined ? undefined : labels[e.labelKey];
+    const label = e.labelKey === undefined ? undefined : tm(`display.${group}.${e.labelKey}`);
     if (label !== undefined) entry.label = label;
     if (e.tone !== undefined) entry.tone = e.tone;
     if (e.icon !== undefined) entry.icon = e.icon;
-    const hint = e.hintKey === undefined || hints === undefined ? undefined : hints[e.hintKey];
+    const hint = e.hintKey === undefined || hintGroup === undefined ? undefined : tm(`display.${hintGroup}.${e.hintKey}`);
     if (hint !== undefined) entry.hint = hint;
     out[id] = entry;
   }
@@ -69,14 +70,13 @@ function table(entries: Readonly<Record<string, TableEntry>>, labels: Readonly<R
 }
 
 /** 표현 컴포넌트에 넘기는 표시 표(문서 상수 → 문구·톤·아이콘). 모르는 값은 표에 없으므로 원문 + 중립 톤으로 보인다. */
-export function buildWikiDisplay(): WikiDisplay {
-  const d = wikiMessages.display;
+export function buildWikiDisplay(tm: MaybeTranslate): WikiDisplay {
   return {
-    ops: table(display.ops, d.ops),
-    authorKinds: table(display.authorKinds, d.authors),
-    linkStatuses: table(display.linkStatuses, d.links),
-    severities: table(display.severities, d.severities),
-    codes: withIssueNamespace(table(display.codes, d.codes, d.codeHints)),
+    ops: table(display.ops, tm, "ops"),
+    authorKinds: table(display.authorKinds, tm, "authors"),
+    linkStatuses: table(display.linkStatuses, tm, "links"),
+    severities: table(display.severities, tm, "severities"),
+    codes: withIssueNamespace(table(display.codes, tm, "codes", "codeHints")),
   };
 }
 
@@ -95,9 +95,9 @@ function withIssueNamespace(codes: Readonly<Record<string, DisplayEntry>>): Read
 }
 
 /** 가져오기 결과 상태(열린 문자열) → 톤·문구. 모르는 값은 중립 + 원문. */
-export function importStatusDisplay(status: string): { tone: string; label: string } {
+export function importStatusDisplay(status: string, tm: MaybeTranslate): { tone: string; label: string } {
   const e = (display.importStatuses as Record<string, TableEntry | undefined>)[status];
-  const label = e?.labelKey === undefined ? undefined : wikiMessages.display.importStatuses[e.labelKey];
+  const label = e?.labelKey === undefined ? undefined : tm(`display.importStatuses.${e.labelKey}`);
   return { tone: e?.tone ?? "neutral", label: label ?? status };
 }
 

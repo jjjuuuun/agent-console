@@ -65,7 +65,7 @@ If the `--ac-log-*` and `--ac-dash-*` tokens (tokens.md 5.9) are defined, they a
 | Filter and URL | `reservedParams` `splitSearchParams` `buildFilterQuery` `buildScreenSearch` `findReservedConflicts` `createLocalStorageSavedFilters` |
 | Taxonomy | `toTaxonomyView` `isErrorEvent` (the decision lives in one place) `isHiddenEvent` `colorFor` `orderCategories` `groupByMessage` |
 | Dashboard layout | `layoutFlow` `moveWidget` `resizeWidget` `updateWidget` `removeWidget` `duplicateWidget` `preserveUnknown` `preserveUnknownDashboards` |
-| Formatting | `defaultFormatters` `formatRelativeTime` `formatDurationMs` `formatTokensShort` (the app can override them through the `formatters` prop) |
+| Formatting | `defaultFormatters` `formatRelativeTime` `formatDurationMs` `formatTokensShort` (the app can override them through the `formatters` prop: `duration`, `number`, `tokens`, and `fullTime` follow the display language when the app injects them; the defaults are fixed: English numbers and `"en-US"` tooltips) |
 
 - To add a widget kind, build a `WidgetDescriptor` and pass it to `createWidgetRegistry(builtinWidgets, mine)`. The list has no `switch`, and a `kind` that is not in the registry is drawn as `UnknownWidget` (its settings are preserved).
 - Charts use recharts only inside the `charts/` adapter and are loaded lazily. If loading fails, the widget falls back to a table. Recharts types never appear in the public API.

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Banner, Button, Popover, type Tone } from "@agent-console/ui";
-import { messages as appMessages } from "../../app/messages";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 
 /** 알림 한 건(데이터). `priority`가 작을수록 먼저 보인다(같으면 `id` 순서 유지). */
 export interface LogNotice {
@@ -24,6 +23,7 @@ export function sortNotices(notices: readonly LogNotice[]): LogNotice[] {
 }
 
 function NoticeBanner({ notice, wrap = false }: { notice: LogNotice; wrap?: boolean }) {
+  const t = useLogsMessages();
   const { action, onDismiss } = notice;
   return (
     <Banner
@@ -34,7 +34,7 @@ function NoticeBanner({ notice, wrap = false }: { notice: LogNotice; wrap?: bool
         action === undefined && onDismiss === undefined ? undefined : (
           <>
             {action === undefined ? null : <Button size="sm" onClick={action.onClick}>{action.label}</Button>}
-            {onDismiss === undefined ? null : <Button size="sm" variant="ghost" onClick={onDismiss}>{appMessages.hints.dismiss}</Button>}
+            {onDismiss === undefined ? null : <Button size="sm" variant="ghost" onClick={onDismiss}>{t.dismissHint}</Button>}
           </>
         )
       }
@@ -53,6 +53,7 @@ export interface NoticeBarProps {
  * 각자의 버튼과 [닫기]가 그대로 동작한다. 알림이 없으면 아무것도 그리지 않는다(세로 공간 0). 영역은 `role="status"` `aria-live="polite"`.
  */
 export function NoticeBar({ notices }: NoticeBarProps) {
+  const t = useLogsMessages();
   const [open, setOpen] = useState(false);
   const sorted = sortNotices(notices);
   const [first, ...rest] = sorted;

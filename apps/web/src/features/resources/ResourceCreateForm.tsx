@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import type { Resource, ResourceTypeDescriptor } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
-import { DEFINITION_KINDS, DefinitionIdField, DescriptorIcon, Field, useKindReservedIds, libraryMessages as lm, useDefinitionId, type DefinitionId } from "../library";
+import { DEFINITION_KINDS, DefinitionIdField, DescriptorIcon, Field, useKindReservedIds, useLibraryMessages, useDefinitionId, type DefinitionId } from "../library";
 import { useNewScope } from "../projects";
 import { ResourceEditorForm, type ResourceDocUpdate } from "./ResourceEditorForm";
 import { ResourceTypeGrid } from "./ResourceTypeGrid";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 import { defaultContentRef, newResourceDoc, type ResourceDoc } from "./resourceLogic";
 
 /** 새 리소스 초안 상태: 종류 + 문서(정의·본문) + id 제안 + 프로젝트 범위. */
@@ -89,6 +89,8 @@ export interface ResourceCreateFormProps {
 
 /** 새 리소스 전체 폼: ① 종류 고르기 ② 이름·id·설명·프로젝트 + `ResourceEditorForm`(리소스 화면과 같은 편집기). */
 export function ResourceCreateForm({ draft, errors = [], disabled = false }: ResourceCreateFormProps) {
+  const lm = useLibraryMessages();
+  const t = useResourceMessages();
   const { doc, descriptor } = draft;
   if (doc === null || descriptor === undefined) return <ResourceTypeGrid types={draft.types} onPick={draft.setTypeId} />;
   const patch = (p: Partial<Resource>) =>

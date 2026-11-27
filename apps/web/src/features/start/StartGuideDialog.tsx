@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "react-router";
 import { Button, Dialog } from "@agent-console/ui";
 import { StartGuide } from "./StartGuide";
-import { startMessages } from "./messages";
+import { useStartMessages } from "./messages";
 
 export interface StartGuideDialogProps {
   open: boolean;
@@ -14,6 +14,7 @@ export interface StartGuideDialogProps {
  * 열렸을 때만 안내를 그려 데이터를 받고, 단계 버튼으로 다른 화면에 가면 닫는다.
  */
 export function StartGuideDialog({ open, onClose }: StartGuideDialogProps) {
+  const startMessages = useStartMessages();
   const { pathname } = useLocation();
   const opened = useRef(pathname);
   useEffect(() => {

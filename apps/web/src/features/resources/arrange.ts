@@ -13,4 +13,4 @@ export function resourceGroupDefs(typeTitle: (typeId: string) => string, noProje
 }
 
 /** 정렬 데이터: 이름순, 최근 수정(요약에 `saved_at`이 있을 때만). */
-export const resourceSortDefs: SortDef<ResourceSummary>[] = [nameSortDef<ResourceSummary>(), modifiedSortDef<ResourceSummary>()];
+export const resourceSortDefs = (language: string): SortDef<ResourceSummary>[] => [nameSortDef<ResourceSummary>(false, language), modifiedSortDef<ResourceSummary>(true, language)];

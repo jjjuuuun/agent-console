@@ -1,0 +1,20 @@
+{
+  "text": {
+    "에이전트가 쓰는 리소스(지침·스킬 같은 파일)를 모아 관리한다": "Collects and manages the resources agents use (files such as instructions and skills)",
+    "리소스 경로 설정.": "Resource path settings.",
+    "서버가 읽은 플러그인 중 리소스 종류가 들어 있는 묶음 이름.": "Name of the bundle, among the plugins the server loaded, that contains resource kinds.",
+    "리소스 종류 묶음 이름": "Resource kind bundle name",
+    "단독 실행 때 선언형 리소스 종류(*.yaml)를 읽을 폴더(워크스페이스 기준).": "Folder to read declarative resource kinds (*.yaml) from when running standalone (relative to the workspace).",
+    "선언형 종류 폴더": "Declarative kinds folder",
+    "본문 형식 → 처음 저장할 본문 파일 이름.": "Content format → name of the content file saved first.",
+    "본문 파일 이름": "Content file names",
+    "표에 없는 형식의 본문 파일 이름.": "Content file name for formats not in the table.",
+    "기본 본문 파일 이름": "Default content file name",
+    "여러 파일 본문 안 폴더·파일 이름이 이것과 같으면 저장은 하되 경고한다. 빈 목록이면 경고 없음.": "If a folder or file name in multi-file content matches one of these, it's saved with a warning. An empty list means no warnings.",
+    "경고할 파일 이름": "File names to warn about"
+  },
+  "codes": {
+    "resource.not_multi_file": "This resource kind doesn't use multi-file content (save the content in /content)",
+    "resource.reserved_file_name": "The path of file '{path}' contains the reserved name '{name}'. It was saved, but it may clash with the run folder or version control, so a different name is recommended"
+  }
+}

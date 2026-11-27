@@ -1,6 +1,7 @@
 """패키지 소스에서 원문 문구·코드를 모은다(AST·데이터 파일, design §I18N.10 S1·S2).
 
-- 원문 문구: 문자열 상수(독스트링은 ``inspect.cleandoc``한 꼴도 — Pydantic 설명이 그 꼴이다)와
+- 원문 문구: 문자열 상수(독스트링은 ``inspect.cleandoc``한 꼴과 첫 줄도 — Pydantic 설명이 앞의 꼴,
+  요약만 내는 표가 뒤의 꼴이다)와
   데이터 파일(YAML·JSON) 안 문자열. 서버 응답의 문구가 어느 패키지 것인지 정하는 데 쓴다.
 - 문구 틀: 원문 문자가 든 f-string과 ``{이름}`` 자리가 있는 상수. 값이 섞인 문구(정적 키가 될 수
   없는 것)를 찾는 데 쓴다.
@@ -136,6 +137,10 @@ class _Visitor(ast.NodeVisitor):
                 cleaned = inspect.cleandoc(value)
                 if cleaned != value:
                     self.texts.append((cleaned, node.lineno))
+                summary = cleaned.split("\n", 1)[0]
+                if summary != cleaned and self.config.is_source_text(summary):
+                    # 독스트링 첫 줄(요약)만 설명으로 내는 곳이 있다(예: 병합 전략 표).
+                    self.texts.append((summary, node.lineno))
                 if _FIELD.search(value):
                     self.templates.append((_format_parts(value), node.lineno))
 

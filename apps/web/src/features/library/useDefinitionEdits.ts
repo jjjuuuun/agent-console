@@ -1,10 +1,15 @@
-import { useCallback } from "react";
+import { createElement, useCallback, type ReactElement } from "react";
 import { ApiError } from "@agent-console/api-client";
 import { folderOf, withFolder } from "@agent-console/list-arrange";
 import { useToast } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
+import { createToastText, type ToastRender } from "../../app/ToastText";
 import { useInvalidateLists } from "./data";
-import type { ArrangeMessages } from "./arrangeMessages";
+import { useArrangeMessages, type ArrangeMessages } from "./arrangeMessages";
+
+const ArrangeToast = createToastText(useArrangeMessages);
+type ArrangeText = (m: ArrangeMessages) => string;
+/** 현재 언어의 공용 `arrange` 표로 글을 만드는 알림 글 요소(`.ts`라 JSX 대신 `createElement`). */
+const arrangeText = (render: ToastRender<ArrangeMessages>): ReactElement => createElement(ArrangeToast, { render });
 
 type Doc = Record<string, unknown>;
 
@@ -33,8 +38,10 @@ const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.status =
  * 목록의 가벼운 편집(폴더 이동·라벨) 공용 훅. 저장 경로는 `store`로 받아 종류를 모른다.
  * 항상 최신 문서를 읽고 → 일부만 바꾸고 → 그 `ETag`로 저장하므로 다른 필드는 보존된다.
  * 412·428(버전 충돌)이면 안내 토스트에 [다시 시도]를 붙인다(다시 시도는 최신 문서를 새로 읽는다).
+ * 토스트 문구는 공용 `arrange` 묶음을 그릴 때 읽으므로 떠 있는 토스트도 언어를 따른다. 둘째 인자 `_messages`는 옛 호출을 위해 받기만 하고 쓰지 않는다.
  */
-export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, m: Pick<ArrangeMessages, "move" | "labels" | "conflict" | "retry">): DefinitionEdits {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 옛 호출(둘째 인자)을 깨지 않으려고 받기만 한다
+export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, _messages?: Pick<ArrangeMessages, "move" | "labels" | "conflict" | "retry">): DefinitionEdits {
   const toast = useToast();
   const invalidate = useInvalidateLists();
   const { load, save } = store;
@@ -50,11 +57,11 @@ export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, 
   );
 
   const fail = useCallback(
-    (e: unknown, fallback: string, retry: () => void) => {
-      if (isConflict(e)) toast({ tone: "danger", text: m.conflict, action: { label: m.retry, onClick: retry } });
-      else toast({ tone: "danger", text: describeError(e, fallback).message });
+    (e: unknown, fallback: ArrangeText, retry: () => void) => {
+      if (isConflict(e)) toast({ tone: "danger", text: arrangeText((a) => a.conflict), action: { label: arrangeText((a) => a.retry), onClick: retry } });
+      else toast({ tone: "danger", text: arrangeText((a, d) => d(e, fallback(a)).message) });
     },
-    [toast, m],
+    [toast],
   );
 
   async function moveToFolder(id: string, name: string, folder: string | undefined): Promise<boolean> {
@@ -63,14 +70,14 @@ export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, 
         const prev = folderOf(before["attributes"] as Doc | undefined);
         toast({
           tone: "success",
-          text: folder === undefined ? m.move.doneClear(name) : m.move.done(name, folder),
+          text: arrangeText((a) => (folder === undefined ? a.move.doneClear(name) : a.move.done(name, folder))),
           action: {
-            label: m.move.undo,
+            label: arrangeText((a) => a.move.undo),
             onClick: () => {
               const undo = (): void => {
                 void edit(id, (d) => withAttributes(d, withFolder(d["attributes"] as Doc | undefined, prev)))
-                  .then(() => toast({ tone: "info", text: m.move.undone }))
-                  .catch((e: unknown) => fail(e, m.move.failed, undo));
+                  .then(() => toast({ tone: "info", text: arrangeText((a) => a.move.undone) }))
+                  .catch((e: unknown) => fail(e, (a) => a.move.failed, undo));
               };
               undo();
             },
@@ -78,7 +85,7 @@ export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, 
         });
         return true;
       } catch (e) {
-        fail(e, m.move.failed, () => void moveToFolder(id, name, folder));
+        fail(e, (a) => a.move.failed, () => void moveToFolder(id, name, folder));
         return false;
       }
   }
@@ -90,10 +97,10 @@ export function useDefinitionEdits<T extends object>(store: DefinitionStore<T>, 
           void _l;
           return labels.length === 0 ? rest : { ...rest, labels };
         });
-        toast({ tone: "success", text: m.labels.saved(name) });
+        toast({ tone: "success", text: arrangeText((a) => a.labels.saved(name)) });
         return true;
       } catch (e) {
-        fail(e, m.labels.failed, () => void saveLabels(id, name, labels));
+        fail(e, (a) => a.labels.failed, () => void saveLabels(id, name, labels));
         return false;
       }
   }

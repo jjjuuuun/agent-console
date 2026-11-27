@@ -1,5 +1,5 @@
 import type { BackendDescriptor } from "@agent-console/contracts";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { useNow } from "../../app/useNow";
 import { BackendProbeButton } from "./BackendProbeButton";
 import { useBackendProbe } from "./hooks";
@@ -10,6 +10,7 @@ import { ProbeResultBlock } from "./ProbeResultBlock";
  * 비용 안내는 백엔드가 준 문구(`probe_cost_note` → `cost_note`)가 있으면 그것을, 없으면 일반 문장을 보인다.
  */
 export function LoginSuccessProbe({ backend }: { backend: BackendDescriptor }) {
+  const m = useAppMessages();
   const t = m.backendReadiness;
   const probe = useBackendProbe(backend);
   const nowMs = useNow(true, 30_000);

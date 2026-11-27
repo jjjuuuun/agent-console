@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { NodeRun } from "@agent-console/contracts";
 import { Button, StatusChip } from "@agent-console/ui";
-import { formatDuration } from "../../lib/format";
-import { delegationMessages as dm } from "../delegation";
+
+import { useDelegationMessages } from "../delegation";
 import { nodeRunKey, runOrdinalText } from "./nodeRuns";
+import { useFormat } from "../../i18n";
 
 export interface NodeRunListChild {
   runId: string;
@@ -45,6 +46,8 @@ const OVERSCAN = 6;
  * 어떤 행에도 자식이 없으면 자식 실행 열을 그리지 않는다.
  */
 export function NodeRunList(p: NodeRunListProps) {
+  const dm = useDelegationMessages();
+  const fmt = useFormat();
   const rowH = p.rowHeight ?? 32;
   const viewport = p.viewportHeight ?? 320;
   const virtual = p.runs.length > (p.virtualAbove ?? 50);
@@ -142,7 +145,7 @@ export function NodeRunList(p: NodeRunListProps) {
                 onKeyDown={(e) => onKey(e, index)}
                 style={{ height: rowH }}
               >
-                <td role="gridcell" title={runOrdinalText(run, p.runs)}>{runOrdinalText(run, p.runs)}</td>
+                <td role="gridcell" title={runOrdinalText(run, p.runs, dm)}>{runOrdinalText(run, p.runs, dm)}</td>
                 <td role="gridcell">
                   <StatusChip status={run.status} label={waiting ? `⏸ ${dm.run.list.waiting}` : p.statusLabel(run.status)} />
                   {waiting && p.onAnswer ? (
@@ -150,7 +153,7 @@ export function NodeRunList(p: NodeRunListProps) {
                   ) : null}
                 </td>
                 <td role="gridcell" className="ac-num">{p.startedText(run)}</td>
-                <td role="gridcell" className="ac-num">{run.duration_ms == null ? "–" : formatDuration(run.duration_ms)}</td>
+                <td role="gridcell" className="ac-num">{run.duration_ms == null ? "–" : fmt.duration(run.duration_ms)}</td>
                 <td role="gridcell">
                   {caller === undefined ? (
                     "–"

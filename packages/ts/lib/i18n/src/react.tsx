@@ -34,6 +34,8 @@ export function useT(namespace: string): Translate & { language: string } {
 const versions = new WeakMap<I18nInstance, number>();
 
 function subscribeVersion(i18n: I18nInstance, onChange: () => void): () => void {
+  // Outside a provider the hooks get a stub without a store; nothing to subscribe to.
+  if (typeof (i18n as Partial<I18nInstance>).store?.on !== "function") return () => undefined;
   const bump = () => {
     versions.set(i18n, (versions.get(i18n) ?? 0) + 1);
     onChange();
@@ -75,6 +77,12 @@ export function overlayMessages<T extends MessageTree>(i18n: I18nInstance, names
             found = hit;
             break;
           }
+          // A key that is both a message and a group is written `{ "key": { "_": "text", "sub": "text" } }` in tree catalogs.
+          const self = typeof hit === "object" && hit !== null ? (hit as Record<string, unknown>)["_"] : undefined;
+          if (typeof self === "string") {
+            found = self;
+            break;
+          }
         }
         out[key] = found;
       } else {
@@ -100,7 +108,9 @@ export function useLibMessages<T extends MessageTree>(namespace: string, default
 /** Lookups for server strings and codes; re-renders when the language or the server catalog changes. */
 export function useServerText(): ServerText {
   const { i18n } = useTranslation(undefined, { bindI18nStore: "added removed" });
-  const language = i18n.language;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `language` is the change signal; resources re-render via the subscription.
-  return useMemo(() => createServerText(i18n), [i18n, language]);
+  const version = useCatalogVersion(i18n);
+  // `version` changes when the language or any resource (the server catalog arriving) changes, so memoized
+  // results derived from `text`/`issue` (schema translations, descriptor lists) are recomputed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `version` is the change signal.
+  return useMemo(() => createServerText(i18n), [i18n, version]);
 }

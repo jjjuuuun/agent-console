@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { getContractSchema } from "@agent-console/contracts";
-import { SchemaForm, type FormError, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
+import { type FormError, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm, useServerTranslate } from "../../i18n";
 import { Switch } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
 import { ProfilesPanel, type ProfilesPanelProps } from "./ProfilesPanel";
-import { archSettingsMessages as t, ORIGIN } from "./messages";
+import { ORIGIN, useArchSettingsMessages } from "./messages";
 import { buildRows, type ProfilesMap } from "./profileLogic";
 
 /** 위젯 이름(계약 `x-ui.widget`). 스키마가 이 이름을 달고 있으면 프로필 목록·편집기로 그린다. */
@@ -40,7 +41,8 @@ function ProfilesField({ value, onChange, options, disabled }: SchemaFormFieldPr
 }
 
 function SwitchWidget({ id, value, onChange, label, disabled, readonly }: SchemaFormWidgetProps) {
-  return <Switch checked={value === true} onChange={onChange} ariaLabel={label} onText="켜짐" offText="꺼짐" disabled={disabled || readonly} className={id} />;
+  const t = useArchSettingsMessages();
+  return <Switch checked={value === true} onChange={onChange} ariaLabel={label} onText={t.switch.on} offText={t.switch.off} disabled={disabled || readonly} className={id} />;
 }
 
 interface Choice {
@@ -49,6 +51,7 @@ interface Choice {
 }
 
 function ProfileSelectWidget({ id, value, onChange, onBlur, label, disabled, readonly, options }: SchemaFormWidgetProps) {
+  const t = useArchSettingsMessages();
   const choices = (options["choices"] as Choice[] | undefined) ?? [];
   const current = typeof value === "string" ? value : "";
   const missing = current !== "" && !choices.some((c) => c.value === current);
@@ -109,7 +112,10 @@ export function ArchitectureSettingsEditor({ value, saved, onChange, errors, dis
   const includeDefaults = draft["include_defaults"] !== false;
   const profiles = asObj(draft["profiles"]);
   const savedProfiles = asObj(savedObj["profiles"]);
-  const { rows, disabled: disabledRows } = useMemo(() => buildRows(list.data, profiles, savedProfiles, includeDefaults, { isDefault: (o) => o === ORIGIN.default, user: ORIGIN.user }), [list.data, profiles, savedProfiles, includeDefaults]);
+  const tr = useServerTranslate();
+  // 패키지가 주는 기본 프로필 이름은 서버 원문이라 화면 언어로 바꾼다(사용자가 만든 프로필 이름은 묶음에 없어 그대로 남는다).
+  const translatedList = useMemo(() => (list.data === undefined ? undefined : { ...list.data, profiles: (list.data.profiles ?? []).map((p) => (p.title === undefined ? p : { ...p, title: tr(p.title) })) }), [list.data, tr]);
+  const { rows, disabled: disabledRows } = useMemo(() => buildRows(translatedList, profiles, savedProfiles, includeDefaults, { isDefault: (o) => o === ORIGIN.default, user: ORIGIN.user }), [translatedList, profiles, savedProfiles, includeDefaults]);
   const loadBody = useCallback(async (id: string) => (await rest.getArchitectureProfile(id)).profile, [rest]);
   const check = useCallback((body: Parameters<typeof rest.checkArchitectureProfile>[0]) => rest.checkArchitectureProfile(body), [rest]);
   // 폼 머리(제목·설명)는 설정 섹션 머리가 이미 보이므로 뺀다.

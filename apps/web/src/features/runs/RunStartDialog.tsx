@@ -5,19 +5,18 @@ import { RUN_ORIGINS, type GraphSummary, type PortDef, type Run } from "@agent-c
 import { ApiError } from "@agent-console/api-client";
 import { createProjectsText, projectAbilities, statusInfo } from "@agent-console/projects";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { FixButtons } from "../../app/fix";
-import { messages as appMessages } from "../../app/messages";
 import { useApi } from "../../app/ApiContext";
 import { useStorage } from "../../app/StorageContext";
 import { useGraphLoginGate } from "../backendChoice";
 import { DEFINITION_KINDS, ROUTE_ROLES, routePath } from "../library";
-import { ProjectTargetPicker, startErrorView, targetPickerMessages as pm, useCopyDialog, useProjectRunsBlocked, useProjects, type StartErrorView, type TargetOption } from "../projects";
+import { ProjectTargetPicker, useStartErrorView, useTargetPickerMessages, useCopyDialog, useProjectRunsBlocked, useProjects, type StartErrorView, type TargetOption } from "../projects";
 import { GraphIssuesPreview, ValidationChip, blocksRun, hasEntry } from "../teams";
 import { RunInputForm } from "./RunInputForm";
 import { buildRunInput, initialInputValues, inputIssues, serverInputErrors } from "./runInputLib";
 import { clearRunDraft, readRunDraft, writeRunDraft } from "./runDraft";
-import { runStartMessages as t } from "./runStartMessages";
+import { useRunStartMessages } from "./runStartMessages";
 
 const text = createProjectsText();
 
@@ -41,6 +40,10 @@ export interface RunStartDialogProps {
  * 입력 칸은 선택한 구성의 `Graph.inputs`에서 그린다. 열려 있을 때만 마운트한다.
  */
 export function RunStartDialog(props: RunStartDialogProps) {
+  const describeError = useDescribeError();
+  const startErrorView = useStartErrorView();
+  const pm = useTargetPickerMessages();
+  const t = useRunStartMessages();
   const p = useProjects();
   const { rest, space } = useApi();
   const storage = useStorage();
@@ -94,7 +97,7 @@ export function RunStartDialog(props: RunStartDialogProps) {
           editHref: projectId === null ? undefined : `${graphPath}/${encodeURIComponent(g.id)}?prj=${encodeURIComponent(projectId)}`,
         };
       }),
-    [graphs.data, graphPath, projectId],
+    [graphs.data, graphPath, projectId, pm],
   );
   const selected = picked !== undefined && options.some((o) => o.id === picked && o.blocked !== true) ? picked : options.find((o) => o.blocked !== true)?.id;
 
@@ -137,7 +140,7 @@ export function RunStartDialog(props: RunStartDialogProps) {
       out[name] = issue.kind === "required" ? t.inputRequired : t.inputInvalidJson;
     }
     return out;
-  }, [issues, serverErrors, submitted, touched]);
+  }, [issues, serverErrors, submitted, touched, t]);
 
   const blockText =
     startBlockRef !== null && startBlockRef !== undefined
@@ -258,7 +261,7 @@ export function RunStartDialog(props: RunStartDialogProps) {
         actions={
           <>
             <span className="run-start-hint app-muted">{t.hintShortcut}</span>
-            <Button onClick={props.onClose} disabled={busy}>{appMessages.common.cancel}</Button>
+            <Button onClick={props.onClose} disabled={busy}>{t.cancel}</Button>
             <Button variant="primary" loading={busy} aria-disabled={canStart ? undefined : "true"} aria-describedby={blockText !== null && !busy ? reasonId : undefined} onClick={() => canStart && void start()}>
               {busy ? t.busy : t.submit}
             </Button>

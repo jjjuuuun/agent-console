@@ -2,6 +2,7 @@
 
 ## 0.1.1 (미발행)
 
+- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-architecture`, so the web can show the default architecture map profile (cells, edges and notes) in English (data only, no API change).
 - FU.6: 기본 프로필 Instructions 칸 조건을 `/documents` `any_item`으로(규칙이 첫 문서여도 뒤의 skill·spec 등을 센다, 5.7R.7 과소 집계). 묶음 값은 그대로 첫 문서 종류.
 
 - 6R.9(M-1): `ProfileMatcher.row_fields`·`match_row(row)`(기본 None). `selector_predicate`가 출처 제한이 있거나 판정기가 열 값으로 답할 수 있으면 행 기준 미리 거르기(`row_fields`·`check_row`, ac-logs `RowPredicate`와 같은 모양)를 가진다. 늘 거짓 대상(관측 안 하는 연결·분류 안 됨 꺼짐)은 행으로 거짓. 판정 결과는 같다.

@@ -1,5 +1,5 @@
 import { Button, Icon } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
+import { useShellMessages } from "../app/shellMessages";
 import type { ConnectionBannerView } from "../app/connectionBanner";
 
 export interface ConnectionBannerProps {
@@ -14,6 +14,7 @@ export interface ConnectionBannerProps {
  * 문구 표는 `messages.connection.banner`, 표시 여부·타이밍은 `useConnectionBanner`가 정한다.
  */
 export function ConnectionBanner({ view, onRetry, onReload }: ConnectionBannerProps) {
+  const m = useShellMessages();
   const t = m.connection.banner;
   // live region은 항상 있어야 상태 변화가 낭독된다
   return (

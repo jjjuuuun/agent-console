@@ -1,6 +1,6 @@
 import type { GraphSummary } from "@agent-console/contracts";
 import { useApiQuery } from "../../app/queries";
-import { startErrorView } from "../projects";
+import { useStartErrorView } from "../projects";
 import { IssuePreview } from "./ValidationChip";
 
 /**
@@ -8,6 +8,7 @@ import { IssuePreview } from "./ValidationChip";
  * 저장된 상태만 있으므로(저장 안 된 편집은 편집기에서) 저장본 기준이다.
  */
 export function GraphIssuesPreview({ graph, project }: { graph: GraphSummary; project?: string | null }) {
+  const startErrorView = useStartErrorView();
   const q = useApiQuery(["graph-issues", project ?? "", graph.id, graph.version_hash ?? ""], (rest) => rest.validateGraph(graph.id, undefined, { project }), { staleTime: 0, retry: false });
   // 프로젝트 기준 검증이 실행 연동 꺼짐(409)이면 실패 대신 서버 문구를 안내로 보인다
   const notice = q.isError ? startErrorView(q.error) : null;

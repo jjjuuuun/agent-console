@@ -213,7 +213,7 @@ def test_wrong_code_fails_and_nothing_leaks(
             for piece in _pieces(secret):
                 assert piece not in text, (piece, text[:200])
     assert "login.example" not in caplog.text  # URL은 로그에 없다
-    login_logs = [r.getMessage() for r in caplog.records if "백엔드 로그인" in r.getMessage()]
+    login_logs = [r.getMessage() for r in caplog.records if "Backend login" in r.getMessage()]
     assert any("phase=failed" in line and "reason=verify_failed" in line for line in login_logs)
 
 

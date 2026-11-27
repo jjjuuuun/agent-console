@@ -785,7 +785,7 @@ class _Execution:
                 await self._finalize()
                 raise
             except Exception as exc:
-                _log.exception("Run %s 실행 중 엔진 오류", self.run.id)
+                _log.exception("Engine error while running run %s", self.run.id)
                 self.token.cancel("internal")
                 await self.broker.close_all()
                 await self._cancel_running(grace=0)
@@ -2305,7 +2305,7 @@ class GraphRuntime:
         self._active.pop(run_id, None)
         # 아무도 wait()하지 않아도 "Task exception was never retrieved"가 나지 않게 회수한다.
         if not task.cancelled() and (exc := task.exception()) is not None:
-            _log.error("Run %s 기록 실패로 종료: %r", run_id, exc)
+            _log.error("Run %s ended because recording failed: %r", run_id, exc)
 
     def get(self, run_id: str) -> RunHandle | None:
         """실행 중인 Run의 손잡이(끝났으면 None)."""

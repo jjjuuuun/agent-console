@@ -2,12 +2,13 @@ import { Fragment, useState } from "react";
 import type { Graph, Issue, IssueSuggestion } from "@agent-console/contracts";
 import { IssueSuggestionButtons } from "@agent-console/graph-editor";
 import { Button } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
-import { issueMessage, sortIssues } from "../../lib/issues";
+import { useAppMessages } from "../../app/appMessages";
+import { sortIssues } from "../../lib/issues";
+import { useIssueMessage } from "../../app/appMessages";
 import { IssueActions } from "./IssueActions";
 import { buildIssueRows, rowSuggestions, severityCounts, type IssueRow } from "./issueRows";
 import type { ValidationState } from "./useValidation";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 import { issueTarget, type IssueTarget } from "./teamsLogic";
 
 type Filter = "all" | "error" | "warning" | "info";
@@ -39,6 +40,9 @@ export function issueFieldPath(issue: Issue): string | undefined {
  * 검증 실패 시 기존 이슈를 흐리게 유지하고 [다시 시도]를 준다.
  */
 export function IssuesPanel({ graph, validation, open, onToggle, onValidate, onFocus, onApplySuggestion, onOpenNode }: IssuesPanelProps) {
+  const issueMessage = useIssueMessage();
+  const m = useAppMessages();
+  const t = useTeamMessages();
   const [filter, setFilter] = useState<Filter>("all");
   const { issues, phase } = validation;
   const [infoOpen, setInfoOpen] = useState(false);

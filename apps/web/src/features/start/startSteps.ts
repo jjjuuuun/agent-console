@@ -1,6 +1,6 @@
 import type { StepGuideStep } from "@agent-console/ui";
 import { ROUTE_ROLES } from "../library";
-import { startMessages } from "./messages";
+import type { StartMessages } from "./messages";
 
 /** 서버 데이터에서 센 값. 아직 모르면 undefined(완료로 치지 않는다). */
 export interface StartCounts {
@@ -33,9 +33,10 @@ export function buildStartSteps(args: {
   counts: StartCounts;
   pathOf: (role: string) => string;
   isOn: (role: string) => boolean;
-  text?: typeof startMessages.steps;
+  /** 단계 문구(화면 언어 문구 표의 `steps`) */
+  text: StartMessages["steps"];
 }): StepGuideStep[] {
-  const text = args.text ?? startMessages.steps;
+  const text = args.text;
   return (args.defs ?? START_STEP_DEFS)
     .filter((d) => args.isOn(d.role))
     .map((d) => {

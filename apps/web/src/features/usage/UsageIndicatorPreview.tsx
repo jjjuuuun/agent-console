@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { UsageSourceInfo, UsageWindowSnapshot } from "@agent-console/contracts";
-import { usageIndicatorMessages as t } from "./messages";
+import { useUsageIndicatorMessages, type UsageIndicatorMessages } from "./messages";
 import { splitFields, type ResolvedIndicatorSettings } from "./indicatorSettings";
-import { indicatorAriaLabel } from "./indicatorText";
+import { indicatorAriaLabel, useIndicatorTexts } from "./indicatorText";
 import { UsageIndicatorView, type IndicatorLayout } from "./UsageIndicatorView";
 import { OFFICIAL_TRUST } from "./usageConfig";
 import { buildIndicatorItems, buildWindowGroups, pickColorRule, remainingPercent, sourceIndex, usedPercent, windowNameIndex, type IndicatorItem } from "./usageLib";
@@ -22,7 +22,7 @@ export interface UsageIndicatorPreviewProps {
 
 const SAMPLE_RATIOS = [0.63, 0.2];
 
-function sampleItems(settings: ResolvedIndicatorSettings): IndicatorItem[] {
+function sampleItems(settings: ResolvedIndicatorSettings, t: UsageIndicatorMessages): IndicatorItem[] {
   return t.settings.sampleNames.slice(0, Math.max(1, settings.max_items)).map((name, i) => {
     const ratio = SAMPLE_RATIOS[i] ?? 0.5;
     const rule = pickColorRule(settings.color_rules, ratio);
@@ -32,13 +32,15 @@ function sampleItems(settings: ResolvedIndicatorSettings): IndicatorItem[] {
 
 /** 설정 화면 미리보기: 같은 `UsageIndicatorView`를 펼침·레일 두 모양으로 그린다. 링크는 이동하지 않는다. */
 export function UsageIndicatorPreview({ settings, windows, sources, labels = {}, primaryOrder = [], staleAfterSeconds = null, nowMs, href }: UsageIndicatorPreviewProps) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
   const index = useMemo(() => sourceIndex(sources), [sources]);
   const windowInfo = useMemo(() => windowNameIndex(sources), [sources]);
   const real = useMemo(() => {
     const groups = buildWindowGroups(windows, primaryOrder, (id) => index.get(id)?.descriptor.trust === OFFICIAL_TRUST);
     return groups.length === 0 ? null : buildIndicatorItems({ groups, windows: settings.windows, maxItems: settings.max_items, labels, windowInfo, nowSec: nowMs / 1000, staleAfterSeconds, colorRules: settings.color_rules });
   }, [windows, primaryOrder, index, windowInfo, settings.windows, settings.max_items, settings.color_rules, labels, nowMs, staleAfterSeconds]);
-  const items = real ?? sampleItems(settings);
+  const items = real ?? sampleItems(settings, t);
   const { known } = splitFields(settings.fields);
   const sourceInfo = (id: string) => ({ title: index.get(id)?.descriptor.title ?? id, trust: index.get(id)?.descriptor.trust ?? "" });
   const render = (layout: IndicatorLayout, title: string) => (
@@ -53,7 +55,7 @@ export function UsageIndicatorPreview({ settings, windows, sources, labels = {},
           status="ready"
           nowMs={nowMs}
           href={href}
-          ariaLabel={indicatorAriaLabel(items, settings.value_mode, nowMs / 1000)}
+          ariaLabel={indicatorAriaLabel(items, settings.value_mode, nowMs / 1000, x)}
           sourceInfo={sourceInfo}
           onActivate={(e) => e.preventDefault()}
           example={real === null}

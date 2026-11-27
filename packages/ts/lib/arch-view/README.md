@@ -81,6 +81,7 @@ A value accepts **only a token variable name** (`--ac-…`), not a CSS color; an
   edgeStyles={{ ...defaultEdgeStyles, slow: { stroke: "--ac-cat-3", dash: "--ac-edge-pattern-3" } }}  // style → line look
   edgeLegend={{ slow: "Slow call" }}                                     // the legend text for the new style
   metricKinds={{ ...defaultMetricKinds, bytes: { kind: "number" } }}    // metric name → display kind
+  locale="en"                                                            // digit grouping (default "en-US")
   cellRenderers={{ gauge: ({ cell, defaultBody }) => <>{defaultBody}<Gauge cell={cell} /></> }}  // a cell's view key → its inner drawing
 />
 ```

@@ -26,7 +26,7 @@ export function graphemes(text: string): string[] {
 /** 제목 첫 글자 아바타(영문은 대문자). 비었으면 "?". */
 export function firstGlyph(title: string): string {
   const first = graphemes(title.trim())[0];
-  return first === undefined ? "?" : first.toLocaleUpperCase();
+  return first === undefined ? "?" : first.toUpperCase();
 }
 
 /** ui_hints.icon이 1~2자 아바타 텍스트면 그대로, 아니면 undefined. */

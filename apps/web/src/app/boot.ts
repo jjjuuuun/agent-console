@@ -9,7 +9,7 @@ export class BootError extends Error {
   readonly corsSuspected: boolean;
 
   constructor(baseUrl: string, cause: unknown, corsSuspected: boolean) {
-    super(cause instanceof Error ? cause.message : "서버에 연결하지 못했습니다", { cause });
+    super(cause instanceof Error ? cause.message : "Could not connect to the server", { cause });
     this.name = "BootError";
     this.baseUrl = baseUrl;
     this.corsSuspected = corsSuspected;

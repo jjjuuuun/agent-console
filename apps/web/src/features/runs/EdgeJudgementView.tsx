@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ConditionOperatorDescriptor } from "@agent-console/contracts";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { actualPreview, delegationMessages as dm, formatRunOrdinal, type ConditionOutcomeView } from "../delegation";
+import { actualPreview, formatRunOrdinal, type ConditionOutcomeView, useDelegationMessages } from "../delegation";
 import type { EdgeRecord, EdgeStatus } from "./edgeRecords";
 
 export interface EdgeJudgementViewProps {
@@ -49,6 +49,7 @@ function Raw({ value }: { value: unknown }) {
  * 조건 근거 payload는 어댑터(`mapConditionOutcome`)가 푼 모양만 받고, 해석할 수 없으면 원본 JSON을 보인다. 읽기 전용이다.
  */
 export function EdgeJudgementView(p: EdgeJudgementViewProps) {
+  const dm = useDelegationMessages();
   const [full, setFull] = useState<{ title: string; text: string } | null>(null);
   const opTitle = (id: string) => p.operators?.find((o) => o.id === id)?.title ?? id;
   const j = dm.run.judgement;
@@ -129,12 +130,12 @@ export function EdgeJudgementView(p: EdgeJudgementViewProps) {
                     <tr key={r.seq}>
                       <td className="ac-num">{r.seq}</td>
                       <td className="ac-num">{p.timeText(r.ts)}</td>
-                      {p.isCycle ? <td>{r.kind === "iteration" ? formatRunOrdinal(r.iteration, "iteration") : "–"}</td> : null}
+                      {p.isCycle ? <td>{r.kind === "iteration" ? formatRunOrdinal(r.iteration, "iteration", dm) : "–"}</td> : null}
                       <td>
                         {r.kind === "passed" ? `✓ ${j.passed}` : r.kind === "skipped" ? (r.condition != null ? j.conditionFalse : j.skippedUpstream) : null}
                         {r.kind === "iteration" ? (
                           <button type="button" className="app-link-btn" onClick={() => p.onSeeIteration?.(r.nodeIds[0] ?? "", r.iteration)}>
-                            {j.startsAt(r.nodeIds.map(p.nodeLabel).join(", "), formatRunOrdinal(r.iteration, "iteration"))}
+                            {j.startsAt(r.nodeIds.map(p.nodeLabel).join(", "), formatRunOrdinal(r.iteration, "iteration", dm))}
                           </button>
                         ) : null}
                         {r.kind === "exhausted" ? <span className="dlg-warn">▲ {r.maxIterations === undefined ? j.exhaustedNoLimit : j.exhausted(r.maxIterations)}</span> : null}

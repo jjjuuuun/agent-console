@@ -3,8 +3,9 @@
 - 서버 명령행 도움말(모듈이 선언한 옵션 도움말 포함)에 한글이 없다.
 - 시작을 거부하는 설정 오류(`settings.removed_key`·값 오류·루프백 아님·모르는 모듈 옵션)는
   영어로 표준 오류에 찍힌다. 이 오류는 서버가 뜨지 않으므로 웹에 가지 않는다.
-- 터미널과 웹 둘 다에 보이는 설정 경고(`plugins.config` — `plugins.disabled`의 모르는 이름)는
-  로그 줄이 영어, `GET /server-info` 경고 문구는 한국어 원문 그대로다(웹 한국어 화면 유지).
+- 터미널과 웹 둘 다에 보이는 설정 경고(`plugins.unknown_disabled` — `plugins.disabled`의 모르는
+  이름)는 로그 줄이 영어, `GET /server-info` 경고 문구는 한국어 원문 그대로이고 코드·`details`가
+  붙는다(웹은 코드 문구 묶음으로 영어·한국어를 고른다, I.7c).
 """
 
 from __future__ import annotations
@@ -96,7 +97,8 @@ def test_settings_warning_terminal_en_web_ko(
     settings = make_settings(tmp_path, plugins={"disabled": ["no-such-plugin-i6"]})
     with caplog.at_level(logging.WARNING), server(settings) as client:
         info = client.get(f"{API}/server-info").json()
-    [warning] = [w for w in info["warnings"] if w["code"] == "plugins.config"]
+    [warning] = [w for w in info["warnings"] if w["code"] == "plugins.unknown_disabled"]
+    assert warning["details"] == {"name": "no-such-plugin-i6"}
     # 웹: 한국어 원문 그대로(웹 한국어 화면이 바뀌지 않는다)
     assert "no-such-plugin-i6" in warning["message"]
     assert _HANGUL.search(warning["message"])

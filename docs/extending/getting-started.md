@@ -186,8 +186,8 @@ server. Other plugins and the built-in implementations are read as usual.
 
 The name is the **entry point name** (`mine.max_chars`), not the distribution name (`my-console-ops`). It is the
 `name` shown in `plugins` of `GET /api/v1/server-info`. If you write a name that is not installed, the server still
-starts and records a warning, in the startup log and in `warnings` of `server-info` (`plugins.config`), that the name
-is not an installed plugin name and is ignored. If you wrote the distribution name by mistake, the warning also lists
+starts and records a warning, in the startup log and in `warnings` of `server-info` (code `plugins.unknown_disabled`), that the name
+is not an installed plugin name and is ignored. If you wrote the distribution name by mistake, the warning (code `plugins.disabled_distribution`) also lists
 the names you should write, the entry point names of that distribution (here `mine.max_chars`).
 
 `agent-console.yaml`:

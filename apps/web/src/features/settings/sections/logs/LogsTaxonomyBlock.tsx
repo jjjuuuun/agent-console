@@ -3,9 +3,9 @@ import { Button, ConfirmDialog, Disclosure } from "@agent-console/ui";
 import { ColorSlotPicker, slotColor } from "@agent-console/log-view";
 import type { LogCategory, LogTaxonomy, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
-import { messages as m } from "../../../../app/messages";
+import { useAppMessages } from "../../../../app/appMessages";
 import { useApi } from "../../../../app/ApiContext";
-import { FILTER_KEYS, TONE_VOCABULARY, logsMessages as t, slotFor, useLogSchema, useLogTaxonomy } from "../../../logs";
+import { FILTER_KEYS, TONE_VOCABULARY, slotFor, useLogSchema, useLogTaxonomy, useLogViewMessages, useLogsMessages } from "../../../logs";
 import { Skeleton } from "../../Skeleton";
 import type { SectionEditProps } from "../FormSections";
 import { patchLogs } from "./helpers";
@@ -19,6 +19,9 @@ function mergedColor(key: string, color: string | null | undefined): string {
 
 /** 분류 체계 편집: 범주 id별 표시 이름·설명·보임·색·톤. 목록에 없는 범주는 데이터에서 찾아 추가할 수 있다. */
 export function LogsTaxonomyBlock({ value, onChange, disabled, errors }: SectionEditProps) {
+  const m = useAppMessages();
+  const t = useLogsMessages();
+  const viewMessages = useLogViewMessages();
   const effective = useLogTaxonomy();
   const schema = useLogSchema();
   const { rest } = useApi();
@@ -103,7 +106,7 @@ export function LogsTaxonomyBlock({ value, onChange, disabled, errors }: Section
                     <td data-cell="visible" data-label={text.columns.visible}>
                       <label className="app-check"><input type="checkbox" checked={visible} disabled={disabled} aria-label={`${id} ${text.columns.visible}`} onChange={(ev) => setCat(id, { visible: ev.target.checked === (e?.visible ?? true) && !custom ? undefined : ev.target.checked })} />{visible ? "" : text.hidden}</label>
                     </td>
-                    <td data-cell="color" data-label={text.columns.color}><ColorSlotPicker value={o?.color ?? e?.color ?? undefined} ariaLabel={`${id} ${text.colorLabel}`} onChange={(c) => setCat(id, { color: c })} /></td>
+                    <td data-cell="color" data-label={text.columns.color}><ColorSlotPicker messages={viewMessages} value={o?.color ?? e?.color ?? undefined} ariaLabel={`${id} ${text.colorLabel}`} onChange={(c) => setCat(id, { color: c })} /></td>
                     <td data-cell="tone" data-label={text.columns.tone}>
                       <select aria-label={`${id} ${text.toneLabel}`} value={tone ?? ""} disabled={disabled} onChange={(ev) => setCat(id, { tone: ev.target.value })}>
                         <option value="">{e?.tone ? `${text.toneDefault} (${text.toneNames[e.tone] ?? e.tone})` : text.toneDefault}</option>

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "@agent-console/api-client";
-import { FolderPicker, createTranslate, middleEllipsis, type FolderCheckState, type FolderSelectPhase, IDLE_STATE } from "@agent-console/folder-picker";
+import { FolderPicker, createTranslate, defaultMessages as folderPickerDefaults, middleEllipsis, type MessageOverrides, type Translate, type FolderCheckState, type FolderSelectPhase, IDLE_STATE } from "@agent-console/folder-picker";
+import { useLibMessages, type MessageTree } from "@agent-console/i18n";
 import { folderErrorOutcome } from "@agent-console/projects";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages, type FolderHomeMessages } from "./folderHomeMessages";
 import { canSubmitAdd, canSubmitRepath, suggestionFor } from "./projectFolderLib";
 import type { FolderApi } from "./useFolderApi";
-
-const fpText = createTranslate();
 
 /** 제출 값. 호출한 쪽(호스트)이 서버 호출·토스트·이동을 맡는다. */
 export type FolderSubmit =
@@ -54,7 +53,7 @@ interface Problem {
 }
 
 /** 서버 오류를 대화상자 안 배너 문구로 바꾼다(예상한 409 충돌은 확인 상태와 같은 문구). */
-function problemOf(error: unknown, fallback: string, nameOf: (id: string) => string | undefined): { problem: Problem; idField: string | null } {
+function problemOf(error: unknown, fallback: string, nameOf: (id: string) => string | undefined, m: FolderHomeMessages, fpText: Translate): { problem: Problem; idField: string | null } {
   if (error instanceof ApiError) {
     const outcome = folderErrorOutcome(error, { projectName: nameOf });
     if (outcome?.kind === "taken") {
@@ -79,6 +78,9 @@ function problemOf(error: unknown, fallback: string, nameOf: (id: string) => str
  * 서버 호출·이동·토스트는 `api`와 `onSubmit`으로 주입받는다.
  */
 export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOpenProject, projectName }: ProjectFolderDialogProps) {
+  const m = useFolderHomeMessages();
+  const fpMessages = useLibMessages("folder-picker", folderPickerDefaults as unknown as MessageTree) as unknown as MessageOverrides;
+  const fpText = useMemo(() => createTranslate(fpMessages), [fpMessages]);
   const uid = useId();
   const add = mode === "add";
   const [path, setPath] = useState("");
@@ -136,7 +138,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
         });
       }
     } catch (e) {
-      const r = problemOf(e, add ? m.dialog.submitFailed : m.dialog.repathFailed, nameOf);
+      const r = problemOf(e, add ? m.dialog.submitFailed : m.dialog.repathFailed, nameOf, m, fpText);
       setProblem(r.problem);
       setIdError(r.idField);
     } finally {
@@ -150,7 +152,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
     try {
       await onSubmit({ kind: "reregister", projectId: hit.projectId, name: hit.name });
     } catch (e) {
-      setProblem(problemOf(e, m.dialog.submitFailed, nameOf).problem);
+      setProblem(problemOf(e, m.dialog.submitFailed, nameOf, m, fpText).problem);
     } finally {
       setBusy(false);
     }
@@ -217,6 +219,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
         )}
 
         <FolderPicker
+          messages={fpMessages}
           id={`${uid}-fp`}
           value={path}
           onValueChange={setPath}

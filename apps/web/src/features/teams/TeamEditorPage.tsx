@@ -5,14 +5,14 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@agent-console/api-client";
 import type { Graph, Issue, IssueSuggestion, NodeSpec } from "@agent-console/contracts";
-import { GraphEditor, MultiLayoutPanel, canHaveResources, createElkEngine, withoutEdges, type DefinitionItem, type GraphEditorHandle, type LayoutPanels, type Selection } from "@agent-console/graph-editor";
+import { GraphEditor, MultiLayoutPanel, canHaveResources, withoutEdges, type DefinitionItem, type GraphEditorHandle, type LayoutPanels, type Selection } from "@agent-console/graph-editor";
 import { Banner, Button, ConfirmDialog, Dialog, PageHeader, StatusChip, useShortcuts } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useDescribeError, useErrorState, raised, raisedAs } from "../../app/errors";
 import { HintBanner } from "../../app/hints";
 import { useStorage } from "../../app/StorageContext";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
@@ -21,12 +21,11 @@ import { readSavedIssues, savedIssuesState, useCarriedSaveIssues } from "../../d
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
-import { formatRelative } from "../../lib/format";
 import { useNow } from "../../app/useNow";
 import { useRegisterCommands } from "../../shell/commands";
 import { usePageTitle } from "../../shell/titles";
 import { Skeleton, useBackends, useEdgeTypes, useDelegationStrategies, useResourceList, useResourceTypes } from "../settings";
-import { ActionMenu, nodeAvatarsOf, useAgentList, useGraphList, useInteractionKinds, useInvalidateLists, useNodeTypes, DeleteDialog, DEFINITION_KINDS, definitionKey, definitionPath, NewDefinitionDialog, libraryMessages as lm, modeLabel, routePath, ROUTE_ROLES, ResourcePicker, useRouteOn, useRoutesOn } from "../library";
+import { ActionMenu, nodeAvatarsOf, useAgentList, useGraphList, useInteractionKinds, useInvalidateLists, useNodeTypes, DeleteDialog, DEFINITION_KINDS, definitionKey, definitionPath, NewDefinitionDialog, useLibraryMessages, modeLabel, routePath, ROUTE_ROLES, ResourcePicker, useRouteOn, useRoutesOn } from "../library";
 import { useProjects, SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { ConnectedBackendChooserCard, precheckBackends, useSaveDefaultBackend, type UnresolvedBackend } from "../backendChoice";
 import { DEFAULT_TEAM_CONVENTIONS, retryFocus } from "../delegation";
@@ -40,11 +39,13 @@ import { EdgeLegend } from "./EdgeLegend";
 import { IssuesPanel } from "./IssuesPanel";
 import { NodePanel } from "./NodePanel";
 import { DuplicateTeamDialog, useStartChat } from "./TeamDialogs";
-import { useExportAction, exportMessages } from "../exports";
-import { DefinitionVersionsTab, versionMessages } from "../versions";
+import { useExportAction, useExportMessages } from "../exports";
+import { DefinitionVersionsTab, useVersionLabels } from "../versions";
 import { TEAM_NAME_INPUT_ID, TeamPanel } from "./TeamPanel";
 import { loadGraph, saveGraph } from "./graphIo";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
+import { TeamToast, type TeamToastMessages } from "./TeamToast";
+import { useGraphEditorProps } from "./useGraphEditorLocale";
 import type { TeamPanelContext } from "./panelContext";
 import { blockingIssues, definitionKindTitles, edgesOf, nodeLabel, entrySourceNodeTypes, toggleRoleOnGraph, nodesOf, overviewOf, startConditionsMet, sharedAttachments, usageCounts, withSharedAttachments, type IssueTarget } from "./teamsLogic";
 import { useValidation } from "./useValidation";
@@ -56,6 +57,7 @@ import type { DefinitionPickItem } from "./DefinitionPicker";
 import { HintOneLine } from "./HintOneLine";
 import { attachResourceToNode } from "./nodeResources";
 import "./teams.css";
+import { localizePortSpec, useFormat, useLocalizedTypes, useServerTranslate } from "../../i18n";
 
 const NONE: never[] = [];
 /** 알림 표시 시간 = 되돌리기 가능 창(`GraphEditor.undoWindowMs`와 같은 값) */
@@ -73,8 +75,6 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
  * 사용자가 [정리] 팝오버에서 고른 값은 그대로 우선한다.
  */
 const TEAM_LAYOUT_OPTION_DEFAULTS = { layerGap: 160 } as const;
-/** 자동 배치 엔진 목록: 모듈 수준에서 한 번만 만든다(elkjs는 첫 [정리] 때 동적으로 불러온다) */
-const LAYOUT_ENGINES = [createElkEngine({ optionDefaults: TEAM_LAYOUT_OPTION_DEFAULTS })];
 /** 한도 필드 이름: 약속(TeamConventions) 포인터의 마지막 조각 */
 const limitFieldName = () => DEFAULT_TEAM_CONVENTIONS.edgeIterationLimit.split("/").pop() ?? "";
 
@@ -93,6 +93,14 @@ export function TeamEditorPage({ basePath }: { basePath: string }) {
 }
 
 function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
+  const fmt = useFormat();
+  const describeError = useDescribeError();
+  const m = useAppMessages();
+  const versionMessages = useVersionLabels();
+  const lm = useLibraryMessages();
+  const exportMessages = useExportMessages();
+  const t = useTeamMessages();
+  const graphEditor = useGraphEditorProps(TEAM_LAYOUT_OPTION_DEFAULTS);
   const toast = useCanvasToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -135,7 +143,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const fixTarget = useFixTarget();
   const [fixFocusPath, setFixFocusPath] = useState<string | null>(null);
   const [fixDone, setFixDone] = useState(false);
-  const [fixNote, setFixNote] = useState<string | null>(null);
+  const [fixNote, setFixNote] = useState<{ missing: string } | { nodeId: string; rest: string } | null>(null);
   const [pageTab, setPageTab] = useState<PageTab>(() => (params.get("tab") === "versions" ? "versions" : "edit"));
   const [selection, setSelection] = useState<Selection>({ nodeIds: [], edgeIds: [] });
   const [nodeTab, setNodeTab] = useState("role");
@@ -149,7 +157,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteButton = useRef<HTMLButtonElement>(null);
   const [backendCard, setBackendCard] = useState<UnresolvedBackend | null>(null);
-  const [backendError, setBackendError] = useState<string | undefined>(undefined);
+  const [backendError, setBackendError] = useErrorState(t.backend.saveFailed);
   const [choosingBackend, setChoosingBackend] = useState(false);
   const storage = useStorage();
   const [minimap, setMinimapState] = useState(() => storage.get(MINIMAP_KEY) === "1");
@@ -189,7 +197,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [bundleNode, setBundleNode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useErrorState("", { del: t.delete.failed, dup: t.duplicate.failed });
   const handle = useRef<GraphEditorHandle>(null);
   const fixNodeId = fixTarget.section;
   const fixFocus = fixTarget.focus;
@@ -200,9 +208,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     // 서버가 중첩 팀 경로형 id(`T/a`)를 줄 수 있다: 루트에 있는 첫 조각(팀 노드)을 고르고 나머지 경로는 문구로 알린다
     const hit = resolveNodePath(fixNodeId, (nid) => draftNodes.some((n) => n.id === nid));
     if (hit === undefined) {
-      setFixNote(t.add.nodeMissingNote(fixNodeId));
+      setFixNote({ missing: fixNodeId });
     } else {
-      if (hit.rest !== "") setFixNote(t.add.nestedNodeNote(hit.nodeId, hit.rest));
+      if (hit.rest !== "") setFixNote({ nodeId: hit.nodeId, rest: hit.rest });
       setForceTeam(false);
       setPanelOpen(true);
       setNodeTab(hit.rest === "" ? "settings" : "role");
@@ -219,8 +227,14 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     [editorDirection, editorEdgeShape],
   );
 
-  const nodeTypeList = nodeTypes.data ?? NONE;
-  const edgeTypeList = edgeTypes.data ?? NONE;
+  const nodeTypeList = useLocalizedTypes(nodeTypes.data ?? NONE, "node");
+  const edgeTypeList = useLocalizedTypes(edgeTypes.data ?? NONE, "edge");
+  const translateServer = useServerTranslate();
+  // 리소스 종류 이름·설명도 서버 원문이라 화면 언어로 옮긴다
+  const resourceTypeList = useMemo(
+    () => (resourceTypes.data ?? []).map((x) => ({ ...x, title: translateServer(x.title), ...(x.description !== undefined ? { description: translateServer(x.description) } : {}), ...(typeof x.ui_hints?.icon === "string" ? { ui_hints: { ...x.ui_hints, icon: translateServer(x.ui_hints.icon) } } : {}) })),
+    [resourceTypes.data, translateServer],
+  );
   const kindTitles = useMemo(() => definitionKindTitles(nodeTypeList), [nodeTypeList]);
   // 다른 팀 구성으로 이동(중첩 [열기]·U 키). 저장하지 않은 변경이 있으면 먼저 묻는다(저장하고 열기 / 저장 안 하고 열기 / 취소).
   const dirtyNow = editor.dirty;
@@ -292,10 +306,10 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     setTimeout(() => void navigate(target.path, target.state === undefined ? undefined : { state: target.state }), 0);
   };
   const change = (next: Graph) => editor.setDraft(next);
-  const undoable = (next: Graph, text: string) => {
+  const undoable = (next: Graph, text: (m: TeamToastMessages) => string) => {
     const prev = draft;
     change(next);
-    if (prev !== undefined) toast({ tone: "info", text, action: { label: t.node.undo, onClick: () => editor.setDraft(prev) } });
+    if (prev !== undefined) toast({ tone: "info", text: <TeamToast render={text} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(prev) } });
   };
 
   // 입구·답변 자동 연결(설정 `editor.auto_connect_io`, 기본 켬): 팀 구성 값 -> 공통 값 순으로 읽는다
@@ -304,8 +318,8 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const announceAutoConnect = (addedEdgeIds: string[]) => {
     toast({
       tone: "info",
-      text: t.editor.autoConnected,
-      action: { label: t.node.undo, onClick: () => editor.setDraft((cur: Graph) => withoutEdges(cur, addedEdgeIds)) },
+      text: <TeamToast render={(m) => m.editor.autoConnected} />,
+      action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft((cur: Graph) => withoutEdges(cur, addedEdgeIds)) },
     });
   };
   const savedNodeIds = useMemo(() => new Set(nodesOf(editor.base ?? ({} as Graph)).map((n) => n.id)), [editor.base]);
@@ -318,7 +332,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const save = () => {
     void editor.save().then((ok) => {
       if (!ok) return;
-      toast({ tone: "success", text: t.editor.saved });
+      toast({ tone: "success", text: <TeamToast render={(m) => m.editor.saved} /> });
       void invalidateLists();
     });
   };
@@ -330,14 +344,14 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const startChat = () => {
     if (!hasEntry) return;
     if (blocking.length > 0) {
-      toast({ tone: "warning", text: `${t.editor.startChatBlocked} ${blocking[0]?.message ?? ""}` });
+      toast({ tone: "warning", text: <TeamToast render={(m) => `${m.editor.startChatBlocked} ${blocking[0]?.message ?? ""}`} /> });
       return;
     }
     // 실행 백엔드를 미리 점검한다(필요한 데이터를 모두 읽은 뒤에만). 비어 있으면 고르는 카드를 먼저 보이고, 고르면 이어서 시작한다(ux-overhaul §1.5-B).
     if (draft !== undefined && agents.data !== undefined && backends.data !== undefined && workspace.data !== undefined) {
       const unresolved = precheckBackends({ graph: draft, nodeTypes: nodeTypeList, agents: agents.data, defaultBackend: workspace.data.value.agent_defaults?.backend, options: backends.data });
       if (unresolved !== undefined) {
-        setBackendError(undefined);
+        setBackendError(null);
         setBackendCard(unresolved);
         return;
       }
@@ -346,11 +360,11 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   };
   const chooseBackend = async (backendId: string) => {
     setChoosingBackend(true);
-    setBackendError(undefined);
+    setBackendError(null);
     try {
       await saveDefaultBackend(backendId);
     } catch (e) {
-      setBackendError(describeError(e, t.backend.saveFailed).message);
+      setBackendError(raised(e));
       setChoosingBackend(false);
       return;
     }
@@ -392,7 +406,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
         if (draft === undefined || selection.nodeIds.length !== 1 || selection.edgeIds.length > 0) return;
         const res = toggleRoleOnGraph(draft, selection.nodeIds[0]!, toggle, { nodeTypes: nodeTypeList, edgeTypes: edgeTypeList });
         if (res.changed) change(res.graph);
-        else if (res.ambiguous) toast({ tone: "warning", text: t.node.toggleAmbiguous });
+        else if (res.ambiguous) toast({ tone: "warning", text: <TeamToast render={(m) => m.node.toggleAmbiguous} /> });
       },
     })),
     ...(openedFrom === undefined ? [] : [{ id: "teams.up", scope: "teams", keys: "u", titleKey: "shortcuts.libOpenParent", run: goParent }]),
@@ -450,7 +464,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const selCount = selection.nodeIds.filter((n) => nodes.some((x) => x.id === n)).length + selection.edgeIds.filter((e) => edges.some((x) => x.id === e)).length;
 
   // ---- 팔레트 데이터(정의 종류 -> 항목). 종류 이름은 코드에 없다.
-  const typeIconByResourceType = new Map((resourceTypes.data ?? []).map((x) => [x.id, x]));
+  const typeIconByResourceType = new Map(resourceTypeList.map((x) => [x.id, x]));
   const counts = usageCounts(draft, nodeTypeList);
   const definitionLists: Record<string, DefinitionItem[]> = {};
   for (const nt of nodeTypeList) {
@@ -476,7 +490,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const sharedChips = shared.map((a, i) => {
     const res = (resources.data ?? []).find((r) => r.id === a.ref);
     const type = res === undefined ? undefined : typeIconByResourceType.get(res.type);
-    return { key: `${i}:${a.ref}`, title: res?.name ?? a.ref, ...(type?.ui_hints?.icon ? { iconText: type.ui_hints.icon } : {}), ...(a.mode && a.mode !== "add" ? { modeText: modeLabel(a.mode) } : {}) };
+    return { key: `${i}:${a.ref}`, title: res?.name ?? a.ref, ...(type?.ui_hints?.icon ? { iconText: type.ui_hints.icon } : {}), ...(a.mode && a.mode !== "add" ? { modeText: modeLabel(a.mode, lm.attach.modes) } : {}) };
   });
   const commonCount = (workspace.data?.value.agent_defaults?.resources ?? []).length;
 
@@ -490,7 +504,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     edgeTypes: edgeTypeList,
     agents: agents.data ?? [],
     resources: resources.data ?? [],
-    resourceTypes: resourceTypes.data ?? [],
+    resourceTypes: resourceTypeList,
     interactionKinds: interactionKinds.data ?? [],
     strategies: strategies.data ?? [],
     strategiesStatus: { loading: strategies.isLoading, error: strategies.isError, onRetry: () => void strategies.refetch() },
@@ -511,8 +525,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   function applySuggestion(issue: Issue, suggestion: IssueSuggestion) {
     const prev = draft;
     const unset = suggestion.patch?.unset_node_fields?.length ?? 0;
+    const unsetNodes = new Set(suggestion.patch?.unset_node_fields?.map((r) => r.node_id)).size;
     if (handle.current?.applySuggestion(issue, suggestion) === true && prev !== undefined) {
-      toast({ tone: "info", text: unset > 0 ? t.issues.actionUnsetDone(new Set(suggestion.patch?.unset_node_fields?.map((r) => r.node_id)).size) : t.issues.applied, mergeKey: "apply-suggestion", mergeText: t.issues.appliedMany, action: { label: t.issues.undo, onClick: () => editor.setDraft(prev) } });
+      toast({ tone: "info", text: <TeamToast render={(m) => (unset > 0 ? m.issues.actionUnsetDone(unsetNodes) : m.issues.applied)} />, mergeKey: "apply-suggestion", mergeText: (n) => <TeamToast render={(m) => m.issues.appliedMany(n)} />, action: { label: <TeamToast render={(m) => m.issues.undo} />, onClick: () => editor.setDraft(prev) } });
     }
   }
 
@@ -580,7 +595,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
       if (target === "node" && attachNode !== undefined) {
         const next = attachResourceToNode(draft, attachNode.id, item, nodeTypeList, edgeTypeList);
         if (next === undefined) {
-          toast({ tone: "warning", text: t.add.nodeLimit });
+          toast({ tone: "warning", text: <TeamToast render={(m) => m.add.nodeLimit} /> });
           return "failed";
         }
         change(next);
@@ -598,8 +613,8 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     const before = draft;
     const result = applyDefinition(kind, { id: item.id, name: item.name }, attachTarget);
     setAddView(null);
-    if (result === "node" && attachNode !== undefined) toast({ tone: "success", text: t.add.attachedNode(item.name, attachNode.label), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
-    else if (result === "shared") toast({ tone: "success", text: t.add.attachedTeam(item.name), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
+    if (result === "node" && attachNode !== undefined) toast({ tone: "success", text: <TeamToast render={(m) => m.add.attachedNode(item.name, attachNode.label)} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(before) } });
+    else if (result === "shared") toast({ tone: "success", text: <TeamToast render={(m) => m.add.attachedTeam(item.name)} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(before) } });
   };
   const pickerPropsOf = (kind: string) => {
     const attach = isAttachKind(kind);
@@ -643,12 +658,12 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     const result = applyDefinition(created.kind, { id: created.id, name: created.name }, created.attach);
     setCreating(null);
     setCreatedIssues(created.issues ?? []);
-    if (created.bodyFailed === true) toast({ tone: "warning", text: t.add.createdBodyFailed(created.name) });
-    else if (result === "none") toast({ tone: "success", text: t.add.createdOnly(created.name) });
-    else if (result === "node" && attachNode !== undefined) toast({ tone: "success", text: t.add.attachedNode(created.name, attachNode.label), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
-    else if (result === "shared") toast({ tone: "success", text: t.add.attachedTeam(created.name), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
+    if (created.bodyFailed === true) toast({ tone: "warning", text: <TeamToast render={(m) => m.add.createdBodyFailed(created.name)} /> });
+    else if (result === "none") toast({ tone: "success", text: <TeamToast render={(m) => m.add.createdOnly(created.name)} /> });
+    else if (result === "node" && attachNode !== undefined) toast({ tone: "success", text: <TeamToast render={(m) => m.add.attachedNode(created.name, attachNode.label)} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(before) } });
+    else if (result === "shared") toast({ tone: "success", text: <TeamToast render={(m) => m.add.attachedTeam(created.name)} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(before) } });
     else if (result === "added") {
-      toast({ tone: "success", text: t.add.createdNode(created.name), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
+      toast({ tone: "success", text: <TeamToast render={(m) => m.add.createdNode(created.name)} />, action: { label: <TeamToast render={(m) => m.node.undo} />, onClick: () => editor.setDraft(before) } });
       setForceTeam(false);
       setPanelOpen(true);
       setNodeTab("role");
@@ -672,8 +687,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     const removed = shared[index];
     if (removed === undefined) return;
     const prev = draft;
+    const removedTitle = sharedChips[index]?.title ?? removed.ref;
     change(withSharedAttachments(draft, shared.filter((_, i) => i !== index)));
-    toast({ tone: "info", text: t.shared.removed(sharedChips[index]?.title ?? removed.ref), action: { label: t.shared.undo, onClick: () => editor.setDraft(prev) } });
+    toast({ tone: "info", text: <TeamToast render={(m) => m.shared.removed(removedTitle)} />, action: { label: <TeamToast render={(m) => m.shared.undo} />, onClick: () => editor.setDraft(prev) } });
   };
 
   const panel = (() => {
@@ -734,7 +750,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
               variant="primary"
               loading={chat.busy}
               disabled={!hasEntry || blocking.length > 0 || editor.conflict !== null}
-              title={!hasEntry ? "입구가 없습니다" : blocking.length > 0 ? t.editor.startChatBlocked : "Ctrl+Enter"}
+              title={!hasEntry ? t.editor.noEntry : blocking.length > 0 ? t.editor.startChatBlocked : "Ctrl+Enter"}
               onClick={startChat}
             >
               {t.editor.startChat}
@@ -770,13 +786,13 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
         <ConflictBanner
           details={editor.conflict}
           busy={saving}
-          summary={`노드 ${editor.conflict.node_count ?? "?"}개 · 연결 ${editor.conflict.edge_count ?? "?"}개`}
+          summary={t.team.counts(editor.conflict.node_count ?? "?", editor.conflict.edge_count ?? "?")}
           onLoadServer={() => void editor.loadServerVersion()}
           onSaveCopy={() => { setDialogError(null); setDialog("save-copy"); }}
           onOverwrite={() => void editor.overwrite()}
         />
       )}
-      {fixNote === null ? null : <Banner tone="info">{fixNote}</Banner>}
+      {fixNote === null ? null : <Banner tone="info">{"missing" in fixNote ? t.add.nodeMissingNote(fixNote.missing) : t.add.nestedNodeNote(fixNote.nodeId, fixNote.rest)}</Banner>}
       <SaveIssuesBanner issues={shownSaveIssues} />
       <SaveIssuesBanner issues={createdIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
@@ -813,7 +829,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                   <tr key={r.id}>
                     <td><Link to={`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(r.id)}`} className="lib-mono">{r.id.slice(0, 8)}</Link></td>
                     <td><StatusChip status={r.status} kind="run" label={m.runStatus[r.status] ?? r.status} /></td>
-                    <td>{formatRelative(r.created_at, now)}</td>
+                    <td>{fmt.relative(r.created_at, now)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -830,7 +846,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                   graph={draft}
                   nodeTypes={nodeTypeList}
                   edgeTypes={edgeTypeList}
-                  resolvePorts={(typeId, config) => rest.resolvePorts(typeId, (config ?? {}) as Record<string, unknown>)}
+                  resolvePorts={async (typeId, config) => localizePortSpec(await rest.resolvePorts(typeId, (config ?? {}) as Record<string, unknown>), translateServer)}
                   onChange={(next, meta) => {
                     change(next);
                     // 팔레트로 새 노드를 놓으면 화면 밖일 수 있어 그 노드로 시야를 옮긴다
@@ -846,7 +862,11 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                   onAutoConnect={({ addedEdgeIds }) => announceAutoConnect(addedEdgeIds)}
                   issues={validation.issues}
                   layoutDefaults={layoutDefaults}
-                  layoutEngines={LAYOUT_ENGINES}
+                  layoutEngines={graphEditor.layoutEngines}
+                  messages={graphEditor.messages}
+                  locale={fmt.language}
+                  categoryLabel={translateServer}
+                  edgeShapes={graphEditor.edgeShapes}
                   onLayoutPanelsChange={setLayoutPanels}
                   {...(focus === undefined ? {} : { focusRequest: focus })}
                   definitionLists={definitionLists}
@@ -861,7 +881,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                   renderIcon={delegation.renderIcon}
                   onConnectRejected={(info) => {
                     // 반복 종류 후보가 없어 순환 연결을 만들 수 없을 때만 이 화면이 안내한다(그 밖의 거절은 편집기 기본 안내)
-                    if (info.reason === "cycle") toast({ tone: "warning", text: t.nested.cycleRejected });
+                    if (info.reason === "cycle") toast({ tone: "warning", text: <TeamToast render={(m) => m.nested.cycleRejected} /> });
                   }}
                   {...(draft.settings?.editor?.default_edge_kind ?? workspace.data?.value.editor?.default_edge_kind ? { defaultEdgeKind: (draft.settings?.editor?.default_edge_kind ?? workspace.data?.value.editor?.default_edge_kind) as string } : {})}
                   showResources={showResources}
@@ -980,7 +1000,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                 setDialog(null);
                 void navigate(basePath);
               })
-              .catch((e: unknown) => setDialogError(describeError(e, t.delete.failed).message))
+              .catch((e: unknown) => setDialogError(raisedAs("del", e)))
               .finally(() => setBusy(false));
           }}
         />
@@ -995,7 +1015,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
           submitLabel={t.editor.saveCopySubmit}
           existingIds={new Set()}
           fallbackId={`${id}-copy`}
-          initialName={`${draft.name} (내 변경)`}
+          initialName={t.editor.saveCopyName(draft.name)}
           showDescription={false}
           busy={busy}
           error={dialogError}
@@ -1011,7 +1031,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                 editor.revert();
                 void navigate(`${basePath}/${encodeURIComponent(v.id)}`);
               })
-              .catch((e: unknown) => setDialogError(describeError(e, t.duplicate.failed).message))
+              .catch((e: unknown) => setDialogError(raisedAs("dup", e)))
               .finally(() => setBusy(false));
           }}
         />
@@ -1021,7 +1041,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
           kind={creating}
           kindTitle={kindTitles[creating] ?? creating}
           existingIds={creating === DEFINITION_KINDS.agent ? new Set((agents.data ?? []).map((a) => a.id)) : creating === DEFINITION_KINDS.resource ? new Set((resources.data ?? []).map((r) => r.id)) : EMPTY_SET}
-          resourceTypes={resourceTypes.data ?? NONE}
+          resourceTypes={resourceTypeList}
           attachNode={attachNode}
           onCreated={onDefinitionCreated}
           onClose={() => setCreating(null)}
@@ -1038,7 +1058,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
             options={backendCard.options}
             nodeLabels={backendCard.labels}
             busy={choosingBackend}
-            error={backendError}
+            error={backendError ?? undefined}
             explain={t.backend.explain}
             busyLabel={t.backend.busy}
             onConfirm={(b) => void chooseBackend(b)}
@@ -1049,11 +1069,11 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
         <ResourcePicker
           open
           resources={resources.data ?? []}
-          types={resourceTypes.data ?? []}
+          types={resourceTypeList}
           exclude={new Set(shared.map((a) => a.ref))}
           onPick={(r) => {
             change(withSharedAttachments(draft, [...shared, newAttachment(r.id)]));
-            toast({ tone: "success", text: t.shared.added(r.name) });
+            toast({ tone: "success", text: <TeamToast render={(m) => m.shared.added(r.name)} /> });
             setDialog(null);
           }}
           onCreateNew={() => void navigate(`${routePath(ROUTE_ROLES.resource)}?new=1`)}

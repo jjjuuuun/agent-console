@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { versionMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface RestoreIssue {
   path: string;
@@ -26,42 +26,43 @@ export interface RestoreDialogProps {
 
 /** 되돌리기 확인(끌 수 없음). 기본 포커스는 [취소]. 확인·메시지 입력·오류 영역만 있고 서버를 모른다. */
 export function RestoreDialog({ open, hash8, summary, dirty, busy, issues, error, onConfirm, onCancel }: RestoreDialogProps) {
+  const t = useT("versions");
   const cancel = useRef<HTMLButtonElement>(null);
   const [message, setMessage] = useState("");
   return (
     <Dialog
       open={open}
-      title={t.restore.title(hash8)}
+      title={t("restore.title", { hash: hash8 })}
       onClose={busy ? () => {} : onCancel}
       initialFocus={cancel}
       actions={
         <>
           <Button ref={cancel} disabled={busy} onClick={onCancel}>
-            {t.restore.cancel}
+            {t("restore.cancel")}
           </Button>
           <Button variant="primary" loading={busy} onClick={() => onConfirm(message.trim())}>
-            {t.restore.confirm}
+            {t("restore.confirm")}
           </Button>
         </>
       }
     >
       <div className="ver-restore">
-        <p className="ac-text">{t.restore.body}</p>
+        <p className="ac-text">{t("restore.body")}</p>
         {summary === null ? null : (
           <p className="app-muted ver-note" role="status">
-            {summary === undefined ? t.restore.summaryLoading : t.restore.summary(summary.fields, summary.content)}
+            {summary === undefined ? t("restore.summaryLoading") : t("restore.summary", { fields: summary.fields, content: summary.content })}
           </p>
         )}
-        {dirty ? <p className="ver-warn">{t.restore.unsaved}</p> : null}
+        {dirty ? <p className="ver-warn">{t("restore.unsaved")}</p> : null}
         <label className="ver-restore-message">
-          <span>{t.restore.messageLabel}</span>
-          <input className="ac-input" value={message} placeholder={t.restore.messagePlaceholder(hash8)} onChange={(e) => setMessage(e.target.value)} disabled={busy} />
+          <span>{t("restore.messageLabel")}</span>
+          <input className="ac-input" value={message} placeholder={t("restore.messagePlaceholder", { hash: hash8 })} onChange={(e) => setMessage(e.target.value)} disabled={busy} />
         </label>
-        <p className="app-muted ver-note">{t.restore.scope}</p>
+        <p className="app-muted ver-note">{t("restore.scope")}</p>
         {issues !== null ? (
           <div role="alert" className="ver-issues">
             <p>
-              <strong>{t.restore.issuesTitle}</strong> {t.restore.issuesHelp}
+              <strong>{t("restore.issuesTitle")}</strong> {t("restore.issuesHelp")}
             </p>
             <ul>
               {issues.map((issue, i) => (

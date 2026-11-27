@@ -116,12 +116,16 @@ describe("팀 편집 화면: 연결 패널 모양·경로", () => {
     withLayout(async () => {
       const { clients, rest: r } = editorClients();
       mountApp(clients, "/teams/tm1");
-      const edge = await waitFor(() => {
-        const el = document.querySelector<HTMLElement>('.react-flow__edge[data-id="x1"]');
-        if (el === null) throw new Error("edge");
-        return el;
-      });
-      fireEvent.click(edge);
+      const findEdge = () =>
+        waitFor(() => {
+          const el = document.querySelector<HTMLElement>('.react-flow__edge[data-id="x1"]');
+          if (el === null) throw new Error("edge");
+          return el;
+        });
+      await findEdge();
+      // 문구 묶음이 늦게 들어오면 편집기가 한 번 더 그려져 연결 요소가 바뀐다: 잠깐 가라앉힌 뒤 다시 찾아 누른다
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      fireEvent.click(await findEdge());
       const shape = await screen.findByLabelText("모양");
       fireEvent.change(shape, { target: { value: "step" } });
       fireEvent.click(screen.getByRole("button", { name: "저장" }));

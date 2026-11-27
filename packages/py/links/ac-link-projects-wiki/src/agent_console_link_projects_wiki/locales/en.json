@@ -1,0 +1,13 @@
+{
+  "text": {
+    "프로젝트 폴더 안에 그 프로젝트의 위키와 페이지를 둔다": "Keeps each project's wiki and pages inside its project folder",
+    "프로젝트 위키 연동 설정.": "Project wiki integration settings.",
+    "프로젝트 구성 폴더 안에서 위키 페이지를 두는 폴더(그 아래 위키마다 폴더 하나). 적지 않으면 위키 모듈 설정의 페이지 폴더 이름을 이어받는다.": "Folder inside the project config folder that holds wiki pages (one folder per wiki below it). If not set, the page folder name from the wiki module settings is used.",
+    "페이지 폴더 이름": "Page folder name",
+    "폴더 이름을 바꾸고 싶을 때 정하세요.": "Set this when you want a different folder name.",
+    "프로젝트 구성 폴더의 상태 폴더(커밋하지 않는 캐시) 안에서 위키 검색 색인 파일을 두는 폴더. 지워도 다시 만든다.": "Folder inside the project config folder's state folder (an uncommitted cache) that holds the wiki search index files. It's rebuilt if deleted.",
+    "검색 색인 폴더 이름": "Search index folder name",
+    "프로젝트 폴더 기준 상대 경로. 페이지 폴더가 이 경로와 겹치면 위키를 열지 않는다. 구성 폴더의 상태·세션 폴더와 정의 종류 폴더는 적지 않아도 늘 막는다.": "Paths relative to the project folder. If the page folder overlaps one of these paths, the wiki isn't opened. The config folder's state and session folders and definition kind folders are always blocked even if not listed.",
+    "페이지 폴더 금지 경로": "Paths blocked for page folders"
+  }
+}

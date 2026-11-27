@@ -1,0 +1,140 @@
+{
+  "menu": "Export…",
+  "title": "Export",
+  "close": "Close",
+  "steps": {
+    "exporter": "Format",
+    "items": "Items and options",
+    "preview": "Preview",
+    "destination": "Destination"
+  },
+  "stepsLabel": "Export steps",
+  "prev": "Back",
+  "next": "Next",
+  "doExport": "Export",
+  "saveFirst": "Save first",
+  "unsavedInfo": "Exports the saved version. Unsaved changes aren't included.",
+  "warningsToggle_one": "{n} warning",
+  "warningsToggle_other": "{n} warnings",
+  "warningsRegion": "Warnings",
+  "exporter": {
+    "label": "Export format",
+    "loading": "Loading formats",
+    "empty": "No export formats are installed. Add formats with a plugin.",
+    "emptyLink": "View server info",
+    "failed": "Couldn't load the formats",
+    "retry": "Try again",
+    "kindsLabel": "Supported definition types"
+  },
+  "items": {
+    "title": "Definitions to export",
+    "add": "+ Add item",
+    "remove": "Remove",
+    "none": "Choose at least one item to export",
+    "unsupported": "Type not supported by this format",
+    "exclude": "Exclude",
+    "pickerTitle": "Choose items",
+    "pickerSearch": "Search by name or id",
+    "pickerKind": "Type",
+    "pickerEmpty": "No matching items",
+    "pickerFailed": "Couldn't load the list",
+    "pickerClose": "Close",
+    "pickerAdded": "Added",
+    "kindLabels": {
+      "Graph": "Team",
+      "Agent": "Agent",
+      "Resource": "Resource"
+    }
+  },
+  "options": {
+    "title": "Options",
+    "none": "This format has no options",
+    "failed": "Couldn't draw the options form",
+    "unset": "(Not set)",
+    "hint": "Only changed values are sent. Empty fields use the server default."
+  },
+  "preview": {
+    "summary_one": "{n} file · {size} total",
+    "summary_other": "{n} files · {size} total",
+    "byAction": {
+      "create": "Created",
+      "overwrite": "Overwritten",
+      "skip": "Skipped",
+      "conflict": "Conflict"
+    },
+    "loading": "Calculating the preview",
+    "refreshing": "Recalculating",
+    "empty": "No files to export. Try changing the items or options.",
+    "failed": "Couldn't build the preview",
+    "retry": "Try again",
+    "treeView": "Tree",
+    "flatView": "Flat",
+    "viewLabel": "View mode",
+    "files": "Files to export",
+    "blocked": "The server reported items it can't export, so you can't continue",
+    "toOptions": "Back to options",
+    "routedBack": "The server rejected the options or items, so you were sent back a step."
+  },
+  "dest": {
+    "group": "Destination",
+    "archive": "Download archive (zip)",
+    "archiveHint": "Downloads to your browser without writing to the server's disk.",
+    "folder": "Write to folder",
+    "root": "Root",
+    "subdir": "Subfolder",
+    "subdirHint": "Leave empty to write directly under the root.",
+    "problems": {
+      "absolute": "Absolute paths aren't allowed",
+      "dotdot": "`..` isn't allowed",
+      "empty_segment": "There is an empty folder name (including a trailing `/`)",
+      "forbidden_char": "There is a character that isn't allowed ( < > : \" | ? * )"
+    },
+    "onConflict": "Existing files",
+    "conflictOptions": {
+      "skip": {
+        "title": "Skip",
+        "hint": "Keep existing files and write the rest."
+      },
+      "overwrite": {
+        "title": "Overwrite",
+        "hint": "Replace files with the same name."
+      },
+      "fail": {
+        "title": "Stop on conflict",
+        "hint": "If anything conflicts, nothing is written."
+      }
+    },
+    "conflictsNow_one": "{n} file conflicts now",
+    "conflictsNow_other": "{n} files conflict now",
+    "rootsLoading": "Loading folders",
+    "rootPath": "Path",
+    "exporting": "Exporting",
+    "failed": "Couldn't export",
+    "conflictFailed": "Some files already exist, so nothing was written.",
+    "conflictPaths": "Conflicting files"
+  },
+  "overwrite": {
+    "title": "Confirm overwrite",
+    "body_one": "This overwrites {n} existing file. You can't undo it.",
+    "body_other": "This overwrites {n} existing files. You can't undo it.",
+    "confirm": "Overwrite",
+    "cancel": "Cancel"
+  },
+  "result": {
+    "title": "Export finished",
+    "archiveDone": "Downloaded the archive {name} ({size}).",
+    "summary": "Written {written} · skipped {skipped}",
+    "failedFiles": "Failed files",
+    "where": "Written to",
+    "copyPath": "Copy path",
+    "copied": "Copied",
+    "again": "Export again in another format",
+    "announce": "Export finished",
+    "files": "Result files"
+  },
+  "severity": {
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  }
+}

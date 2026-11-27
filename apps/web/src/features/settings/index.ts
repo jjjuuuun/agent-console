@@ -4,6 +4,6 @@ export { Skeleton } from "./Skeleton";
 export { UserSettingsForm } from "./UserSettingsForm";
 export { NotificationsEditor, changedKeysOnly } from "./sections/NotificationsSection";
 export { useBackends, useDelegationStrategies, useEdgeTypes, useMergeStrategies, useResourceList, useResourceTypes } from "./settingsData";
-export { agentSchemaForBackend, buildAgentDefaultsUi, buildUserSettingsUi } from "./userSettingsUi";
+export { agentSchemaForBackend, buildAgentDefaultsUi, buildUserSettingsUi, useUserSettingsText, type UserSettingsText } from "./userSettingsUi";
 export { CHOICE_SELECT_WIDGET } from "./widgets/ChoiceSelectWidget";
 export { STRING_TAGS_FIELD, StringTagsField } from "./widgets/StringTagsField";

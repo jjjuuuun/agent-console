@@ -216,6 +216,8 @@
     "emptyList": "Empty",
     "noLinks": "No link rules — the graph, backlinks, and broken-link checks are off",
     "source": {
+      "label": "Source: {source}",
+      "tip": "Where this value came from",
       "rules": "Rule {id}",
       "open": "Open"
     }

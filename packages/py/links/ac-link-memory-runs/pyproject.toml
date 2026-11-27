@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-memory-runs"
 version = "0.1.0"
-description = "Agent Console — 메모리·실행 연동 모듈: 에이전트 메모리 도구 공급, 리소스 종류 memory, memory.* 실행 이벤트"
+description = "Agent Console — memory and runs link module: agent memory tools, resource kind memory, memory.* run events"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ link-memory-runs = "agent_console_link_memory_runs.module:module"
 # 리소스 종류(X14). 이름 = 레지스트리 key = 디스크립터 id(패키지 데이터 `data/memory_resource_type.yaml`).
 [project.entry-points."agent_console.resource_types"]
 memory = "agent_console_link_memory_runs.resource_type:MemoryResourceType"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-memory-runs = "agent_console_link_memory_runs"
 
 [dependency-groups]
 dev = [

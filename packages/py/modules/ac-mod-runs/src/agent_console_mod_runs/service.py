@@ -206,7 +206,7 @@ class RunService:
                 if scoper.accepts_project(project_id):
                     return True
             except Exception:
-                _log.exception("프로젝트 범위 확인 실패: %s", type(scoper).__name__)
+                _log.exception("Project scope check failed: %s", type(scoper).__name__)
         return False
 
     @property
@@ -250,7 +250,7 @@ class RunService:
             try:
                 result = scoper.run_definitions(project_id, graph_id)
             except Exception:
-                _log.exception("정의 출처 계산 실패: %s", type(scoper).__name__)
+                _log.exception("Computing the definition source failed: %s", type(scoper).__name__)
                 continue
             if isinstance(result, ErrorInfo):
                 raise RunPreflightError(result)
@@ -340,7 +340,7 @@ class RunService:
             try:
                 items.update(provider.services(env))
             except Exception:
-                _log.exception("노드 서비스 공급자 실패: %s", type(provider).__name__)
+                _log.exception("Node service provider failed: %s", type(provider).__name__)
         if definitions is not None:
             items[RUN_DEFINITIONS] = definitions
             return Services(items)
@@ -366,7 +366,7 @@ class RunService:
             except Exception:
                 if strict and not any(blocks_run(i) for i in engine):
                     raise  # 검사 없이 시작하지 않는다
-                _log.exception("실행 전 검사 실패: %s", graph.id)
+                _log.exception("Pre-run check failed: %s", graph.id)
         return self._annotate(graph, [*engine, *extra])
 
     def _annotate(self, graph: Graph, issues: list[Issue]) -> list[Issue]:
@@ -377,7 +377,7 @@ class RunService:
             try:
                 annotated = list(preparer.annotate_issues(graph, issues))
             except Exception:
-                _log.exception("검증 이슈 꾸미기 실패: %s", graph.id)
+                _log.exception("Decorating validation issues failed: %s", graph.id)
                 continue
             if len(annotated) == len(issues):
                 issues = annotated
@@ -424,7 +424,7 @@ class RunService:
             try:
                 error = preparer.preflight(graph, current)
             except Exception:
-                _log.exception("실행 전 사전 점검 실패: %s", graph.id)
+                _log.exception("Pre-run preflight failed: %s", graph.id)
                 continue
             if error is not None:
                 return error
@@ -450,7 +450,7 @@ class RunService:
             try:
                 found = scoper.scope_run(graph, services, project_id=project_id)
             except Exception:
-                _log.exception("실행 범위 계산 실패: %s", type(scoper).__name__)
+                _log.exception("Computing the run scope failed: %s", type(scoper).__name__)
                 continue
             if found is None:
                 continue
@@ -524,7 +524,7 @@ class RunService:
             try:
                 errors = scoper.check_child(request.graph, request.services, project_id=project_id)
             except Exception:
-                _log.exception("자식 Run 범위 점검 실패: %s", type(scoper).__name__)
+                _log.exception("Child run scope check failed: %s", type(scoper).__name__)
                 continue
             for error in errors or ():
                 if isinstance(error, ErrorInfo):
@@ -843,7 +843,8 @@ class RunService:
                 )
                 if not done:
                     _log.warning(
-                        "실행 정리가 %.1f초 안에 끝나지 않아 남은 Run을 강제 취소했습니다",
+                        "Run cleanup didn't finish within %.1f seconds; "
+                        "force-cancelled the remaining runs",
                         self._shutdown_timeout,
                     )
                 self._closed.set_result(done)

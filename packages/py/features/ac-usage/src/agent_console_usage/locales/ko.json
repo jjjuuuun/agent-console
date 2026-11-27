@@ -1,0 +1,8 @@
+{
+  "codes": {
+    "usage.source_config_invalid": "사용량 출처 {source}의 설정이 그 출처의 설정 스키마에 맞지 않습니다.",
+    "usage_source_failed": "출처를 읽지 못했습니다.",
+    "usage_source_schema_invalid": "출처의 설정 스키마가 잘못돼 설정을 검증할 수 없습니다.",
+    "usage_source_timeout": "출처가 시간 안에 답하지 않았습니다."
+  }
+}

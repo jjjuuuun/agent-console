@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Banner, Button } from "@agent-console/ui";
-import { messages as m } from "./messages";
+import { useAppMessages } from "./appMessages";
 import type { SafeStorage } from "./storage";
 import { useStorage } from "./StorageContext";
 
@@ -34,6 +34,7 @@ export function useHint(id: string): { visible: boolean; dismiss: () => void } {
  * `satisfied`가 true면(안내가 요구하는 조건을 이미 채움) 보이지 않는다. 저장된 닫힘 표시는 건드리지 않는다.
  */
 export function HintBanner({ id, children, satisfied = false }: { id: string; children: ReactNode; satisfied?: boolean }) {
+  const m = useAppMessages();
   const { visible, dismiss } = useHint(id);
   if (!visible || satisfied) return null;
   return (

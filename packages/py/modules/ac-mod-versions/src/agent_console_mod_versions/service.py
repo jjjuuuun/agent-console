@@ -183,7 +183,7 @@ class VersionService:
             try:
                 target = self._spaces(space)
             except Exception:
-                _log.exception("보존 개수 적용: 공간을 열 수 없음 %s", space)
+                _log.exception("Applying the retention count: couldn't open space %s", space)
                 return
         target.retain(saved.kind, saved.id, (saved.version_hash,))
 
@@ -198,7 +198,7 @@ class VersionService:
                 protect = (current.version_hash,) if current is not None else ()
                 total += self.retain(kind, item_id, protect)
         if total:
-            _log.info("보존 개수(%d)를 넘는 버전 %d개를 지웠습니다", self._keep, total)
+            _log.info("Deleted versions above the retention count (%d): %d", self._keep, total)
         return total
 
 

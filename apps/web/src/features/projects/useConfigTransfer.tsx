@@ -1,11 +1,11 @@
 import { useMemo, type ReactNode } from "react";
-import { createProjectsText, projectAbilities } from "@agent-console/projects";
+import { projectAbilities } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import { SelectMark, SelectionToolbar, useListSelection, type ListSelection } from "./useListSelection";
 import { useProjects } from "./ProjectsContext";
 import { useSpace } from "./SpaceScope";
 import { useCopyDialog } from "./useCopyDialog";
 
-const text = createProjectsText();
 
 /** 행 메뉴 항목(`library`의 `ActionMenu`와 `ui`의 `Menu`가 모두 받는 모양: 글자 라벨). */
 export interface ConfigMenuItem {
@@ -45,6 +45,7 @@ export interface ConfigTransfer<T> {
  * 프로젝트 기능이 꺼져 있거나 프로젝트가 없으면 아무 동작도 없다(목록은 그대로 동작한다).
  */
 export function useConfigTransfer<T>(source: readonly T[] | undefined, options: ConfigTransferOptions<T>): ConfigTransfer<T> {
+  const text = useProjectsText();
   const p = useProjects();
   const space = useSpace();
   const selection = useListSelection();

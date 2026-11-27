@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-interactions"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 서명 받기 상호작용 종류(example.sign_off)와 허용 연결"
+description = "Agent Console example extension — a sign-off interaction type (example.sign_off) and its allowed edges"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

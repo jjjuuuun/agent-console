@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CopyApplyRequest, CopyApplyResult, CopyPlan, CopyPlanRequest } from "@agent-console/contracts/projects";
 import { createProjectsText } from "@agent-console/projects";

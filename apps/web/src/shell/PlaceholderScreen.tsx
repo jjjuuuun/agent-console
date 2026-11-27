@@ -1,5 +1,5 @@
 import { EmptyState, Icon, PageHeader } from "@agent-console/ui";
-import { lookupMessage, messages as m } from "../app/messages";
+import { useLookupMessage, useShellMessages } from "../app/shellMessages";
 import type { RouteDef } from "./routeConfig";
 
 /**
@@ -7,6 +7,8 @@ import type { RouteDef } from "./routeConfig";
  * 실제 화면이 들어오면 `routes.tsx`의 페이지 표에서 이 자리를 바꾼다.
  */
 export function PlaceholderScreen({ route, detail }: { route: RouteDef; detail?: string }) {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
   const title = lookupMessage(route.titleKey);
   return (
     <div className="app-screen-frame" data-screen={route.id} data-placeholder="true">

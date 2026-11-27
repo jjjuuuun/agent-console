@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Button } from "@agent-console/ui";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
+import { useLanguageCode } from "../../i18n";
 
 export interface DefinitionPickItem {
   id: string;
@@ -37,7 +38,7 @@ export interface DefinitionPickerProps {
 }
 
 /** 최근 사용을 앞으로, 나머지는 이름 순(한국어). 검색어는 이름·설명·id 부분 일치. */
-export function sortPickItems(items: readonly DefinitionPickItem[], recentIds: readonly string[], query: string): DefinitionPickItem[] {
+export function sortPickItems(items: readonly DefinitionPickItem[], recentIds: readonly string[], query: string, language: string): DefinitionPickItem[] {
   const q = query.trim().toLowerCase();
   const rank = new Map(recentIds.map((id, i) => [id, i]));
   return items
@@ -46,7 +47,7 @@ export function sortPickItems(items: readonly DefinitionPickItem[], recentIds: r
       const ra = rank.get(a.id);
       const rb = rank.get(b.id);
       if (ra !== undefined || rb !== undefined) return (ra ?? Infinity) - (rb ?? Infinity);
-      return a.name.localeCompare(b.name, "ko");
+      return a.name.localeCompare(b.name, language);
     });
 }
 
@@ -55,11 +56,13 @@ export function sortPickItems(items: readonly DefinitionPickItem[], recentIds: r
  * ↑↓ 이동, Enter 추가. Esc는 감싼 팝오버가 닫는다. 정의 종류를 모른다(항목과 문구는 호출자가 준다).
  */
 export function DefinitionPicker({ label, items, recentIds = [], groups, onPick, onCreate, footer }: DefinitionPickerProps) {
+  const t = useTeamMessages();
+  const language = useLanguageCode();
   const uid = useId();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
-  const sorted = useMemo(() => sortPickItems(items, recentIds, query), [items, recentIds, query]);
+  const sorted = useMemo(() => sortPickItems(items, recentIds, query, language), [items, recentIds, query, language]);
   const rows = useMemo(() => {
     if (groups === undefined || groups.length === 0) return [{ key: "", label: "", items: sorted }];
     const out = groups.map((g) => ({ key: g.key, label: g.label, items: sorted.filter((it) => it.group === g.key) }));

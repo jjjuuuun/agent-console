@@ -4,7 +4,6 @@ import type { WikiCapabilities, WikiInfo, WikiLimits } from "@agent-console/cont
 import { useProjectId } from "../../app/projectScope";
 import { useProjects } from "../projects";
 import { useWikiInfo } from "./useWikiApi";
-import { wikiMessages } from "./messages";
 
 const text = createProjectsText();
 
@@ -53,5 +52,3 @@ export function useWikiContext(): WikiContext {
   }, [projectId, view, info]);
 }
 
-/** 읽기 전용 이유가 비었을 때의 기본 문구(요청이 막힌 경우). */
-export const READONLY_FALLBACK = wikiMessages.readonly.title;

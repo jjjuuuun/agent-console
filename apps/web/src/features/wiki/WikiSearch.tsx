@@ -10,7 +10,8 @@ import type { WikiPageSummary } from "@agent-console/contracts/wiki";
 import { useWikiSpace } from "./useWikiApi";
 import { DebouncedInput } from "./parts";
 import { WIKI_LIMITS } from "./wikiConfig";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
 
 export interface WikiSearchProps {
   wikiId: string;
@@ -21,6 +22,8 @@ export interface WikiSearchProps {
 }
 
 export function WikiSearch({ wikiId, pages, onOpen, inputRef }: WikiSearchProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const space = useWikiSpace();
   const baseId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const listId = `wikisr${baseId}`;
@@ -56,8 +59,8 @@ export function WikiSearch({ wikiId, pages, onOpen, inputRef }: WikiSearchProps)
           setDismissed(false);
           setActive(0);
         }}
-        label={m.search.label}
-        placeholder={m.search.placeholder}
+        label={t("search.label")}
+        placeholder={t("search.placeholder")}
         className="wiki-search wiki-search-input"
         inputRef={inputRef}
         onFocus={() => setFocused(true)}
@@ -85,20 +88,20 @@ export function WikiSearch({ wikiId, pages, onOpen, inputRef }: WikiSearchProps)
         open={filterOpen}
         onOpenChange={setFilterOpen}
         panelRole="dialog"
-        panelLabel={m.search.filter}
-        renderTrigger={(trigger) => <Button size="sm" {...trigger}>{filters === 0 ? m.search.filter : m.search.filterN(filters)} ▾</Button>}
+        panelLabel={t("search.filter")}
+        renderTrigger={(trigger) => <Button size="sm" {...trigger}>{filters === 0 ? t("search.filter") : t("search.filterN", { n: filters })} ▾</Button>}
       >
         <div className="wiki-filter-panel">
           <label className="wiki-field">
-            <span className="wiki-label">{m.search.folder}</span>
+            <span className="wiki-label">{t("search.folder")}</span>
             <select className="wiki-input" value={prefix} onChange={(e) => setPrefix(e.target.value)}>
-              <option value="">{m.search.folderAll}</option>
+              <option value="">{t("search.folderAll")}</option>
               {folders.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </label>
           {allTags.length === 0 ? null : (
             <fieldset className="wiki-field">
-              <legend className="wiki-label">{m.search.tags}</legend>
+              <legend className="wiki-label">{t("search.tags")}</legend>
               {allTags.map((t) => (
                 <label key={t} className="ac-choice">
                   <input type="checkbox" checked={tags.includes(t)} onChange={(e) => setTags(e.target.checked ? [...tags, t] : tags.filter((x) => x !== t))} />
@@ -112,11 +115,11 @@ export function WikiSearch({ wikiId, pages, onOpen, inputRef }: WikiSearchProps)
       {open ? (
         <div className="wiki-search-panel" onMouseDown={(e) => e.preventDefault()} data-testid="wiki-search-panel">
           {search.isError ? (
-            <p className="app-field-error" role="alert">{m.search.failed}</p>
+            <p className="app-field-error" role="alert">{t("search.failed")}</p>
           ) : search.isPending ? (
-            <p className="app-muted" role="status">{m.search.searching}</p>
+            <p className="app-muted" role="status">{t("search.searching")}</p>
           ) : (
-            <SearchResults
+            <SearchResults messages={wikiViewMessages}
               hits={hits}
               query={text}
               degraded={search.data?.degraded === true}

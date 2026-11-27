@@ -3,10 +3,11 @@ import { Link } from "react-router";
 import type { RunEvent } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { messages as appMessages } from "../../app/messages";
-import { wikiEventSummary } from "../../app/wikiIssueMessages";
-import { runsMessages as t } from "./messages";
+import { wikiEventSummary } from "../wiki";
+import { useRunsMessages } from "./messages";
 import { buildObserveRows, formatMs, observeStats, type ObserveRow } from "./runsLib";
+import { useFormat } from "../../i18n";
+import { useServerText } from "@agent-console/i18n";
 
 export interface ObserveTabProps {
   events: readonly RunEvent[];
@@ -24,19 +25,22 @@ export interface ObserveTabProps {
 
 /** 탭 ③ hook·MCP: 접두 세그먼트(데이터에서 생성) + 표 + 집계 줄 + 상세 드로어. 비밀은 서버가 가리며 화면에서 다시 가공하지 않는다. */
 export function ObserveTab(p: ObserveTabProps) {
+  const server = useServerText();
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const [prefix, setPrefix] = useState("");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [actor, setActor] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
 
-  const all = useMemo(() => buildObserveRows(p.events, p.prefixes, (e) => wikiEventSummary(e.payload)), [p.events, p.prefixes]);
+  const all = useMemo(() => buildObserveRows(p.events, p.prefixes, (e) => wikiEventSummary(e.payload, server)), [p.events, p.prefixes, server]);
   const present = useMemo(() => [...new Set(all.map((r) => r.prefix))], [all]);
   const actors = useMemo(() => [...new Set(all.map((r) => r.event.actor ?? "").filter((a) => a !== ""))], [all]);
   const rows = useMemo(() => all.filter((r) => (prefix === "" || r.prefix === prefix) && (!errorsOnly || r.error) && (actor === "" || r.event.actor === actor)), [all, prefix, errorsOnly, actor]);
   const stats = useMemo(() => observeStats(rows), [rows]);
 
   if (p.status === "loading" && p.events.length === 0) return <div className="app-loading" role="status">{t.observe.loading}</div>;
-  if (p.status === "error" && p.events.length === 0) return <ErrorBlock title={t.observe.loadFailed} retryLabel={appMessages.common.retry} onRetry={p.onRetry} />;
+  if (p.status === "error" && p.events.length === 0) return <ErrorBlock title={t.observe.loadFailed} retryLabel={t.shared.retry} onRetry={p.onRetry} />;
   if (all.length === 0) {
     return (
       <div className="app-empty">
@@ -53,7 +57,7 @@ export function ObserveTab(p: ObserveTabProps) {
       .map(([k, n]) => t.observe.statPart(name(k), n))
       .join(" · "),
     stats.errors,
-    stats.avgMs === undefined ? "" : formatMs(stats.avgMs),
+    stats.avgMs === undefined ? "" : formatMs(stats.avgMs, fmt),
   );
 
   return (
@@ -116,6 +120,8 @@ export function ObserveTab(p: ObserveTabProps) {
 }
 
 function ObserveRowView({ row, start, agentName, selected, onSelect }: { row: ObserveRow; start: number | undefined; agentName(id: string): string; selected: boolean; onSelect(): void }) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const e = row.event;
   const d = e.ts - (start ?? e.ts);
   return (
@@ -136,7 +142,7 @@ function ObserveRowView({ row, start, agentName, selected, onSelect }: { row: Ob
       <td className="ac-ellipsis" title={e.type}>
         <code className="app-mono">{e.type}</code> {row.kind}
       </td>
-      <td className="ac-num">{row.durationMs === undefined ? "–" : formatMs(row.durationMs)}</td>
+      <td className="ac-num">{row.durationMs === undefined ? "–" : formatMs(row.durationMs, fmt)}</td>
       <td>
         <span className={row.error ? "runs-result-error" : undefined}>{row.error ? `▲ ${t.observe.error}` : `✓ ${t.observe.ok}`}</span>
       </td>

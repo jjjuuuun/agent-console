@@ -8,7 +8,7 @@ import { useNavigate } from "react-router";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES, getContractSchema } from "@agent-console/contracts";
 import { KNOWN_UI_WIDGETS, KNOWN_WIKI_RULE_ENTRY_KINDS, KNOWN_WIKI_SYNTAX_SOURCES } from "@agent-console/contracts/constants";
-import { SchemaForm } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { Banner, Button, useToast } from "@agent-console/ui";
 import { SyntaxValueTree, type RuleSummary } from "@agent-console/wiki-view";
 import { ToneChip } from "@agent-console/markdown-doc";
@@ -27,19 +27,21 @@ import { useRulesScreenOn, useLibraryRulesKind } from "./wikiDialogs";
 import { severityTone, WIKI_PARAMS } from "./wikiConfig";
 import { wikiRulesPath } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
-import { wikiTabMessages } from "./tabMessages";
+import { useServerText, useT, type Translate } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useWikiViewMessages } from "./useViewMessages";
 
 type Obj = Record<string, unknown>;
-const t = wikiTabMessages.rules;
+
 const RULE_REFS = KNOWN_UI_WIDGETS.WIKI_RULE_REFS;
 const FIELDS = { [RULE_REFS]: RuleRefsField } as const;
 
 const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.code === ERROR_CODES.VERSION_CONFLICT || e.status === 412);
 
 /** 종류별 추가 열: 서버가 항목에 싣는 값(null이면 빈 칸). 빈 `applies_to` 목록은 "모든 페이지". */
-const EXTRA_COLUMNS: Readonly<Record<string, readonly { key: "appliesTo" | "pathTemplate" | "title"; mono: boolean; cell: (e: WikiRuleEntry) => string }[]>> = {
+const EXTRA_COLUMNS: Readonly<Record<string, readonly { key: "appliesTo" | "pathTemplate" | "title"; mono: boolean; cell: (e: WikiRuleEntry, t: Translate) => string }[]>> = {
   [KNOWN_WIKI_RULE_ENTRY_KINDS.WRITE]: [
-    { key: "appliesTo", mono: true, cell: (e) => (e.applies_to === undefined || e.applies_to === null ? "" : e.applies_to.length === 0 ? t.appliesAll : e.applies_to.join(", ")) },
+    { key: "appliesTo", mono: true, cell: (e, t) => (e.applies_to === undefined || e.applies_to === null ? "" : e.applies_to.length === 0 ? t("tab.rules.appliesAll") : e.applies_to.join(", ")) },
   ],
   [KNOWN_WIKI_RULE_ENTRY_KINDS.TEMPLATE]: [
     { key: "pathTemplate", mono: true, cell: (e) => e.path ?? "" },
@@ -48,6 +50,9 @@ const EXTRA_COLUMNS: Readonly<Record<string, readonly { key: "appliesTo" | "path
 };
 
 export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setParams, refresh, reportDirty }: WikiTabProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const tm = useMaybeT("wiki");
   const navigate = useNavigate();
   const toast = useToast();
   const space = useWikiSpace();
@@ -62,7 +67,8 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
   const ui = useMemo(() => widgetUiSchema(schema, new Set(Object.keys(FIELDS))), [schema]);
   const ruleSchema = useMemo(() => getContractSchema("WikiRulesDefinition"), []);
   const enumUi = useMemo(() => collectEnumUi(ruleSchema), [ruleSchema]);
-  const syntaxTitles = useMemo(() => propertyTitles(getContractSchema("WikiSyntax")), []);
+  const serverText = useServerText();
+  const syntaxTitles = useMemo(() => Object.fromEntries(Object.entries(propertyTitles(getContractSchema("WikiSyntax"))).map(([key, title]) => [key, serverText.text(title)])), [serverText]);
 
   const server = view.wiki as unknown as Obj;
   const [draft, setDraft] = useState<Obj | null>(null);
@@ -108,7 +114,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
       await invalidate();
     } catch (e) {
       if (isConflict(e)) setConflict(true);
-      else setFailure(e instanceof Error && e.message !== "" ? e.message : t.saveFailed);
+      else setFailure(e instanceof Error && e.message !== "" ? e.message : t("tab.rules.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -141,7 +147,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
     all,
     onOpen: openRule,
     onImport: rulesScreen && ctx.capabilities.rules_library && library.kind !== null && ctx.projectId !== null ? importRule : undefined,
-    onRemoved: (restore) => toast({ tone: "info", text: t.removed, durationMs: 5000, action: { label: t.undo, onClick: restore } }),
+    onRemoved: (restore) => toast({ tone: "info", text: t("tab.rules.removed"), durationMs: 5000, action: { label: t("tab.rules.undo"), onClick: restore } }),
     readOnlyReason: writeBlock,
   };
 
@@ -181,22 +187,22 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
     return <ToneChip tone={tone} label={enumUi.labels[value] ?? value} />;
   };
   const sourceCell = (ruleId: string) =>
-    rulesScreen ? <button type="button" className="app-link-btn wiki-mono" onClick={() => openOwner(ruleId)} aria-label={`${t.openRule}: ${ruleId}`}>{ruleId}</button> : <span className="wiki-mono">{ruleId}</span>;
+    rulesScreen ? <button type="button" className="app-link-btn wiki-mono" onClick={() => openOwner(ruleId)} aria-label={`${t("tab.rules.openRule")}: ${ruleId}`}>{ruleId}</button> : <span className="wiki-mono">{ruleId}</span>;
   const table = (kind: string, withValue: boolean) => {
     const rows = byKind(kind);
     if (rows.length === 0) return null;
     const extras = EXTRA_COLUMNS[kind] ?? [];
     return (
-      <section key={kind} aria-label={t.table[kind] ?? kind}>
-        <h4 className="wiki-subtitle">{t.table[kind] ?? kind}</h4>
-        <table className="wiki-table" aria-label={t.table[kind] ?? kind}>
+      <section key={kind} aria-label={tm(`tab.rules.table.${kind}`) ?? kind}>
+        <h4 className="wiki-subtitle">{tm(`tab.rules.table.${kind}`) ?? kind}</h4>
+        <table className="wiki-table" aria-label={tm(`tab.rules.table.${kind}`) ?? kind}>
           <thead>
             <tr>
-              <th scope="col">{t.col.id}</th>
-              {withValue ? <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.LINT ? t.col.severity : t.col.action}</th> : null}
-              <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.TEMPLATE ? t.col.name : t.col.message}</th>
-              {extras.map((c) => <th key={c.key} scope="col">{t.col[c.key]}</th>)}
-              <th scope="col">{t.col.source}</th>
+              <th scope="col">{t("tab.rules.col.id")}</th>
+              {withValue ? <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.LINT ? t("tab.rules.col.severity") : t("tab.rules.col.action")}</th> : null}
+              <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.TEMPLATE ? t("tab.rules.col.name") : t("tab.rules.col.message")}</th>
+              {extras.map((c) => <th key={c.key} scope="col">{tm(`tab.rules.col.${c.key}`)}</th>)}
+              <th scope="col">{t("tab.rules.col.source")}</th>
             </tr>
           </thead>
           <tbody>
@@ -205,7 +211,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
                 <td className="wiki-mono">{e.id}</td>
                 {withValue ? <td>{actionChip(e)}</td> : null}
                 <td>{e.label ?? ""}</td>
-                {extras.map((c) => <td key={c.key} className={c.mono ? "wiki-mono" : undefined}>{c.cell(e)}</td>)}
+                {extras.map((c) => <td key={c.key} className={c.mono ? "wiki-mono" : undefined}>{c.cell(e, t)}</td>)}
                 <td>{sourceCell(e.rule_id)}</td>
               </tr>
             ))}
@@ -215,26 +221,26 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
     );
   };
 
-  const sectionItems = RULES_SECTION_KEYS.map((k) => ({ id: k, label: t.sections[k], onSelect: () => scrollTo(k) }));
+  const sectionItems = RULES_SECTION_KEYS.map((k) => ({ id: k, label: t(`tab.rules.sections.${k}`), onSelect: () => scrollTo(k) }));
   const syntax = syntaxQ.data;
 
   return (
     <div className="wiki-rules" data-testid="wiki-rules" onKeyDown={onKeyDown}>
-      <nav className="wiki-rules-nav" aria-label={t.sectionsLabel}>
+      <nav className="wiki-rules-nav" aria-label={t("tab.rules.sectionsLabel")}>
         <ul>
           {RULES_SECTION_KEYS.map((k) => (
             <li key={k}>
-              <button type="button" aria-current={k === active ? "true" : undefined} onClick={() => scrollTo(k)}>{t.sections[k]}</button>
+              <button type="button" aria-current={k === active ? "true" : undefined} onClick={() => scrollTo(k)}>{t(`tab.rules.sections.${k}`)}</button>
             </li>
           ))}
         </ul>
       </nav>
       <div className="wiki-rules-main">
-        <div className="wiki-rules-toolbar" role="group" aria-label={t.toolbar}>
-          <span className="wiki-rules-menu"><MenuButton label={<>{t.sectionsMenu} <span aria-hidden="true">▾</span></>} panelLabel={t.sectionsLabel} align="start" items={sectionItems} /></span>
-          {issues.length === 0 ? null : <span data-testid="wiki-rules-issues"><ToneChip tone={errors > 0 ? "danger" : "warning"} label={t.issuesChip(issues.length)} /></span>}
+        <div className="wiki-rules-toolbar" role="group" aria-label={t("tab.rules.toolbar")}>
+          <span className="wiki-rules-menu"><MenuButton label={<>{t("tab.rules.sectionsMenu")} <span aria-hidden="true">▾</span></>} panelLabel={t("tab.rules.sectionsLabel")} align="start" items={sectionItems} /></span>
+          {issues.length === 0 ? null : <span data-testid="wiki-rules-issues"><ToneChip tone={errors > 0 ? "danger" : "warning"} label={t("tab.rules.issuesChip", { count: issues.length })} /></span>}
           <span className="wiki-spacer" />
-          <span className="app-muted" role="status">{saving ? t.saving : dirty ? t.dirty : t.saved}</span>
+          <span className="app-muted" role="status">{saving ? t("tab.rules.saving") : dirty ? t("tab.rules.dirty") : t("tab.rules.saved")}</span>
           <Button
             size="sm"
             variant="primary"
@@ -245,29 +251,29 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
               if (dirty && !readonly && !showConflict) void save(baseHash ?? versionHash);
             }}
           >
-            {t.save}
+            {t("tab.rules.save")}
           </Button>
         </div>
-        {readonly ? <Banner tone="warning" data-testid="wiki-rules-readonly">{writeBlock ?? t.readonlyTop}</Banner> : null}
+        {readonly ? <Banner tone="warning" data-testid="wiki-rules-readonly">{writeBlock ?? t("tab.rules.readonlyTop")}</Banner> : null}
         {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
         {showConflict ? (
           <Banner
             tone="warning"
-            title={t.conflictTitle}
+            title={t("tab.rules.conflictTitle")}
             data-testid="wiki-rules-conflict"
             actions={
               <>
-                <Button size="sm" onClick={() => { discard(); void refresh(); }}>{t.reload}</Button>
-                <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t.overwrite}</Button>
+                <Button size="sm" onClick={() => { discard(); void refresh(); }}>{t("tab.rules.reload")}</Button>
+                <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t("tab.rules.overwrite")}</Button>
               </>
             }
           >
-            {t.conflictBody}
+            {t("tab.rules.conflictBody")}
           </Banner>
         ) : null}
 
-        <section id={sectionDomId("info")} aria-label={t.sections.info} className="wiki-rules-section">
-          <h2 className="wiki-section-title">{t.sections.info}</h2>
+        <section id={sectionDomId("info")} aria-label={t("tab.rules.sections.info")} className="wiki-rules-section">
+          <h2 className="wiki-section-title">{t("tab.rules.sections.info")}</h2>
           <RuleRefsProvider env={env}>
             <SchemaForm
               key={epoch}
@@ -283,31 +289,31 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
             />
           </RuleRefsProvider>
           {issues.length === 0 ? null : (
-            <ul className="wiki-issue-lines" aria-label={t.issuesChip(issues.length)}>
+            <ul className="wiki-issue-lines" aria-label={t("tab.rules.issuesChip", { count: issues.length })}>
               {issues.map((i, idx) => <li key={`${i.code}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{i.message}</li>)}
             </ul>
           )}
         </section>
 
-        <section id={sectionDomId("instructions")} aria-label={t.sections.instructions} className="wiki-rules-section">
-          <h2 className="wiki-section-title">{t.sections.instructions}</h2>
-          {ctx.capabilities.runs ? null : <Banner tone="info" data-testid="wiki-rules-runs-off">{t.instructionsRunsOff}</Banner>}
+        <section id={sectionDomId("instructions")} aria-label={t("tab.rules.sections.instructions")} className="wiki-rules-section">
+          <h2 className="wiki-section-title">{t("tab.rules.sections.instructions")}</h2>
+          {ctx.capabilities.runs ? null : <Banner tone="info" data-testid="wiki-rules-runs-off">{t("tab.rules.instructionsRunsOff")}</Banner>}
           {instructions === "" ? (
-            <p className="app-muted">{t.instructionsNone}</p>
+            <p className="app-muted">{t("tab.rules.instructionsNone")}</p>
           ) : (
             <>
               <div className="wiki-toolbar">
-                <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(instructions); toast({ tone: "success", text: t.instructionsCopied }); }}>{t.instructionsCopy}</Button>
+                <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(instructions); toast({ tone: "success", text: t("tab.rules.instructionsCopied") }); }}>{t("tab.rules.instructionsCopy")}</Button>
               </div>
-              <pre className="ac-pre wiki-instructions" tabIndex={0} aria-label={t.sections.instructions}>{instructions}</pre>
+              <pre className="ac-pre wiki-instructions" tabIndex={0} aria-label={t("tab.rules.sections.instructions")}>{instructions}</pre>
             </>
           )}
-          <p className="app-muted wiki-hint">{t.instructionsNote}</p>
+          <p className="app-muted wiki-hint">{t("tab.rules.instructionsNote")}</p>
         </section>
 
-        <section id={sectionDomId("merged")} aria-label={t.sections.merged} className="wiki-rules-section">
-          <h2 className="wiki-section-title">{t.sections.merged}</h2>
-          {entries.length === 0 ? <p className="app-muted">{t.mergedNone}</p> : (
+        <section id={sectionDomId("merged")} aria-label={t("tab.rules.sections.merged")} className="wiki-rules-section">
+          <h2 className="wiki-section-title">{t("tab.rules.sections.merged")}</h2>
+          {entries.length === 0 ? <p className="app-muted">{t("tab.rules.mergedNone")}</p> : (
             <>
               {table(KNOWN_WIKI_RULE_ENTRY_KINDS.WRITE, true)}
               {table(KNOWN_WIKI_RULE_ENTRY_KINDS.LINT, true)}
@@ -316,15 +322,15 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
           )}
         </section>
 
-        <section id={sectionDomId("syntax")} aria-label={t.sections.syntax} className="wiki-rules-section">
-          <h2 className="wiki-section-title">{t.sections.syntax}</h2>
+        <section id={sectionDomId("syntax")} aria-label={t("tab.rules.sections.syntax")} className="wiki-rules-section">
+          <h2 className="wiki-section-title">{t("tab.rules.sections.syntax")}</h2>
           {syntaxQ.isPending ? <ListSkeleton rows={3} /> : syntaxQ.isError || syntax === undefined ? (
-            <FailureBlock error={syntaxQ.error} title={t.syntaxLoadFailed} onRetry={() => void syntaxQ.refetch()} />
+            <FailureBlock error={syntaxQ.error} title={t("tab.rules.syntaxLoadFailed")} onRetry={() => void syntaxQ.refetch()} />
           ) : (
             <>
-              <SyntaxValueTree syntax={syntax} titles={syntaxTitles} onOpenSource={openSource} />
-              <p className="app-muted wiki-hint">{t.syntaxDefault}</p>
-              <Button size="sm" onClick={() => void navigate(routePath(ROUTE_ROLES.settings))}>{t.syntaxOpenSettings}</Button>
+              <SyntaxValueTree messages={wikiViewMessages} syntax={syntax} titles={syntaxTitles} onOpenSource={openSource} />
+              <p className="app-muted wiki-hint">{t("tab.rules.syntaxDefault")}</p>
+              <Button size="sm" onClick={() => void navigate(routePath(ROUTE_ROLES.settings))}>{t("tab.rules.syntaxOpenSettings")}</Button>
             </>
           )}
         </section>

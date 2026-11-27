@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConditionList, type OperatorsState } from "./ConditionList";

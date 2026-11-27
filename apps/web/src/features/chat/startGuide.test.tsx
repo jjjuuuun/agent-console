@@ -5,9 +5,11 @@ import { AppRoot } from "../../app/AppRoot";
 import { createAppQueryClient } from "../../app/queries";
 import { createSafeStorage } from "../../app/storage";
 import { buildAppRoutes, preloadScreens } from "../../shell/routes";
-import { startMessages } from "../start";
+import { createStartMessages } from "../start";
+import { koT } from "../../testing/koText";
 import { createHarness, type Harness } from "./testing/chatFakes";
 
+const startMessages = createStartMessages(koT("start"));
 beforeAll(preloadScreens, 120_000);
 afterEach(cleanup);
 

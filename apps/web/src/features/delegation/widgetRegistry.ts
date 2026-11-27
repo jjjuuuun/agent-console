@@ -1,3 +1,4 @@
+import type { DelegationMessages } from "./messages";
 import type { ComponentType } from "react";
 import type { ChipView } from "@agent-console/graph-editor";
 import type { SchemaFormFieldProps, UiSchema } from "@agent-console/schema-form";
@@ -9,6 +10,8 @@ const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !
 
 /** 칩 요약을 만들 때 위젯에 건네는 문맥. 위젯이 필요로 하는 것은 서버 데이터(연산자 목록)와 필드의 `ui:options`다. */
 export interface WidgetSummaryContext {
+  /** 위임 문구 표(화면 언어). 위젯이 칩 문구를 만들 때 쓴다 */
+  messages: DelegationMessages;
   /** 서버 연산자 목록. 없으면(연동 꺼짐·로딩·오류) null */
   operators: readonly { id: string; title: string }[] | null;
   /** 필드의 `ui:options`(예: 경로 → 제목 표) */

@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useConfigWidgets } from "../../app/ConfigWidgets";
-import { SchemaForm, type FormError } from "@agent-console/schema-form";
+import type { FormError } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { STRING_TAGS_FIELD, StringTagsField } from "../settings";
 import { buildConfigUi, withEnumArraysUnique } from "./configUi";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Banner } from "@agent-console/ui";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 import { plainSecretPaths, secretFieldsOf } from "./resourceLogic";
 
 const FIELDS = { [STRING_TAGS_FIELD]: StringTagsField };
@@ -20,13 +21,14 @@ export interface ConfigTabProps {
 
 /** 종류의 `config_schema`·`ui_schema`로 그리는 설정 폼. 출처 배지는 없다(리소스는 층 병합 대상이 아니다). */
 export function ConfigTab({ descriptor, value, onChange, errors, disabled }: ConfigTabProps) {
+  const t = useResourceMessages();
   const schema = useMemo(() => (descriptor.config_schema === undefined ? undefined : withEnumArraysUnique(descriptor.config_schema)), [descriptor.config_schema]);
   const hasFields = useMemo(() => {
     const props = schema?.["properties"];
     return typeof props === "object" && props !== null && Object.keys(props).length > 0;
   }, [schema]);
   const widgets = useConfigWidgets();
-  const ui = useMemo(() => buildConfigUi(schema, descriptor.ui_schema as Record<string, unknown> | undefined, new Set(Object.keys(widgets))), [schema, descriptor.ui_schema, widgets]);
+  const ui = useMemo(() => buildConfigUi(schema, descriptor.ui_schema as Record<string, unknown> | undefined, new Set(Object.keys(widgets)), t), [schema, descriptor.ui_schema, widgets, t]);
   const secretFields = useMemo(() => secretFieldsOf(schema), [schema]);
   if (schema === undefined || !hasFields) return <p className="app-muted">{t.config.empty}</p>;
   const plain = plainSecretPaths(value, secretFields);

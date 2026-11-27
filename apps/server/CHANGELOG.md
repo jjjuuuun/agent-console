@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `server`, so the web can show the `plugin_load_failed`, `plugins.config` and `settings.removed_key` codes in English (data only, no API change).
+- I.7c: Settings warnings in `GET /server-info` `warnings` keep the code and `details` of the modkit `SettingsNotice` (for example `plugins.unknown_disabled` with `details.name`), so the web picks the text in the current language. Warnings that come as plain text still use `plugins.config`.
 - I.6: Terminal text is now English: the `serve` help (module option help gets a `(module <id>)` suffix), startup and ready log lines, and `ConfigError` messages (`Invalid settings (settings.removed_key): …`, `Invalid settings: …`, settings file read and shape errors, non-loopback bind, unknown module option). Error codes (`ConfigError.code`, `removed`) are unchanged. Responses to the web (error bodies, `/server-info` warnings, schema text) keep their Korean original text; the web translates them by code.
 
 ## 1.0.0

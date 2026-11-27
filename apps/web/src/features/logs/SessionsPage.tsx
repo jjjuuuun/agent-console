@@ -14,15 +14,15 @@ import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
 import { EmptyNoLogs, EmptyNoMatch, FirstUseCard, freshNotice, useOtherSourcesNotice } from "./LogsEmpty";
 import type { ActionMenuEntry } from "./ActionMenu";
 import type { LogNotice } from "./NoticeBar";
-import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu } from "./LogMenu";
 import { LogsPageFrame } from "./LogsPageFrame";
-import { RangeControl } from "./LogFilters";
+import { LogFilters, RangeControl, useFilterFields } from "./LogFilters";
 import { useLogsIngested } from "./LogsLive";
 import { DEFAULT_RANGE, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SESSION_COLUMNS_DEFAULT, SESSION_COLUMN_IDS } from "./logsConfig";
-import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
+import { useErrorBlockOf, fieldErrorsOf } from "./logsErrors";
 import { classifyEmpty, enabledCount, parseRange, rangeToWindow, toRequestParams, projectParam } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
+import { LogsToast } from "./LogsToast";
 import { useArchiveDownload } from "./archive";
 import { useElementHeight } from "./useElementHeight";
 import { useFilterOptions } from "./useFilterOptions";
@@ -30,12 +30,17 @@ import { useLogUrlState } from "./useLogFilterState";
 import { useLogScan } from "./useLogScan";
 import { logKeys, useAnyEvents, useLogSessions, useLogSources, useLogTaxonomyView } from "./useLogsApi";
 import type { RowMenuAnchor } from "@agent-console/log-view";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
-const FIELDS = buildFilterFields();
 const NO_SEEN: readonly string[] = [];
 
 /** 세션 목록(`/logs/sessions`): 필터·기간·정렬(시작 시각)·열 구성·보관본·수집. 데이터는 `GET /logs/sessions`. */
 export function SessionsPage() {
+  const errorBlockOf = useErrorBlockOf();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const FIELDS = useFilterFields();
+  const t = useLogsMessages();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -57,7 +62,7 @@ export function SessionsPage() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const height = useElementHeight(wrapRef, 480);
   const [cols, setCols] = useColumnChoice(LOGS_STORAGE.colsSessions, SESSION_COLUMN_IDS, SESSION_COLUMNS_DEFAULT);
-  const columns = useMemo(() => sessionColumns(cols), [cols]);
+  const columns = useMemo(() => sessionColumns(cols, lv), [lv, cols]);
 
   const rangeValue = url.screen[SCREEN_PARAMS.range]?.[0];
   const range = parseRange(rangeValue, DEFAULT_RANGE.sessions);
@@ -65,7 +70,7 @@ export function SessionsPage() {
   const params = useMemo(() => toRequestParams(url.filter, { order, limit: LOGS_LIMITS.sessionsPage, ...projectParam(project) }, window), [url.filter, project, order, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
   const q = useLogSessions(params);
   const list = q.data ?? [];
-  const fieldErrors = useMemo(() => fieldErrorsOf(q.error), [q.error]);
+  const fieldErrors = useMemo(() => fieldErrorsOf(q.error, t), [q.error, t]);
   const hasServerFilterError = Object.keys(fieldErrors).length > 0;
   const total0 = useAnyEvents(q.data !== undefined && list.length === 0 && sources.data !== undefined && enabledCount(sources.data) > 0);
 
@@ -84,7 +89,7 @@ export function SessionsPage() {
   );
 
   const copyId = (id: string) => {
-    void navigator.clipboard?.writeText(id).then(() => toast({ tone: "success", text: t.copied, durationMs: 2000 }));
+    void navigator.clipboard?.writeText(id).then(() => toast({ tone: "success", text: <LogsToast render={(l) => l.copied} />, durationMs: 2000 }));
   };
   useShortcuts([
     { id: "logs.search", scope: LOGS_SCOPES.common, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
@@ -125,7 +130,7 @@ export function SessionsPage() {
   } else {
     body = (
       <>
-        <SessionList
+        <SessionList messages={lv} formatters={lvFormatters}
           onActiveChange={(id) => {
             activeSession.current = id;
           }}
@@ -186,7 +191,7 @@ export function SessionsPage() {
       </div>
       <div className="logs-subhead">
         <span className="app-muted" aria-live="polite">{q.data === undefined ? "" : t.sessions.count(list.length)}</span>
-        <ColumnsMenu all={SESSION_COLUMN_IDS} selected={cols} labelOf={(id) => sessionColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
+        <ColumnsMenu all={SESSION_COLUMN_IDS} selected={cols} labelOf={(id) => sessionColumns([id], lv)[0]?.header?.toString() ?? id} onChange={setCols} />
       </div>
       <div ref={wrapRef} className="logs-tablewrap" data-dim={q.isError && q.data !== undefined ? "true" : undefined}>
         {body}

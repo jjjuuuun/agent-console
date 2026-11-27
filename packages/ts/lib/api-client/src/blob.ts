@@ -32,7 +32,7 @@ export async function requestBlob(o: BlobRequestOptions): Promise<BlobResponse> 
   try {
     response = await o.fetch(o.base + o.path, init);
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "네트워크 오류";
+    const message = cause instanceof Error ? cause.message : "Network error";
     throw new ApiError(0, { code: NETWORK_ERROR_CODE, message }, { cause });
   }
   if (!response.ok) {

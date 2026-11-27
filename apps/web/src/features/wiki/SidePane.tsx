@@ -7,7 +7,9 @@ import { ToneChip } from "@agent-console/markdown-doc";
 import { OutlinksPanel, PageHistory, type WikiDisplay } from "@agent-console/wiki-view";
 import type { WikiHistoryPage, WikiLink, WikiPageVersion, WikiPageView } from "@agent-console/contracts/wiki";
 import { SIDE_TAB_DEFS } from "./wikiConfig";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useWikiViewMessages } from "./useViewMessages";
 
 export interface SidePaneProps {
   tab: string;
@@ -43,28 +45,32 @@ export interface SidePaneProps {
 }
 
 function NoSyntax({ onOpenRules }: { onOpenRules?: (() => void) | undefined }): ReactNode {
+  const t = useT("wiki");
   return (
     <div className="wiki-nosyntax" role="note" data-testid="wiki-nosyntax">
-      <strong>{m.page.noSyntaxTitle}</strong>
-      <p className="app-muted">{m.page.noSyntaxBody}</p>
-      {onOpenRules === undefined ? null : <button type="button" className="app-link-btn" onClick={onOpenRules}>{m.header.issuesOpen}</button>}
+      <strong>{t("page.noSyntaxTitle")}</strong>
+      <p className="app-muted">{t("page.noSyntaxBody")}</p>
+      {onOpenRules === undefined ? null : <button type="button" className="app-link-btn" onClick={onOpenRules}>{t("header.issuesOpen")}</button>}
     </div>
   );
 }
 
 export function SidePane(p: SidePaneProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const tm = useMaybeT("wiki");
   const backlinks = p.page?.backlinks ?? [];
   const links = p.page?.links ?? [];
   const versions = p.history.data?.items ?? [];
   const counts: Record<string, number | null> = { backlinks: p.noSyntax ? null : backlinks.length, outlinks: p.noSyntax ? null : links.length, history: p.history.unavailable ? null : p.history.data === undefined ? null : versions.length };
   return (
-    <div className="wiki-side-pane" data-testid="wiki-side-pane" aria-label={m.side.label}>
-      <div role="tablist" aria-label={m.side.label} className="wiki-segment">
+    <div className="wiki-side-pane" data-testid="wiki-side-pane" aria-label={t("side.label")}>
+      <div role="tablist" aria-label={t("side.label")} className="wiki-segment">
         {SIDE_TAB_DEFS.map((t) => {
           const n = counts[t.id];
           return (
             <button key={t.id} type="button" role="tab" id={`wiki-side-tab-${t.id}`} aria-selected={p.tab === t.id} aria-controls="wiki-side-panel" className="wiki-segment-btn" onClick={() => p.onTab(t.id)}>
-              {m.side.tabs[t.labelKey] ?? t.id}{n === null || n === undefined ? "" : ` ${n}`}
+              {tm(`side.tabs.${t.labelKey}`) ?? t.id}{n === null || n === undefined ? "" : ` ${n}`}
             </button>
           );
         })}
@@ -73,17 +79,17 @@ export function SidePane(p: SidePaneProps) {
         {p.tab === "backlinks" ? (
           p.noSyntax ? <NoSyntax onOpenRules={p.onOpenRules} /> : backlinks.length === 0 ? (
             <div className="wiki-side-empty">
-              <p className="app-muted">{m.side.backlinksNone}</p>
-              {p.page?.page.orphan === true ? <ToneChip label={m.side.orphan} tone="warning" /> : null}
+              <p className="app-muted">{t("side.backlinksNone")}</p>
+              {p.page?.page.orphan === true ? <ToneChip label={t("side.orphan")} tone="warning" /> : null}
             </div>
           ) : (
-            <ul className="wiki-backlinks" aria-label={m.side.tabs["backlinks"]}>
+            <ul className="wiki-backlinks" aria-label={tm("side.tabs.backlinks")}>
               {backlinks.map((b) => (
                 <li key={b.path}>
                   <button type="button" className="wiki-backlink-row" onClick={() => p.onOpenPage(b.path)}>
                     <span className="wiki-backlink-title ac-ellipsis">{b.title !== undefined && b.title !== "" ? b.title : b.path}</span>
                     <span className="wiki-backlink-path ac-mono-wrap ac-ellipsis app-muted">{b.path}</span>
-                    {b.count !== undefined && b.count >= 2 ? <span className="wiki-backlink-count app-muted">{m.side.count(b.count)}</span> : null}
+                    {b.count !== undefined && b.count >= 2 ? <span className="wiki-backlink-count app-muted">{t("side.count", { n: b.count })}</span> : null}
                   </button>
                 </li>
               ))}
@@ -91,7 +97,7 @@ export function SidePane(p: SidePaneProps) {
           )
         ) : p.tab === "outlinks" ? (
           p.noSyntax ? <NoSyntax onOpenRules={p.onOpenRules} /> : (
-            <OutlinksPanel
+            <OutlinksPanel messages={wikiViewMessages}
               content={p.page?.content ?? ""}
               links={links}
               display={p.display}
@@ -107,11 +113,11 @@ export function SidePane(p: SidePaneProps) {
             />
           )
         ) : p.history.failed && !p.history.unavailable ? (
-          <p className="app-field-error" role="alert">{m.history.failed}</p>
+          <p className="app-field-error" role="alert">{t("history.failed")}</p>
         ) : p.history.loading && !p.history.unavailable ? (
-          <p className="app-muted" role="status">{m.loading}</p>
+          <p className="app-muted" role="status">{t("loading")}</p>
         ) : (
-          <PageHistory
+          <PageHistory messages={wikiViewMessages}
             versions={versions}
             pruned={p.history.data?.pruned === true}
             currentVersion={p.currentVersion}

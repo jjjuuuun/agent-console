@@ -50,7 +50,7 @@ class SpaceLocator:
         limit: ``project_ids``에서 읽는 최대 개수(0 = 아는 공간과 호스트만).
         remember: 기억할 찾은 자리 최대 개수.
         spaced: 공간 포트가 있나(부를 때마다). 거짓이면 호스트만 본다.
-        label: 기록 메시지에 붙일 이름(예: ``"대화"``).
+        label: 기록 메시지에 붙일 이름(예: ``"conversation"``).
     """
 
     def __init__(
@@ -62,7 +62,7 @@ class SpaceLocator:
         limit: int = DEFAULT_LOCATE_LIMIT,
         remember: int = DEFAULT_LOCATE_REMEMBER,
         spaced: Callable[[], bool] = lambda: True,
-        label: str = "기록",
+        label: str = "record",
     ) -> None:
         self._has_raw = has
         self._opened = opened
@@ -104,7 +104,7 @@ class SpaceLocator:
                 try:
                     ids = list(self._project_ids())
                 except Exception:
-                    _log.exception("%s 위치 찾기: 공간 목록을 읽지 못했습니다", self._label)
+                    _log.exception("%s locate: could not read the space list", self._label)
                     ids = []
                 listed = 0
                 for space in ids:
@@ -112,7 +112,7 @@ class SpaceLocator:
                         continue
                     if listed >= self._limit:
                         _log.info(
-                            "%s 위치 찾기: 공간 %d개 중 %d개만 읽었습니다",
+                            "%s locate: found %d spaces but read only %d",
                             self._label,
                             len(ids),
                             self._limit,
@@ -142,7 +142,7 @@ class SpaceLocator:
         try:
             return bool(self._has_raw(place, item_id))
         except Exception:
-            _log.debug("%s 위치 찾기: %r를 읽지 못했습니다", self._label, place, exc_info=True)
+            _log.debug("%s locate: could not read %r", self._label, place, exc_info=True)
             return False
 
 

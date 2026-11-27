@@ -6,7 +6,7 @@ import { IdDialog } from "./IdDialog";
 import { ImportDialog } from "./ImportDialog";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProfileTable, type RowAction } from "./ProfileTable";
-import { archSettingsMessages as t } from "./messages";
+import { useArchSettingsMessages } from "./messages";
 import { ORIGIN } from "./messages";
 import { deleteProfile, disableProfile, removeKey, setProfile, suggestCloneId, type ProfileRow, type ProfilesMap } from "./profileLogic";
 import { newProfileSkeleton, parseProfileYaml, profileToYaml } from "./yamlProfile";
@@ -53,6 +53,7 @@ type DialogState =
  * 서버 호출(본문 읽기·검사)은 props로 받는다.
  */
 export function ProfilesPanel(p: ProfilesPanelProps) {
+  const t = useArchSettingsMessages();
   const { profiles, saved, onChange, rows, disabledRows, includeDefaults, status } = p;
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);

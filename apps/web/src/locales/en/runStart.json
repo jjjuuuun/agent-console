@@ -1,0 +1,21 @@
+{
+  "title": "New run",
+  "button": "New run",
+  "submit": "Start run",
+  "busy": "Starting…",
+  "hintShortcut": "Start with Ctrl+Enter",
+  "inputTitle": "Input",
+  "inputNone": "This team takes no input.",
+  "inputLoading": "Loading input details…",
+  "inputLoadError": "Couldn't load input details",
+  "inputUnknownType": "Unknown format, so it's entered as JSON",
+  "inputRequired": "Required",
+  "inputInvalidJson": "The JSON format is invalid",
+  "error": "Couldn't start the run",
+  "retry": "Try again",
+  "blockedConfig": "Choose a team",
+  "blockedInput": "Fill in the required inputs",
+  "configLabel": "Team to run",
+  "noGraphs": "This project has no team to run",
+  "cancel": "Cancel"
+}

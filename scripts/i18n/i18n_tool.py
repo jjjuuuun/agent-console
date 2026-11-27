@@ -476,11 +476,22 @@ def add_entries(path: Path, section: str, keys: Sequence[str]) -> int:
 _TABLE = re.compile(r"^\[", re.MULTILINE)
 
 
+def _before_comments(text: str, pos: int) -> int:
+    """``pos``(표 머리) 바로 위에 붙은 주석 줄들의 시작(그 주석은 그 표의 설명이다)."""
+    while pos > 0:
+        prev = text.rfind("\n", 0, pos - 1) + 1
+        if not text[prev:pos].lstrip().startswith("#"):
+            break
+        pos = prev
+    return pos
+
+
 def register_catalog(pyproject: Path, name: str, module: str) -> bool:
     """``[project.entry-points."agent_console.message_catalogs"]``에 ``name = "module"``을 더한다.
 
     이미 그 모듈을 가리키는 항목이 있으면 아무것도 하지 않는다(False). 표가 없으면 첫 ``[tool.``·
-    ``[dependency-groups]``·``[build-system]`` 표 앞에(없으면 끝에) 만든다.
+    ``[dependency-groups]``·``[build-system]`` 표 앞에(그 표 바로 위 주석 줄보다 앞, 없으면 끝에)
+    만든다.
 
     Raises:
         I18nToolError: 고친 결과가 TOML로 읽히지 않을 때(파일은 바꾸지 않는다).
@@ -502,7 +513,7 @@ def register_catalog(pyproject: Path, name: str, module: str) -> bool:
         for m in _TABLE.finditer(text):
             rest = text[m.start() :]
             if rest.startswith(("[dependency-groups]", "[build-system]", "[tool.")):
-                anchor = m.start()
+                anchor = _before_comments(text, m.start())
                 break
         new = (
             text[:anchor] + block + text[anchor:]

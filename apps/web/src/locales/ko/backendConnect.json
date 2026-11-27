@@ -1,0 +1,42 @@
+{
+  "buttonName": "백엔드 연결",
+  "tip": "백엔드 연결: {name} — {summary}",
+  "tipChecking": "백엔드 연결: 확인 중…",
+  "tipUnavailable": "백엔드 연결: 상태를 불러오지 못했습니다",
+  "chipLabel": "백엔드",
+  "chipChecking": "확인 중…",
+  "command": {
+    "title": "백엔드 연결…",
+    "keywords": "로그인 구독 연결 테스트 백엔드 sign in login test connection subscription",
+    "hint": "{tone}"
+  },
+  "dialog": {
+    "title": "백엔드 연결",
+    "lead": "에이전트를 실행하는 백엔드의 로그인·준비 상태입니다. 여기서 바로 로그인하고 연결을 테스트할 수 있습니다.",
+    "loading": "백엔드 상태를 불러오는 중…",
+    "off": "백엔드 상태 기능이 꺼져 있습니다."
+  },
+  "default": "기본",
+  "defaultTip": "공통 설정의 기본 백엔드입니다.",
+  "moreInSettings": "설정에서 자세히",
+  "models": {
+    "fetching": "모델 목록을 가져오는 중…",
+    "okForm_other": "계정에서 가져온 모델 {count}개 · {when} 기준",
+    "okDialog_other": "이 계정에서 쓸 수 있는 모델 {count}개 · {when} 기준",
+    "none": "이 계정에서 가져온 모델이 없습니다.",
+    "stale_other": "마지막으로 가져온 모델 {count}개 · {when} 기준 — 새로 가져오지 못했습니다",
+    "failed": "모델 목록을 가져오지 못했습니다. 설정에 적은 모델만 보입니다.",
+    "disabled": "모델 자동 조회가 꺼져 있습니다. 설정에 적은 모델만 보입니다.",
+    "unsupported": "이 로그인 방식에서는 모델 목록을 가져올 수 없습니다. 설정에 적은 모델만 보이고, 직접 입력할 수 있습니다.",
+    "refresh": "새로 고침",
+    "check": "연결 확인…",
+    "fetched_other": "모델 {count}개를 가져왔습니다.",
+    "moreActions": "더 보기"
+  },
+  "source": {
+    "config": "설정",
+    "configTip": "설정에 적힌 모델입니다.",
+    "discovered": "계정",
+    "discoveredTip": "이 계정에서 가져온 모델입니다."
+  }
+}

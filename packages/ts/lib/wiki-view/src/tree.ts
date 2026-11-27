@@ -23,6 +23,8 @@ export interface BuildTreeOptions {
   titleMode?: TreeTitleMode;
   /** 이 페이지의 상위 폴더는 항상 펼친다. */
   revealPath?: string | null;
+  /** 이름 정렬 로캘(BCP 47, 보통 화면 언어). 생략하면 `DEFAULT_LOCALE`("en"). */
+  locale?: string;
 }
 
 interface FolderNode {
@@ -32,7 +34,8 @@ interface FolderNode {
   pages: WikiPageSummary[];
 }
 
-const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
+/** 로캘을 안 주었을 때의 정렬 기준(환경 로캘에 기대지 않는다). */
+export const DEFAULT_LOCALE = "en";
 
 /** 페이지의 트리 이름. */
 export function pageName(page: WikiPageSummary, mode: TreeTitleMode): string {
@@ -68,6 +71,7 @@ export function allFolders(pages: readonly WikiPageSummary[]): string[] {
 /** 보이는 행(펼침 상태 반영)을 만든다. `filter`가 있으면 맞는 페이지와 그 상위 폴더만 남기고 모두 펼친다. */
 export function buildTree(pages: readonly WikiPageSummary[], opts: BuildTreeOptions): TreeRow[] {
   const mode = opts.titleMode ?? "title";
+  const collator = new Intl.Collator(opts.locale ?? DEFAULT_LOCALE, { numeric: true, sensitivity: "base" });
   const needle = (opts.filter ?? "").trim().toLowerCase();
   const filtering = needle !== "";
   const root: FolderNode = { path: "", name: "", folders: new Map(), pages: [] };

@@ -2,19 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConditionSpec, Issue } from "@agent-console/contracts";
 import { getContractSchema } from "@agent-console/contracts";
-import { SchemaForm, getDefaultValue, type FormError, type UiSchema } from "@agent-console/schema-form";
+import { getDefaultValue, type FormError, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm, useServerTranslate } from "../../i18n";
 import { scopeLabel } from "@agent-console/memory-view";
 import type { MemoryScopeRef } from "@agent-console/contracts/memory";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
 import { formatInterval } from "./formatInterval";
-import { memorySettingsMessages } from "./messages";
 import { useModule } from "../../modules";
 import { sameValue } from "../architectureSettings";
-import { summarizeConditions, useConditionOperators } from "../delegation";
+import { summarizeConditions, useConditionOperators, useDelegationMessages } from "../delegation";
 import { ROUTE_ROLES, routePath, useRouteOn } from "../library";
 import { CURRENT_PROJECT_PARAM } from "../../app/projectScope";
-import { IMPORTED_AUTHOR_KIND, MEMORY_PARAMS, MEMORY_ROLE, MEMORY_STORE_LIBRARY, memoryKeys, memoryMessages, useMemoryClient, useMemoryContext, useMemoryKinds, useMemoryScopes, useMemoryStoreState } from "../memory";
+import { IMPORTED_AUTHOR_KIND, MEMORY_PARAMS, MEMORY_ROLE, MEMORY_STORE_LIBRARY, memoryKeys, useMemoryClient, useMemoryContext, useMemoryKinds, useMemoryScopes, useMemoryStoreState } from "../memory";
 import { useProjects } from "../projects";
 import { LimitsBlock } from "./LimitsBlock";
 import { conditionFieldOf } from "./RuleEditorDialog";
@@ -25,6 +25,7 @@ import { buildKindRows, entriesByKind } from "./kindRows";
 import { readAuto } from "./AutoTargets";
 import { LIMITS, SETTINGS_KEYS, WIDGETS } from "./memorySettingsConfig";
 import { useDebouncedCheck } from "./useDebouncedCheck";
+import { useT } from "@agent-console/i18n";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -61,7 +62,6 @@ function widgetOf(node: Obj): string | undefined {
   const widget = asObj(node["x-ui"])["widget"];
   return typeof widget === "string" ? widget : undefined;
 }
-
 
 const WIDGET_TABLE = { [SWITCH_WIDGET]: SwitchWidget, [CHOICE_CARDS_WIDGET]: ChoiceCardsWidget };
 
@@ -123,11 +123,15 @@ function useInstallerOptions() {
  * 범위 종류·규칙은 서버가 병합한 목록과 사용자 데이터이며 이름은 코드에 없다. 설정 문서 전체와 저장은 이 컴포넌트가 모른다(값·콜백만).
  */
 export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, disabled, checkDelayMs }: MemorySettingsEditorProps) {
+  const t = useT("memorySettings");
+  const tMemory = useT("memory");
+  const delegationMessages = useDelegationMessages();
   const { rest } = useApi();
   const qc = useQueryClient();
   const draft = asObj(value);
   const savedObj = asObj(saved);
   const kindsQ = useMemoryKinds();
+  const tr = useServerTranslate();
   const scopesQ = useMemoryScopes();
   const options = useInstallerOptions();
   // 정리 미리보기·적용의 대상 저장소(기본 = 현재 프로젝트, 프로젝트가 없거나 기능이 꺼져 있으면 공용 고정). 메모리 화면과 같은 훅으로 정한다.
@@ -150,7 +154,8 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
   const kindsMap = asObj(draft[SETTINGS_KEYS.scopeKinds]);
   const savedKinds = asObj(savedObj[SETTINGS_KEYS.scopeKinds]);
   const counts = useMemo(() => entriesByKind(scopesQ.data), [scopesQ.data]);
-  const { rows, disabled: disabledRows } = buildKindRows(kindsQ.data?.kinds, kindsMap, savedKinds, includeDefaults, counts, sameValue);
+  const kindList = useMemo(() => kindsQ.data?.kinds?.map((k) => ({ ...k, label: tr(k.label), ...(k.description ? { description: tr(k.description) } : {}) })), [kindsQ.data, tr]);
+  const { rows, disabled: disabledRows } = buildKindRows(kindList, kindsMap, savedKinds, includeDefaults, counts, sameValue);
 
   const schema = useMemo(() => {
     const full = { ...(getContractSchema("MemorySettings") as unknown as Obj) };
@@ -188,7 +193,7 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
 
   const retention = asObj(draft[SETTINGS_KEYS.retention]);
   const interval = options?.values?.["retention_interval_seconds"];
-  const everyText = typeof interval === "number" && interval > 0 ? formatInterval(interval, memorySettingsMessages.retention.unit) : null;
+  const everyText = typeof interval === "number" && interval > 0 ? formatInterval(interval, { hour: (n) => t("retention.unit.hour", { n }), minute: (n) => t("retention.unit.minute", { n }), second: (n) => t("retention.unit.second", { n }) }) : null;
   const scopeText = useCallback(
     (scope: MemoryScopeRef) => {
       const kinds = kindsQ.data?.kinds ?? [];
@@ -200,11 +205,11 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
   // 자동 정리 대상(프로젝트 기능이 꺼져 있으면 프로젝트 칸 없음)
   const registeredProjects = projectsCtx.enabled ? projectsCtx.projects.filter((p) => p.archived !== true).map((p) => ({ id: p.id, name: projectsCtx.names.get(p.id) ?? p.id })) : null;
   const autoSummary = (() => {
-    const m = memorySettingsMessages.retention.autoTargets;
+    
     const a = readAuto(asObj(retention[SETTINGS_KEYS.auto]), autoSchema);
     const n = registeredProjects === null || !a.projects ? 0 : registeredProjects.filter((p) => !a.exclude.includes(p.id)).length;
-    const parts = [...(a.library ? [m.library] : []), ...(registeredProjects !== null && a.projects ? [m.projects(n)] : [])];
-    if (parts.length === 0) return ` · ${m.none}`;
+    const parts = [...(a.library ? [t("retention.autoTargets.library")] : []), ...(registeredProjects !== null && a.projects ? [t("retention.autoTargets.projects", { count: n })] : [])];
+    if (parts.length === 0) return ` · ${t("retention.autoTargets.none")}`;
     return registeredProjects === null && a.library ? undefined : ` · ${parts.join("·")}`;
   })();
   const whenKey = conditionFieldOf(ruleSchema);
@@ -236,7 +241,7 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
     everyText,
     summarize: (rule) => {
       const when = whenKey === undefined ? undefined : rule[whenKey];
-      const s = summarizeConditions(isObj(when) ? (when as ConditionSpec) : undefined, operators.operators, undefined);
+      const s = summarizeConditions(isObj(when) ? (when as ConditionSpec) : undefined, operators.operators, undefined, delegationMessages.condition.summary);
       return s.empty ? "" : s.text;
     },
     check: (rules) => checkWith({ [SETTINGS_KEYS.retention]: { ...retention, [SETTINGS_KEYS.rules]: rules } }),
@@ -247,8 +252,8 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
       value: store.library ? TARGET_LIBRARY : TARGET_PROJECT,
       key: store.project === null ? TARGET_LIBRARY : `${STORE_KEY_PROJECT}${store.project}`,
       options: store.canChoose
-        ? [{ id: TARGET_PROJECT, label: memoryMessages.store.project(store.currentName ?? "") }, { id: TARGET_LIBRARY, label: memoryMessages.store.library }]
-        : [{ id: TARGET_LIBRARY, label: memoryMessages.store.library }],
+        ? [{ id: TARGET_PROJECT, label: tMemory("store.project", { name: store.currentName ?? "" }) }, { id: TARGET_LIBRARY, label: tMemory("store.library") }]
+        : [{ id: TARGET_LIBRARY, label: tMemory("store.library") }],
       onChange: (id) => setWantLibrary(id === TARGET_LIBRARY),
     } }),
     autoTargets: {
@@ -277,8 +282,8 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
   const formValue = useMemo(() => Object.fromEntries(Object.entries(draft).filter(([k]) => k in asObj(formSchema["properties"]))), [draft, formSchema]);
   const optionTitles = useMemo(() => {
     const props = asObj(asObj(options?.schema)["properties"]);
-    return Object.fromEntries(Object.entries(props).flatMap(([k, v]) => (typeof asObj(v)["title"] === "string" ? [[k, asObj(v)["title"] as string]] : [])));
-  }, [options]);
+    return Object.fromEntries(Object.entries(props).flatMap(([k, v]) => (typeof asObj(v)["title"] === "string" ? [[k, tr(asObj(v)["title"] as string)]] : [])));
+  }, [options, tr]);
   return (
     <div className="memset" data-testid="memset">
       <SchemaForm

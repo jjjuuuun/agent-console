@@ -1,4 +1,4 @@
-# 기능 라이브러리(L1): FastAPI·modkit·mod-*·link-*를 모른다(modularity §3.7 규칙 1).
+# Feature library (L1): knows nothing about FastAPI, modkit, mod-*, or link-* (modularity §3.7 rule 1).
 folder = "features"
 description = "{{product_name}} feature library"
 dependencies = ["{{dist_prefix}}contracts"]

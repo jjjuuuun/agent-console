@@ -1,0 +1,10 @@
+{
+  "text": {
+    "세션 로그에서 에이전트 사이 위임 흐름을 보여 준다": "Shows the delegation flow between agents from session logs",
+    "연결 키·읽을 이벤트 상한.": "Link key and event read limit.",
+    "서브에이전트 기록의 부모를 찾는 연결 키 이름. 기본은 Claude Code 기록의 tool_use_id.": "Name of the key that finds the parent of a subagent record. The default is tool_use_id in Claude Code records.",
+    "부모 찾기 키": "Parent lookup key",
+    "세션 하나에서 읽을 이벤트 상한(넘으면 앞부분만으로 그린다).": "Maximum events read from one session (above it, only the first events are drawn).",
+    "읽을 이벤트 상한": "Event read limit"
+  }
+}

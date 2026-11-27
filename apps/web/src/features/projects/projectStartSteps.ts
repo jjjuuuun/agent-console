@@ -1,5 +1,5 @@
 import type { StepGuideStep } from "@agent-console/ui";
-import { folderHomeMessages } from "./folderHomeMessages";
+import type { FolderHomeMessages } from "./folderHomeMessages";
 
 /** 시작하기 단계를 판단하는 개수(앱 상태에서 센 값, 저장된 플래그 없음). 아직 모르면 undefined(완료로 치지 않는다). */
 export interface ProjectStartCounts {
@@ -20,8 +20,8 @@ export interface ProjectStartStepDef {
   needs: readonly string[];
   /** 이 역할의 화면이 꺼져 있으면 단계를 뺀다 */
   role?: string | undefined;
-  /** 단계가 건너뛸 수 있는지: 처음부터 끝나 있으면 "건너뜀" 문구 */
-  doneHint?: string;
+  /** 단계가 이미 끝나 있으면 그 단계의 `done` 문구를 보인다(없으면 단계 힌트) */
+  doneHint?: boolean;
   /** 이 단계 버튼이 막히는 동작(프로젝트 능력표의 열 이름). 막혀 있으면 `blocked[ability]`의 이유가 버튼에 붙는다 */
   ability?: string;
 }
@@ -32,7 +32,7 @@ export interface ProjectStartStepDef {
  */
 export const PROJECT_START_STEPS: readonly ProjectStartStepDef[] = [
   { id: "folder", done: (c) => (c.projects ?? 0) > 0, needs: [] },
-  { id: "library", done: (c) => (c.libraryTeams ?? 0) > 0, needs: [], doneHint: folderHomeMessages.steps.library.done },
+  { id: "library", done: (c) => (c.libraryTeams ?? 0) > 0, needs: [], doneHint: true },
   { id: "import", done: (c) => (c.projectTeams ?? 0) > 0, needs: ["folder"], ability: "copy_in" },
   { id: "chat", done: (c) => (c.projectConversations ?? 0) > 0, needs: ["folder", "import"], ability: "start_chat" },
 ];
@@ -54,11 +54,12 @@ export function buildProjectStartSteps(args: {
   counts: ProjectStartCounts;
   actions: Readonly<Record<string, ProjectStartAction | undefined>>;
   defs?: readonly ProjectStartStepDef[];
-  text?: typeof folderHomeMessages.steps;
+  /** 단계 문구(`useFolderHomeMessages().steps`) */
+  text: FolderHomeMessages["steps"];
   /** 능력 이름 → 막힌 이유 문구(막혀 있지 않으면 없음·null) */
   blocked?: Readonly<Record<string, string | null | undefined>>;
 }): StepGuideStep[] {
-  const text = args.text ?? folderHomeMessages.steps;
+  const text = args.text;
   const defs = args.defs ?? PROJECT_START_STEPS;
   const doneById = new Map(defs.map((d) => [d.id, d.done(args.counts)]));
   const labels = text as unknown as Record<string, { label: string; hint?: string; action?: string; done?: string } | undefined>;
@@ -70,7 +71,7 @@ export function buildProjectStartSteps(args: {
       const unmet = d.needs.find((n) => doneById.get(n) !== true);
       const ready = unmet === undefined;
       const action = args.actions[d.id];
-      const hint = done && d.doneHint !== undefined ? d.doneHint : unmet === "folder" ? text.needFolder : unmet !== undefined ? text.needConfig : t?.hint;
+      const hint = done && d.doneHint === true && t?.done !== undefined ? t.done : unmet === "folder" ? text.needFolder : unmet !== undefined ? text.needConfig : t?.hint;
       return {
         id: d.id,
         label: t?.label ?? d.id,

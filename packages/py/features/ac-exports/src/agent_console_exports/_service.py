@@ -129,7 +129,7 @@ class ExportService:
                     )
                 )
         except SchemaError:
-            _log.warning("내보내기 형식 %s의 옵션 스키마가 잘못됐습니다", descriptor.id)
+            _log.warning("The options schema of export format %s is invalid", descriptor.id)
         if issues:
             raise ExportValidationError("내보내기 요청이 잘못됐습니다", issues=issues)
         for item in request.items:

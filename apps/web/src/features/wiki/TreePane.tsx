@@ -8,8 +8,9 @@ import { Menu, Button, type MenuItemDef } from "@agent-console/ui";
 import { AuthorChip, OpChip, PageTree, expandAllFolders, type TreeRow, type TreeTitleMode, type WikiDisplay } from "@agent-console/wiki-view";
 import type { WikiChange, WikiPageSummary } from "@agent-console/contracts/wiki";
 import { KNOWN_WIKI_CHANGE_OPS } from "@agent-console/contracts/constants";
-import { formatRelative } from "../../lib/format";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useFormat, useLanguageCode } from "../../i18n";
 
 export interface TreePaneProps {
   pages: readonly WikiPageSummary[];
@@ -50,6 +51,9 @@ interface Menu2 {
 }
 
 export function TreePane({ filterRef, ...p }: TreePaneProps) {
+  const language = useLanguageCode();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const [filter, setFilter] = useState("");
   const [menu, setMenu] = useState<Menu2 | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,16 +79,16 @@ export function TreePane({ filterRef, ...p }: TreePaneProps) {
   const items = (row: TreeRow): MenuItemDef[] => {
     if (row.kind === "folder") {
       return [
-        { id: "new", label: m.tree.menu.newHere, disabled: blocked, onSelect: () => p.onNewHere(row.key) },
-        { id: "expand", label: m.tree.menu.expandAll, onSelect: () => p.onExpandedChange(expandAllFolders(p.pages)) },
-        { id: "collapse", label: m.tree.menu.collapseAll, onSelect: () => p.onExpandedChange(new Set()) },
+        { id: "new", label: t("tree.menu.newHere"), disabled: blocked, onSelect: () => p.onNewHere(row.key) },
+        { id: "expand", label: t("tree.menu.expandAll"), onSelect: () => p.onExpandedChange(expandAllFolders(p.pages)) },
+        { id: "collapse", label: t("tree.menu.collapseAll"), onSelect: () => p.onExpandedChange(new Set()) },
       ];
     }
     return [
-      { id: "open", label: m.tree.menu.open, onSelect: () => p.onSelect(row.key) },
-      { id: "rename", label: m.tree.menu.rename, disabled: blocked, onSelect: () => p.onRename(row.key) },
-      { id: "delete", label: m.tree.menu.delete, danger: true, disabled: blocked, onSelect: () => p.onDelete(row.key) },
-      { id: "copy", label: m.tree.menu.copyPath, onSelect: () => p.onCopyPath(row.key) },
+      { id: "open", label: t("tree.menu.open"), onSelect: () => p.onSelect(row.key) },
+      { id: "rename", label: t("tree.menu.rename"), disabled: blocked, onSelect: () => p.onRename(row.key) },
+      { id: "delete", label: t("tree.menu.delete"), danger: true, disabled: blocked, onSelect: () => p.onDelete(row.key) },
+      { id: "copy", label: t("tree.menu.copyPath"), onSelect: () => p.onCopyPath(row.key) },
     ];
   };
 
@@ -96,14 +100,14 @@ export function TreePane({ filterRef, ...p }: TreePaneProps) {
             ref={filterRef}
             type="search"
             className="wiki-input wiki-tree-filter"
-            aria-label={m.tree.filter}
-            placeholder={m.tree.filter}
+            aria-label={t("tree.filter")}
+            placeholder={t("tree.filter")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <select className="wiki-input wiki-tree-mode" aria-label={m.tree.titleMode} value={p.titleMode} onChange={(e) => p.onTitleModeChange(e.target.value === "path" ? "path" : "title")}>
-            <option value="title">{m.tree.byTitle}</option>
-            <option value="path">{m.tree.byPath}</option>
+          <select className="wiki-input wiki-tree-mode" aria-label={t("tree.titleMode")} value={p.titleMode} onChange={(e) => p.onTitleModeChange(e.target.value === "path" ? "path" : "title")}>
+            <option value="title">{t("tree.byTitle")}</option>
+            <option value="path">{t("tree.byPath")}</option>
           </select>
         </div>
       )}
@@ -111,9 +115,9 @@ export function TreePane({ filterRef, ...p }: TreePaneProps) {
         {p.recentShown ? (
           <RecentList {...p} />
         ) : p.pages.length === 0 ? (
-          <p className="app-muted wiki-tree-empty">{m.tree.empty}</p>
+          <p className="app-muted wiki-tree-empty">{t("tree.empty")}</p>
         ) : (
-          <PageTree
+          <PageTree messages={wikiViewMessages} locale={language}
             pages={p.pages}
             selectedPath={p.selectedPath}
             expanded={p.expanded}
@@ -137,11 +141,11 @@ export function TreePane({ filterRef, ...p }: TreePaneProps) {
       </div>
       <div className="wiki-tree-foot">
         <Button size="sm" aria-pressed={p.recentShown} onClick={() => p.onShowRecent(!p.recentShown)}>
-          {p.recentShown ? m.tree.recentBack : `${m.tree.recent} ▸`}
+          {p.recentShown ? t("tree.recentBack") : `${t("tree.recent")} ▸`}
         </Button>
       </div>
       {menu === null ? null : (
-        <div ref={menuRef} className="ac-popover wiki-ctx" role="presentation" style={{ position: "fixed", left: menu.x, top: menu.y }} aria-label={m.tree.menuLabel}>
+        <div ref={menuRef} className="ac-popover wiki-ctx" role="presentation" style={{ position: "fixed", left: menu.x, top: menu.y }} aria-label={t("tree.menuLabel")}>
           <Menu items={items(menu.row)} onClose={() => setMenu(null)} />
         </div>
       )}
@@ -150,24 +154,27 @@ export function TreePane({ filterRef, ...p }: TreePaneProps) {
 }
 
 function RecentList(p: Omit<TreePaneProps, "filterRef">) {
+  const fmt = useFormat();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const del: string = KNOWN_WIKI_CHANGE_OPS.DELETE;
-  if (p.changes.loading && p.changes.items.length === 0) return <p className="app-muted wiki-tree-empty" role="status">{m.loading}</p>;
-  if (p.changes.failed) return <p className="app-field-error wiki-tree-empty" role="alert">{m.changes.failed}</p>;
-  if (p.changes.items.length === 0) return <p className="app-muted wiki-tree-empty">{m.tree.recentEmpty}</p>;
+  if (p.changes.loading && p.changes.items.length === 0) return <p className="app-muted wiki-tree-empty" role="status">{t("loading")}</p>;
+  if (p.changes.failed) return <p className="app-field-error wiki-tree-empty" role="alert">{t("changes.failed")}</p>;
+  if (p.changes.items.length === 0) return <p className="app-muted wiki-tree-empty">{t("tree.recentEmpty")}</p>;
   return (
-    <ul className="wiki-recent" aria-label={m.tree.recent}>
+    <ul className="wiki-recent" aria-label={t("tree.recent")}>
       {p.changes.items.map((c, i) => (
         <li key={`${c.path}:${c.version}:${i}`} className="wiki-recent-row">
           <button type="button" className="wiki-recent-open ac-mono-wrap" title={c.path} onClick={() => p.onSelect(c.path)}>{c.path}</button>
           <span className="wiki-recent-meta">
             <OpChip op={c.op} display={p.display} size="dense" />
-            <span className="app-muted">{formatRelative(c.at, p.now)}</span>
-            <AuthorChip author={c.author} display={p.display} size="dense" {...(p.onOpenRun === undefined ? {} : { onOpenRun: p.onOpenRun })} />
-            {c.op === del && p.onRestoreDeleted !== undefined ? <button type="button" className="app-link-btn" onClick={() => p.onRestoreDeleted?.(c)}>{m.tree.deletedUndo}</button> : null}
+            <span className="app-muted">{fmt.relative(c.at, p.now)}</span>
+            <AuthorChip messages={wikiViewMessages} author={c.author} display={p.display} size="dense" {...(p.onOpenRun === undefined ? {} : { onOpenRun: p.onOpenRun })} />
+            {c.op === del && p.onRestoreDeleted !== undefined ? <button type="button" className="app-link-btn" onClick={() => p.onRestoreDeleted?.(c)}>{t("tree.deletedUndo")}</button> : null}
           </span>
         </li>
       ))}
-      {p.changes.hasMore ? <li><Button size="sm" onClick={p.changes.loadMore}>{m.tree.recentMore}</Button></li> : null}
+      {p.changes.hasMore ? <li><Button size="sm" onClick={p.changes.loadMore}>{t("tree.recentMore")}</Button></li> : null}
     </ul>
   );
 }

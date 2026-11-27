@@ -3,15 +3,15 @@ import type { Agent, Issue } from "@agent-console/contracts";
 import { useNavigate, useParams } from "react-router";
 import { EmptyState, Icon, PageHeader } from "@agent-console/ui";
 import { savedIssuesState } from "../../definition/savedIssuesState";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useErrorState, raised } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
 import { useRegisterCommands } from "../../shell/commands";
 import { useAgentList, useInvalidateLists, NewDefinitionDialog, DEFINITION_KINDS, type DetailRequest } from "../library";
 import { SpaceChip, SpaceNote, useConfigTransfer, useNewScope } from "../projects";
 import { useApi } from "../../app/ApiContext";
 import { AgentDetail } from "./AgentDetail";
 import { AgentList } from "./AgentList";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
 const idOfAgent = (a: Agent) => a.id;
 const nameOfAgent = (a: Agent) => a.name;
 
@@ -22,6 +22,8 @@ export interface AgentsScreenProps {
 
 /** 에이전트 화면(`/agents`, `/agents/:id`): 목록 + 상세. 목록 선택은 URL이다. */
 export function AgentsScreen({ basePath }: AgentsScreenProps) {
+  const m = useAppMessages();
+  const t = useAgentMessages();
   const { id } = useParams();
   const navigate = useNavigate();
   const { rest } = useApi();
@@ -29,7 +31,7 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
   const invalidate = useInvalidateLists();
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.create.failed);
   const [request, setRequest] = useState<DetailRequest | undefined>(undefined);
   const scoped = useConfigTransfer(agents.data, { kind: DEFINITION_KINDS.agent, idOf: idOfAgent, nameOf: nameOfAgent });
 
@@ -53,7 +55,7 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
       setCreating(false);
       go(v.id, saved.issues);
     } catch (e) {
-      setError(describeError(e, t.create.failed).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }
@@ -92,6 +94,7 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
 }
 
 function CreateAgent({ existing, busy, error, onClose, onCreate }: { existing: ReadonlySet<string>; busy: boolean; error: string | null; onClose: () => void; onCreate: (v: { name: string; id: string; description: string }, role: string, scope: { project?: string }) => void }) {
+  const t = useAgentMessages();
   const [role, setRole] = useState("");
   const scope = useNewScope();
   return (

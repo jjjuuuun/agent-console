@@ -8,14 +8,14 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryEntry, MemoryScopeKindInfo, MemoryScopeRef, MemoryScopeSummary, MemorySecretRejectedDetails } from "@agent-console/contracts/memory";
 import { MemoryEntryEditor, keyErrorText, secretRejectedField, validateKey, type MemoryEntryEditorHandle } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { isImeKeyEvent } from "../../lib/ime";
-import { memoryMessages as t } from "./messages";
-import { viewMessages } from "./format";
+import { useViewMessages } from "./format";
 import { pickOf, pickedScope, ScopePicker, type ScopePickerState } from "./ScopePicker";
 import { SecretBand } from "./SecretBand";
 import { useMemoryContext } from "./useMemoryContext";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
 
 export interface NewEntryFormProps {
   /** 처음 채울 범위(지금 보는 범위). 없으면 비워 둔다 */
@@ -36,6 +36,8 @@ export interface NewEntryFormProps {
 }
 
 export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes, labelOf, maxBytes, onCreated, onOpenExisting, onCancel, onDirtyChange }: NewEntryFormProps) {
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
   const rest = useMemoryRest();
   const ctx = useMemoryContext();
   const uid = useId();
@@ -49,7 +51,7 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
   const [content, setContent] = useState(initialContent);
   const [busy, setBusy] = useState(false);
   const [existing, setExisting] = useState<string | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useErrorState(t("newEntry.createFailed"));
   const [secret, setSecret] = useState<{ field: "content" | "key" | "tags" | null } | null>(null);
   const editorRef = useRef<MemoryEntryEditorHandle>(null);
   const keyRef = useRef<HTMLInputElement>(null);
@@ -92,7 +94,7 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
       } else if (e instanceof ApiError && e.code === ERROR_CODES.MEMORY_SECRET_REJECTED) {
         setSecret({ field: secretRejectedField((e.details as Partial<MemorySecretRejectedDetails>).field) });
       } else {
-        setFailure(describeError(e, t.newEntry.createFailed).message);
+        setFailure(raised(e));
       }
     } finally {
       setBusy(false);
@@ -108,7 +110,7 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
   return (
     <form
       className="mem-new"
-      aria-label={t.newEntry.title}
+      aria-label={t("newEntry.title")}
       onSubmit={(e) => {
         e.preventDefault();
         void create();
@@ -123,17 +125,17 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
       }}
     >
       <div className="mem-detail-head">
-        <h2 className="mem-detail-title">{t.newEntry.title}</h2>
+        <h2 className="mem-detail-title">{t("newEntry.title")}</h2>
         <div className="mem-detail-actions">
-          <Button type="button" onClick={onCancel}>{t.newEntry.cancel}</Button>
-          <Button type="submit" variant="primary" disabled={!canCreate} loading={busy}>{t.newEntry.create}</Button>
+          <Button type="button" onClick={onCancel}>{t("newEntry.cancel")}</Button>
+          <Button type="submit" variant="primary" disabled={!canCreate} loading={busy}>{t("newEntry.create")}</Button>
         </div>
       </div>
       {secret !== null ? <SecretBand field={secret.field} onGo={() => goTo(secret.field)} /> : null}
       {failure !== null ? <Banner tone="danger" className="mem-band">{failure}</Banner> : null}
       <div className="mem-new-fields">
         <ScopePicker
-          label={t.newEntry.scope}
+          label={t("newEntry.scope")}
           kinds={kinds}
           scopes={scopes}
           state={pick}
@@ -145,13 +147,13 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
           }}
         />
         <div className="mem-field">
-          <label htmlFor={`${uid}-key`} className="mem-label">{t.newEntry.key}</label>
+          <label htmlFor={`${uid}-key`} className="mem-label">{t("newEntry.key")}</label>
           <input
             ref={keyRef}
             id={`${uid}-key`}
             className="mem-input mem-mono"
             value={key}
-            placeholder={t.newEntry.keyPlaceholder}
+            placeholder={t("newEntry.keyPlaceholder")}
             aria-invalid={keyError !== null || existing !== null}
             aria-describedby={`${uid}-key-err`}
             onCompositionStart={() => (composing.current = true)}
@@ -166,11 +168,11 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
             }}
           />
           <span id={`${uid}-key-err`} className="mem-error" role={keyError !== null || existing !== null ? "alert" : undefined}>
-            {keyError ?? (existing !== null ? t.newEntry.exists : "")}
+            {keyError ?? (existing !== null ? t("newEntry.exists") : "")}
             {existing !== null && existing !== "" ? (
               <>
                 {" "}
-                <button type="button" className="mem-linkbtn" onClick={() => onOpenExisting(existing)}>{t.newEntry.open}</button>
+                <button type="button" className="mem-linkbtn" onClick={() => onOpenExisting(existing)}>{t("newEntry.open")}</button>
               </>
             ) : null}
           </span>
@@ -191,10 +193,10 @@ export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes,
         </div>
       </div>
       <div className="mem-new-editor" data-ac-editable>
-        <MemoryEntryEditor
+        <MemoryEntryEditor messages={viewMessages}
           value={content}
           onChange={(v) => (setContent(v), touch())}
-          entryKey={key === "" ? t.newEntry.title : key}
+          entryKey={key === "" ? t("newEntry.title") : key}
           contentType={contentType === "" ? null : contentType}
           saveState={busy ? "saving" : dirty ? "dirty" : "saved"}
           maxBytes={maxBytes}

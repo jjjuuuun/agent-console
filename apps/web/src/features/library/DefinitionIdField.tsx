@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { idProblem, suggestId } from "./ids";
-import { libraryMessages as t } from "./messages";
+import { useLibraryMessages } from "./messages";
 
 export interface DefinitionId {
   /** 화면에 보일 id: 직접 고친 값, 없으면 이름에서 제안한 값 */
@@ -33,6 +33,7 @@ export interface DefinitionIdFieldProps {
 
 /** id 입력 한 줄: 라벨, 입력, 도움말 또는 오류(`role=alert`). */
 export function DefinitionIdField({ id, problem, onChange, inputId, noteId }: DefinitionIdFieldProps) {
+  const t = useLibraryMessages();
   const uid = useId();
   const input = inputId ?? `${uid}-id`;
   const note = noteId ?? `${uid}-id-note`;

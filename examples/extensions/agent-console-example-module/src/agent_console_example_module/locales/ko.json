@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "example_notes.settings_invalid": "사용자 설정 섹션을 읽지 못해 기본값을 씁니다.",
+    "example_notes.storage_memory": "DB가 없어 앱 노트를 메모리에만 둡니다(재시작하면 사라집니다)."
+  }
+}

@@ -222,7 +222,7 @@ class _Builder:
             return model.model_validate(event.payload)
         except ValidationError:
             self.skipped += 1
-            _log.debug("형식이 틀린 이벤트 건너뜀: %s seq=%s", event.type, event.seq)
+            _log.debug("Skipped malformed event: %s seq=%s", event.type, event.seq)
             return None
 
     def _node_span(

@@ -233,7 +233,7 @@ class ProjectSessionArchive:
     def note_failure(self, project_id: str, session: SessionKey, error: BaseException) -> None:
         """보관 실패를 남긴다(실행은 막지 않는다)."""
         _log.warning(
-            "세션 기록 보관 실패(프로젝트 %s, 백엔드 %s): %s",
+            "Archiving session records failed (project %s, backend %s): %s",
             project_id,
             session.backend,
             type(error).__name__,
@@ -388,7 +388,7 @@ def _default_submit(job: Callable[[], None]) -> None:
 
 def _log_failure(future: asyncio.Future[None]) -> None:
     if not future.cancelled() and future.exception() is not None:
-        _log.warning("세션 기록 보관 작업 실패: %s", type(future.exception()).__name__)
+        _log.warning("Session records archive job failed: %s", type(future.exception()).__name__)
 
 
 __all__ = [

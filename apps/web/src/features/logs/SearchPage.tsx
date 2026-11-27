@@ -15,7 +15,7 @@ import type { LogNotice } from "./NoticeBar";
 import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { useDetailLink } from "./useDetailLink";
-import { LogFilters, RangeControl, buildFilterFields } from "./LogFilters";
+import { LogFilters, RangeControl, useFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
 import { LogsPageFrame } from "./LogsPageFrame";
 import { useLogsIngested } from "./LogsLive";
@@ -23,17 +23,18 @@ import { SplitHandle } from "./SplitHandle";
 import { useArchiveDownload } from "./archive";
 import { useLogTimeMode } from "./useLogTimeMode";
 import { CELL_IDS, DEFAULT_RANGE, SETTINGS_TAXONOMY_HASH, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_EVENT_COLUMNS_DEFAULT, SEARCH_VIEWS, SUGGEST_FROM } from "./logsConfig";
-import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
+import { useErrorBlockOf, fieldErrorsOf } from "./logsErrors";
 import { classifyEmpty, enabledCount, eventFieldValues, originOf, parseRange, rangeToWindow, suggestionsFor, toRequestParams, projectParam, withValues } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
+import { LogsToast } from "./LogsToast";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
 import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState, useSelectedUid } from "./useLogFilterState";
 import { useLogScan } from "./useLogScan";
 import { logKeys, useAnyEvents, useLogEventPages, useLogHandoffs, useLogSources, useLogTaxonomyView } from "./useLogsApi";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
-const FIELDS = buildFilterFields();
 const VIEWS = SEARCH_VIEWS;
 /** 보기 id: 첫째가 이벤트 표(기본), 둘째가 위임 행렬 */
 const EVENTS_VIEW = VIEWS[0] ?? "";
@@ -42,6 +43,11 @@ type View = string;
 
 /** 검색(`/logs/search`): 세션 경계 없는 이벤트 표(키셋 페이지)와 handoff 행렬. 필터는 두 보기가 공유한다. */
 export function SearchPage() {
+  const errorBlockOf = useErrorBlockOf();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const FIELDS = useFilterFields();
+  const t = useLogsMessages();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -63,7 +69,7 @@ export function SearchPage() {
   const height = useElementHeight(wrapRef, 420);
   const [cols, setCols] = useColumnChoice(LOGS_STORAGE.colsSession + ".search", EVENT_COLUMN_IDS, SEARCH_EVENT_COLUMNS_DEFAULT);
   const time = useLogTimeMode();
-  const columns = useMemo(() => eventColumns(cols, undefined, time.widths), [cols, time.widths]);
+  const columns = useMemo(() => eventColumns(cols, lv, time.widths), [lv, cols, time.widths]);
   const [detailW, setDetailW] = useState(() => Number(storage.get(LOGS_STORAGE.detailWidth)) || LOGS_LIMITS.detailWidthDefault);
 
   const viewParam = url.screen[SCREEN_PARAMS.view]?.[0];
@@ -76,7 +82,7 @@ export function SearchPage() {
   const handoffs = useLogHandoffs(handoffParams, view === MATRIX_VIEW);
   const rows = useMemo<LogEvent[]>(() => (events.data?.pages ?? []).flatMap((p) => p.items ?? []), [events.data]);
   const total = events.data?.pages[0]?.total ?? null;
-  const fieldErrors = useMemo(() => fieldErrorsOf(view === EVENTS_VIEW ? events.error : handoffs.error), [view, events.error, handoffs.error]);
+  const fieldErrors = useMemo(() => fieldErrorsOf(view === EVENTS_VIEW ? events.error : handoffs.error, t), [view, events.error, handoffs.error, t]);
   const isError = useCallback((e: Pick<LogEvent, "category" | "tags">) => isErrorEvent(e, taxonomy), [taxonomy]);
   const seen = useMemo(() => [...new Set(rows.map((r) => r.category))], [rows]);
   const options = useFilterOptions(taxonomy, seen);
@@ -101,7 +107,7 @@ export function SearchPage() {
     { id: "logs.x.scan", scope: LOGS_SCOPES.search, keys: "Shift+R", titleKey: "shortcuts.logsScan", run: () => void scan.run() },
   ]);
 
-  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast({ tone: "success", text: t.copied, durationMs: 2000 }));
+  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast({ tone: "success", text: <LogsToast render={(l) => l.copied} />, durationMs: 2000 }));
   const openRowMenu = (uid: string, a: RowMenuAnchor) => {
     const e = rows.find((r) => r.uid === uid);
     if (e === undefined) return;
@@ -134,7 +140,7 @@ export function SearchPage() {
     body = handoffs.isError && handoffs.data === undefined && Object.keys(fieldErrors).length === 0 ? (
       <ErrorBlock title={t.search.handoffFailed} message={errorBlockOf(handoffs.error, t.loadFailed).message} retryLabel={t.retry} onRetry={() => void handoffs.refetch()} />
     ) : (
-      <HandoffMatrixView
+      <HandoffMatrixView messages={lv}
         cells={cells}
         loading={handoffs.isPending}
         limit={40}
@@ -151,7 +157,7 @@ export function SearchPage() {
     body = kind === "B" ? <EmptyNoLogs sources={sources.data} scanning={scan.scanning} onScan={() => void scan.run()} /> : <EmptyNoMatch onClearFilters={filtered ? clearFilters : undefined} onAllRange={defaultRange ? () => url.setScreen({ [SCREEN_PARAMS.range]: "all" }) : undefined} />;
   } else {
     body = (
-      <LogEventTable
+      <LogEventTable messages={lv} formatters={lvFormatters}
         ref={eventTableRef}
         onActivate={activateEvent}
         rows={rows}
@@ -214,7 +220,7 @@ export function SearchPage() {
         }}>
           {VIEWS.map((v) => (
             <button key={v} type="button" role="tab" id={`logs-view-${v}`} aria-selected={view === v} tabIndex={view === v ? 0 : -1} className="ac-tab" onClick={() => setView(v)}>
-              {t.search.views[v] ?? v}
+              {v === EVENTS_VIEW ? t.search.viewEvents : v === MATRIX_VIEW ? t.search.viewMatrix : v}
             </button>
           ))}
         </div>
@@ -224,7 +230,7 @@ export function SearchPage() {
           <LogViewMenu
             sort={{ order, onChange: setOrder }}
             time={{ mode: time.mode, onChange: time.setMode }}
-            columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => eventColumns([id])[0]?.header?.toString() ?? id, onChange: setCols }}
+            columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => eventColumns([id], lv)[0]?.header?.toString() ?? id, onChange: setCols }}
             onEditTaxonomy={() => void navigate(`${pathForRole(LINK_ROLES.settings)}#${SETTINGS_TAXONOMY_HASH}`)}
           />
         ) : null}

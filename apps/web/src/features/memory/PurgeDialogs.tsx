@@ -2,11 +2,11 @@
 import { useRef, useState } from "react";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef, MemoryScopeSummary } from "@agent-console/contracts/memory";
-import { describeError } from "../../app/errors";
-import { relativeTime } from "./format";
+import { useDescribeError } from "../../app/errors";
+import { useRelativeTime } from "./format";
 import { MEMORY_LIMITS } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
 
 export interface PurgeDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -19,25 +19,27 @@ export interface PurgeDialogProps {
 }
 
 export function PurgeDialog({ entry, scopeLabel, versions, busy, onCancel, onConfirm }: PurgeDialogProps) {
+  const t = useT("memory");
+  const relativeTime = useRelativeTime();
   const [ok, setOk] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
   return (
     <Dialog
       open
       size="md"
-      title={t.purge.title}
+      title={t("purge.title")}
       onClose={onCancel}
       initialFocus={cancelRef}
       actions={
         <>
-          <Button ref={cancelRef} onClick={onCancel}>{t.cancel}</Button>
-          <Button variant="danger" disabled={!ok} loading={busy} onClick={onConfirm}>{t.purge.submit}</Button>
+          <Button ref={cancelRef} onClick={onCancel}>{t("cancel")}</Button>
+          <Button variant="danger" disabled={!ok} loading={busy} onClick={onConfirm}>{t("purge.submit")}</Button>
         </>
       }
     >
-      <Banner tone="danger">{t.purge.body(versions)}</Banner>
-      <p className="mem-purge-summary">{t.purge.summary(entry.key, scopeLabel, relativeTime(entry.updated_at))}</p>
-      <Choice checked={ok} onChange={(e) => setOk(e.target.checked)}>{t.purge.confirm}</Choice>
+      <Banner tone="danger">{t("purge.body", { count: versions })}</Banner>
+      <p className="mem-purge-summary">{t("purge.summary", { key: entry.key, scope: scopeLabel, updated: relativeTime(entry.updated_at) })}</p>
+      <Choice checked={ok} onChange={(e) => setOk(e.target.checked)}>{t("purge.confirm")}</Choice>
     </Dialog>
   );
 }
@@ -55,6 +57,8 @@ type Phase = { step: 1 } | { step: 2 } | { step: 3; done: number; total: number;
 
 /** 범위의 항목을 차례로 완전 삭제한다(지운 항목·보관 포함). 중간에 [중지]할 수 있고 실패는 사유 목록으로 남긴다. */
 export function ClearScopeDialog({ scope, summary, label, onClose, onDone }: ClearScopeDialogProps) {
+  const describeError = useDescribeError();
+  const t = useT("memory");
   const rest = useMemoryRest();
   const [phase, setPhase] = useState<Phase>({ step: 1 });
   const [typed, setTyped] = useState("");
@@ -89,7 +93,7 @@ export function ClearScopeDialog({ scope, summary, label, onClose, onDone }: Cle
             progressed = true;
           } catch (e) {
             failedIds.add(item.id);
-            failed.push(`${item.key}: ${describeError(e, t.toast.failed).message}`);
+            failed.push(`${item.key}: ${describeError(e, t("toast.failed")).message}`);
           }
           setPhase({ step: 3, done, total: planned, failed: [...failed], finished: false });
         }
@@ -98,7 +102,7 @@ export function ClearScopeDialog({ scope, summary, label, onClose, onDone }: Cle
         if (!progressed) break;
       }
     } catch (e) {
-      failed.push(describeError(e, t.toast.failed).message);
+      failed.push(describeError(e, t("toast.failed")).message);
     }
     setPhase({ step: 3, done, total: planned, failed, finished: true });
     onDone();
@@ -109,46 +113,46 @@ export function ClearScopeDialog({ scope, summary, label, onClose, onDone }: Cle
     <Dialog
       open
       size="md"
-      title={t.clear.title}
+      title={t("clear.title")}
       onClose={phase.step === 3 && !finished ? () => undefined : onClose}
       initialFocus={cancelRef}
       actions={
         phase.step === 1 ? (
           <>
-            <Button ref={cancelRef} onClick={onClose}>{t.cancel}</Button>
-            <Button variant="danger" onClick={() => setPhase({ step: 2 })}>{t.clear.next}</Button>
+            <Button ref={cancelRef} onClick={onClose}>{t("cancel")}</Button>
+            <Button variant="danger" onClick={() => setPhase({ step: 2 })}>{t("clear.next")}</Button>
           </>
         ) : phase.step === 2 ? (
           <>
-            <Button ref={cancelRef} onClick={onClose}>{t.cancel}</Button>
-            <Button variant="danger" disabled={typed !== label} onClick={() => void run()}>{t.clear.submit}</Button>
+            <Button ref={cancelRef} onClick={onClose}>{t("cancel")}</Button>
+            <Button variant="danger" disabled={typed !== label} onClick={() => void run()}>{t("clear.submit")}</Button>
           </>
         ) : finished ? (
-          <Button ref={cancelRef} variant="primary" onClick={onClose}>{t.close}</Button>
+          <Button ref={cancelRef} variant="primary" onClick={onClose}>{t("close")}</Button>
         ) : (
-          <Button ref={cancelRef} onClick={() => (stop.current = true)}>{t.clear.stop}</Button>
+          <Button ref={cancelRef} onClick={() => (stop.current = true)}>{t("clear.stop")}</Button>
         )
       }
     >
       {phase.step === 1 ? (
         <>
-          <Banner tone="danger">{t.clear.step1(label, total, archived)}</Banner>
-          <p className="mem-help">{t.clear.note}</p>
+          <Banner tone="danger">{t("clear.step1", { label, n: total, archived })}</Banner>
+          <p className="mem-help">{t("clear.note")}</p>
         </>
       ) : null}
       {phase.step === 2 ? (
         <div className="mem-field">
-          <label htmlFor="mem-clear-type" className="mem-label">{t.clear.typeLabel}</label>
+          <label htmlFor="mem-clear-type" className="mem-label">{t("clear.typeLabel")}</label>
           <input id="mem-clear-type" className="mem-input" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
           <span className="mem-help mem-mono">{label}</span>
         </div>
       ) : null}
       {phase.step === 3 ? (
         <div role="status" aria-live="polite">
-          <p>{t.clear.progress(phase.done, phase.total)}</p>
+          <p>{t("clear.progress", { k: phase.done, n: phase.total })}</p>
           {phase.failed.length > 0 ? (
             <>
-              <p className="mem-error">{t.clear.partial(phase.done, phase.failed.length)}</p>
+              <p className="mem-error">{t("clear.partial", { k: phase.done, f: phase.failed.length })}</p>
               <ul className="mem-issue-list">{phase.failed.slice(0, 10).map((f, i) => <li key={i}>{f}</li>)}</ul>
             </>
           ) : null}

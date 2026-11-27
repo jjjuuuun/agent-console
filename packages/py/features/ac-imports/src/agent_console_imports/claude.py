@@ -218,14 +218,14 @@ class ClaudeDirectorySource:
         max_bytes = self.max_file_bytes if limit is None else limit
         try:
             if path.is_symlink():
-                _log.warning("가져오기: 심볼릭 링크는 건너뜁니다: %s", path)
+                _log.warning("Import: skipping symbolic link: %s", path)
                 scan.link(path)
                 return None
             if not path.is_file():
                 return None
             boundary = self._boundary(path).resolve()
             if not path.resolve().is_relative_to(boundary):
-                _log.warning("가져오기: 출처 밖을 가리키는 경로는 건너뜁니다: %s", path)
+                _log.warning("Import: skipping path that points outside the source: %s", path)
                 scan.link(path)
                 return None
             if path.stat().st_size > max_bytes:
@@ -460,7 +460,7 @@ class ClaudeDirectorySource:
             rel = path.relative_to(folder).as_posix()
             total += len(read.data)
             if total > self.max_skill_bytes:
-                _log.warning("가져오기: skill이 너무 커서 건너뜁니다: %s", folder)
+                _log.warning("Import: skipping skill that is too large: %s", folder)
                 return None
             files[rel] = read.data
             digest.update(rel.encode("utf-8") + b"\0" + read.data)

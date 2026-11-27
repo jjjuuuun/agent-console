@@ -2,11 +2,12 @@ import { useMemo } from "react";
 import { contractsSchema, getContractSchema, type WorkspaceSettings } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { Banner, Button } from "@agent-console/ui";
-import { describeError } from "../../../app/errors";
-import { messages as m } from "../../../app/messages";
+import { useServerTranslate } from "../../../i18n";
+import { useDescribeError } from "../../../app/errors";
+import { useAppMessages } from "../../../app/appMessages";
 import { attachmentErrorsAt } from "../../../lib/attachmentProblems";
 import { Skeleton } from "../Skeleton";
-import { agentSchemaForBackend, buildAgentDefaultsUi } from "../userSettingsUi";
+import { agentSchemaForBackend, buildAgentDefaultsUi, useUserSettingsText } from "../userSettingsUi";
 import { LayerForm } from "../LayerForm";
 import { UserSettingsForm } from "../UserSettingsForm";
 import { BackendReadinessSection } from "../../backendReadiness";
@@ -26,9 +27,14 @@ export interface SectionEditProps {
 
 /** 공통 층 하나만 있는 설정 화면의 층 목록. 스키마 기본값은 "어느 층에도 없음"(기본값 배지)이다. */
 export const COMMON_LAYER_ID = "common";
-const useLayers = () => useMemo(() => [{ id: COMMON_LAYER_ID, label: m.settings.layerCommon }], []);
+const useLayers = () => {
+  const m = useAppMessages();
+  return useMemo(() => [{ id: COMMON_LAYER_ID, label: m.settings.layerCommon }], [m]);
+};
 
 function QueryNote({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
   return (
     <Banner tone="warning" actions={<Button size="sm" onClick={onRetry}>{m.common.retry}</Button>}>
       {m.settings.optionsFailed} <span className="app-muted">{describeError(error, "").message}</span>
@@ -38,6 +44,8 @@ function QueryNote({ error, onRetry }: { error: Error; onRetry: () => void }) {
 
 /** ① 공통 설정(`agent_defaults`): 에이전트 기본값 스키마(`AgentDefaults`, 필드는 에이전트 설정과 같고 분류만 다름), 백엔드·첨부 목록은 서버 데이터로. */
 export function CommonSection({ value, onChange, errors, disabled, focusPath }: SectionEditProps) {
+  const m = useAppMessages();
+  const text = useUserSettingsText();
   const layers = useLayers();
   const backends = useBackends();
   const resources = useResourceList();
@@ -51,8 +59,8 @@ export function CommonSection({ value, onChange, errors, disabled, focusPath }: 
   }, []);
   const attachmentErrors = useMemo(() => attachmentErrorsAt(errors, "/resources"), [errors]);
   const ui = useMemo(
-    () => buildAgentDefaultsUi(schema, { backends: backends.data ?? [], resources: resources.data ?? [], resourceTypes: types.data ?? [], attachmentModes: modes, layerLabel: m.settings.layerCommon, backendEmptyLabel: m.settings.backendUnset, attachmentErrors }),
-    [schema, backends.data, resources.data, types.data, modes, attachmentErrors],
+    () => buildAgentDefaultsUi(schema, { backends: backends.data ?? [], resources: resources.data ?? [], resourceTypes: types.data ?? [], attachmentModes: modes, layerLabel: m.settings.layerCommon, backendEmptyLabel: m.settings.backendUnset, attachmentErrors }, text),
+    [schema, backends.data, resources.data, types.data, modes, attachmentErrors, text, m],
   );
   const failed = backends.error ?? resources.error ?? types.error;
   return (
@@ -81,16 +89,18 @@ export function CommonSection({ value, onChange, errors, disabled, focusPath }: 
 
 /** 값 한 묶음(`sections`)을 사용자 설정 폼으로. 채팅·편집기·위임·병합 규칙·상호작용이 같은 경로를 쓴다. */
 export function UserSection({ sections, value, onChange, errors, disabled }: SectionEditProps & { sections: readonly string[] }) {
+  const m = useAppMessages();
   const layers = useLayers();
   const edgeTypes = useEdgeTypes();
   const strategies = useMergeStrategies();
+  const tr = useServerTranslate();
   const options = useMemo(
     () => ({
-      edgeKinds: (edgeTypes.data ?? []).filter((e) => e.ui_hints?.hidden !== true).map((e) => ({ value: e.id, label: e.title })),
+      edgeKinds: (edgeTypes.data ?? []).filter((e) => e.ui_hints?.hidden !== true).map((e) => ({ value: e.id, label: tr(e.title) })),
       mergeStrategies: strategies.data ?? [],
       mergeSchema: getContractSchema("AgentSettings") as SchemaNode,
     }),
-    [edgeTypes.data, strategies.data],
+    [edgeTypes.data, strategies.data, tr],
   );
   const failed = edgeTypes.error ?? strategies.error;
   return (
@@ -114,6 +124,8 @@ export function UserSection({ sections, value, onChange, errors, disabled }: Sec
 
 /** 위임 방식 표(읽기 전용, `GET /delegation-strategies`). 제약이 무엇인지 확인하는 용도. */
 export function DelegationTable() {
+  const m = useAppMessages();
+  const tr = useServerTranslate();
   const q = useDelegationStrategies();
   if (q.isLoading) return <Skeleton rows={2} />;
   if (q.error) return <QueryNote error={q.error} onRetry={() => void q.refetch()} />;
@@ -134,7 +146,7 @@ export function DelegationTable() {
       <tbody>
         {rows.map((r) => (
           <tr key={r.id}>
-            <td title={r.description || undefined}>{r.title}</td>
+            <td title={r.description ? tr(r.description) : undefined}>{tr(r.title)}</td>
             <td>{r.max_depth ?? t.unlimited}</td>
             <td>{r.allows_outgoing_flow ? t.allowed : t.denied}</td>
             <td className="app-wrap">{r.member_fields.length === 0 ? t.anyField : r.member_fields.join(", ")}</td>

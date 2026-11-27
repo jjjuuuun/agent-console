@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ArchitectureProfileCheckRequest, ArchitectureProfileCheckResult, Issue } from "@agent-console/contracts";
 import { Button, Icon, Tooltip } from "@agent-console/ui";
 import { LazyTextEditor } from "../library";
-import { archSettingsMessages as t } from "./messages";
+import { useArchSettingsMessages } from "./messages";
 import { useProfileCheck } from "./useProfileCheck";
 import { lineOfPath, parseProfileYaml } from "./yamlProfile";
 
@@ -35,6 +35,7 @@ const timeText = (ms: number) => {
  * 오류가 남아 있으면 [프로필 저장]을 끈다(경고·안내는 막지 않는다). 검사 요청이 실패하면 막지 않는다.
  */
 export function ProfileEditor({ id, title, initialText, readOnly, check, onSave, onClose, onDirtyChange, delayMs }: ProfileEditorProps) {
+  const t = useArchSettingsMessages();
   const [text, setText] = useState(initialText);
   const dirty = text !== initialText;
   const [composing, setComposing] = useState(false);
@@ -93,6 +94,7 @@ export function ProfileEditor({ id, title, initialText, readOnly, check, onSave,
 }
 
 function CheckBody({ result, text, count, parseMessage }: { result: ReturnType<typeof useProfileCheck>; text: string; count: number; parseMessage: string | null }) {
+  const t = useArchSettingsMessages();
   if (result.parseError !== null) {
     return (
       <ul className="arch-settings-issues" data-testid="arch-issues">
@@ -129,6 +131,7 @@ function CheckBody({ result, text, count, parseMessage }: { result: ReturnType<t
 }
 
 function IssueItem({ issue, text }: { issue: Issue; text: string }) {
+  const t = useArchSettingsMessages();
   const line = issue.path ? lineOfPath(text, issue.path) : null;
   const label = t.editor.severity[issue.severity] ?? issue.severity;
   return (

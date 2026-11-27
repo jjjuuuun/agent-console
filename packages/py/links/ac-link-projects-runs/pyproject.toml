@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-projects-runs"
 version = "0.3.0"
-description = "Agent Console — 프로젝트·실행 연동 모듈: 실행의 project_id로 프로젝트 설정 층·작업 폴더·정의 출처를 정하고 실행 전 점검한다"
+description = "Agent Console — projects and runs link module: uses a run's project_id to pick the project settings layer, working folder, and definition source, and checks before the run"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -18,6 +18,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-projects-runs = "agent_console_link_projects_runs.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-projects-runs = "agent_console_link_projects_runs"
 
 [dependency-groups]
 dev = [

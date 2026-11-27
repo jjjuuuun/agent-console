@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render as rtlRender, type RenderOptions, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { fireEvent } from "@testing-library/react";
@@ -9,7 +9,15 @@ import { CurrentProjectContext, ProjectScopeReadyContext } from "../../app/proje
 import { createFakeClients } from "../../testing/fakes";
 import { ShortcutProvider } from "@agent-console/ui";
 import { RollupPanel } from "./RollupPanel";
-import { usageMessages } from "./messages";
+import { koT } from "../../testing/koText";
+import { createUsageMessages } from "./messages";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
+
+const usageMessages = createUsageMessages(koT("usage"));
 import { UsageScreen } from "./UsageScreen";
 
 afterEach(cleanup);

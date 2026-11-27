@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EdgeSpec, EdgeTypeDescriptor, Graph, NodeTypeDescriptor } from "@agent-console/contracts";
 import { IconRegistryProvider } from "@agent-console/ui";

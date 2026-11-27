@@ -5,7 +5,6 @@
  */
 export { SDD_ROLE, SDD_TEMPLATES_ROLE, SDD_SETTINGS_SECTION, SDD_PARAMS, gapDisplay, verificationDisplay } from "./sddConfig";
 export type { ToneDisplay } from "./sddConfig";
-export { sddMessages } from "./messages";
 export { specsPath, specPath, specTemplatesPath } from "./sddPaths";
 export { sddKeys, useSddSpace, useSddInfo, useSpecList, useSpecView, useSpecTasks, useSddLive, useInvalidateSdd } from "./useSddApi";
 export { useSddContext, type SddContext } from "./useSddContext";

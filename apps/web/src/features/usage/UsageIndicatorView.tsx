@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Gauge } from "@agent-console/ui";
-import { itemFlags, itemRailValue, itemValueText } from "./indicatorText";
-import { usageIndicatorMessages as t, usageMessages as u } from "./messages";
+import { itemFlags, itemRailValue, itemValueText, useIndicatorTexts, type IndicatorTexts } from "./indicatorText";
+import { useUsageMessages, useUsageIndicatorMessages } from "./messages";
 import { APPROX_TRUST, INDICATOR_FIELD as F, INDICATOR_TONES } from "./usageConfig";
 import { formatResetClock } from "./resetDisplay";
 import { indicatorFill, type IndicatorItem } from "./usageLib";
@@ -67,21 +67,24 @@ function isApprox(item: IndicatorItem, sourceInfo: SourceInfo): boolean {
 }
 
 /** 값이 없는 창의 사유(툴팁용): 상태 글자·토큰 수 등 출처가 준 사실. */
-function noRatioReason(item: IndicatorItem, mode: string): string {
+function noRatioReason(item: IndicatorItem, mode: string, x: IndicatorTexts): string {
+  const { t, u } = x;
   if (!item.observed) return t.notObserved;
-  if (item.kind === "status") return itemValueText(item, mode);
-  if (item.kind === "tokens") return `${t.tokensDetail}, ${itemValueText(item, mode)}`;
+  if (item.kind === "status") return itemValueText(item, mode, x);
+  if (item.kind === "tokens") return `${t.tokensDetail}, ${itemValueText(item, mode, x)}`;
   return u.cards.noValue;
 }
 
-function itemTitle(item: IndicatorItem, mode: string, approx = false): string {
-  if (item.kind !== "ratio") return t.noRatioTitle(item.name, noRatioReason(item, mode));
-  return [`${item.name} ${itemValueText(item, mode)}`, ...(approx ? [t.approxNote] : []), ...itemFlags(item)].join(" · ");
+function itemTitle(item: IndicatorItem, mode: string, x: IndicatorTexts, approx = false): string {
+  const { t } = x;
+  if (item.kind !== "ratio") return t.noRatioTitle(item.name, noRatioReason(item, mode, x));
+  return [`${item.name} ${itemValueText(item, mode, x)}`, ...(approx ? [t.approxNote] : []), ...itemFlags(item, x)].join(" · ");
 }
 
 /** 미니 값 글자: 사용률만 `42%`(추정이면 `~42%`). 그 밖의 종류는 `–`. 상태·토큰 글자는 그리지 않는다. */
-function miniValue(item: IndicatorItem, mode: string, approx: boolean): string {
-  return item.kind === "ratio" ? `${approx ? "~" : ""}${itemRailValue(item, mode)}` : u.common.none;
+function miniValue(item: IndicatorItem, mode: string, approx: boolean, x: IndicatorTexts): string {
+  const { u } = x;
+  return item.kind === "ratio" ? `${approx ? "~" : ""}${itemRailValue(item, mode, x)}` : u.common.none;
 }
 
 /**
@@ -89,6 +92,8 @@ function miniValue(item: IndicatorItem, mode: string, approx: boolean): string {
  * 상태·신뢰·관측 시각·토큰 같은 부가 정보는 그리지 않는다(상세는 사용량 화면). `fields` 설정은 칩 모양에만 적용된다.
  */
 function ItemBlock({ item, mode, nowMs, sourceInfo }: { item: IndicatorItem; mode: string; nowMs: number; sourceInfo: SourceInfo }) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
   const nowSec = nowMs / 1000;
   const fill = indicatorFill(item, mode);
   const dim = item.stale || item.reset === "passed";
@@ -96,14 +101,14 @@ function ItemBlock({ item, mode, nowMs, sourceInfo }: { item: IndicatorItem; mod
     item.reset === "passed"
       ? t.resetsPassed
       : item.reset === "future" && item.resetsAt != null
-        ? formatResetClock(item.resetsAt, nowSec, { today: t.resetsClockToday, other: t.resetsClockOther })
+        ? formatResetClock(item.resetsAt, nowSec, { today: t.resetsClockToday, other: t.resetsClockOther }, x.fmt.language)
         : null;
   return (
-    <div className="usage-ind-item usage-ind-simple" data-stale={dim ? "true" : undefined} data-tone={item.rule?.tone} style={toneStyle(item)} title={itemTitle(item, mode, isApprox(item, sourceInfo))}>
+    <div className="usage-ind-item usage-ind-simple" data-stale={dim ? "true" : undefined} data-tone={item.rule?.tone} style={toneStyle(item)} title={itemTitle(item, mode, x, isApprox(item, sourceInfo))}>
       <div className="usage-ind-head">
         <span className="usage-ind-label ac-ellipsis">{item.name}</span>
         <span className="usage-ind-value ac-num">
-          {itemValueText(item, mode)}
+          {itemValueText(item, mode, x)}
           <ToneMark item={item} />
         </span>
       </div>
@@ -117,23 +122,25 @@ function ItemBlock({ item, mode, nowMs, sourceInfo }: { item: IndicatorItem; mod
 
 /** 접힘 레일 타일: 값 숫자 + 4px 막대. 이름은 툴팁(`title`)과 링크 `aria-label`이 맡는다. */
 function ItemRail({ item, mode, sourceInfo }: { item: IndicatorItem; mode: string; sourceInfo: SourceInfo }) {
+  const x = useIndicatorTexts();
   const fill = indicatorFill(item, mode);
   const toneGlyph = item.rule !== undefined && (item.rule.tone === "warning" || item.rule.tone === "danger") ? (INDICATOR_TONES[item.rule.tone]?.glyph ?? "") : "";
   const mark = item.stale ? "⚠" : item.reset === "passed" || item.overLimit ? "▲" : toneGlyph;
   return (
-    <div className="usage-ind-item usage-ind-rail-item" data-stale={item.stale || item.reset === "passed" ? "true" : undefined} style={toneStyle(item)} title={itemTitle(item, mode, isApprox(item, sourceInfo))}>
-      <span className="usage-ind-rail-value ac-num">{itemRailValue(item, mode)}{mark === "" ? null : <span className="usage-ind-rail-mark" aria-hidden="true">{mark}</span>}</span>
+    <div className="usage-ind-item usage-ind-rail-item" data-stale={item.stale || item.reset === "passed" ? "true" : undefined} style={toneStyle(item)} title={itemTitle(item, mode, x, isApprox(item, sourceInfo))}>
+      <span className="usage-ind-rail-value ac-num">{itemRailValue(item, mode, x)}{mark === "" ? null : <span className="usage-ind-rail-mark" aria-hidden="true">{mark}</span>}</span>
       <div aria-hidden="true"><Gauge {...(fill === undefined ? {} : { value: fill })} stale={item.stale} label={item.name} noValueLabel="" /></div>
     </div>
   );
 }
 
 function ItemChip({ item, fields, mode }: { item: IndicatorItem; fields: readonly string[]; mode: string }) {
+  const x = useIndicatorTexts();
   const fill = indicatorFill(item, mode);
   return (
-    <span className="usage-ind-chip-item" data-stale={item.stale ? "true" : undefined} style={toneStyle(item)} title={itemTitle(item, mode)}>
+    <span className="usage-ind-chip-item" data-stale={item.stale ? "true" : undefined} style={toneStyle(item)} title={itemTitle(item, mode, x)}>
       {fields.includes(F.label) ? <span className="usage-ind-label ac-ellipsis">{item.name}</span> : null}
-      {fields.includes(F.value) ? <span className="usage-ind-value ac-num" data-empty={item.kind !== "ratio" ? "true" : undefined}>{miniValue(item, mode, false)}<ToneMark item={item} /></span> : null}
+      {fields.includes(F.value) ? <span className="usage-ind-value ac-num" data-empty={item.kind !== "ratio" ? "true" : undefined}>{miniValue(item, mode, false, x)}<ToneMark item={item} /></span> : null}
       {fields.includes(F.gauge) ? <span className="usage-ind-chip-gauge" aria-hidden="true"><Gauge {...(fill === undefined ? {} : { value: fill })} label={item.name} noValueLabel="" /></span> : null}
     </span>
   );
@@ -144,6 +151,8 @@ function ItemChip({ item, fields, mode }: { item: IndicatorItem; fields: readonl
  * 폭 판정은 링크의 `overflow` 측정이라 레이아웃이 없는 환경(테스트)에서는 한도만 적용된다.
  */
 function ChipBody({ items, fields, mode, maxItems }: { items: readonly IndicatorItem[]; fields: readonly string[]; mode: string; maxItems: number | undefined }) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
   const cap = Math.max(1, Math.min(maxItems ?? items.length, items.length));
   const key = `${cap}|${items.map((i) => i.window).join(",")}|${fields.join(",")}`;
   const [fit, setFit] = useState<{ key: string; n: number }>({ key, n: cap });
@@ -158,7 +167,7 @@ function ChipBody({ items, fields, mode, maxItems }: { items: readonly Indicator
     <>
       <span ref={probe} hidden />
       {items.slice(0, shown).map((i) => <ItemChip key={i.window} item={i} fields={fields} mode={mode} />)}
-      {rest.length > 0 ? <span className="usage-ind-chip-more" aria-hidden="true" data-more={rest.length} title={rest.map((i) => itemTitle(i, mode)).join("\n")}>{t.chipMore(rest.length)}</span> : null}
+      {rest.length > 0 ? <span className="usage-ind-chip-more" aria-hidden="true" data-more={rest.length} title={rest.map((i) => itemTitle(i, mode, x)).join("\n")}>{t.chipMore(rest.length)}</span> : null}
     </>
   );
 }
@@ -168,6 +177,9 @@ function ChipBody({ items, fields, mode, maxItems }: { items: readonly Indicator
  * 링크 하나(탭 정지 1개)이며 값은 `aria-label`로 읽히고 게이지는 `aria-hidden`이다.
  */
 export function UsageIndicatorView(p: UsageIndicatorViewProps) {
+  const x = useIndicatorTexts();
+  const t = useUsageIndicatorMessages();
+  const u = useUsageMessages();
   const spokenId = useId();
   let body: ReactNode;
   const unlinked = p.layout === "block" && (p.status === "ready" || p.status === "empty") && p.setupHref !== undefined && !p.items.some((i) => i.kind === "ratio");
@@ -198,7 +210,7 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
   // 이름을 내용에서 얻을 수 있는가: 레일은 값 글자만, 로딩은 글자가 없다
   const nameFromContent = p.layout !== "rail" && p.status !== "loading";
   // 레일은 보이는 글자(값)가 이름의 시작에 와야 한다(WCAG 2.5.3 / label-content-name-mismatch)
-  const railLead = p.layout === "rail" && p.status !== "loading" && p.status !== "error-empty" && p.status !== "empty" ? railItems.map((i) => itemRailValue(i, p.valueMode)).join(" ") : "";
+  const railLead = p.layout === "rail" && p.status !== "loading" && p.status !== "error-empty" && p.status !== "empty" ? railItems.map((i) => itemRailValue(i, p.valueMode, x)).join(" ") : "";
   const { "aria-describedby": extraDescribedBy, ...restLink } = (p.linkProps ?? {}) as Record<string, unknown>;
   const describedBy = [nameFromContent ? spokenId : undefined, typeof extraDescribedBy === "string" ? extraDescribedBy : undefined].filter((v) => v !== undefined).join(" ");
   return (

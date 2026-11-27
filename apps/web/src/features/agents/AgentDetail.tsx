@@ -1,4 +1,5 @@
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
+import { useUiLibMessages } from "../../i18n";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,8 +8,9 @@ import type { Agent } from "@agent-console/contracts";
 import { Banner, Button, Dialog, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useDescribeError, useErrorState, raisedAs } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
+import { createToastText } from "../../app/ToastText";
 import { useApiQuery } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
@@ -18,14 +20,17 @@ import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
 import { usePageTitle } from "../../shell/titles";
 import { Skeleton } from "../settings";
-import { ActionMenu, useAgentList, useInvalidateLists, DeleteDialog, DEFINITION_KINDS, definitionKey, NewDefinitionDialog, libraryMessages as lm, type DetailRequest } from "../library";
-import { useExportAction, exportMessages } from "../exports";
-import { DefinitionVersionsTab, versionMessages } from "../versions";
+import { ActionMenu, useAgentList, useInvalidateLists, DeleteDialog, DEFINITION_KINDS, definitionKey, NewDefinitionDialog, useLibraryMessages, type DetailRequest } from "../library";
+import { useExportAction, useExportMessages } from "../exports";
+import { DefinitionVersionsTab, useVersionLabels } from "../versions";
 import { AgentActivityTab, AgentResourcesTab, AgentUsagesTab } from "./AgentTabs";
 import { AgentEditorForm } from "./AgentEditorForm";
 import { loadAgent, saveAgent } from "./agentLogic";
 import { NAME_INPUT_SELECTOR } from "./ids";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
+
+const AgentToast = createToastText(useAgentMessages);
+const LibraryToast = createToastText(useLibraryMessages);
 
 const TAB_IDS = ["settings", "resources", "usages", "activity", "versions"] as const;
 type TabId = (typeof TAB_IDS)[number];
@@ -39,6 +44,13 @@ export interface AgentDetailProps {
 
 /** 에이전트 상세(컨테이너): 정의 편집 상태(`useDefinitionEditor`) + 탭. 이름·역할 등은 탭 표현 컴포넌트에 props로 넘긴다. */
 export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
+  const versionMessages = useVersionLabels();
+  const lm = useLibraryMessages();
+  const exportMessages = useExportMessages();
+  const t = useAgentMessages();
+  const ui = useUiLibMessages();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,7 +72,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
   const [tab, setTab] = useState<TabId>(() => TAB_IDS.find((x) => x === params.get("tab")) ?? "settings");
   const [dialog, setDialog] = useState<"duplicate" | "delete" | "json" | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useErrorState("", { del: t.delete.failed, lmDel: lm.delete.failed });
 
   // 목록 단축키 요청(렌더 중 상태 조정 패턴: 같은 요청을 두 번 처리하지 않는다)
   const [handled, setHandled] = useState(request?.token ?? 0);
@@ -79,7 +91,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
   const save = () => {
     void editor.save().then((ok) => {
       if (!ok) return;
-      toast({ tone: "success", text: t.detail.saved });
+      toast({ tone: "success", text: <AgentToast render={(a) => a.detail.saved} /> });
       void invalidateLists();
     });
   };
@@ -129,7 +141,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       setDialog(null);
       void navigate(basePath);
     } catch (e) {
-      setDialogError(describeError(e, t.delete.failed).message);
+      setDialogError(raisedAs("del", e));
     } finally {
       setBusy(false);
     }
@@ -147,7 +159,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       const state = savedIssuesState(saved.issues);
       void navigate(`${basePath}/${encodeURIComponent(v.id)}`, state === undefined ? undefined : { state });
     } catch (e) {
-      setDialogError(describeError(e, lm.delete.failed).message);
+      setDialogError(raisedAs("lmDel", e));
     } finally {
       setBusy(false);
     }
@@ -199,7 +211,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
           <h2 className="app-block-title ac-ellipsis" title={draft.name}>{draft.name || id}</h2>
           <span className="lib-detail-sub app-muted">
             {t.detail.id}: <span className="lib-mono">{id}</span>{" "}
-            <button type="button" className="app-link-btn" onClick={() => void navigator.clipboard?.writeText(id).then(() => toast({ tone: "success", text: lm.copied }))}>
+            <button type="button" className="app-link-btn" onClick={() => void navigator.clipboard?.writeText(id).then(() => toast({ tone: "success", text: <LibraryToast render={(l) => l.copied} /> }))}>
               {lm.copy}
             </button>
           </span>
@@ -226,7 +238,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       )}
       <SaveIssuesBanner issues={shownSaveIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
-      <Tabs lazy tabs={items} activeId={tab === "usages" && !usagePart.visible ? "settings" : tab} onChange={(next) => setTab(next as TabId)} ariaLabel={t.detail.tabsLabel} />
+      <Tabs messages={ui} lazy tabs={items} activeId={tab === "usages" && !usagePart.visible ? "settings" : tab} onChange={(next) => setTab(next as TabId)} ariaLabel={t.detail.tabsLabel} />
       {exportAction.dialog}
       {dialog === "duplicate" ? (
         <NewDefinitionDialog

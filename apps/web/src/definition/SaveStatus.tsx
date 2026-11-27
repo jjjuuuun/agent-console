@@ -1,5 +1,5 @@
 import { Button } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
+import { useAppMessages } from "../app/appMessages";
 import type { SavePhase } from "./useDefinitionEditor";
 
 export interface SaveStatusProps {
@@ -11,6 +11,7 @@ export interface SaveStatusProps {
 
 /** 저장 상태 텍스트: 저장됨 / 저장 안 됨 / 저장 중… / 저장 실패 [다시 시도]. 색 단독이 아니라 글자와 점 모양으로도 전달한다. */
 export function SaveStatus({ dirty, phase, onRetry }: SaveStatusProps) {
+  const m = useAppMessages();
   const state = phase === "saving" ? "saving" : phase === "failed" ? "failed" : dirty ? "dirty" : "saved";
   const text = { saved: m.definition.saved, dirty: m.definition.dirty, saving: m.definition.saving, failed: m.definition.failed }[state];
   const mark = { saved: "✓", dirty: "●", saving: "…", failed: "▲" }[state];

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@agent-console/ui";
-import { projectMessages as t } from "./messages";
+import { useProjectMessages } from "./messages";
 
 export interface ListSelection {
   selecting: boolean;
@@ -49,6 +49,7 @@ export interface SelectionToolbarProps {
 
 /** 목록 위 한 줄: [선택] 토글 + (선택 모드에서) `n개 선택됨` [모두 선택] [프로젝트로 이동…]. */
 export function SelectionToolbar({ selection, visibleIds, onMove, actionLabel, className }: SelectionToolbarProps) {
+  const t = useProjectMessages();
   const { selecting, setSelecting, selected, setAll } = selection;
   return (
     <div className={["prj-selectbar", className].filter(Boolean).join(" ")}>

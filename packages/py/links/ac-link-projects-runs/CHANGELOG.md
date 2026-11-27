@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-link-projects-runs`, so the web can show the link module description and settings in English (data only, no API change). Log lines are now English.
 - FU.4: 경로 지킴의 틀 표를 `ac-nodes-core.path_placeholders`로 바꿨다 — 실행(agent 노드 `resolve_paths`)과
   같은 표·같은 기준(프로젝트 폴더)이라 검사한 경로와 백엔드가 받는 `limits.directories`가 같다.
 - FU.4: `scope_run`이 프로젝트 실행에 노드 서비스 `WORKING_DIRECTORY` = 프로젝트 폴더를 넣는다(상대

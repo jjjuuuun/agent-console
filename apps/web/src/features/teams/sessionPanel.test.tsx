@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph, NodeTypeDescriptor } from "@agent-console/contracts";
@@ -15,6 +16,7 @@ import { EdgePanel } from "./EdgePanel";
 import { SessionWhere } from "./SessionWhere";
 import { incomingSessions, nodeSessionMode } from "./sessionView";
 import type { TeamPanelContext } from "./panelContext";
+import { useTeamMessages } from "./messages";
 
 afterEach(cleanup);
 
@@ -40,12 +42,13 @@ const graph0 = (config?: Record<string, unknown>): Graph =>
   }) as unknown as Graph;
 
 function Harness({ initial, onUndoable, list = strategies }: { initial: Graph; onUndoable?: (text: string) => void; list?: DelegationStrategyDescriptor[] }) {
+  const teamText = useTeamMessages();
   const [graph, setGraph] = useState<Graph>(initial);
   const ctx: TeamPanelContext = {
     graphId: "zg", graph, savedNodeIds: new Set(), savedVersion: "h", dirty: false, nodeTypes, edgeTypes: [kindDeleg, kindFlow], agents, resources: [], resourceTypes: [], interactionKinds: [],
     strategies: list, workspace: undefined, issues: [],
     plan: { data: undefined, isLoading: false, isError: false, isDraft: false, updating: false, error: null, refetch: () => {} } as never,
-    disabled: false, onGraphChange: setGraph, onUndoableChange: (next, text) => { setGraph(next); onUndoable?.(text); }, onApplySuggestion: () => {}, onPreviewBundle: () => {}, navigateTo: () => {},
+    disabled: false, onGraphChange: setGraph, onUndoableChange: (next, text) => { setGraph(next); onUndoable?.(text(teamText)); }, onApplySuggestion: () => {}, onPreviewBundle: () => {}, navigateTo: () => {},
   };
   return <EdgePanel ctx={ctx} edge={(graph.edges ?? [])[0] as EdgeSpec} />;
 }
@@ -89,7 +92,7 @@ describe("연결 패널: 동작 방식 블록·비교표(R0)", () => {
     const heads = within(block).getAllByRole("columnheader").slice(1);
     expect(heads.map((h) => h.textContent)).toEqual(["방식 하나", "방식 둘", "속성 없는 방식"]);
     fireEvent.click(within(heads[1]!).getByRole("button"));
-    expect(seen).toHaveBeenCalledWith("위임 방식을 ‘방식 둘’(으)로 바꿨습니다");
+    expect(seen).toHaveBeenCalledWith("위임 방식을 ‘방식 둘’로 바꿨습니다");
     // 바뀐 방식이 현재 열(첫 열)이 된다
     const after = await screen.findByRole("region", { name: "동작 방식" });
     expect(within(after).getAllByText("같은 세션").length).toBeGreaterThan(0);

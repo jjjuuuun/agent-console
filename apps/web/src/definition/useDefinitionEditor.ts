@@ -4,8 +4,8 @@ import { ApiError, type RestClient, type Versioned } from "@agent-console/api-cl
 import type { Issue, VersionConflictDetails } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { useApi } from "../app/ApiContext";
-import { describeError } from "../app/errors";
-import { messages as m } from "../app/messages";
+import { useErrorState, raised, raisedAs } from "../app/errors";
+import { useAppMessages } from "../app/appMessages";
 import { useApiQuery } from "../app/queries";
 import { jsonEqual } from "../lib/jsonPointer";
 
@@ -77,6 +77,7 @@ interface Edit<T> {
  * 다른 곳에서 값이 바뀌어도(창 복귀 갱신) 초안은 유지되며, 저장 때 `If-Match`가 달라 충돌로 드러난다.
  */
 export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): DefinitionEditor<T> {
+  const m = useAppMessages();
   const { queryKey, load, save: saveFn } = options;
   const { rest } = useApi();
   const queryClient = useQueryClient();
@@ -85,7 +86,7 @@ export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): Def
 
   const [edit, setEdit] = useState<Edit<T> | null>(null);
   const [savePhase, setSavePhase] = useState<SavePhase>("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useErrorState(m.common.requestFailed, { missingVersion: m.definition.missingVersion });
   const [saveIssues, setSaveIssues] = useState<readonly Issue[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FormError[]>([]);
   const [conflict, setConflict] = useState<VersionConflictDetails | null>(null);
@@ -113,7 +114,7 @@ export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): Def
     setFieldErrors([]);
     setSavePhase("idle");
     setSaveIssues([]);
-  }, []);
+  }, [setSaveError]);
 
   const applySaved = useCallback(
     (saved: Versioned<T>, sent: T) => {
@@ -126,7 +127,7 @@ export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): Def
       setFieldErrors([]);
       setSaveIssues(saved.issues ?? []);
     },
-    [queryClient, queryKey],
+    [queryClient, queryKey, setSaveError],
   );
 
   const report = useCallback(
@@ -145,14 +146,14 @@ export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): Def
         setSavePhase("idle");
       } else if (e instanceof ApiError && e.status === 428) {
         setSavePhase("failed");
-        setSaveError(m.definition.missingVersion);
+        setSaveError(raisedAs("missingVersion"));
       } else {
         setSavePhase("failed");
-        setSaveError(describeError(e, m.common.requestFailed).message);
+        setSaveError(raised(e));
         setFieldErrors(e instanceof ApiError && e.status === 422 ? issuesToFormErrors(e.details["issues"]) : []);
       }
       },
-    [queryClient, queryKey],
+    [queryClient, queryKey, setSaveError],
   );
 
   const save = useCallback(async (): Promise<boolean> => {
@@ -168,7 +169,7 @@ export function useDefinitionEditor<T>(options: DefinitionEditorOptions<T>): Def
       report(e);
       return false;
     }
-  }, [baseState, draft, conflict, saveFn, rest, edit, applySaved, report]);
+  }, [baseState, draft, conflict, saveFn, rest, edit, applySaved, report, setSaveError]);
 
   const loadServerVersion = useCallback(async () => {
     revert();

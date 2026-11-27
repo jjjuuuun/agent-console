@@ -10,6 +10,6 @@ export function ApiProvider({ clients, children }: { clients: ApiClients; childr
 
 export function useApi(): ApiClients {
   const value = useContext(ApiContext);
-  if (value === null) throw new Error("ApiProvider 안에서만 사용할 수 있습니다");
+  if (value === null) throw new Error("useApi must be used inside ApiProvider");
   return value;
 }

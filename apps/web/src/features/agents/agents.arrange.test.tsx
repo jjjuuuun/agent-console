@@ -27,12 +27,12 @@ describe("에이전트 묶는 기준 데이터", () => {
     expect(defs.find((d) => d.id === "attribute")?.read(list[0]!)).toEqual(["t1"]);
   });
   it("속성 키 후보에는 ui와 객체 값이 없고, 폴더 후보에는 중간 단계가 있다", () => {
-    expect(attributeKeys(list)).toEqual(["team_tag"]);
-    expect(folderPaths(list)).toEqual(["개발팀", "개발팀/백엔드"]);
+    expect(attributeKeys(list, "ko")).toEqual(["team_tag"]);
+    expect(folderPaths(list, "ko")).toEqual(["개발팀", "개발팀/백엔드"]);
   });
   it("사용 많은 순 정렬은 사용 수가 있을 때만 후보에 있다", () => {
-    expect(agentSortDefs(undefined).map((d) => d.id)).toEqual(["name"]);
-    const defs = agentSortDefs((id) => (id === "b" ? 3 : 0));
+    expect(agentSortDefs(undefined, "ko").map((d) => d.id)).toEqual(["name"]);
+    const defs = agentSortDefs((id) => (id === "b" ? 3 : 0), "ko");
     expect(defs.map((d) => d.id)).toEqual(["name", "usage"]);
     expect([...list].sort(defs[1]!.compare).map((a) => a.id)).toEqual(["b", "a", "c"]);
   });

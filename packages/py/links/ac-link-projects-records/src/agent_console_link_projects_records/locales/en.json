@@ -1,0 +1,22 @@
+{
+  "text": {
+    "실행·대화 기록을 프로젝트 폴더 안에 둔다": "Keeps run and conversation records inside the project folder",
+    "대화 원본 보관(다른 앱에서 대화를 이어 가기 위한 세션 기록 사본).": "Conversation transcript archive (copies of session records so conversations can be resumed from another app).",
+    "대화 원본(도구 출력 포함)을 프로젝트 폴더에 복사해 다른 앱에서도 이어 갑니다. 로그인 자격은 넣지 않습니다. 폴더를 공유하면 대화 원본도 함께 공유됩니다.": "Copies conversation transcripts (including tool output) into the project folder so they can be resumed from another app. Sign-in credentials aren't included. If you share the folder, the transcripts are shared too.",
+    "대화 원본 보관": "Archive conversation transcripts",
+    "프로젝트 구성 폴더(.agent-console) 안 보관 폴더 이름. 구성 폴더의 .gitignore 틀이 이 이름을 따르고, 빠진 줄은 프로젝트 목록이 알린다.": "Name of the archive folder inside the project config folder (.agent-console). The config folder's .gitignore template follows this name, and the project list reports missing lines.",
+    "보관 폴더 이름": "Archive folder name",
+    "프로젝트 기록 DB 연동 설정.": "Project records database integration settings.",
+    "기록 공간 이름에서 떼어 낼 접두. 나머지가 프로젝트 등록 id다.": "Prefix removed from records space names. The rest is the project registration id.",
+    "공간 이름 접두": "Space name prefix",
+    "한 번에 열어 두는 프로젝트 기록 DB 개수. 넘으면 오래 안 쓴 것부터 닫는다.": "Number of project records databases kept open at once. Above it, the least recently used are closed first.",
+    "이 시간 동안 쓰지 않은 프로젝트 기록 DB의 연결을 닫는다. 0이면 닫지 않는다.": "Closes connections to project records databases unused for this long. 0 means never close.",
+    "다른 앱이 같은 기록 DB를 쓰고 있을 때 잠금이 풀리길 기다리는 시간.": "How long to wait for the lock to be released when another app is using the same records database.",
+    "잠금 대기 시간(밀리초)": "Lock wait (milliseconds)",
+    "기록 DB를 새 버전으로 올리기 전에 만든 백업을 몇 개까지 남길지.": "How many backups made before upgrading a records database to keep.",
+    "올리기 전 백업 보관 개수": "Pre-upgrade backups to keep",
+    "다른 앱에서도 대화를 이어 가도록 세션 원본을 프로젝트 폴더에 둡니다(기본 켬). 폴더를 공유하면 대화 원본도 함께 공유됩니다.": "Keeps session transcripts in the project folder so conversations can be resumed from another app (on by default). If you share the folder, the transcripts are shared too.",
+    "폴더가 사라져 못 쓴 기록을 임시로 적어 두는, 앱 상태 폴더 안 폴더 이름.": "Name of the folder inside the app state folder where records that couldn't be written (because the folder disappeared) are kept for now.",
+    "대기 파일 폴더 이름": "Pending files folder name"
+  }
+}

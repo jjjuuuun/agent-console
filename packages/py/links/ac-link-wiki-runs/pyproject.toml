@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-wiki-runs"
 version = "0.1.0"
-description = "Agent Console — 위키·실행 연동 모듈: 에이전트 위키 도구·지침 공급, 리소스 종류 wiki, wiki.* 실행 이벤트"
+description = "Agent Console — wiki and runs link module: agent wiki tools and instructions, resource kind wiki, wiki.* run events"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -30,6 +30,9 @@ wiki = "agent_console_link_wiki_runs.resource_type:WikiResourceType"
 # 노드 서비스(`runs.services`)로 준다 — 연동이 꺼져 있으면 노드는 검증 경고·실행 때 건너뜀.
 [project.entry-points."agent_console.node_types"]
 wiki-update = "agent_console_link_wiki_runs.update_node:WikiUpdateNode"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-wiki-runs = "agent_console_link_wiki_runs"
 
 [dependency-groups]
 dev = [

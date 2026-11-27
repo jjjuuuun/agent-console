@@ -1,7 +1,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Banner, useToast } from "@agent-console/ui";
 import { LoadingBlock } from "../app/ErrorBlock";
-import { messages as m } from "../app/messages";
+import { useAppMessages } from "../app/appMessages";
+import { ToastText } from "../app/ToastText";
 import { useDelayed } from "../app/useDelayed";
 import { useHasUnsaved } from "../definition/unsaved";
 import { useRequires } from "./ModulesContext";
@@ -19,6 +20,7 @@ export interface RouteGateProps extends Omit<FeatureOffScreenProps, "unmet"> {
  * - 안내 화면을 보던 중 기능이 켜지면 토스트 후 원래 화면으로 바뀐다(주소는 그대로).
  */
 export function RouteGate({ requires, children, ...off }: RouteGateProps) {
+  const m = useAppMessages();
   const r = useRequires(requires);
   const toast = useToast();
   // 저장 안 된 변경은 이 화면에서만 생길 수 있다(안내 화면에는 편집기가 없고, 다른 화면으로는 이탈 확인이 막는다).
@@ -29,7 +31,7 @@ export function RouteGate({ requires, children, ...off }: RouteGateProps) {
 
   useEffect(() => {
     if (r.phase === "met") {
-      if (wasOff.current) toast({ tone: "success", text: m.moduleOff.enabledToast });
+      if (wasOff.current) toast({ tone: "success", text: <ToastText render={({ app }) => app.moduleOff.enabledToast} /> });
       wasOff.current = false;
     } else if (r.phase === "unmet" && !holding) {
       wasOff.current = true;

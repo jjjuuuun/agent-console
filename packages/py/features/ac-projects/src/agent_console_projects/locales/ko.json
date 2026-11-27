@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "project.copy_reserved_id": "{kind}/{id}의 id는 이 종류의 경로 이름과 겹쳐 대상 공간에서 열 수 없습니다. 새 id로 바꿔 복사하세요."
+  }
+}

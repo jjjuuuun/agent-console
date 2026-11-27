@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- I.7d: Internal log messages are now in English.
+
 ## 0.1.0
 
 - 6R.12: `ChatService.page(after, limit, graph_id, archived, project_id) -> (요약, 다음 기준)` — `updated_at`·`id` 내림차순, 요약 계산은 그 페이지만. 커서 문자열은 호출자가 정한다.

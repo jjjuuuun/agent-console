@@ -2,9 +2,9 @@ import { useId, useState, type KeyboardEvent } from "react";
 import { useImeGuard } from "../../lib/ime";
 import type { ConditionOperatorDescriptor } from "./conditions";
 import { guessFreeKind, valueKindOf } from "./conditions";
-import { delegationMessages } from "./messages";
+import { useDelegationMessages, type ConditionMessages } from "./messages";
 
-type M = typeof delegationMessages.condition;
+type M = ConditionMessages;
 type FreeKind = "string" | "number" | "boolean" | "json";
 
 export interface ValueEditorProps {
@@ -34,10 +34,11 @@ const stringify = (v: unknown): string => {
  * 조건 값 입력. 연산자 `value_schema`의 `type`으로 모양을 정한다(문자열·숫자·불리언·배열 칩·객체 JSON·값 없음).
  * 스키마가 비었거나 연산자가 없으면 형식 선택 `[문자열|숫자|참거짓|JSON]`을 앞에 붙인다. 한글 조합 중에는 Enter를 처리하지 않는다.
  */
-export function ValueEditor({ value, onChange, operator, disabled, label, error, messages = delegationMessages.condition, id }: ValueEditorProps) {
+export function ValueEditor({ value, onChange, operator, disabled, label, error, messages, id }: ValueEditorProps) {
+  const dm = useDelegationMessages();
   const kind = operator === undefined ? undefined : valueKindOf(operator.value_schema);
   const [free, setFree] = useState<FreeKind>(() => guessFreeKind(value));
-  const m = messages;
+  const m = messages ?? dm.condition;
   if (kind === "none") {
     return (
       <div className="dlg-value" data-kind="none">

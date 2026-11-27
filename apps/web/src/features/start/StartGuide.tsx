@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { StepGuide, type StepGuideStep } from "@agent-console/ui";
-import { startMessages } from "./messages";
+import { useStartMessages } from "./messages";
 import { useStartGuide } from "./useStartGuide";
 
 export interface StartGuideProps {
@@ -19,6 +19,7 @@ function renderLink({ to, className, children, dataAttrs }: { to: string; classN
  */
 export function StartGuide({ actionOverrides, layout = "column" }: StartGuideProps) {
   const g = useStartGuide();
+  const startMessages = useStartMessages();
   const steps: StepGuideStep[] = g.steps.map((s) => {
     const o = actionOverrides?.[s.id];
     // 전제가 안 끝나 버튼이 없는 단계(`to`·`onAction` 없음)에는 동작을 붙이지 않는다(버튼이 새로 생기지 않게)

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-definitions-teams"
 version = "0.1.0"
-description = "Agent Console — 정의·팀 연동 모듈: 사용처·유효 설정·실행 계획·묶음 미리보기, 목록 입구 이름·사용 수"
+description = "Agent Console — definitions and teams link module: usages, effective settings, run plans, bundle previews, list entry names and usage counts"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -20,6 +20,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-definitions-teams = "agent_console_link_definitions_teams.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-definitions-teams = "agent_console_link_definitions_teams"
 
 [dependency-groups]
 dev = [

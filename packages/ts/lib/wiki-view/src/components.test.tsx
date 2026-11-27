@@ -479,6 +479,23 @@ describe("LinkGraph·LinkList", () => {
   });
 });
 
+describe("locale prop", () => {
+  it("LintTable sorts codes by the given locale", () => {
+    const base = sampleIssues()[0]!;
+    const issues = ["z", "ä", "b"].map((code) => ({ ...base, code }));
+    const codeOptions = (locale?: string) => {
+      const { container, unmount } = render(<LintTable issues={issues} display={sampleDisplay()} {...(locale === undefined ? {} : { locale })} />);
+      const names = [...container.querySelectorAll("option")].map((o) => o.textContent);
+      unmount();
+      return names;
+    };
+    const en = codeOptions();
+    const sv = codeOptions("sv");
+    expect(en.indexOf("ä")).toBeLessThan(en.indexOf("z"));
+    expect(sv.indexOf("z")).toBeLessThan(sv.indexOf("ä"));
+  });
+});
+
 describe("LintTable (수용 기준 22)", () => {
   const order = ["error", "warning", "info"];
   it("6열, 모르는 심각도·코드는 원문 + 중립, 심각도 순서로 정렬", () => {

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-text-template"
 version = "0.1.0"
-description = "Agent Console — 안전 문자열 치환({이름}·{이름:형식}) 기반 패키지"
+description = "Agent Console — base package for safe string substitution ({name} and {name:format})"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

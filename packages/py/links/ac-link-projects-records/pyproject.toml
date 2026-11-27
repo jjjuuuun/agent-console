@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-projects-records"
 version = "0.1.0"
-description = "Agent Console — 프로젝트·기록 연동 모듈: 프로젝트 폴더의 기록 DB를 열고 계보를 맞춰 실행·대화 모듈에 준다"
+description = "Agent Console — projects and records link module: opens the records DB in a project folder, brings its lineage up to date, and gives it to the runs and chat modules"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-projects-records = "agent_console_link_projects_records.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-projects-records = "agent_console_link_projects_records"
 
 [dependency-groups]
 dev = [

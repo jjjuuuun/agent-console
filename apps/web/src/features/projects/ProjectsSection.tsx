@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import type { RestClient } from "@agent-console/api-client";
 import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, ProjectView, RecordsMoveRequest, RecordsMoveResult } from "@agent-console/contracts/projects";
-import { createProjectsText, statusInfo } from "@agent-console/projects";
+import { statusInfo } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import { Button, EmptyState, useToast } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
-import { lookupMessage } from "../../app/messages";
+import { useDescribeError, useErrorState, raisedAs } from "../../app/errors";
+import { useLookupMessage } from "../../app/shellMessages";
 import { queryKeys } from "../../app/queries";
 import { useApi } from "../../app/ApiContext";
 import { useStorage } from "../../app/StorageContext";
@@ -14,13 +15,12 @@ import { AssignProjectDialog, type AssignTarget } from "./AssignProjectDialog";
 import { RecordsMoveDialog, type RecordsMoveOutcome } from "./RecordsMoveDialog";
 import { AppRecordsBlock, ArchivedProjects, LegacyConfigBlock, LegacyRecordsBlock, ProjectsTable, SectionError, type ArchivedRow, type CleanupRow, type LegacyRow, type ProjectRow, type RecordsRow } from "./SettingsBlocks";
 import { assignSummary, countFor, mergeMoveResults } from "./settingsLib";
-import { scopeMessages } from "./scopeMessages";
+import { useScopeMessages } from "./scopeMessages";
 import { projectHomePath, useProjects } from "./ProjectsContext";
 import { regionProjects } from "./projectRegionLib";
 import { useCopyDialog } from "./useCopyDialog";
+import { useLanguageCode, useCollator } from "../../i18n";
 
-const t = scopeMessages.settings;
-const text = createProjectsText();
 const dismissedKey = (feature: string) => `ac.legacy.dismissed.${feature}`;
 
 /** 이 섹션의 개수는 모두 "이 앱에 저장된 기록"이다: 앱 DB만 센다(폴더 기록 DB는 프로젝트 화면 몫). */
@@ -40,7 +40,7 @@ const RECORD_FEATURES: readonly RecordFeature[] = [
   { key: "runs", role: "runs", counts: (r) => r.getRunProjectCounts(APP_ONLY), assign: (r, q) => r.assignRunsToProject(q), move: (r, q) => r.moveRunsToProject(q) },
 ];
 
-function featureLabel(f: RecordFeature): string {
+function featureLabel(f: RecordFeature, lookupMessage: (key: string) => string): string {
   const route = routeServing(DEFAULT_ROUTES, f.role);
   return route === undefined ? f.key : lookupMessage(route.titleKey);
 }
@@ -73,24 +73,31 @@ type Dialog =
   | { kind: "move"; view: ProjectView };
 
 function ProjectsSectionBody() {
+  const language = useLanguageCode();
+  const collator = useCollator();
+  const describeError = useDescribeError();
+  const text = useProjectsText();
+  const scopeMessages = useScopeMessages();
+  const t = scopeMessages.settings;
   const p = useProjects();
   const { rest } = useApi();
   const toast = useToast();
+  const lookupMessage = useLookupMessage();
   const storage = useStorage();
   const queryClient = useQueryClient();
   const copy = useCopyDialog();
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useErrorState("", { assign: t.assignFailed, move: t.moveFailed });
   const [outcome, setOutcome] = useState<RecordsMoveOutcome | null>(null);
   const [reregistering, setReregistering] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   // 접어 둔 기능(저장값이 없거나 저장이 막혀도 이번 화면에서는 접힌다)
   const [kept, setKept] = useState<ReadonlySet<string>>(new Set());
 
-  const active = useMemo(() => p.views.filter((v) => v.project.archived !== true).sort((a, b) => a.project.name.localeCompare(b.project.name, "ko")), [p.views]);
+  const active = useMemo(() => p.views.filter((v) => v.project.archived !== true).sort((a, b) => collator.compare(a.project.name, b.project.name)), [p.views, collator]);
   const archived = useMemo(() => p.views.filter((v) => v.project.archived === true), [p.views]);
-  const activeIds = useMemo(() => new Set(regionProjects(p.projects).map((x) => x.id)), [p.projects]);
+  const activeIds = useMemo(() => new Set(regionProjects(p.projects, language).map((x) => x.id)), [p.projects, language]);
 
   const counts = useQueries({
     queries: RECORD_FEATURES.map((f) => ({
@@ -140,7 +147,7 @@ function ProjectsSectionBody() {
   // ---- 프로젝트 없는 이전 기록 ----
   const dismissed = (f: RecordFeature) => kept.has(f.key) || storage.get(dismissedKey(f.key)) === "1";
   const withNone = RECORD_FEATURES.filter((f) => countOf(f, null) > 0);
-  const legacyRows: LegacyRow[] = withNone.filter((f) => showHidden || !dismissed(f)).map((f) => ({ key: f.key, feature: featureLabel(f), count: countOf(f, null) }));
+  const legacyRows: LegacyRow[] = withNone.filter((f) => showHidden || !dismissed(f)).map((f) => ({ key: f.key, feature: featureLabel(f, lookupMessage), count: countOf(f, null) }));
   const hiddenCount = showHidden ? 0 : withNone.filter(dismissed).length;
 
   // ---- 옛 프로젝트 전용 구성 ----
@@ -196,13 +203,13 @@ function ProjectsSectionBody() {
       : feature.assign(rest, { to: projectId, from_null: true }).then((r) => assignSummary(r, requested));
     run
       .then(async (s) => {
-        toast({ tone: "success", text: s.skipped > 0 ? t.assignPartial(s.total, s.ok, s.skipped) : t.assignDone(featureLabel(feature), s.ok, name) });
+        toast({ tone: "success", text: s.skipped > 0 ? t.assignPartial(s.total, s.ok, s.skipped) : t.assignDone(featureLabel(feature, lookupMessage), s.ok, name) });
         closeDialog();
         await refreshAll();
       })
       .catch((e: unknown) => {
         setBusy(false);
-        setDialogError(describeError(e, t.assignFailed).message);
+        setDialogError(raisedAs("assign", e));
       });
   };
 
@@ -217,7 +224,7 @@ function ProjectsSectionBody() {
       }
     } catch (e: unknown) {
       setBusy(false);
-      setDialogError(describeError(e, t.moveFailed).message);
+      setDialogError(raisedAs("move", e));
       return;
     }
     const merged = mergeMoveResults(results);
@@ -294,7 +301,7 @@ function ProjectsSectionBody() {
       />
       {dialog?.kind === "assign" ? (
         <AssignProjectDialog
-          feature={featureLabel(dialog.feature)}
+          feature={featureLabel(dialog.feature, lookupMessage)}
           count={countOf(dialog.feature, null)}
           targets={assignTargets.filter((x) => activeIds.has(x.id))}
           directDefault={true}

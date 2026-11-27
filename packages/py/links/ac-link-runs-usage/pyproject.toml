@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-runs-usage"
 version = "0.1.0"
-description = "Agent Console — 실행·사용량 연동 모듈: 실행 이벤트 조회·플랫폼 실행분 토큰 집계(증분 캐시)"
+description = "Agent Console — runs and usage link module: run event queries and token totals for platform runs (incremental cache)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -15,6 +15,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-runs-usage = "agent_console_link_runs_usage.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-runs-usage = "agent_console_link_runs_usage"
 
 [dependency-groups]
 dev = [

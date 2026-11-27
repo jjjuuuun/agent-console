@@ -3,11 +3,10 @@ import type { DelegationStrategyDescriptor, EdgeTypeDescriptor } from "@agent-co
 import { resolveEdgeStyle } from "@agent-console/graph-editor";
 import { Button, Icon, useIconRegistry } from "@agent-console/ui";
 import { useHint } from "../../app/hints";
-import { SessionChip, attributeRows, edgeSessionOf, effectiveStrategyId, sessionOf } from "../delegation";
-import { teamMessages } from "./messages";
+import { SessionChip, attributeRows, edgeSessionOf, effectiveStrategyId, sessionOf, useDelegationMessages } from "../delegation";
+import { useTeamMessages } from "./messages";
 import { latestById } from "./teamsLogic";
 
-const m = teamMessages.sessions;
 const HINT_MS = 8000;
 
 export interface LegendRow {
@@ -78,6 +77,8 @@ export interface EdgeLegendProps {
  * 세션 칩 설명은 디스크립터에 나온 세션 값마다 한 줄이다. `Esc`로 닫고 포커스는 버튼으로 돌아간다.
  */
 export function EdgeLegend({ edges, edgeTypes, strategies, renderIcon, onRetry }: EdgeLegendProps) {
+  const m = useTeamMessages().sessions;
+  const dm = useDelegationMessages();
   const [open, setOpen] = useState(false);
   const [unusedOpen, setUnusedOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -100,10 +101,10 @@ export function EdgeLegend({ edges, edgeTypes, strategies, renderIcon, onRetry }
     }
     for (const k of latestById(edgeTypes)) if (typeof k.session === "string" && k.session !== "") seen.add(k.session);
     return [...seen].flatMap((v) => {
-      const cell = attributeRows({ session: v })[0];
+      const cell = attributeRows({ session: v }, dm)[0];
       return cell === undefined || cell.unknownValue ? [] : [{ value: v, text: cell.long }];
     });
-  }, [strategies, edgeTypes]);
+  }, [strategies, edgeTypes, dm]);
   const empty = rows.used.length + rows.unused.length === 0;
   const close = () => {
     setOpen(false);

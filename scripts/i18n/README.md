@@ -29,7 +29,7 @@ uv run poe i18n-check --package ac-mod-runs --strict --list
 - **S2 codes.** Codes are taken from package sources by AST: string constants in classes whose name matches `codes.class_pattern` (`ErrorCodes`, `KnownIssueCodes` and the per-package `*Codes` classes), `code=` arguments (literal, `Class.ATTR` or a module constant) and `{"code": ..., "message": ...}` dictionaries; plus codes seen in S1 responses. Every code must have a non-empty value in the `codes` section of some catalog for every language in `languages`.
 - **S3 placeholders.** Within a package, a code template must use the same placeholders in every language, and a placeholder must be a key of that code's `details`. Known `details` keys come from `details={...}` dictionary literals next to `code=` in the source and from issues seen in responses (intersection over all sites; sites with unknown keys are ignored).
 
-The owner of a missing string is the package whose source or data file contains it literally (docstrings are matched after `inspect.cleandoc`, the way Pydantic builds descriptions). When several packages contain it, `texts.prefer_owners` decides, then name order. The owner of a code is the package that defines it, otherwise the first package that uses it.
+The owner of a missing string is the package whose source or data file contains it literally (docstrings are matched after `inspect.cleandoc`, the way Pydantic builds descriptions, and by their first line, which some tables use as a summary). When several packages contain it, `texts.prefer_owners` decides, then name order. The owner of a code is the package that defines it, otherwise the first package that uses it.
 
 ## Rules
 

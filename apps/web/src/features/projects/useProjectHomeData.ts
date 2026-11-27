@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { useServerText } from "@agent-console/i18n";
 import type { CopyKindInfo, ProjectView } from "@agent-console/contracts/projects";
 import { useApi } from "../../app/ApiContext";
-import { lookupMessage } from "../../app/messages";
+import { useLookupMessage } from "../../app/shellMessages";
 import { DEFAULT_ROUTES, routeServing } from "../../shell/routeConfig";
 import { ROUTE_ROLES, definitionPath, useRouteOn } from "../library";
 import { mergeActivity, type ActivityRow } from "./projectHomeLib";
+import { useLanguageCode } from "../../i18n";
 
 /** 구성 표의 한 행. 종류 이름은 코드에 없다(`kind`는 서버가 준 문자열, 제목은 라우트 데이터에서). */
 export interface ConfigRow {
@@ -24,10 +26,8 @@ export interface ConfigRow {
   version: string | undefined;
 }
 
-const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
-
 /** 종류 제목: 그 종류를 편집하는 화면(라우트)의 제목. 화면이 없으면 종류 문자열 원문. */
-export function kindTitle(kind: string): string {
+export function kindTitle(kind: string, lookupMessage: (key: string) => string): string {
   const route = routeServing(DEFAULT_ROUTES, `definition:${kind}`);
   return route === undefined ? kind : lookupMessage(route.titleKey);
 }
@@ -49,6 +49,9 @@ export interface ProjectConfig {
  * `enabled=false`(폴더를 읽을 수 없음 등)면 읽지 않는다.
  */
 export function useProjectConfig(view: ProjectView | undefined, enabled: boolean): ProjectConfig {
+  const language = useLanguageCode();
+  const lookupMessage = useLookupMessage();
+  const serverText = useServerText();
   const { rest } = useApi();
   const id = view?.project.id ?? "";
   const on = enabled && id !== "";
@@ -60,7 +63,7 @@ export function useProjectConfig(view: ProjectView | undefined, enabled: boolean
     meta: { silentBackgroundError: true },
   });
   const infos = useMemo(() => (kindsQuery.data ?? []).filter((k) => k.portable), [kindsQuery.data]);
-  const titleOf = (info: CopyKindInfo): string => (info.title != null && info.title !== "" ? info.title : kindTitle(info.kind));
+  const titleOf = (info: CopyKindInfo): string => (info.title != null && info.title !== "" ? serverText.text(info.title) : kindTitle(info.kind, lookupMessage));
   const queries = useQueries({
     queries: infos.map((info) => ({
       queryKey: ["list", "project-config", id, info.kind] as const,
@@ -94,10 +97,11 @@ export function useProjectConfig(view: ProjectView | undefined, enabled: boolean
       });
     }
   });
+  const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
   rows.sort((a, b) => collator.compare(a.kindTitle, b.kindTitle) || collator.compare(a.name, b.name));
   const creatable = (view?.kinds ?? []).flatMap((kind) => {
     const route = routeServing(DEFAULT_ROUTES, `definition:${kind}`);
-    return route === undefined ? [] : [{ kind, title: kindTitle(kind), href: `${route.path}?prj=${encodeURIComponent(id)}` }];
+    return route === undefined ? [] : [{ kind, title: kindTitle(kind, lookupMessage), href: `${route.path}?prj=${encodeURIComponent(id)}` }];
   });
   return {
     rows,

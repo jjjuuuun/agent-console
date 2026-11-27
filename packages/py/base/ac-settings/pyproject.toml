@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-settings"
 version = "0.1.0"
-description = "Agent Console — 설정 층 병합(교체·병합·이어 붙이기 등 이름 붙은 전략)과 값별 출처 추적"
+description = "Agent Console — settings layer merging (named strategies such as replace, merge, and append) with per-value source tracking"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

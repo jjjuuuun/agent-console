@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Button, useToast } from "@agent-console/ui";
 import { formatBytes } from "../../lib/bytes";
+import { createToastText } from "../../app/ToastText";
 import { FilesView, IssueRows, PlanSummaryLine } from "./PlanParts";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
+
+const ExportToast = createToastText(useExportMessages);
 import type { Outcome } from "./useExportFlow";
 
 export interface ResultStepProps {
@@ -13,6 +16,7 @@ export interface ResultStepProps {
 
 /** ⑤ 결과: 파일별 동작 배지 + 요약 + 경고 재표시. 제목에 포커스가 간다(스크린리더에 완료를 알림). */
 export function ResultStep({ outcome, onClose, onAgain }: ResultStepProps) {
+  const t = useExportMessages();
   const heading = useRef<HTMLHeadingElement>(null);
   const toast = useToast();
   useEffect(() => {
@@ -51,7 +55,7 @@ export function ResultStep({ outcome, onClose, onAgain }: ResultStepProps) {
         <button
           type="button"
           className="app-link-btn"
-          onClick={() => void navigator.clipboard?.writeText(outcome.path || outcome.rootLabel).then(() => toast({ tone: "success", text: t.result.copied }))}
+          onClick={() => void navigator.clipboard?.writeText(outcome.path || outcome.rootLabel).then(() => toast({ tone: "success", text: <ExportToast render={(e) => e.result.copied} /> }))}
         >
           {t.result.copyPath}
         </button>

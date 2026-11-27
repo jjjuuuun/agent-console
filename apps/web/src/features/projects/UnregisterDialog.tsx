@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 
 export interface UnregisterDialogProps {
   name: string;
@@ -12,10 +12,9 @@ export interface UnregisterDialogProps {
   onClose: () => void;
 }
 
-const BODY_AFTER = "의 파일은 지우지 않습니다.";
-
 /** 등록 해제 확인(screen-projects §6.2, 폭 480). 폴더 안 파일·구성·기록은 지우지 않는다. 기본 포커스는 [취소]. */
 export function UnregisterDialog({ name, folder, configDir, onConfirm, onClose }: UnregisterDialogProps) {
+  const m = useFolderHomeMessages();
   const cancel = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +53,7 @@ export function UnregisterDialog({ name, folder, configDir, onConfirm, onClose }
       <p>
         {m.unregister.bodyBefore}
         {folder === null ? null : <> (<span className="ac-mono-wrap">{folder}</span>)</>}
-        {BODY_AFTER} {configDir === undefined ? m.unregister.bodyAfterUnknown : m.unregister.bodyAfter(configDir)}
+        {m.unregister.bodyFilesKept} {configDir === undefined ? m.unregister.bodyAfterUnknown : m.unregister.bodyAfter(configDir)}
       </p>
       {error === null ? null : <Banner tone="danger">{error}</Banner>}
     </Dialog>

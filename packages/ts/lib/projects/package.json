@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/projects",
   "version": "0.3.0",
-  "description": "프로젝트 재사용 로직: 상태·능력 표, 공간, 복사 계획, 로그 필터, 현재 프로젝트 상태",
+  "description": "Reusable project logic: status and capability tables, spaces, copy plans, log filters, current project state",
   "private": true,
   "license": "MIT",
   "type": "module",

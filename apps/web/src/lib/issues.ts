@@ -1,12 +1,16 @@
 import type { Issue } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
-import { messages } from "../app/messages";
 
-/** 서버 검증기(JSON Schema 키워드) 이슈의 영어 메시지를 한국어로. 모르면 서버 메시지 그대로. */
-export function issueMessage(issue: Issue): string {
+/** 검증기(JSON Schema 키워드) 이름 → 화면 언어의 문장. 모르는 키워드는 `undefined`. */
+export type ValidatorText = (validator: string) => string | undefined;
+
+/**
+ * 서버 검증기 이슈의 메시지를 화면 언어로. 이슈에 `details.validator`가 있고 `validatorText`가 문장을 주면 그 문장, 아니면 서버 메시지 그대로.
+ */
+export function issueMessage(issue: Issue, validatorText?: ValidatorText): string {
   const validator = issue.details?.["validator"];
-  const ko = typeof validator === "string" ? messages.issues.validators[validator] : undefined;
-  return ko !== undefined && !/[가-힣]/.test(issue.message) ? ko : issue.message;
+  const text = typeof validator === "string" ? validatorText?.(validator) : undefined;
+  return text ?? issue.message;
 }
 
 export interface IssueCounts {
@@ -32,14 +36,14 @@ export interface NodeIssueSplit {
  * 한 노드의 이슈를 폼 필드 오류와 나머지로 나눈다.
  * 서버 `Issue.path`는 노드 `config` 기준 JSON Pointer다.
  */
-export function splitNodeIssues(issues: readonly Issue[], nodeId: string): NodeIssueSplit {
+export function splitNodeIssues(issues: readonly Issue[], nodeId: string, validatorText?: ValidatorText): NodeIssueSplit {
   const fieldErrors: FormError[] = [];
   const unmapped: Issue[] = [];
   for (const issue of issues) {
     if (issue.node_id !== nodeId) continue;
     const path = issue.path;
     if (typeof path === "string" && (path === "" || path.startsWith("/")) && issue.severity !== "info") {
-      fieldErrors.push({ path, message: issueMessage(issue), severity: issue.severity === "warning" ? "warning" : "error" });
+      fieldErrors.push({ path, message: issueMessage(issue, validatorText), severity: issue.severity === "warning" ? "warning" : "error" });
     } else {
       unmapped.push(issue);
     }

@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/markdown-doc",
   "version": "0.2.0",
-  "description": "마크다운 문서 편집기·미리보기와 공용 상태 칩·출처 배지",
+  "description": "Markdown document editor and preview with shared status chips and source badges",
   "private": true,
   "license": "MIT",
   "type": "module",

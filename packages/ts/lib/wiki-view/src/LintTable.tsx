@@ -37,6 +37,8 @@ export interface LintTableProps {
   rowHeight?: number;
   height?: number | string;
   messages?: Readonly<Record<string, string>>;
+  /** 코드·페이지 정렬 로캘(BCP 47, 보통 화면 언어). 생략하면 "en". */
+  locale?: string;
   className?: string;
 }
 
@@ -54,16 +56,15 @@ function defaultRule(issue: WikiIssue): string | null {
   return typeof v === "string" && v !== "" ? v : null;
 }
 
-const collator = new Intl.Collator("ko", { numeric: true });
-
 /**
  * 점검 표(가상 그리드). 열 6개(심각도·코드·페이지·줄·메시지·규칙)는 숨기지 않는다. 거르기 목록(심각도·코드)은 데이터에서 만들고
  * 모르는 심각도·코드는 원문 + 중립 톤이다. 정렬은 심각도(순서는 prop)·코드·페이지. 모든 거르기·정렬은 클라이언트다.
  */
 export function LintTable({
-  initialFilter, onFilterChange, issues, display, severityOrder = [], lineOf = defaultLine, ruleOf = defaultRule, onOpen, onContextMenu, notice, rowHeight = 32, height, messages, className,
+  initialFilter, onFilterChange, issues, display, severityOrder = [], lineOf = defaultLine, ruleOf = defaultRule, onOpen, onContextMenu, notice, rowHeight = 32, height, messages, locale, className,
 }: LintTableProps) {
   const t = resolveMessages(messages);
+  const collator = useMemo(() => new Intl.Collator(locale ?? "en", { numeric: true }), [locale]);
   const base = useDomId();
   const [sevFilter, setSevFilter] = useState<ReadonlySet<string>>(() => new Set(initialFilter?.severities ?? []));
   const [codeFilter, setCodeFilter] = useState(initialFilter?.code ?? "");
@@ -83,8 +84,8 @@ export function LintTable({
   const [sort, setSort] = useState<{ key: LintSortKey; dir: "asc" | "desc" }>({ key: "severity", dir: "asc" });
   const [active, setActive] = useState(0);
 
-  const severities = useMemo(() => [...new Set(issues.map((i) => i.severity as string))].sort((a, b) => severityRank(a, severityOrder) - severityRank(b, severityOrder) || a.localeCompare(b)), [issues, severityOrder]);
-  const codes = useMemo(() => [...new Set(issues.map((i) => i.code))].sort(collator.compare), [issues]);
+  const severities = useMemo(() => [...new Set(issues.map((i) => i.severity as string))].sort((a, b) => severityRank(a, severityOrder) - severityRank(b, severityOrder) || collator.compare(a, b)), [issues, severityOrder, collator]);
+  const codes = useMemo(() => [...new Set(issues.map((i) => i.code))].sort(collator.compare), [issues, collator]);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     for (const i of issues) m.set(i.severity, (m.get(i.severity) ?? 0) + 1);
@@ -108,7 +109,7 @@ export function LintTable({
       if (c !== 0) return c * dir;
       return cmpPage(a, b) || (lineOf(a) ?? 0) - (lineOf(b) ?? 0);
     });
-  }, [issues, sevFilter, codeFilter, pageFilter, sort, severityOrder, lineOf]);
+  }, [issues, sevFilter, codeFilter, pageFilter, sort, severityOrder, lineOf, collator]);
 
   const filtered = sevFilter.size > 0 || codeFilter !== "" || pageFilter.trim() !== "";
   const shown = Math.min(Math.max(active, 0), Math.max(rows.length - 1, 0));

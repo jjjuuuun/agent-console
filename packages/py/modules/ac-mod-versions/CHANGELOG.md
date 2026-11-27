@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-mod-versions`, so the web can show the module description and settings in English (data only, no API change). Log lines are now English.
 - P1.17: `VersionService.diff` now calls the shared `agent_console_store.diff_versions` (same result; the calculation moved to `ac-store` so the document template version routes in `ac-mod-sdd` can use it too). `SECRET_MASK` is re-exported from `ac-store`. Dropped the direct `agent-console-settings` dependency. Consumer range: `agent-console-store>=0.2,<0.3`.
 - FU.3: 공간(`?project=`) 되돌리기·비교의 저장 전 검사는 검사의 선택 메서드 `space_issues`(`SpaceDefinitionCheck`)를 부른다(없으면 `issues`). `VersionService(space=)` 선택 인자.
 - 5.7R.33x: 선택 포트 `definitions.spaces`. 모든 버전 경로가 `?project=<공간>`을 받아 그 공간 저장소의 버전 기록(목록·하나·비교·본문 파일·되돌리기)을 쓴다. 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`. `definitions.saved` 항목에 `space`가 있으면 그 공간에 보존 개수를 적용한다(`VersionService(spaces=)`). **깨는 변경**: `build_router(service, …)`의 `service`가 공간 이름 하나를 받는다.

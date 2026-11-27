@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-graph"
 version = "0.1.0"
-description = "Agent Console — 그래프 정의 순수 로직: 구조 검증, 포트 해석, 위상 정렬·사이클 검사, 버전 해시"
+description = "Agent Console — pure graph definition logic: structure validation, port resolution, topological sort and cycle checks, version hashes"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

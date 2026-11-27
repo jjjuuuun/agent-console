@@ -18,7 +18,7 @@ import { registerServiceWorker } from "./pwa/registerSw";
 import { buildAppRoutes } from "./shell/routes";
 
 const root = document.getElementById("root");
-if (!root) throw new Error("#root 요소가 없습니다");
+if (!root) throw new Error("The #root element is missing");
 
 const router = createBrowserRouter(buildAppRoutes());
 // 서버 주소: /config.json → 빌드 변수 → 같은 출처(개발·미리보기 서버는 /api, /ws를 프록시)

@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-architecture"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 구조도 프로필 플러그인(example-minimal)"
+description = "Agent Console example extension — an architecture profile plugin (example-minimal)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

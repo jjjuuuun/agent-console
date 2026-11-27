@@ -1,0 +1,24 @@
+{
+  "text": {
+    "구조도 대상": "Architecture map target",
+    "구조도 묶음": "Architecture map group",
+    "구조도 출처": "Architecture map source",
+    "로그를 구조도 위에 겹쳐 보고 구조도 칸으로 이벤트를 거른다": "Overlays logs on the architecture map and filters events by map cell",
+    "로그 구조도의 출처 종류 대응과 결과 캐시 크기를 정하는 설치자 설정입니다.": "Server administrator settings for the log architecture map: source kind mapping and result cache size.",
+    "로그 출처 id → 구조도 프로필의 출처 종류(coverage·source_priority 키). 적지 않은 출처는 출처 id를 종류로 쓴다.": "Log source id → source kind in the architecture map profile (coverage and source_priority keys). Sources not listed use their source id as the kind.",
+    "출처 종류 대응": "Source kind mapping",
+    "구조도를 그린 범위(필터)를 몇 개까지 기억할지. 기억한 범위는 다음 호출에서 새 이벤트만 읽는다. 0이면 캐시하지 않는다.": "How many drawn ranges (filters) of the architecture map to remember. A remembered range reads only new events on the next call. 0 turns off caching.",
+    "캐시할 범위 수": "Cached ranges",
+    "기억한 범위들의 이벤트 수 합의 상한(넘으면 오래 쓰지 않은 범위부터 버린다).": "Upper limit on the total number of events in remembered ranges (above it, the least recently used ranges are dropped first).",
+    "캐시 이벤트 상한": "Cached event limit",
+    "범위 하나에 프로필(내용·연산자·오류 범주가 같은 것)별 판정 결과를 몇 개까지 기억할지. 판정 결과는 이벤트 수만큼 커서, 넘으면 오래 쓰지 않은 것부터 버린다.": "How many match results per profile (same content, operators and error categories) to remember for one range. Results grow with the number of events; above the limit, the least recently used are dropped first.",
+    "범위마다 기억할 판정 수": "Match results per range",
+    "범위 이벤트를 색인에서 읽을 때 쪽 하나의 크기. 클수록 질의 수가 줄고 한 번에 메모리에 올리는 이벤트가 는다.": "Page size when reading range events from the index. Larger means fewer queries and more events in memory at once.",
+    "한 번에 읽을 이벤트 수": "Events per read",
+    "구조도는 목록용 이벤트만 보므로 이 경로(예: /detail) 아래 값을 보는 프로필 조건은 맞지 않는다. 프로필 검사가 이런 조건을 경고한다. 비우면 경고하지 않는다.": "The architecture map sees only list events, so profile conditions that look at values under these paths (for example /detail) never match. The profile check warns about such conditions. Leave empty for no warning.",
+    "목록에 없는 경로": "Paths not in the list"
+  },
+  "codes": {
+    "architecture.invalid_query": "The architecture map query isn't valid"
+  }
+}

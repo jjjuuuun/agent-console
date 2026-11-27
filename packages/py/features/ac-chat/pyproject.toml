@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-chat"
 version = "0.1.0"
-description = "Agent Console — 대화 서비스: 대화 CRUD, 메시지 → 턴(Run) 시작, 실행 중 메시지 정책, 세션 이어 쓰기, 턴 조립"
+description = "Agent Console — chat service: conversation CRUD, message → turn (Run) start, policy for messages during a run, session continuation, turn assembly"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

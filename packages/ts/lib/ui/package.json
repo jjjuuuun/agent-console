@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/ui",
-  "version": "0.2.0",
-  "description": "공용 UI 토큰과 기본 컴포넌트",
+  "version": "0.2.1",
+  "description": "Shared UI tokens and basic components",
   "private": true,
   "license": "MIT",
   "type": "module",

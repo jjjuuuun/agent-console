@@ -16,6 +16,7 @@ from agent_console_modkit import (
     ConfigurableSecretProvider,
     ExtensionRegistries,
     SecretProviderOptionsError,
+    SettingsNoticeCodes,
     configure_secret_providers,
     env_secret_lookup,
     schema_defaults,
@@ -184,3 +185,21 @@ def test_settings_warnings_log_english_and_keep_web_text(caplog: pytest.LogCaptu
     assert any("'ghost' is not a registered secret provider" in line for line in logged)
     assert not any(re.search("[가-힣]", line) for line in logged)
     assert all(re.search("[가-힣]", w) for w in setup.warnings)
+
+
+def test_settings_notices_carry_code_and_details() -> None:
+    """I.7c: 웹이 문구 묶음 ``codes``로 문구를 고르도록 코드·``details``가 붙는다(값은 없다)."""
+    setup = configure_secret_providers(
+        _bundle(plain=Plain()), {"plain": {"a": 1}, "ghost": {"b": 2}}, environ={}
+    )
+    assert [(n.code, dict(n.details)) for n in setup.notices] == [
+        (
+            SettingsNoticeCodes.SECRET_PROVIDER_NO_SETTINGS_HOOK,
+            {"setting": "secrets.providers.plain", "provider": "plain", "hook": "from_options"},
+        ),
+        (
+            SettingsNoticeCodes.SECRET_PROVIDER_UNKNOWN,
+            {"setting": "secrets.providers", "provider": "ghost"},
+        ),
+    ]
+    assert setup.warnings == [n.message for n in setup.notices]

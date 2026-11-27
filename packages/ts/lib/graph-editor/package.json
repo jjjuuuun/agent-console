@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/graph-editor",
-  "version": "0.2.0",
-  "description": "그래프 편집기 컴포넌트(스키마·디스크립터로 그리는 노드·엣지 편집)",
+  "version": "0.2.2",
+  "description": "Graph editor component (node and edge editing drawn from schemas and descriptors)",
   "private": true,
   "license": "MIT",
   "type": "module",

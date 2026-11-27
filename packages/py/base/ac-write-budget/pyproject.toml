@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-write-budget"
 version = "0.1.0"
-description = "Agent Console — 쓰기 횟수 한도(실행 하나가 함께 쓰는 카운터) 기반 패키지"
+description = "Agent Console — base package for write count limits (a counter shared by one run)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

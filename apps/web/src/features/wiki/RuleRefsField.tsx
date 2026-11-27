@@ -7,7 +7,8 @@ import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { RuleListEditor, type RuleListChange, type RuleSummary } from "@agent-console/wiki-view";
 import type { WikiRuleRef } from "@agent-console/contracts/wiki";
 import { sectionDomId } from "./rulesSections";
-import { wikiTabMessages } from "./tabMessages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
 
 /** 목록에서 규칙을 뺀 변경(`RuleListChange` 판별 값, 타입이 값을 검사한다) */
 const REMOVED: RuleListChange["type"] = "remove";
@@ -34,6 +35,8 @@ export function RuleRefsProvider({ env, children }: { env: RuleRefsEnv; children
 }
 
 export function RuleRefsField({ value, onChange, label, disabled, readonly }: SchemaFormFieldProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const env = useContext(Ctx);
   const ids = useMemo(() => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []), [value]);
   const refs = useMemo<WikiRuleRef[]>(
@@ -50,8 +53,8 @@ export function RuleRefsField({ value, onChange, label, disabled, readonly }: Sc
   const locked = disabled === true || readonly === true || env.readOnlyReason !== undefined;
   return (
     <div id={sectionDomId("used")} className="wiki-rulerefs" role="group" aria-label={label}>
-      <p className="app-muted wiki-hint">{wikiTabMessages.rules.usedHint}</p>
-      <RuleListEditor
+      <p className="app-muted wiki-hint">{t("tab.rules.usedHint")}</p>
+      <RuleListEditor messages={wikiViewMessages}
         value={refs}
         summaries={env.summaries}
         available={available}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { LogSessionSummary } from "@agent-console/contracts/logs";
-import { fullTimeTitle, mergeFormatters, shortId } from "./format";
+import { mergeFormatters, shortId } from "./format";
 import { fmt, mergeMessages, type DeepPartial, type LogViewMessages } from "./messages";
 import { listStateBlock, NeutralChip } from "./parts";
 import type { ColumnSpec, Formatters, ListSlots } from "./types";
@@ -149,7 +149,7 @@ export function SessionList(props: SessionListProps) {
         const p = (n: number) => String(n).padStart(2, "0");
         const hm = `${p(d.getHours())}:${p(d.getMinutes())}`;
         const text = d.toDateString() === today.toDateString() ? hm : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
-        return <span className="ac-lv-num" title={fullTimeTitle(s.first_time)}>{text}</span>;
+        return <span className="ac-lv-num" title={formatters.fullTime(s.first_time)}>{text}</span>;
       }
       case "session":
         return <span className="ac-lv-mono" title={s.session}>{shortId(s.session)}</span>;

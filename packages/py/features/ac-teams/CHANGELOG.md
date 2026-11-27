@@ -2,6 +2,7 @@
 
 ## 미출시 (0.2.0)
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-teams`, so the web can show the effective settings layer names and the `team.*`, `interaction.*`, `review.*` and `settings.*` issues in English (data only, no API change).
 - P1.16 — BREAKING CHANGE: The common layer no longer reads the legacy top-level `WorkspaceSettings.default_backend`. Put the value in `agent_defaults.backend`.
   공통 층(`agent_layers`·`layers_for`·`node_settings`·`resolve_backends` 등)은 `agent_defaults`만 읽는다. 옛 키만 있으면
   공통 층 backend가 비어 실행 전 점검이 `backend.unresolved`를 낸다. 함수 인자 `default_backend`(마지막 대체값)는 그대로다.

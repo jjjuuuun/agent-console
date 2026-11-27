@@ -1,12 +1,15 @@
 import { useState } from "react";
 import type { EdgeSpec, NodeTypeDescriptor } from "@agent-console/contracts";
-import { EdgeLayoutPanel, IssueSuggestionButtons, candidateEdgeKinds, edgeKindBadge, defaultMessages, type EdgeLayoutPanelProps } from "@agent-console/graph-editor";
+import { EdgeLayoutPanel, IssueSuggestionButtons, candidateEdgeKinds, edgeKindBadge, type EdgeLayoutPanelProps } from "@agent-console/graph-editor";
 import { Banner, Button, ConfirmDialog, useToast } from "@agent-console/ui";
-import { DEFAULT_TEAM_CONVENTIONS, configRelativePath, effectiveStrategyId, hasAttributes, resolveCycleLimit, type ConfigIssue } from "../delegation";
+import { DEFAULT_TEAM_CONVENTIONS, configRelativePath, effectiveStrategyId, hasAttributes, resolveCycleLimit, useDelegationMessages, type ConfigIssue } from "../delegation";
 import { setAt, unsetAt } from "../../lib/jsonPointer";
-import { issueMessage } from "../../lib/issues";
+import { useIssueMessage } from "../../app/appMessages";
+import { useLibraryMessages } from "../library";
 import { EdgeConfigForm } from "./forms";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
+import { TeamToast } from "./TeamToast";
+import { useGraphEditorLocale } from "./useGraphEditorLocale";
 import type { TeamPanelContext } from "./panelContext";
 import { edgeKindOf, edgesOf, issuesOfEdge, latestById, nodeLabel, nodesOf, withEdge } from "./teamsLogic";
 
@@ -19,6 +22,11 @@ function portTitle(types: readonly NodeTypeDescriptor[], typeId: string | undefi
 
 /** 연결 패널: 출발→도착, 연결 종류 바꾸기, 종류의 `config_schema` 폼, "모양·경로"(편집기가 알려 준 값), 이 연결의 문제. 종류별 전용 화면은 없다. */
 export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: EdgeSpec; layout?: EdgeLayoutPanelProps | undefined }) {
+  const issueMessage = useIssueMessage();
+  const t = useTeamMessages();
+  const geMessages = useGraphEditorLocale().messages;
+  const dm = useDelegationMessages();
+  const lm = useLibraryMessages();
   const [pending, setPending] = useState<string | null>(null);
   const [descOpen, setDescOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -34,8 +42,8 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
   const mine = issuesOfEdge(ctx.issues, edge.id);
   const badge = kind === undefined ? undefined : edgeKindBadge(kind);
   // 분류 칩 문구: 메시지 표의 문구, 표에 없는 scheduling 값(플러그인이 준 새 값)은 원문 그대로(명세 §14.4.3). 표에서 빈 문구(none)는 행을 숨긴다.
-  const knownBadge = badge === undefined ? undefined : defaultMessages.kindBadgeLabels[badge];
-  const classText = knownBadge ? knownBadge : badge === "none" && kind?.scheduling != null && !(kind.scheduling in defaultMessages.kindBadgeLabels) ? String(kind.scheduling) : undefined;
+  const knownBadge = badge === undefined ? undefined : geMessages.kindBadgeLabels[badge];
+  const classText = knownBadge ? knownBadge : badge === "none" && kind?.scheduling != null && !(kind.scheduling in geMessages.kindBadgeLabels) ? String(kind.scheduling) : undefined;
   // 서버 이슈 중 연결 설정 안을 가리키는 것(조건 행·한도 필드)은 폼의 해당 위치에 매단다
   const configIssues: ConfigIssue[] = mine.flatMap((issue) => {
     const path = configRelativePath(issue.path);
@@ -45,7 +53,7 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
   // 위임 연결: 유효 방식과 위임자 이름(동작 방식 블록·옵션 문구). 방식 id를 비교하지 않고 디스크립터 속성만 본다
   const effectiveId = kind === undefined ? undefined : effectiveStrategyId(edge, kind);
   const effective = effectiveId === undefined ? undefined : ctx.strategies.find((s) => s.id === effectiveId);
-  const behaviorBlock = effective !== undefined && hasAttributes(effective);
+  const behaviorBlock = effective !== undefined && hasAttributes(effective, dm);
   const delegatorName = src ? nodeLabel(src) : edge.source.node;
   const pickStrategy = (id: string) => {
     if (kind?.invocation == null) return;
@@ -55,14 +63,14 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
     const nextConfig = (id === kind.invocation.strategy ? unsetAt(edge.config ?? {}, pointer) : setAt(edge.config ?? {}, pointer, id)) as Record<string, unknown>;
     const next = { ...edge, config: nextConfig } as EdgeSpec;
     if (Object.keys(nextConfig).length === 0) delete (next as { config?: unknown }).config;
-    ctx.onUndoableChange({ ...ctx.graph, edges: edgesOf(ctx.graph).map((e) => (e.id === edge.id ? next : e)) }, t.sessions.strategyChanged(title));
+    ctx.onUndoableChange({ ...ctx.graph, edges: edgesOf(ctx.graph).map((e) => (e.id === edge.id ? next : e)) }, (m) => m.sessions.strategyChanged(title));
   };
   const schemaProps = (kind?.config_schema as { properties?: Record<string, unknown> } | undefined)?.properties;
   const hasSettings = schemaProps !== undefined && schemaProps !== null && Object.keys(schemaProps).length > 0;
   const fromPort = portTitle(ctx.nodeTypes, src?.type, "outputs", edge.source.port);
   const toPort = portTitle(ctx.nodeTypes, tgt?.type, "inputs", edge.target.port);
   const rawPorts = `${edge.source.port} → ${edge.target.port}`;
-  const copyPorts = () => void navigator.clipboard?.writeText(rawPorts).then(() => toast({ tone: "success", text: t.edge.portsCopied }));
+  const copyPorts = () => void navigator.clipboard?.writeText(rawPorts).then(() => toast({ tone: "success", text: <TeamToast render={(m) => m.edge.portsCopied} /> }));
   const sourceLabels = { edge: t.nested.sourceEdge, teamSettings: t.nested.sourceTeam, commonSettings: t.nested.sourceCommon, kindDefault: t.nested.sourceKind } as const;
 
   const change = (id: string) => {
@@ -185,7 +193,7 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
         open={pending !== null}
         title={t.edge.kindChangeTitle}
         confirmLabel={t.edge.kindChange}
-        cancelLabel="취소"
+        cancelLabel={lm.cancel}
         danger
         onConfirm={confirm}
         onCancel={() => setPending(null)}

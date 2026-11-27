@@ -50,20 +50,23 @@ const errorCount = (m: Readonly<Record<string, ArchitectureMetric>> | undefined)
 export const cellHasErrors = (c: ArchitectureCellView): boolean => c.status !== "not_collected" && errorCount(c.metrics) > 0;
 
 /** 접근 이름: "{이름}, {지표 조각…}, {상태 조각}" (§10.1). */
-export function cellAriaLabel(cell: ArchitectureCellView, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>> } = {}): string {
+/** 로캘이 있으면 서식 옵션 조각으로. */
+const loc = (locale: string | undefined): { locale?: string } => (locale === undefined ? {} : { locale });
+
+export function cellAriaLabel(cell: ArchitectureCellView, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
   const parts = [cell.label];
   if (cell.status === "not_collected") parts.push(messages.metricNotCollected);
-  else parts.push(...metricPieces(cell.metrics, messages, { kinds: options.kinds }).map((p) => p.aria));
+  else parts.push(...metricPieces(cell.metrics, messages, { kinds: options.kinds, ...loc(options.locale) }).map((p) => p.aria));
   if (cell.status === "partial" && cell.partial_reason) parts.push(formatMessage(messages.ariaPartial, { reason: cell.partial_reason }));
   if (options.highlighted) parts.push(messages.ariaHighlighted);
   return parts.join(", ");
 }
 
-export function edgeAriaLabel(edge: ArchitectureEdgeView, cellLabels: Readonly<Record<string, string>>, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>> } = {}): string {
+export function edgeAriaLabel(edge: ArchitectureEdgeView, cellLabels: Readonly<Record<string, string>>, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
   const parts = [edge.label || edge.id, formatMessage(messages.ariaEdgeFlow, { from: cellLabels[edge.from] ?? edge.from, to: cellLabels[edge.to] ?? edge.to })];
   if (edge.kind === "structural") parts.push(messages.edgeStructural);
   else if (edge.status === "not_collected") parts.push(messages.metricNotCollected);
-  else parts.push(...metricPieces(edge.metrics, messages, { kinds: options.kinds }).map((p) => p.aria));
+  else parts.push(...metricPieces(edge.metrics, messages, { kinds: options.kinds, ...loc(options.locale) }).map((p) => p.aria));
   if (edge.status === "partial" && edge.partial_reason) parts.push(formatMessage(messages.ariaPartial, { reason: edge.partial_reason }));
   if (options.highlighted) parts.push(messages.ariaHighlighted);
   return parts.join(", ");
@@ -91,7 +94,7 @@ export interface EdgeModel {
 export function buildEdgeModels(
   view: Pick<ArchitectureView, "edges">,
   rects: Readonly<Record<string, Rect>>,
-  options: { edgeStyles?: Readonly<Record<string, EdgeStyleSpec>>; messages: ArchViewMessages; measure?: (t: string) => number },
+  options: { edgeStyles?: Readonly<Record<string, EdgeStyleSpec>>; messages: ArchViewMessages; measure?: (t: string) => number; locale?: string },
 ): EdgeModel[] {
   const out: EdgeModel[] = [];
   for (const edge of view.edges ?? []) {
@@ -109,11 +112,11 @@ export function buildEdgeModels(
     if (observed) {
       if (dead || (countMetric && (countMetric.value === null || countMetric.value === undefined))) count = options.messages.metricDash;
       else if (countMetric) {
-        count = formatMetric(countMetric, options.messages, { name: METRIC_COUNT, compact: true }).text;
-        countShort = (countMetric.value ?? 0) >= 1000 ? abbreviateNumber(countMetric.value as number) : undefined;
+        count = formatMetric(countMetric, options.messages, { name: METRIC_COUNT, compact: true, ...loc(options.locale) }).text;
+        countShort = (countMetric.value ?? 0) >= 1000 ? abbreviateNumber(countMetric.value as number, options.locale) : undefined;
       }
     }
-    const errorText = errors > 0 ? groupDigits(errors) : undefined;
+    const errorText = errors > 0 ? groupDigits(errors, options.locale) : undefined;
     const cap = chipWidthCap(segmentAt(points, center), edge.label_max_w);
     const fit = fitChip({ label: edge.label ?? "", count, countShort, errors: errorText }, cap, options.measure);
     out.push({ edge, points, d: pathData(points), center, state, style, cap, fit, errorText });

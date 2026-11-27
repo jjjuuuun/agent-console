@@ -3,6 +3,7 @@ import {
   groupItems, groupKeysOf, hasNamedGroups, loadCollapsed, loadViewState, resolveGroupBy, resolveSort, revealGroup, saveCollapsed, saveViewState, sortItems, uniqueCount, visibleGroups,
   type GroupByDef, type GroupNode, type KeyValueStorage, type SortDef, type ViewState,
 } from "@agent-console/list-arrange";
+import { useLanguageCode } from "../../i18n/collation";
 
 export interface ArrangeOptions<T> {
   /** 보기·접힘 저장 키 접두(`ac.list.*.<listId>`) */
@@ -46,6 +47,7 @@ export interface Arranged<T> {
  */
 export function useArrange<T>(o: ArrangeOptions<T>): Arranged<T> {
   const { listId, items, groupDefs, sortDefs, storage, defaultView, searching, selectedId, idOf } = o;
+  const language = useLanguageCode();
   const [view, setViewState] = useState<ViewState>(() => loadViewState(storage, listId, defaultView));
   const groupId = view.groupBy ?? defaultView.groupBy;
   const [collapsedSaved, setCollapsed] = useState<Set<string>>(() => loadCollapsed(storage, listId, groupId));
@@ -59,7 +61,7 @@ export function useArrange<T>(o: ArrangeOptions<T>): Arranged<T> {
   const groupDef = useMemo(() => resolveGroupBy(groupDefs, groupId, items), [groupDefs, groupId, items]);
   const sortDef = useMemo(() => resolveSort(sortDefs, view.sort, items), [sortDefs, view.sort, items]);
   const sorted = useMemo(() => (sortDef === undefined ? [...items] : sortItems(items, sortDef)), [items, sortDef]);
-  const nodes = useMemo(() => (groupDef === undefined ? [] : groupItems(sorted, groupDef)), [groupDef, sorted]);
+  const nodes = useMemo(() => (groupDef === undefined ? [] : groupItems(sorted, groupDef, { locale: language })), [groupDef, sorted, language]);
   const named = groupDef !== undefined && hasNamedGroups(nodes);
   const collapsed = useMemo<ReadonlySet<string>>(() => (searching ? new Set<string>() : collapsedSaved), [searching, collapsedSaved]);
 

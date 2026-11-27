@@ -1,0 +1,18 @@
+{
+  "codes": {
+    "cancelled": "취소로 끝났습니다.",
+    "delegation.conflicting_options": "합친 위임 방식의 요청 옵션 값이 서로 다릅니다.",
+    "delegation.cycle": "이 노드는 이미 위임 경로에 있어 다시 부를 수 없습니다.",
+    "delegation.duplicate_host_tool_names": "합친 위임 방식의 플랫폼 도구 이름이 겹칩니다.",
+    "delegation.duplicate_subagent_names": "합친 위임 방식의 하위 에이전트 이름이 겹칩니다.",
+    "interrupted": "서버 재시작 등으로 실행이 끊겼습니다.",
+    "invalid_node_result": "노드가 올바르지 않은 결과를 돌려줬습니다.",
+    "invalid_response": "응답이 요청 형식에 맞지 않습니다.",
+    "no_entry": "입구 연결(scheduling=entry)이 없어 실행할 수 없습니다.",
+    "node_exception": "노드 실행 중 예외가 났습니다.",
+    "node_failed": "'{node_name}' 노드가 실패했습니다.",
+    "resume.not_rerunnable": "이 노드는 다시 실행할 수 없습니다.",
+    "resume.unknown_node": "고른 노드는 이 실행에서 끊긴 노드가 아니라 다시 실행할 수 없습니다.",
+    "seed_not_scheduled": "이 팀 구성에서 실행되는 노드가 아니라 여기서부터 다시 실행할 수 없습니다."
+  }
+}

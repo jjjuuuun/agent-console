@@ -7,7 +7,7 @@ export const PACKAGE_NAME = "@agent-console/graph-editor" as const;
 export { GraphEditor } from "./components/GraphEditor";
 export { NodeCard, nodeAriaLabel, issueAriaText } from "./components/NodeCard";
 export type { NodeCardProps } from "./components/NodeCard";
-export { NodePalette, PaletteItem, groupNodeTypes } from "./components/NodePalette";
+export { DEFAULT_PALETTE_LOCALE, NodePalette, PaletteItem, groupNodeTypes } from "./components/NodePalette";
 export type { PaletteItemProps } from "./components/NodePalette";
 export { TeamPalette, buildTeamPalette } from "./components/TeamPalette";
 export type { DefinitionSection, DefinitionSubgroup, TeamPaletteProps } from "./components/TeamPalette";

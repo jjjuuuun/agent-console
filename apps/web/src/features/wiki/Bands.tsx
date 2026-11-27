@@ -1,7 +1,7 @@
 /** 본문 위 띠 목록(screen-wiki §6.7). 우선순위 순서로 받은 항목을 최대 2개 보이고 나머지는 `외 n건 [펼치기]`로 접는다. */
 import { useState, type ReactNode } from "react";
 import { Banner, Button, type Tone } from "@agent-console/ui";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface BandItem {
   id: string;
@@ -13,6 +13,7 @@ export interface BandItem {
 }
 
 export function Bands({ items, max = 2 }: { items: readonly BandItem[]; max?: number }) {
+  const t = useT("wiki");
   const [expanded, setExpanded] = useState(false);
   if (items.length === 0) return null;
   const shown = expanded ? items : items.slice(0, max);
@@ -33,8 +34,8 @@ export function Bands({ items, max = 2 }: { items: readonly BandItem[]; max?: nu
       ))}
       {hidden > 0 ? (
         <p className="app-muted wiki-band-more">
-          {m.band.more(hidden)}{" "}
-          <Button size="sm" onClick={() => setExpanded(true)}>{m.band.expand}</Button>
+          {t("band.more", { n: hidden })}{" "}
+          <Button size="sm" onClick={() => setExpanded(true)}>{t("band.expand")}</Button>
         </p>
       ) : null}
     </div>

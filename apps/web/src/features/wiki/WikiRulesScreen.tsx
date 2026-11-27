@@ -19,9 +19,9 @@ import { useInvalidateWiki } from "./useWikiApi";
 import { useWikiRulesItems, useWikiRulesKind, useWikiRulesSpace, wikiRulesKeys } from "./useWikiRulesApi";
 import { WIKI_RULES_SCREEN } from "./wikiConfig";
 import { wikiRulesPath } from "./wikiPaths";
-import { wikiMessages as m } from "./messages";
-import { wikiRulesMessages as t } from "./rulesScreenMessages";
 import "./wiki.css";
+import { useT } from "@agent-console/i18n";
+import { useCollator } from "../../i18n";
 
 const nameOf = (x: WikiRulesListItem) => (x.name !== undefined && x.name !== "" ? x.name : x.id);
 const idOf = (x: WikiRulesListItem) => x.id;
@@ -35,7 +35,9 @@ export function WikiRulesScreen() {
 }
 
 function WikiRulesBody() {
-  usePageTitle(t.title);
+  const collator = useCollator();
+  const t = useT("wiki");
+  usePageTitle(t("rules.title"));
   const space = useWikiRulesSpace();
   const toast = useToast();
   const qc = useQueryClient();
@@ -49,7 +51,7 @@ function WikiRulesBody() {
   const [creating, setCreating] = useState(false);
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
-  const items = useMemo(() => [...(list.data ?? [])].sort((a, b) => nameOf(a).localeCompare(nameOf(b), "ko")), [list.data]);
+  const items = useMemo(() => [...(list.data ?? [])].sort((a, b) => collator.compare(nameOf(a), nameOf(b))), [list.data, collator]);
   const kind = useWikiRulesKind(space.client, space.key, items[0]?.id, items.length > 0, space.info?.rules_kind);
   const existingIds = useMemo(() => new Set(items.map((x) => x.id)), [items]);
   const transfer = useConfigTransfer(items, { kind, idOf, nameOf });
@@ -87,33 +89,33 @@ function WikiRulesBody() {
     const made = await space.client.createWikiRules({ ...body });
     setCreating(false);
     await invalidate();
-    toast({ tone: "success", text: t.toast.created(made.value.rules.name || made.value.rules.id) });
+    toast({ tone: "success", text: t("rules.toast.created", { name: made.value.rules.name || made.value.rules.id }) });
     apply(made.value.rules.id);
   };
 
   let body;
   if (space.infoQuery.isPending || list.isPending) body = <ListSkeleton />;
-  else if (space.infoQuery.isError) body = <FailureBlock error={space.infoQuery.error} title={t.loadFailed} onRetry={() => void space.infoQuery.refetch()} />;
-  else if (list.isError) body = <FailureBlock error={list.error} title={t.loadFailed} onRetry={() => void list.refetch()} />;
+  else if (space.infoQuery.isError) body = <FailureBlock error={space.infoQuery.error} title={t("rules.loadFailed")} onRetry={() => void space.infoQuery.refetch()} />;
+  else if (list.isError) body = <FailureBlock error={list.error} title={t("rules.loadFailed")} onRetry={() => void list.refetch()} />;
   else if (items.length === 0) {
     body = (
       <div className="wiki-state" data-testid="wiki-rules-empty">
-        <EmptyState title={t.empty.title} description={`${t.empty.body} ${t.empty.hint}`} />
+        <EmptyState title={t("rules.empty.title")} description={`${t("rules.empty.body")} ${t("rules.empty.hint")}`} />
       </div>
     );
   } else {
     body = (
       <div className="wiki-rules-screen">
         <div className="wiki-rules-list">
-          <DebouncedInput value={q} onCommit={setQ} label={t.searchLabel} />
-          <ul aria-label={t.listLabel}>
+          <DebouncedInput value={q} onCommit={setQ} label={t("rules.searchLabel")} />
+          <ul aria-label={t("rules.listLabel")}>
             {shown.map((x) => {
               const action = transfer.menuItem(x);
               return (
                 <li key={x.id} className="wiki-rules-item">
                   <button type="button" className="wiki-rules-row" aria-current={x.id === picked ? "true" : undefined} onClick={() => select(x.id)}>
                     <span className="ac-ellipsis"><strong>{nameOf(x)}</strong></span>
-                    <span className="app-muted">{t.rowSub(x.counts?.write ?? 0, x.counts?.lint ?? 0, x.counts?.templates ?? 0)}</span>
+                    <span className="app-muted">{t("rules.rowSub", { w: x.counts?.write ?? 0, l: x.counts?.lint ?? 0, t: x.counts?.templates ?? 0 })}</span>
                     {x.description !== undefined && x.description !== "" ? <span className="app-muted ac-ellipsis" title={x.description}>{x.description}</span> : null}
                     <span className="app-muted ac-mono-wrap ac-ellipsis wiki-mono" title={x.id}>{x.id}</span>
                   </button>
@@ -128,7 +130,7 @@ function WikiRulesBody() {
           </ul>
         </div>
         <div className="wiki-rules-detail">
-          {selected === undefined ? <p className="app-muted">{t.picked}</p> : (
+          {selected === undefined ? <p className="app-muted">{t("rules.picked")}</p> : (
             <WikiRulesEditor
               key={`${space.key}:${selected.id}`}
               space={space}
@@ -139,7 +141,7 @@ function WikiRulesBody() {
               onDeleted={(name) => {
                 qc.removeQueries({ queryKey: wikiRulesKeys.one(space.key, selected.id) });
                 void invalidate();
-                toast({ tone: "success", text: t.toast.deleted(name) });
+                toast({ tone: "success", text: t("rules.toast.deleted", { name }) });
                 dirtyRef.current = false;
                 setDirty(false);
                 apply(null);
@@ -154,15 +156,15 @@ function WikiRulesBody() {
   return (
     <div className="app-screen-frame wiki-screen">
       <PageHeader
-        title={t.title}
+        title={t("rules.title")}
         status={<SpaceChip />}
-        actions={<GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => setCreating(true)}>{t.new}</GuardedButton>}
+        actions={<GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => setCreating(true)}>{t("rules.new")}</GuardedButton>}
       />
       <SpaceNote />
       <div className="wiki-screen-body">{body}</div>
       {creating ? <NewWikiRulesDialog open existingIds={existingIds} fallbackId={kind} kind={kind} onClose={() => setCreating(false)} onSubmit={create} /> : null}
       {transfer.dialog}
-      <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
+      <ConfirmDialog open={blocker.state === "blocked"} title={t("leave.title")} confirmLabel={t("leave.leave")} cancelLabel={t("leave.stay")} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{t("leave.body")}</ConfirmDialog>
     </div>
   );
 }

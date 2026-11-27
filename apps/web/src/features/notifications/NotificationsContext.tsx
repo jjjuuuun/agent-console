@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getDefaultValue, type JsonSchema } from "@agent-console/schema-form";
 import { getContractSchema, type Agent, type NotificationSettings } from "@agent-console/contracts";
 import type { WsClient } from "@agent-console/api-client";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { DEFAULT_EVENT_ALIASES, OBSERVED_NAMES_MAX } from "./config";
 import { toNotifyEvents, type EventAlias, type NotifySettings, type NotifyTarget, type PermissionState } from "./core";
 import { createNotifier } from "./notifier";
@@ -76,6 +76,7 @@ export interface NotificationsProviderProps {
  * 라우터·API를 모르며 이동/경로 판정은 props로 받는다.
  */
 export function NotificationsProvider({ ws, settings, ports, pathFor, isViewing, pathname, navigate, aliases = DEFAULT_EVENT_ALIASES, children }: NotificationsProviderProps) {
+  const m = useAppMessages();
   const queryClient = useQueryClient();
   const [permission, setPermission] = useState<PermissionState>(() => ports.notification.permission());
   const [observed, setObserved] = useState<readonly string[]>([]);
@@ -138,7 +139,7 @@ export function NotificationsProvider({ ws, settings, ports, pathFor, isViewing,
       });
       notifier.handle(message);
     });
-  }, [ws, ports, aliases, queryClient]);
+  }, [ws, ports, aliases, queryClient, m]);
 
   const api = useMemo<NotificationsApi>(
     () => ({
@@ -161,7 +162,7 @@ export function NotificationsProvider({ ws, settings, ports, pathFor, isViewing,
       soundUnlocked,
       observedEvents: observed,
     }),
-    [permission, ports, soundUnlocked, observed],
+    [permission, ports, soundUnlocked, observed, m],
   );
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-projects-wiki"
 version = "0.1.0"
-description = "Agent Console — 프로젝트·위키 연동 모듈: 프로젝트 폴더의 정의 저장소와 폴더 안 페이지 폴더를 위키 모듈의 위키 공간으로 준다"
+description = "Agent Console — projects and wiki link module: gives the project folder's definition store and in-folder page folder to the wiki module as a wiki space"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-projects-wiki = "agent_console_link_projects_wiki.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-projects-wiki = "agent_console_link_projects_wiki"
 
 [dependency-groups]
 dev = [

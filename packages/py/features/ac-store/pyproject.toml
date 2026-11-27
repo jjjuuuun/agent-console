@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-store"
 version = "0.2.0"
-description = "Agent Console — 저장소 인터페이스와 구현: 정의(YAML), 버전·실행·이벤트·라우팅 기록(SQLite), 인메모리"
+description = "Agent Console — store interfaces and implementations: definitions (YAML); versions, runs, events, and routing records (SQLite); in-memory"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

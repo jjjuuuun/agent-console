@@ -1,0 +1,25 @@
+{
+  "codes": {
+    "agent_error": "에이전트가 오류로 끝났습니다.",
+    "auth_failed": "인증에 실패했습니다. API 키나 로그인 정보를 확인하세요.",
+    "auth_missing": "키·토큰이 설정되지 않았습니다.",
+    "backend.auth_dir_unavailable": "앱 전용 자격 폴더를 만들거나 열 수 없습니다. 폴더 권한을 확인하세요.",
+    "backend.subscription_auth_disabled": "Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이 안내됩니다. 본인 구독 자격으로 쓰려면 설치자 설정에서 allow_subscription_auth를 켜세요(본인 책임).",
+    "backend.subscription_auth_enabled": "설치자 설정 allow_subscription_auth에 따라 본인 Claude Code 구독 로그인 자격으로 실행합니다. Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이 안내되며, 구독 자격 사용은 본인 책임입니다.",
+    "backend_error": "실행 백엔드에서 오류가 났습니다.",
+    "backend_no_result": "실행 백엔드가 결과 없이 끝났습니다.",
+    "cli_missing": "Claude Code 실행 파일을 찾지 못했습니다.",
+    "error": "오류가 났습니다.",
+    "exited": "로그인이 끝나기 전에 Claude Code가 종료됐습니다.",
+    "logout_failed": "로그아웃하지 못했습니다.",
+    "network": "Claude에 연결하지 못했습니다. 네트워크 연결을 확인하세요.",
+    "observe.collector_config_invalid": "관측 수집기 {collector} 설정이 올바르지 않습니다.",
+    "observe.hook_probe_wrapped": "hook 감싸기 켜짐: hook 명령 {hooks}개를 hook probe로 감싸 입력·출력·결정·소요 시간을 기록합니다.",
+    "observe.unknown_collector": "관측 수집기 {collector}는 백엔드 {backend}에 없어 기록하지 않습니다.",
+    "pty_unavailable": "이 환경에서는 앱 화면 로그인을 쓸 수 없습니다(터미널 연결 불가).",
+    "secret_unresolved": "비밀 참조를 풀지 못했습니다. 비밀 이름과 저장소를 확인하세요.",
+    "start_failed": "로그인을 시작하지 못했습니다.",
+    "timeout": "시간 안에 끝나지 않았습니다.",
+    "verify_failed": "로그인을 확인하지 못했습니다. 다시 시도하세요."
+  }
+}

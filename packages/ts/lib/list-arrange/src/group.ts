@@ -1,4 +1,4 @@
-import { textCompare } from "./sort";
+import { DEFAULT_LOCALE, textCompare } from "./sort";
 import type { GroupByDef, GroupNode, GroupOptions } from "./types";
 
 /** "없음" 묶음의 키. 실제 값과 겹치지 않는 제어 문자. */
@@ -25,7 +25,7 @@ function segments(value: string, maxDepth: number): string[] {
  * "없음" 묶음은 항상 맨 아래). 항목이 없는 묶음은 만들지 않는다(트리의 중간 단계는 하위에 항목이 있으면 둔다).
  */
 export function groupItems<T>(items: readonly T[], def: GroupByDef<T>, options: GroupOptions<T> = {}): GroupNode<T>[] {
-  const { locale = "ko", compare, maxDepth = 3 } = options;
+  const { locale = DEFAULT_LOCALE, compare, maxDepth = 3 } = options;
   const text = textCompare(locale);
   const tree = def.tree === true;
   const nodes = new Map<string, GroupNode<T>>();

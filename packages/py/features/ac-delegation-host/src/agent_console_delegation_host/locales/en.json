@@ -1,0 +1,39 @@
+{
+  "text": {
+    "독립 에이전트로 위임": "Delegate to an independent agent",
+    "위 에이전트가 판단해 위임 도구로 아래 에이전트를 부른다. 아래 에이전트는 자기 세션·백엔드·모델·리소스로 따로 실행되고 결과가 도구 결과로 돌아온다. 아래 에이전트도 다시 위임하거나 사용자에게 되물을 수 있다.": "The upper agent decides when to call the lower agent with the delegation tool. The lower agent runs separately with its own session, backend, model and resources, and its result comes back as the tool result. The lower agent can also delegate again or ask the user.",
+    "다른 에이전트에게 일을 맡기는 위임 도구의 이름·안내 문구입니다. 비우면 기본 문구를 씁니다.": "Name and guidance text of the delegation tool that hands work to other agents. Leave empty to use the default text.",
+    "에이전트가 일을 맡길 때 부르는 도구 이름입니다(영문·숫자·_·-, 64자 이하).": "Name of the tool the agent calls to hand off work (letters, digits, _ and -, up to 64 characters).",
+    "다른 도구 이름과 겹치거나 에이전트가 알아보기 어려울 때 바꾸세요.": "Change this when it clashes with another tool name or the agent has trouble recognizing it.",
+    "에이전트에게 보이는 도구 설명입니다. {targets}는 대상 목록, {count}는 대상 수입니다.": "Tool description shown to the agent. {targets} is the target list and {count} is the number of targets.",
+    "에이전트가 언제 일을 맡길지 헷갈려 할 때 고치세요.": "Edit this when the agent is unsure when to hand off work.",
+    "도구 설명의 {targets}에 들어갈 대상 한 줄입니다. {id}·{role}·{when}·{agent}를 씁니다.": "One target line that goes into {targets} in the tool description. You can use {id}, {role}, {when} and {agent}.",
+    "대상 한 줄 형식": "Target line format",
+    "도구 문구": "Tool text",
+    "도구 입력에서 맡길 대상을 받는 이름입니다.": "Name of the tool input that receives the target.",
+    "대상 파라미터 이름": "Target parameter name",
+    "에이전트에게 보이는 대상 입력 칸 설명입니다.": "Description of the target input field shown to the agent.",
+    "대상 파라미터 설명": "Target parameter description",
+    "도구 입력에서 맡길 일을 받는 이름입니다.": "Name of the tool input that receives the work to hand off.",
+    "할 일 파라미터 이름": "Task parameter name",
+    "에이전트에게 보이는 할 일 입력 칸 설명입니다.": "Description of the task input field shown to the agent.",
+    "할 일 파라미터 설명": "Task parameter description",
+    "없는 대상을 불렀을 때 에이전트에게 돌려줄 문구입니다. {target}·{targets}를 씁니다.": "Text returned to the agent when it calls a target that doesn't exist. You can use {target} and {targets}.",
+    "모르는 대상 결과 문구": "Unknown target result text",
+    "부를 수 없는 호출일 때 돌려줄 문구입니다. {target}을 씁니다.": "Text returned when the call can't be made. You can use {target}.",
+    "잘못된 호출 결과 문구": "Invalid call result text",
+    "대상 실행이 실패했을 때 돌려줄 문구입니다. {target}·{status}·{message} 등을 씁니다.": "Text returned when the target's run fails. You can use {target}, {status}, {message} and so on.",
+    "대상 실패 결과 문구": "Target failure result text",
+    "대상이 결과 글을 내지 않았을 때 돌려줄 문구입니다.": "Text returned when the target doesn't produce result text.",
+    "빈 결과 문구": "Empty result text",
+    "독립 위임 설정": "Independent delegation settings"
+  },
+  "codes": {
+    "delegation.backend_unsupported": "Backend {backend} doesn't support this delegation strategy.",
+    "delegation.duplicate_member": "The same delegate is connected twice.",
+    "delegation.invalid_config": "The independent delegation settings are invalid.",
+    "delegation.invalid_result_mode": "Unknown result mode on the delegation edge (use text or reply).",
+    "delegation.no_members": "There are no delegates.",
+    "delegation.unknown_backend": "Couldn't find the delegator's backend."
+  }
+}

@@ -6,8 +6,8 @@ import type { Resource } from "@agent-console/contracts";
 import { Banner, Button, Dialog, Tabs, Tag, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useDescribeError, useErrorState, raisedAs } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
 import { SaveStatus } from "../../definition/SaveStatus";
@@ -15,13 +15,14 @@ import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
 import { shortId } from "../../lib/format";
 import { usePageTitle } from "../../shell/titles";
-import { Skeleton, useResourceList, useResourceTypes } from "../settings";
-import { ActionMenu, DescriptorIcon, useInvalidateLists, DeleteDialog, DEFINITION_KINDS, definitionKey, NewDefinitionDialog, libraryMessages as lm, type DetailRequest } from "../library";
-import { useExportAction, exportMessages } from "../exports";
-import { DefinitionVersionsTab, versionMessages } from "../versions";
+import { Skeleton, useResourceList } from "../settings";
+import { useLocalizedResourceTypes } from "./useLocalizedResourceTypes";
+import { ActionMenu, DescriptorIcon, useInvalidateLists, DeleteDialog, DEFINITION_KINDS, definitionKey, NewDefinitionDialog, useLibraryMessages, type DetailRequest } from "../library";
+import { useExportAction, useExportMessages } from "../exports";
+import { DefinitionVersionsTab, useVersionLabels } from "../versions";
 import { ResourceEditorForm } from "./ResourceEditorForm";
 import { ResourceUsagesTab, useResourceUsages } from "./UsagesTab";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 import { loadResource, mediaTypeOf, resourceTabIds, saveResource, type ResourceDoc, type ResourceTabId } from "./resourceLogic";
 
 export interface ResourceDetailProps {
@@ -44,12 +45,18 @@ function importedFrom(resource: Resource): { path: string; hash: string } | unde
 
 /** 리소스 상세(컨테이너): 종류 디스크립터가 탭 구성을 정한다(내용/설정/사용처). 정의 + 본문을 하나의 [저장]으로 저장한다. */
 export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
+  const versionMessages = useVersionLabels();
+  const lm = useLibraryMessages();
+  const exportMessages = useExportMessages();
+  const t = useResourceMessages();
   const toast = useToast();
   const navigate = useNavigate();
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const invalidateLists = useInvalidateLists();
-  const types = useResourceTypes();
+  const types = useLocalizedResourceTypes();
   const list = useResourceList();
   const usages = useResourceUsages(id);
   const descriptors = types.data ?? [];
@@ -57,13 +64,13 @@ export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
     queryKey: definitionKey(DEFINITION_KINDS.resource, id),
     enabled: types.isSuccess || types.isError,
     load: (r) => loadResource(r, id, descriptors),
-    save: (r, value, hash) => saveResource(r, value, hash, descriptors),
+    save: (r, value, hash) => saveResource(r, value, hash, descriptors, t, describeError),
   });
   const [params] = useSearchParams();
   const [tab, setTab] = useState<DetailTabId | null>(() => (params.get("tab") === "versions" ? "versions" : null));
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useErrorState("", { del: t.delete.failed, lmDel: lm.delete.failed });
 
   const [handled, setHandled] = useState(request?.token ?? 0);
   if (request !== undefined && request.token !== handled) {
@@ -139,7 +146,7 @@ export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
       setDialog(null);
       void navigate(basePath);
     } catch (e) {
-      setDialogError(describeError(e, t.delete.failed).message);
+      setDialogError(raisedAs("del", e));
     } finally {
       setBusy(false);
     }
@@ -162,7 +169,7 @@ export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
       setDialog(null);
       void navigate(`${basePath}/${encodeURIComponent(v.id)}`);
     } catch (e) {
-      setDialogError(describeError(e, lm.delete.failed).message);
+      setDialogError(raisedAs("lmDel", e));
     } finally {
       setBusy(false);
     }

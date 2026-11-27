@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-sdd-junit"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — JUnit XML 테스트 결과를 스펙 추적 표에 넣는 검증 결과 출처(example.junit)"
+description = "Agent Console example extension — a verification result source that puts JUnit XML test results into the spec trace table (example.junit)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

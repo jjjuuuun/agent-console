@@ -1,13 +1,15 @@
 import { useT } from "@agent-console/i18n";
 import { Banner, Button, Disclosure, IconButton, Icon } from "@agent-console/ui";
 import { useApi } from "../../../app/ApiContext";
+import { useServerTranslate } from "../../../i18n";
 import { useConnectionStatus } from "../../../app/useConnectionStatus";
-import { describeError } from "../../../app/errors";
-import { messages as m } from "../../../app/messages";
+import { useDescribeError } from "../../../app/errors";
+import { useAppMessages } from "../../../app/appMessages";
 import { Skeleton } from "../Skeleton";
 import { useBackends, useServerInfo } from "../settingsData";
 
 function CopyRow({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
+  const m = useAppMessages();
   return (
     <tr>
       <th scope="row">{label}</th>
@@ -21,11 +23,14 @@ function CopyRow({ label, value, children }: { label: string; value: string; chi
 
 /** ⑥ 서버 정보(읽기 전용). 토큰은 어떤 경우에도 표시하지 않는다. */
 export function ServerSection() {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
   const tSettings = useT("settings");
   const { meta, ws } = useApi();
   const connection = useConnectionStatus(ws);
   const info = useServerInfo();
   const backends = useBackends();
+  const tr = useServerTranslate();
   const t = m.settings.server;
   if (info.isLoading) return <Skeleton rows={4} />;
   if (info.error) {
@@ -71,7 +76,7 @@ export function ServerSection() {
           {attrs["allow_remote"] === undefined ? null : <CopyRow label={t.rows.remote} value={attrs["allow_remote"] ? t.remoteOn : t.remoteOff} />}
           <CopyRow label={t.rows.allowedOrigins} value={origins.join(", ")}>{origins.length === 0 ? t.emptyOrigins : origins.join(", ")}</CopyRow>
           <CopyRow label={t.rows.backends} value={(backends.data ?? []).map((b) => b.id).join(", ")}>
-            {(backends.data ?? []).map((b) => b.title).join(", ") || m.common.none}
+            {(backends.data ?? []).map((b) => tr(b.title)).join(", ") || m.common.none}
           </CopyRow>
           {str("recovered_runs") === "" ? null : <CopyRow label={t.rows.recoveredRuns} value={str("recovered_runs")} />}
         </tbody>

@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "example.round_robin.invalid_config": "돌아가며 맡기기 설정이 유효하지 않습니다.",
+    "example.round_robin.member_failed": "위임 대상이 실패했습니다.",
+    "example.round_robin.no_members": "위임 대상이 없습니다."
+  }
+}

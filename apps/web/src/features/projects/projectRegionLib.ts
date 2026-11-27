@@ -1,9 +1,9 @@
 import type { Project, ProjectView } from "@agent-console/contracts/projects";
+import keymap from "./hangul2set.json";
 
-const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
-
-/** 사이드바에 보일 프로젝트: 보관(등록 해제)된 것은 빼고 이름 오름차순(한국어, 숫자 자연 정렬). */
-export function regionProjects(projects: readonly Project[]): Project[] {
+/** 사이드바에 보일 프로젝트: 보관(등록 해제)된 것은 빼고 이름 오름차순(화면 언어, 숫자 자연 정렬). */
+export function regionProjects(projects: readonly Project[], language: string): Project[] {
+  const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
   return projects.filter((p) => p.archived !== true).sort((a, b) => collator.compare(a.name, b.name) || collator.compare(a.id, b.id));
 }
 
@@ -22,7 +22,8 @@ export function parseCollapsed(raw: string | null): boolean {
 }
 
 /** 사이드바에 보일 프로젝트 보기: 보관(등록 해제)된 것은 빼고 이름순. */
-export function regionViews(views: readonly ProjectView[]): ProjectView[] {
+export function regionViews(views: readonly ProjectView[], language: string): ProjectView[] {
+  const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
   return views.filter((v) => v.project.archived !== true).sort((a, b) => collator.compare(a.project.name, b.project.name) || collator.compare(a.project.id, b.project.id));
 }
 
@@ -53,13 +54,9 @@ export function typeAheadIndex(names: readonly string[], active: number, typed: 
 
 /**
  * 한글 입력기가 켜져 있으면 키 입력이 글자가 아니라 `key: "Process"`로 오므로, 물리 키(`code`)를 두벌식 자판의 자모로 바꿔 type-ahead에 쓴다.
- * 자판 배열 데이터다(다른 배열이 필요하면 이 표만 바꾼다).
+ * 자판 배열 데이터(`hangul2set.json`)다(다른 배열이 필요하면 그 파일만 바꾼다).
  */
-export const HANGUL_2SET_BY_CODE: Readonly<Record<string, string>> = {
-  KeyQ: "ㅂ", KeyW: "ㅈ", KeyE: "ㄷ", KeyR: "ㄱ", KeyT: "ㅅ", KeyY: "ㅛ", KeyU: "ㅕ", KeyI: "ㅑ", KeyO: "ㅐ", KeyP: "ㅔ",
-  KeyA: "ㅁ", KeyS: "ㄴ", KeyD: "ㅇ", KeyF: "ㄹ", KeyG: "ㅎ", KeyH: "ㅗ", KeyJ: "ㅓ", KeyK: "ㅏ", KeyL: "ㅣ",
-  KeyZ: "ㅋ", KeyX: "ㅌ", KeyC: "ㅊ", KeyV: "ㅍ", KeyB: "ㅠ", KeyN: "ㅜ", KeyM: "ㅡ",
-};
+export const HANGUL_2SET_BY_CODE: Readonly<Record<string, string>> = keymap;
 
 /** type-ahead에 넣을 글자: 평소엔 `key`, 입력기 처리 중(`Process`)이면 물리 키의 자모. 글자가 아니면 undefined. */
 export function typeAheadChar(e: { key: string; code: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; isComposing: boolean }): string | undefined {

@@ -2,7 +2,7 @@ import { useId, type KeyboardEvent, type ReactNode } from "react";
 import { Button, Menu, Popover } from "@agent-console/ui";
 import type { AddAction, AddMenuEntry } from "./addMenu";
 import { DefinitionPicker, type DefinitionPickerProps } from "./DefinitionPicker";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 /** 열린 면: 메뉴 또는 한 종류의 정의 고르기. 닫힘 = null. */
 export type AddView = { op: "menu" } | { op: "pick"; kind: string } | null;
@@ -25,6 +25,7 @@ export interface AddControlProps {
  * 메뉴 안에서 숫자키 1~9로 항목을 고른다. 항목은 호출자가 데이터로 준다(`buildAddMenu`).
  */
 export function AddControl({ entries, view, onViewChange, onAction, pickerProps, header, disabled = false }: AddControlProps) {
+  const t = useTeamMessages();
   const uid = useId();
   const choose = (entry: AddMenuEntry) => {
     if (entry.action.op === "pick") onViewChange({ op: "pick", kind: entry.action.kind });

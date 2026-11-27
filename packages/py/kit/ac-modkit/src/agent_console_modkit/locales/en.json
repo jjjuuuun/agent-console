@@ -1,0 +1,15 @@
+{
+  "text": {
+    "설정 plugins.disabled에 있음": "Listed in the plugins.disabled setting",
+    "설정 plugins.enabled에 없음": "Not listed in the plugins.enabled setting"
+  },
+  "codes": {
+    "plugins.disabled_distribution": "'{name}' in plugins.disabled isn't an installed plugin name (ignored). '{name}' is a distribution name; plugins.disabled takes entry point names. Entry point names of this distribution: {entry_points}",
+    "plugins.disabled_distribution_nothing": "'{name}' in plugins.disabled isn't an installed plugin name (ignored). '{name}' is a distribution name; plugins.disabled takes entry point names. This distribution has no entry points that plugins.disabled can turn off",
+    "plugins.disabled_module_id": "'{name}' in plugins.disabled isn't an installed plugin name (ignored). '{name}' is a server module id; turn modules off with modules.disabled (or --disable-module). Entry point names of this distribution: {entry_points}",
+    "plugins.disabled_module_id_nothing": "'{name}' in plugins.disabled isn't an installed plugin name (ignored). '{name}' is a server module id; turn modules off with modules.disabled (or --disable-module). This distribution has no entry points that plugins.disabled can turn off",
+    "plugins.unknown_disabled": "'{name}' in plugins.disabled isn't an installed plugin name (ignored)",
+    "secrets.provider_no_settings_hook": "{setting}: secret provider {provider} has no settings hook ({hook}); its settings are ignored",
+    "secrets.provider_unknown": "'{provider}' in {setting} isn't a registered secret provider (not installed or turned off; ignored)"
+  }
+}

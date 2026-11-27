@@ -54,7 +54,7 @@ def configure_backends(
         if not isinstance(entry.item, ConfigurableBackend):
             if entry.key in options_by_id:
                 _log.warning(
-                    "백엔드 %s는 설정 훅(%s)이 없어 설정을 무시합니다",
+                    "Backend %s has no settings hook (%s); its settings are ignored",
                     entry.key,
                     BACKEND_OPTIONS_HOOK,
                 )
@@ -75,7 +75,8 @@ def configure_backends(
     for backend_id in options_by_id:
         if backend_id not in registries.backends:
             _log.warning(
-                "설정의 백엔드 %s가 등록되어 있지 않습니다(비활성 또는 미설치)", backend_id
+                "Backend %s in the settings is not registered (turned off or not installed)",
+                backend_id,
             )
     return replaced
 
@@ -103,7 +104,9 @@ def reveal_hidden_backends(registries: Registries) -> list[str]:
         try:
             entry.item.descriptor = shown
         except (AttributeError, TypeError):
-            _log.warning("백엔드 %s의 디스크립터를 바꿀 수 없어 숨김을 풀지 못했습니다", entry.key)
+            _log.warning(
+                "Couldn't change the descriptor of backend %s, so it stays hidden", entry.key
+            )
             continue
         revealed.append(entry.key)
     return revealed

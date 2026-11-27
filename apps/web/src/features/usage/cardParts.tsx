@@ -1,10 +1,10 @@
 import type { UsageWindowSnapshot } from "@agent-console/contracts";
 import { Tooltip } from "@agent-console/ui";
-import { usageMessages as t } from "./messages";
+import { useUsageMessages, type UsageMessages } from "./messages";
 import { formatRatio, formatTokens, type WindowGroup } from "./usageLib";
 
 /** 상태 값 → 라벨·톤·접근성 이름(메시지 표). 표에 없는 값은 원문. */
-export function statusView(status: string | null | undefined) {
+export function statusView(status: string | null | undefined, t: UsageMessages) {
   if (status == null || status === "") return undefined;
   const known = t.status[status];
   return { label: known?.label ?? status, tone: known?.tone, aria: known?.aria };
@@ -27,10 +27,11 @@ export interface CardValue {
 }
 
 /** 스냅샷 하나의 표시 값(순수). 값을 지어내지 않고, 정보가 없는 줄은 `hidden`으로 모은다. */
-export function describeValue(s: UsageWindowSnapshot, windowName: string, fellBack = false): CardValue {
-  const st = statusView(s.status);
+export function describeValue(s: UsageWindowSnapshot, windowName: string, x: { t: UsageMessages; language: string }, fellBack = false): CardValue {
+  const { t, language } = x;
+  const st = statusView(s.status, t);
   const hidden: string[] = [];
-  const tokensLine = s.used_tokens != null ? t.cards.tokens(formatTokens(s.used_tokens)) : undefined;
+  const tokensLine = s.used_tokens != null ? t.cards.tokens(formatTokens(s.used_tokens, language)) : undefined;
   let v: Omit<CardValue, "hidden">;
   if (s.used_ratio != null) {
     const headline = t.cards.headline(formatRatio(s.used_ratio));
@@ -49,6 +50,7 @@ export function describeValue(s: UsageWindowSnapshot, windowName: string, fellBa
 
 /** 정보 없는 줄을 접는 ⓘ. 줄이 없으면 아무것도 그리지 않는다. 글자는 툴팁(시각)과 `.ac-sr-only`(스크린리더)로 간다. */
 export function InfoHint({ lines, placement = "top" }: { lines: readonly string[]; placement?: "top" | "bottom" }) {
+  const t = useUsageMessages();
   if (lines.length === 0) return null;
   return (
     <span className="usage-info">

@@ -1,6 +1,5 @@
 import type { EdgeTypeDescriptor, Graph, Interaction, NodeRun, Run, RunEvent, Trace, TraceSpan, Usage } from "@agent-console/contracts";
 import payloadKeys from "./eventPayloadKeys.json";
-import { formatDuration as formatDurationLib } from "../../lib/format";
 import { conditionPayloadOf, parseDelegationEvent } from "../delegation";
 import { compareNodeRuns, type VisibleRun } from "./nodeRuns";
 import {
@@ -489,6 +488,6 @@ export function filterFailedSpans(trace: Trace, failedStatus: string): Trace {
 }
 
 /** 밀리초 표시: 1초 미만은 `21ms`, 그 이상은 `1.2초` 식 공용 포맷. */
-export function formatMs(ms: number): string {
-  return ms < 1000 ? `${Math.round(ms)}ms` : formatDurationLib(ms);
+export function formatMs(ms: number, fmt: { duration(ms: number): string }): string {
+  return ms < 1000 ? `${Math.round(ms)}ms` : fmt.duration(ms);
 }

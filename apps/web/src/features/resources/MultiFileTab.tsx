@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Markdown } from "@agent-console/chat";
 import type { TextEditorStatus } from "@agent-console/text-editor";
+import { useLanguageCode } from "../../i18n";
 import { Banner, Button, ConfirmDialog, FileTree, useToast, type FileTreeItem } from "@agent-console/ui";
 import { formatBytes } from "../../lib/bytes";
 import { isImeKeyEvent } from "../../lib/ime";
 import { LazyTextEditor } from "../library";
 import { checkPath, decodeUtf8, dirOf, entryChanged, entrySize, languageForFile, removeEntries, renameEntries, sortEntries, totalSize, upsertEntry, type FileEntry } from "./fileTreeLogic";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 import { MAX_EDIT_BYTES } from "./resourceLogic";
 
 export interface MultiFileTabProps {
@@ -36,12 +37,14 @@ interface Target {
  * 로컬 초안만 바꾸고(저장은 부모), 서버·종류 이름을 모른다. 키보드: 트리 `N` 새 파일, `F2` 이름 바꾸기, `Delete` 삭제, `F6` 트리/편집기.
  */
 export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDismissError, onSave, disabled = false }: MultiFileTabProps) {
+  const languageCode = useLanguageCode();
+  const t = useResourceMessages();
   const toast = useToast();
   const [selected, setSelected] = useState<string | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [nameMode, setNameMode] = useState<NameMode | null>(null);
   const [nameValue, setNameValue] = useState("");
-  const [nameProblem, setNameProblem] = useState<string | null>(null);
+  const [nameProblem, setNameProblem] = useState<NonNullable<ReturnType<typeof checkPath>> | null>(null);
   const [confirmFolder, setConfirmFolder] = useState<string | null>(null);
   const [preview, setPreview] = useState(true);
   const [status, setStatus] = useState<TextEditorStatus>({ line: 1, col: 1, chars: 0 });
@@ -80,7 +83,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
           ),
         };
       }),
-    [files, originByPath, errors],
+    [files, originByPath, errors, t],
   );
 
   const focusTree = () => rootRef.current?.querySelector<HTMLElement>('[role="treeitem"][tabindex="0"]')?.focus();
@@ -134,14 +137,14 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
     const value = nameValue.trim();
     if (nameMode.kind === "folder") {
       const problem = checkPath(value.replace(/\/+$/, ""), []);
-      if (problem !== null && problem !== "duplicate") return setNameProblem(t.files.problems[problem]);
+      if (problem !== null && problem !== "duplicate") return setNameProblem(problem);
       beginName({ kind: "file" }, `${value.replace(/\/+$/, "")}/`);
       return;
     }
     const ignore = nameMode.kind === "rename" ? nameMode.from : undefined;
     const others = nameMode.kind === "rename" && nameMode.isFolder ? paths.filter((p) => !p.startsWith(`${nameMode.from}/`)) : paths;
     const problem = checkPath(value, others, ignore);
-    if (problem !== null) return setNameProblem(t.files.problems[problem]);
+    if (problem !== null) return setNameProblem(problem);
     if (nameMode.kind === "file") {
       onChange(sortEntries([...files, { path: value, text: "", size: 0 }]));
       setSelected(value);
@@ -261,7 +264,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
                 aria-describedby="res-files-name-problem"
               />
             </label>
-            <span id="res-files-name-problem" role="alert" className="res-file-error">{nameProblem}</span>
+            <span id="res-files-name-problem" role="alert" className="res-file-error">{nameProblem === null ? null : t.files.problems[nameProblem]}</span>
             <span className="app-muted lib-field-note">{t.files.nameHint}</span>
             <span className="res-files-name-actions">
               <Button size="sm" type="submit" variant="primary">{t.files.nameConfirm}</Button>
@@ -277,7 +280,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
             if (row !== null) setTarget({ path: row.dataset["path"] ?? "", kind: row.dataset["kind"] === "folder" ? "folder" : "file" });
           }}
         >
-          {files.length === 0 ? <p className="app-muted">{t.files.empty}</p> : <FileTree items={items} ariaLabel={t.files.treeLabel} selected={selected} onSelect={(p) => {
+          {files.length === 0 ? <p className="app-muted">{t.files.empty}</p> : <FileTree items={items} locale={languageCode} ariaLabel={t.files.treeLabel} selected={selected} onSelect={(p) => {
             setSelected(p);
             setTarget({ path: p, kind: "file" });
           }} />}

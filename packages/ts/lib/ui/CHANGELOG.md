@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 0.2.1 (11/27, BC.2): 아이콘 `plug`(연결, 오른쪽 아래 모서리를 비움)를 더했다. `CommandItem`에 선택 필드 `keywords`(검색에만 쓰는 별칭)를 더하고 `filterCommandGroups`가 이를 함께 본다. `ToastInput.text`·`action.label`이 `ReactNode`를 받는다(글자도 그대로 된다. 언어를 따라 다시 그려지는 요소를 주면 떠 있는 알림 문구가 언어 전환 때 바뀐다). `FileTree`에 선택 prop `locale`(이름 정렬 언어, 기본 `en`)과 `buildRows`의 4번째 인자. 기존 동작은 같다.
 - 측정 기반 접기(I.10, screen-i18n §5.0): `PageHeader`가 컨테이너 폭이 640px 이상이어도 보조 액션 때문에 제목이 120px보다 좁아지면 `more` 메뉴로 접는다(`data-collapsed`, `ResizeObserver`). 문구가 긴 언어(영어)용. 공개 API 변화 없음.
 - 문구 데이터(0.2.0, I.9a): 컴포넌트 기본 문구(`더 보기`·`N개 더 보기`·단축키 중복 경고·공급자 밖 오류)를 `src/locales/ko.json`으로 옮기고(`defaultUiMessages`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`, `ChipRow`·`Tabs`·`PageHeader`·`ShortcutProvider`에 선택 prop `messages`, `UiMessages`·`defaultUiMessages`·`formatUiMessage` 공개. 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가. 기본 동작은 같다.
 - 0.1.1 (11/26, P1.8): `.ac-pageheader-status`를 flex + `--ac-space-2` gap으로 바꿔 상태 칸의 Tag와 글자가 맞닿지 않게 했다.

@@ -123,6 +123,18 @@ _ITEM_POINTER_SCHEMA: dict[str, Any] = {"type": "string", "pattern": "^(/.*|\\.(
 _TEMPLATE: dict[str, Any] = {"type": "string"}
 
 
+_VALUE_DESCRIPTION = "로그에 보일 이 필드의 값. 틀(예: {type}) 또는 이벤트에서 읽어 바꾸는 규칙."
+"""``_value_schema`` 기본 설명(고정 문구 — 필드 이름은 제목에 있다, 화면이 문구 묶음으로 옮긴다)."""
+
+
+_DOCUMENT_FIELD_DESCRIPTIONS: dict[str, str] = {
+    "path": "문서의 문서 경로(틀 또는 읽어 바꾸는 규칙). 비면 그 문서를 뺀다.",
+    "kind": "문서의 문서 종류(틀 또는 읽어 바꾸는 규칙). 비면 기본값.",
+    "action": "문서의 관계(틀 또는 읽어 바꾸는 규칙). 비면 기본값.",
+}
+"""문서 틀 필드 설명(``DOCUMENT_FIELDS``와 같은 키, 고정 문구 — 화면이 문구 묶음으로 옮긴다)."""
+
+
 def _pointer_field(title: str, description: str, example: str) -> dict[str, Any]:
     return {
         **_POINTER,
@@ -139,8 +151,7 @@ def _value_schema(
     label = VALUE_FIELD_TITLES.get(name, name)
     return {
         "title": label,
-        "description": description
-        or f"로그의 {label} 값. 틀(예: {{type}}) 또는 이벤트에서 읽어 바꾸는 규칙.",
+        "description": description or _VALUE_DESCRIPTION,
         **x_ui(tier="advanced", example=example),
         "oneOf": [
             {**_TEMPLATE, "title": "틀"},
@@ -244,8 +255,7 @@ _DOCUMENT_SCHEMA: dict[str, Any] = {
         **{
             name: _item_value_schema(
                 label,
-                f"문서의 {label}(틀 또는 읽어 바꾸는 규칙)."
-                + (" 비면 그 문서를 뺀다." if name == "path" else " 비면 기본값."),
+                _DOCUMENT_FIELD_DESCRIPTIONS[name],
                 {"path": "{./id}", "kind": "{./kind}", "action": "read"}[name],
             )
             for name, label in DOCUMENT_FIELDS.items()

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useUiLibMessages } from "../../i18n";
 import { useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RestClient } from "@agent-console/api-client";
@@ -6,8 +7,8 @@ import type { Run, RunStatus } from "@agent-console/contracts";
 import { Button, ConfirmDialog, EmptyState, Icon, IconButton, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as appMessages } from "../../app/messages";
+import { useDescribeError } from "../../app/errors";
+import { createToastText } from "../../app/ToastText";
 import { queryKeys, useApiQuery } from "../../app/queries";
 import { useApiPagedQuery } from "../../app/pagedQuery";
 import { LoadMoreFooter } from "../../app/LoadMoreFooter";
@@ -23,10 +24,12 @@ import { ROUTE_ROLES, routeIconNode, routePath } from "../library";
 import { RunsFilterBar, type RunsFilters } from "./RunsFilterBar";
 import { RunsTable } from "./RunsTable";
 import { RunStartDialog } from "./RunStartDialog";
-import { runStartMessages as startText } from "./runStartMessages";
+import { useRunStartMessages } from "./runStartMessages";
 import { useRunLookups } from "./useRunLookups";
 import { runOpenState } from "./useRunView";
-import { runStatusLabels, runsMessages as t } from "./messages";
+import { useRunsMessages } from "./messages";
+
+const RunsToast = createToastText(useRunsMessages);
 import { DEFAULT_PERIOD, PERIOD_ANCHOR_REFRESH_MS, PERIOD_OPTIONS, RUN_LIST_POLL_MS, RUN_PAGE_SIZE, WAITING_RUN_STATUS } from "./runsConfig";
 import { usePeriodAnchor } from "./usePeriodAnchor";
 import { activeCounts, isActiveRun, periodSince } from "./runsLib";
@@ -73,6 +76,10 @@ function writeFilters(prev: URLSearchParams, f: RunsFilters): URLSearchParams {
 
 /** 실행 기록 화면(컨테이너): URL 쿼리 필터 + 목록 질의 + 위임 집계. */
 export function RunsListScreen() {
+  const describeError = useDescribeError();
+  const startText = useRunStartMessages();
+  const t = useRunsMessages();
+  const ui = useUiLibMessages();
   const { rest } = useApi();
   const qc = useQueryClient();
   const toast = useToast();
@@ -160,10 +167,10 @@ export function RunsListScreen() {
   const counts = activeCounts(runs ?? [], WAITING_RUN_STATUS);
 
   const statusOptions = useMemo(() => {
-    const fromMessages = Object.keys(runStatusLabels);
+    const fromMessages = Object.keys(t.runStatus);
     const extra = [...new Set((runs ?? []).map((r) => r.status))].filter((s) => !fromMessages.includes(s));
     return [...fromMessages, ...extra];
-  }, [runs]);
+  }, [runs, t]);
 
   const setFilters = (next: RunsFilters) => {
     if (next.period !== filters.period) refreshPeriodAnchor();
@@ -192,10 +199,10 @@ export function RunsListScreen() {
     rest
       .cancelRun(target.id)
       .then(() => {
-        toast({ tone: "success", text: t.list.cancelled });
+        toast({ tone: "success", text: <RunsToast render={(r) => r.list.cancelled} /> });
         void qc.invalidateQueries({ queryKey: ["list", "runs"] });
       })
-      .catch((e: unknown) => toast({ tone: "danger", text: describeError(e, t.list.cancelFailed).message }));
+      .catch((e: unknown) => toast({ tone: "danger", text: <RunsToast render={(r, d) => d(e, r.list.cancelFailed).message} /> }));
   };
 
   const hasFilter = filters.graph !== "" || filters.agent !== "" || filters.conversation !== "" || filters.statuses.length > 0 || filters.query !== "" || filters.period !== DEFAULT_PERIOD || filters.children || filters.root !== "";
@@ -211,7 +218,7 @@ export function RunsListScreen() {
     body = null; // 폴더·기록 상태 띠가 이유와 해결 단추를 보인다
   } else if (runsQ.isError && runs === undefined) {
     const e = describeError(runsQ.error, t.list.loadFailed);
-    body = <ErrorBlock title={t.list.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={() => void runsQ.refetch()} />;
+    body = <ErrorBlock title={t.list.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={t.shared.details} retryLabel={t.shared.retry} onRetry={() => void runsQ.refetch()} />;
   } else if ((runs ?? []).length === 0 && !hasFilter) {
     body = <EmptyState icon={routeIconNode(ROUTE_ROLES.runs)} title={t.list.empty} description={t.list.emptyBody} action={<Button variant="primary" onClick={() => void navigate(routePath(ROUTE_ROLES.conversations))}>{t.list.toChat}</Button>} />;
   } else if ((runs ?? []).length === 0) {
@@ -238,7 +245,7 @@ export function RunsListScreen() {
     if (handoffsQ.isPending) return <div role="status" className="app-loading">{t.handoffs.loading}</div>;
     if (handoffsQ.isError) {
       const e = describeError(handoffsQ.error, t.handoffs.loadFailed);
-      return <ErrorBlock title={t.handoffs.loadFailed} message={e.message} retryLabel={appMessages.common.retry} onRetry={() => void handoffsQ.refetch()} />;
+      return <ErrorBlock title={t.handoffs.loadFailed} message={e.message} retryLabel={t.shared.retry} onRetry={() => void handoffsQ.refetch()} />;
     }
     return (
       <>
@@ -269,6 +276,7 @@ export function RunsListScreen() {
       <div className="app-screen-body runs-body">
         {handoffPart.visible ? (
           <Tabs
+            messages={ui}
             ariaLabel={t.list.views.label}
             activeId={view}
             onChange={setView}
@@ -291,7 +299,7 @@ export function RunsListScreen() {
         />
         <ProjectRecordsNotice banners={recordsState.banners} />
         {view === "handoffs" ? handoffBody : body}
-        {view === "list" ? <LoadMoreFooter hasMore={runsQ.hasMore} loading={runsQ.loadingMore} onLoadMore={runsQ.loadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} /> : null}
+        {view === "list" ? <LoadMoreFooter hasMore={runsQ.hasMore} loading={runsQ.loadingMore} onLoadMore={runsQ.loadMore} label={t.shared.loadMore} loadingLabel={t.shared.loadingMore} /> : null}
       </div>
       {startDialog !== null && canStartRun ? (
         <RunStartDialog

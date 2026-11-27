@@ -1,10 +1,16 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Graph, Issue } from "@agent-console/contracts";
 import { IssuesPanel } from "./IssuesPanel";
 import { previewIssues } from "./ValidationChip";
-import { ignoredFieldReasons, IgnoredValueClear } from "./ignoredFields";
+import { koMessages } from "../../testing/messageTables";
+import { createTeamMessages } from "./messages";
+import { ignoredFieldReasons as ignoredFieldReasonsWith, IgnoredValueClear } from "./ignoredFields";
+
+const teamText = koMessages("teams", createTeamMessages);
+const ignoredFieldReasons = (...a: Parameters<typeof ignoredFieldReasonsWith> extends [infer A, infer B, infer C, infer D, infer E, unknown] ? [A, B, C, D, E] : never) => ignoredFieldReasonsWith(...a, teamText);
 
 afterEach(cleanup);
 

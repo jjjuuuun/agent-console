@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalog `locales/en.json` registered as entry point `agent_console.message_catalogs` `ac-logs`, so the web can show the default log categories, dashboard fields and the built-in log sources and classifiers in English (data only, no API change).
 - I.6: `open_existing_log_index` error messages are English (`log index file not found: …`, `log index tables are missing: …`); tools print them to the terminal.
 - REL.14: 세션 요약(`list_sessions`, 메모리·SQLite 색인 모두)이 옛 `LogSessionSummary.project`(`LogProjectRef`)를 채우지 않고 `project_id`만 채운다(계약 0.15.0에서 필드 삭제 예정). 로그 보관본 HTML의 프로젝트 칸은 `project_id`(지금과 같은 값). 공개 테스트 키트 `testing`의 세션 검사도 `project_id`만 본다 — 외부 색인 구현은 `project`를 채우지 않아도 된다. 필터 예약 값 `UNGROUPED_PROJECT`(`~ungrouped`)는 그대로.
 

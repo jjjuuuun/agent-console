@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ApiError } from "@agent-console/api-client";
 import type { Run } from "@agent-console/contracts";
 import { Banner, Button, Dialog, Spinner, StatusChip } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
-import { describeError } from "../../app/errors";
-import { chatMessages } from "./chatMessages";
+import { createToastText } from "../../app/ToastText";
+import { useDescribeError, useErrorState, raised } from "../../app/errors";
+import { useChatMessages } from "./chatMessages";
 import { anyRerunnable, defaultResumeSelection, hasRunningSelected, issuesByNode } from "./lib/resume";
 
-const t = chatMessages.resume;
+const ChatToast = createToastText(useChatMessages);
 
 export interface ResumeDialogProps {
   open: boolean;
@@ -16,8 +17,8 @@ export interface ResumeDialogProps {
   onClose: () => void;
   /** 새 Run이 시작되었다(턴 목록을 다시 읽는다) */
   onResumed: (run: Run) => void;
-  /** 409/404처럼 목록이 낡았을 때 서버 메시지를 알린다 */
-  onNotify: (message: string) => void;
+  /** 409/404처럼 목록이 낡았을 때 서버 메시지를 알린다(언어를 바꾸면 문구도 바뀌도록 요소로 준다) */
+  onNotify: (message: ReactNode) => void;
 }
 
 /**
@@ -25,6 +26,9 @@ export interface ResumeDialogProps {
  * 다시 실행은 `POST /runs/{id}/resume`. 기본 선택·가능 여부는 서버 값(`rerunnable`, `status`)으로만 정한다.
  */
 export function ResumeDialog({ open, runId, onClose, onResumed, onNotify }: ResumeDialogProps) {
+  const describeError = useDescribeError();
+  const m = useChatMessages();
+  const t = m.resume;
   const { rest } = useApi();
   const options = useApiQuery(["chat", "resume-options", runId], (r) => r.getResumeOptions(runId), { enabled: open, gcTime: 0, staleTime: 0 });
   const nodes = options.data?.nodes ?? null;
@@ -32,7 +36,7 @@ export function ResumeDialog({ open, runId, onClose, onResumed, onNotify }: Resu
   const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useErrorState(t.failed);
 
   const list = useMemo(() => nodes ?? [], [nodes]);
   // 사용자가 건드리기 전에는 서버 값으로 계산한 기본 선택
@@ -61,13 +65,13 @@ export function ResumeDialog({ open, runId, onClose, onResumed, onNotify }: Resu
         if (Object.keys(byNode).length > 0) {
           setRowErrors(byNode);
           setPicked(new Set([...selected].filter((id) => byNode[id] === undefined)));
-        } else setSubmitError(describeError(e, t.failed).message);
+        } else setSubmitError(raised(e));
       } else if (e instanceof ApiError && (e.status === 409 || e.status === 404)) {
-        onNotify(describeError(e, t.failed).message);
+        onNotify(<ChatToast render={(c, d) => d(e, c.resume.failed).message} />);
         setPicked(null);
         setRowErrors({});
         void options.refetch();
-      } else setSubmitError(describeError(e, t.failed).message);
+      } else setSubmitError(raised(e));
     } finally {
       setBusy(false);
     }

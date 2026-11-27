@@ -17,6 +17,8 @@ export interface ArchitectureCellListProps {
   onBlocked?: (target: ArchSelection, reason: BlockedReason) => void;
   tones?: Readonly<Record<string, string>>;
   metricKinds?: Readonly<Record<string, MetricKindSpec>>;
+  /** 숫자 자릿수 표기 로캘(BCP 47). 생략하면 "en-US". */
+  locale?: string;
   messages?: Partial<ArchViewMessages>;
   className?: string;
 }
@@ -25,7 +27,7 @@ export interface ArchitectureCellListProps {
  * 칸 목록(§5.6): 그림과 같은 일을 목록으로 한다. 칸 행 수 = 칸 수, 연결 행 수 = 연결 수.
  * 행은 `aria-pressed` 버튼이다.
  */
-export function ArchitectureCellList({ view, selection = null, highlight = null, onSelect, onBlocked, tones = defaultTones, metricKinds = defaultMetricKinds, messages: partial, className }: ArchitectureCellListProps) {
+export function ArchitectureCellList({ view, selection = null, highlight = null, onSelect, onBlocked, tones = defaultTones, metricKinds = defaultMetricKinds, locale, messages: partial, className }: ArchitectureCellListProps) {
   const messages = resolveMessages(partial);
   const hl = highlightSets(highlight);
   const cells = view.cells ?? [];
@@ -42,7 +44,7 @@ export function ArchitectureCellList({ view, selection = null, highlight = null,
       <ul className="ac-arch-list-rows" aria-label={formatMessage(messages.listCells, { n: cells.length })}>
         {cells.map((c) => (
           <li key={c.id}>
-            <CellRow cell={c} messages={messages} tones={tones} kinds={metricKinds} selected={selection?.kind === "cell" && selection.id === c.id} highlighted={hl.cells.has(c.id)} onPress={() => press({ kind: "cell", id: c.id }, cellBlockedReason(c))} />
+            <CellRow cell={c} messages={messages} tones={tones} kinds={metricKinds} locale={locale} selected={selection?.kind === "cell" && selection.id === c.id} highlighted={hl.cells.has(c.id)} onPress={() => press({ kind: "cell", id: c.id }, cellBlockedReason(c))} />
           </li>
         ))}
       </ul>
@@ -50,7 +52,7 @@ export function ArchitectureCellList({ view, selection = null, highlight = null,
       <ul className="ac-arch-list-rows" aria-label={formatMessage(messages.listEdges, { n: edges.length })}>
         {edges.map((e) => (
           <li key={e.id}>
-            <EdgeRow edge={e} labels={labels} messages={messages} kinds={metricKinds} selected={selection?.kind === "edge" && selection.id === e.id} highlighted={hl.edges.has(e.id)} onPress={() => press({ kind: "edge", id: e.id }, edgeBlockedReason(e))} />
+            <EdgeRow edge={e} labels={labels} messages={messages} kinds={metricKinds} locale={locale} selected={selection?.kind === "edge" && selection.id === e.id} highlighted={hl.edges.has(e.id)} onPress={() => press({ kind: "edge", id: e.id }, edgeBlockedReason(e))} />
           </li>
         ))}
       </ul>
@@ -60,7 +62,7 @@ export function ArchitectureCellList({ view, selection = null, highlight = null,
             <li>
               <button type="button" className="ac-arch-row" data-selected={selection?.kind === "unassigned" ? "" : undefined} aria-pressed={selection?.kind === "unassigned"} onClick={() => press({ kind: "unassigned", id: "" }, null)}>
                 <span className="ac-arch-row-name">{messages.listUnassigned}</span>
-                <span className="ac-arch-row-metrics">{metricPieces(unassigned.metrics, messages, { kinds: metricKinds }).map((p) => <MetricPiece key={p.name} piece={p} />)}</span>
+                <span className="ac-arch-row-metrics">{metricPieces(unassigned.metrics, messages, { kinds: metricKinds, ...(locale === undefined ? {} : { locale }) }).map((p) => <MetricPiece key={p.name} piece={p} />)}</span>
               </button>
             </li>
           ) : null}
@@ -75,8 +77,8 @@ export function ArchitectureCellList({ view, selection = null, highlight = null,
   );
 }
 
-function CellRow({ cell, messages, tones, kinds, selected, highlighted, onPress }: { cell: ArchitectureCellView; messages: ArchViewMessages; tones: Readonly<Record<string, string>>; kinds: Readonly<Record<string, MetricKindSpec>>; selected: boolean; highlighted: boolean; onPress: () => void }) {
-  const pieces = cell.status === "not_collected" ? [] : metricPieces(cell.metrics, messages, { kinds });
+function CellRow({ cell, messages, tones, kinds, locale, selected, highlighted, onPress }: { locale?: string | undefined; cell: ArchitectureCellView; messages: ArchViewMessages; tones: Readonly<Record<string, string>>; kinds: Readonly<Record<string, MetricKindSpec>>; selected: boolean; highlighted: boolean; onPress: () => void }) {
+  const pieces = cell.status === "not_collected" ? [] : metricPieces(cell.metrics, messages, { kinds, ...(locale === undefined ? {} : { locale }) });
   return (
     <button
       type="button"
@@ -86,7 +88,7 @@ function CellRow({ cell, messages, tones, kinds, selected, highlighted, onPress 
       data-selected={selected ? "" : undefined}
       data-highlighted={highlighted ? "" : undefined}
       aria-pressed={selected}
-      aria-label={cellAriaLabel(cell, messages, { highlighted, kinds })}
+      aria-label={cellAriaLabel(cell, messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
       style={{ ["--cell-tone" as string]: `var(${resolveTone(cell.tone, tones)})` }}
       onClick={onPress}
     >
@@ -101,8 +103,8 @@ function CellRow({ cell, messages, tones, kinds, selected, highlighted, onPress 
   );
 }
 
-function EdgeRow({ edge, labels, messages, kinds, selected, highlighted, onPress }: { edge: ArchitectureEdgeView; labels: Record<string, string>; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>>; selected: boolean; highlighted: boolean; onPress: () => void }) {
-  const pieces = edge.kind === "observed" && edge.status !== "not_collected" ? metricPieces(edge.metrics, messages, { kinds }) : [];
+function EdgeRow({ edge, labels, messages, kinds, locale, selected, highlighted, onPress }: { locale?: string | undefined; edge: ArchitectureEdgeView; labels: Record<string, string>; messages: ArchViewMessages; kinds: Readonly<Record<string, MetricKindSpec>>; selected: boolean; highlighted: boolean; onPress: () => void }) {
+  const pieces = edge.kind === "observed" && edge.status !== "not_collected" ? metricPieces(edge.metrics, messages, { kinds, ...(locale === undefined ? {} : { locale }) }) : [];
   return (
     <button
       type="button"
@@ -112,7 +114,7 @@ function EdgeRow({ edge, labels, messages, kinds, selected, highlighted, onPress
       data-selected={selected ? "" : undefined}
       data-highlighted={highlighted ? "" : undefined}
       aria-pressed={selected}
-      aria-label={edgeAriaLabel(edge, labels, messages, { highlighted, kinds })}
+      aria-label={edgeAriaLabel(edge, labels, messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
       onClick={onPress}
     >
       <span className="ac-arch-row-name">{edge.label || edge.id}</span>

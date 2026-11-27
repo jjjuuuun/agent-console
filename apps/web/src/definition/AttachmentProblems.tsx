@@ -1,6 +1,6 @@
 import type { ResourceAttachment } from "@agent-console/contracts";
 import { hasMaskedSecret } from "../lib/attachmentProblems";
-import { messages as m } from "../app/messages";
+import { useAppMessages } from "../app/appMessages";
 
 export interface AttachmentProblemsProps {
   attachments: readonly ResourceAttachment[];
@@ -12,6 +12,7 @@ export interface AttachmentProblemsProps {
 
 /** 첨부 목록 아래의 오류·안내 줄: 서버 오류(평문 비밀 등)와, 가려진 비밀(`***`)을 비밀 참조로 바꾸라는 안내. */
 export function AttachmentProblems({ attachments, errors, titleOf }: AttachmentProblemsProps) {
+  const m = useAppMessages();
   const rows = attachments.flatMap((a, i) => {
     const messages = [...(errors?.[i] ?? []), ...(hasMaskedSecret(a) ? [m.definition.attachProblems.masked] : [])];
     return messages.length === 0 ? [] : [{ key: `${i}:${a.ref}`, title: titleOf(a, i), messages }];

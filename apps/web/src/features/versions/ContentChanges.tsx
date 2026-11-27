@@ -3,8 +3,9 @@ import type { ContentChange } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { formatBytes } from "../../lib/bytes";
 import { LazyTextDiff } from "./LazyTextDiff";
-import { versionMessages as t } from "./messages";
 import { contentStatus, languageOfPath, textDiffBlocked } from "./versionsLogic";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 /** 한 쪽(이전/이후) 파일 내용. 텍스트가 아니면 text가 null. */
 export interface SideText {
@@ -22,6 +23,8 @@ export interface ContentChangesProps {
 type Phase = { name: "idle" } | { name: "loading" } | { name: "error" } | { name: "blocked"; reason: "large" | "binary" } | { name: "ready"; before: string; after: string };
 
 function ContentRow({ change, sizeOf, load }: { change: ContentChange } & Omit<ContentChangesProps, "changes">) {
+  const t = useT("versions");
+  const tm = useMaybeT("versions");
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
   const [open, setOpen] = useState(false);
   const seq = useRef(0);
@@ -58,21 +61,21 @@ function ContentRow({ change, sizeOf, load }: { change: ContentChange } & Omit<C
     <li className="ver-content-row" data-status={status}>
       <div className="ver-content-head">
         <span className="ver-op">
-          <span aria-hidden="true">{t.content.statusIcon[status]}</span> {t.content.status[status]}
+          <span aria-hidden="true">{tm(`content.statusIcon.${status}`)}</span> {tm(`content.status.${status}`)}
         </span>
         <span className="lib-mono app-wrap ver-content-path">{change.path}</span>
         <span className="lib-mono app-muted" title={`${change.before_hash ?? ""} → ${change.after_hash ?? ""}`}>
           {(change.before_hash ?? "").slice(0, 8) || "–"} → {(change.after_hash ?? "").slice(0, 8) || "–"}
         </span>
         <Button size="sm" disabled={tooLarge} aria-expanded={open} onClick={toggle}>
-          {open ? t.content.close : t.content.open}
+          {open ? t("content.close") : t("content.open")}
         </Button>
       </div>
-      {tooLarge ? <p className="app-muted ver-note">{t.content.tooLarge(formatBytes(sizeBefore), formatBytes(sizeAfter))}</p> : null}
+      {tooLarge ? <p className="app-muted ver-note">{t("content.tooLarge", { a: formatBytes(sizeBefore), b: formatBytes(sizeAfter) })}</p> : null}
       {open && !tooLarge ? (
         <div className="ver-content-body">
           {phase.name === "loading" ? (
-            <div className="app-skeleton" role="status" aria-busy="true" aria-label={t.content.loading}>
+            <div className="app-skeleton" role="status" aria-busy="true" aria-label={t("content.loading")}>
               {Array.from({ length: 8 }, (_, i) => (
                 <span key={i} className="app-skeleton-row" aria-hidden="true" />
               ))}
@@ -80,20 +83,20 @@ function ContentRow({ change, sizeOf, load }: { change: ContentChange } & Omit<C
           ) : null}
           {phase.name === "error" ? (
             <p role="alert" className="ver-error">
-              {t.content.failed}{" "}
+              {t("content.failed")}{" "}
               <button type="button" className="app-link-btn" onClick={run}>
-                {t.content.retry}
+                {t("content.retry")}
               </button>
             </p>
           ) : null}
-          {phase.name === "blocked" ? <p className="app-muted ver-note">{t.content.binary}</p> : null}
+          {phase.name === "blocked" ? <p className="app-muted ver-note">{t("content.binary")}</p> : null}
           {phase.name === "ready" ? (
             <LazyTextDiff
               before={phase.before}
               after={phase.after}
               language={languageOfPath(change.path)}
-              ariaLabel={t.content.diffLabel(change.path)}
-              messages={{ unchangedLines: t.content.unchangedLines, split: t.content.split, unified: t.content.unified, toolbar: t.content.viewToolbar }}
+              ariaLabel={t("content.diffLabel", { path: change.path })}
+              messages={{ unchangedLines: t("content.unchangedLines"), split: t("content.split"), unified: t("content.unified"), toolbar: t("content.viewToolbar") }}
             />
           ) : null}
         </div>
@@ -104,10 +107,11 @@ function ContentRow({ change, sizeOf, load }: { change: ContentChange } & Omit<C
 
 /** 본문 변경 목록(`DefinitionDiff.content_changes`). 행마다 [텍스트 비교 ▸]로 `TextDiff`를 펼친다(크기 > 상한이면 해시만 비교). */
 export function ContentChanges({ changes, sizeOf, load }: ContentChangesProps) {
+  const t = useT("versions");
   if (changes.length === 0) return null;
   return (
-    <section aria-label={t.content.table} className="ver-content">
-      <h3 className="app-block-title">{t.content.title}</h3>
+    <section aria-label={t("content.table")} className="ver-content">
+      <h3 className="app-block-title">{t("content.title")}</h3>
       <ul className="ver-content-list">
         {changes.map((c) => (
           <ContentRow key={c.path} change={c} sizeOf={sizeOf} load={load} />

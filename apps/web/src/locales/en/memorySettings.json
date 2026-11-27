@@ -1,0 +1,174 @@
+{
+  "help": "Set the scope kinds, cleanup rules and secret handling for the memory that agents and people share.",
+  "loading": "Loading…",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "apply": "Apply",
+  "close": "Close",
+  "secrets": {
+    "label": "Secret handling",
+    "none": "There's no option to save secrets as they are.",
+    "byValue": {
+      "reject": {
+        "title": "Reject save",
+        "body": "If the content looks like a secret, it isn't saved and an error comes back. The agent gets a “secret rejected” result."
+      },
+      "redact": {
+        "title": "Mask and save",
+        "body": "Saves the content with the secret-looking parts masked. Masked lines can't be recovered. The agent may not know they were masked."
+      }
+    }
+  },
+  "kinds": {
+    "title": "Scope kinds ({n})",
+    "add": "New scope kind",
+    "label": "Scope kind list",
+    "col": {
+      "name": "Label",
+      "id": "id",
+      "template": "Id template",
+      "origin": "Source",
+      "entries": "Entries",
+      "state": "Status",
+      "actions": "Actions"
+    },
+    "noTemplate": "(empty — no scope id)",
+    "computed": "(computed scope — no template)",
+    "on": "On",
+    "off": "Off",
+    "problems": "Problems {n}",
+    "unsaved": "Unsaved change",
+    "origin": {
+      "default": "Default",
+      "user": "User",
+      "userOverride": "User (overridden)",
+      "plugin": "Plugin: {name}"
+    },
+    "view": "View",
+    "edit": "Edit",
+    "clone": "Duplicate and edit",
+    "disable": "Turn off",
+    "enable": "Turn on again",
+    "remove": "Delete",
+    "revert": "Revert to default",
+    "disabledTitle": "Disabled scope kinds {n}",
+    "actionsFor": "Actions for {label}",
+    "empty": "No scope kinds",
+    "emptyBody": "Without a scope kind, agents can't write to memory. Entries people created stay.",
+    "enableDefaults": "Turn on default scope kinds",
+    "loadFailed": "Couldn't load the scope kind list",
+    "defaultsPending": "The default scope kind list updates when you save the settings.",
+    "confirmTitle": "{verb} scope kind",
+    "confirmBody_one": "The {count} entry of this kind stays. In Memory it shows as an “unknown scope kind” (or off), and agents can't write to it. Resources that use this kind get a warning.",
+    "confirmBody_other": "The {count} entries of this kind stay. In Memory they show as an “unknown scope kind” (or off), and agents can't write to them. Resources that use this kind get a warning."
+  },
+  "kindEditor": {
+    "newTitle": "New scope kind",
+    "editTitle": "Scope kind “{id}”",
+    "viewTitle": "View scope kind “{id}”",
+    "cloneTitle": "Duplicate and edit “{label}”",
+    "label": "Label",
+    "id": "id",
+    "description": "Description",
+    "template": "Id template",
+    "templateHelp": "Leave it empty for a scope with no scope id (everyone shares one scope). A template whose values are empty can't be used in that run.",
+    "idHelp": "You can't change it after creating. If a default or plugin kind has the same id, this overrides it.",
+    "idTaken": "This id is already used. Applying changes that kind.",
+    "idEmpty": "Enter an id.",
+    "labelEmpty": "Enter a label.",
+    "examples": "Available values",
+    "insert": "Insert {v}",
+    "checking": "Checking…",
+    "checkFailed": "Couldn't check. You can still apply.",
+    "checkOk": "No problems.",
+    "issues": "Check result"
+  },
+  "retention": {
+    "title": "Cleanup rules ({n})",
+    "add": "Add rule",
+    "help": "Rules are checked from the top, and only the first one that matches is applied. No rule applies to pinned entries.",
+    "empty": "No cleanup rules",
+    "emptyBody": "Nothing is archived or deleted automatically.",
+    "label": "Cleanup rule list",
+    "col": {
+      "order": "Order",
+      "id": "id",
+      "description": "Description",
+      "condition": "Condition",
+      "action": "Action"
+    },
+    "up": "Move {id} up",
+    "down": "Move {id} down",
+    "edit": "Edit",
+    "remove": "Delete",
+    "actionsFor": "Actions for {id}",
+    "action": {
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "noPreview": "No preview",
+    "unit": {
+      "hour": "{n} h",
+      "minute": "{n} min",
+      "second": "{n} s"
+    },
+    "autoOn": "Runs automatically: every {every}",
+    "autoTargets": {
+      "library": "Shared",
+      "projects_one": "{count} project",
+      "projects_other": "{count} projects",
+      "none": "No automatic cleanup targets"
+    },
+    "auto": {
+      "title": "Automatic cleanup targets",
+      "on": "On",
+      "off": "Off",
+      "noProjects": "No projects registered.",
+      "notRegistered": "(not registered)"
+    },
+    "target": "Target store",
+    "autoOff": "Automatic run is off — it runs only with [Apply now]",
+    "autoDelete": "Delete rules apply automatically every {every}. When you change a rule, check its targets with a preview first.",
+    "editorNew": "Add cleanup rule",
+    "editorEdit": "Cleanup rule “{id}”",
+    "idTaken": "This rule id already exists.",
+    "tabCheck": "Check result",
+    "tabPreview": "Preview",
+    "previewTitle": "Cleanup preview",
+    "blocked": {
+      "unsaved": "Save first.",
+      "targetChanged": "The target store changed. Preview again.",
+      "stale": "The rules changed. Preview again.",
+      "none": "Preview first.",
+      "empty": "Nothing to clean up."
+    },
+    "confirmTitle": "Apply cleanup",
+    "confirmBody": "Processing {n}: archive {a}, delete (mark as deleted) {d}. You can undo archiving and deleting from the entry history.",
+    "confirmDanger": "This includes delete rules.",
+    "confirmApply": "Apply",
+    "applyFailed": "Couldn't apply the cleanup.",
+    "viewInMemory": "View in memory",
+    "failedIssues": "Some entries couldn't be processed"
+  },
+  "limits": {
+    "title": "Administrator limits (read-only)",
+    "note": "These values are set when the server starts, so you can't change them here (`modules.options` in the settings file).",
+    "unknown": "Unknown",
+    "empty": "The server reported no limits."
+  },
+  "scopeKindWidget": {
+    "placeholder": "Choose a scope kind",
+    "unknown": "Unknown scope kind",
+    "offHelp": "The memory feature is off, so the list can't load. Once it's on, you can choose from the list.",
+    "loadFailed": "Couldn't load the scope kind list. You can enter the id yourself.",
+    "none": "(none selected)"
+  },
+  "issues": {
+    "error": "Error:",
+    "warning": "Warning:"
+  },
+  "widgets": {
+    "on": "On",
+    "off": "Off"
+  }
+}

@@ -1,4 +1,5 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildBreadcrumb, openedFromState, parentState, readOpenedFrom } from "./openedFrom";

@@ -8,9 +8,10 @@ import { LogDetailPanel } from "./LogDetailPanel";
 import { useDetailLink } from "./useDetailLink";
 import { RUN_TAB_COLUMNS, RUN_TABLE_CHROME, RUN_TABLE_MIN_BODY, LOGS_LIMITS } from "./logsConfig";
 import { categoryItems, originOf } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
 /** 표 위 필터 막대의 값(탭과 [크게 보기] 대화상자가 같은 값을 쓴다). */
 export interface RunEventFilters {
@@ -44,12 +45,15 @@ export interface RunArchitectureEventsProps {
 
 /** 압축 이벤트 표 + 필터 막대 + 인라인 상세(화면 명세 §6.3). 데이터와 선택은 부모가 갖는다. */
 export function RunArchitectureEvents(p: RunArchitectureEventsProps) {
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const t = useLogsMessages();
   const { filters: f } = p;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [chipsOpen, setChipsOpen] = useState(false);
   const height = useElementHeight(wrapRef, 200, 80);
   const time = useLogTimeMode();
-  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, undefined, time.widths), [time.widths]);
+  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, lv, time.widths), [lv, time.widths]);
   const { events, isError } = p;
   const filtered = f.q !== "" || f.errorsOnly || f.categories.length > 0;
   const needle = f.q.trim().toLowerCase();
@@ -94,13 +98,13 @@ export function RunArchitectureEvents(p: RunArchitectureEventsProps) {
             {t.runTab.categories(f.categories.length)} {chipsOpen ? "▴" : "▾"}
           </Button>
         )}
-        {chipsOpen ? <span id={`${p.searchId}-chips`} className="logs-runtab-chips"><CategoryChips items={chips} taxonomy={p.taxonomy} slotFor={slotFor} selected={[...f.categories]} onChange={(next) => p.onFilters({ ...f, categories: next })} maxInline={6} /></span> : null}
+        {chipsOpen ? <span id={`${p.searchId}-chips`} className="logs-runtab-chips"><CategoryChips messages={lv} items={chips} taxonomy={p.taxonomy} slotFor={slotFor} selected={[...f.categories]} onChange={(next) => p.onFilters({ ...f, categories: next })} maxInline={6} /></span> : null}
         <label className="app-check"><input type="checkbox" checked={f.errorsOnly} onChange={(e) => p.onFilters({ ...f, errorsOnly: e.target.checked })} />{t.runTab.errorsOnly}</label>
         {p.running ? <label className="app-check"><input type="checkbox" checked={f.follow} onChange={(e) => p.onFilters({ ...f, follow: e.target.checked })} />{t.runTab.follow}</label> : null}
       </div>
       {p.note === undefined ? null : <p className="arch-table-note" role="status">{p.note}</p>}
       <div ref={wrapRef} className="logs-tablewrap logs-runtab-table" style={{ flex: "1 1 0" }}>
-        <LogEventTable
+        <LogEventTable messages={lv} formatters={lvFormatters}
           ref={tableRef}
           onActivate={onActivate}
           rows={rows}

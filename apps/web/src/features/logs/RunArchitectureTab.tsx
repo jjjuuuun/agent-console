@@ -5,7 +5,7 @@ import { Button, Switch } from "@agent-console/ui";
 import { isErrorEvent } from "@agent-console/log-view";
 import type { LogEvent } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
-import { ARCH_FIT, ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_SCOPE_KIND, ARCH_STORAGE, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
+import { ARCH_FIT, ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_SCOPE_KIND, ARCH_STORAGE, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, observedValue, useArchitectureController, useArchMessages } from "../architecture";
 import { RunArchitectureEvents, NO_RUN_EVENT_FILTERS, type RunEventFilters } from "./RunArchitectureEvents";
 import { settingsLogsHref } from "./LogsEmpty";
 import { useLogsIngested, LogsLiveProvider } from "./LogsLive";
@@ -35,6 +35,7 @@ export function RunArchitectureTab(props: RunArchitectureTabProps) {
 }
 
 function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchitectureTabProps) {
+  const am = useArchMessages();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const storage = useStorage();
@@ -93,22 +94,22 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
   }, [refreshKey, running]);
 
   const count = observedValue(arch.target?.count);
-  const note = count === undefined ? undefined : archMessages.table.only(arch.targetTitle, count);
-  const scopeName = includeChildren ? archMessages.runTab.scopeTree : archMessages.runTab.scopeRun;
+  const note = count === undefined ? undefined : am.table.only(arch.targetTitle, count);
+  const scopeName = includeChildren ? am.runTab.scopeTree : am.runTab.scopeRun;
   const profileTitle = arch.profiles?.profiles?.find((x) => x.id === arch.view?.profile)?.title ?? arch.view?.profile ?? "";
 
   const includeSwitch = hasChildren ? (
-    <Switch checked={includeChildren} onChange={setTree} label={archMessages.runTab.includeChildren} onText={archMessages.runTab.on} offText={archMessages.runTab.off} />
+    <Switch checked={includeChildren} onChange={setTree} label={am.runTab.includeChildren} onText={am.runTab.on} offText={am.runTab.off} />
   ) : null;
   const toolbarExtra = (
     <>
       {includeSwitch}
       <PopoutButton popout={popout} />
-      <Button ref={expandRef} size="sm" aria-haspopup="dialog" onClick={() => setExpanded(true)}>{archMessages.dialog.expand} ⤢</Button>
+      <Button ref={expandRef} size="sm" aria-haspopup="dialog" onClick={() => setExpanded(true)}>{am.dialog.expand} ⤢</Button>
     </>
   );
   const panelProps = {
-    rootLabel: archMessages.runTab.rootLabel,
+    rootLabel: am.runTab.rootLabel,
     live: running,
     // 확대·맞춤 단추는 두지 않는다(화면 맞춤 그림이 기본이고, 자세히 보려면 [크게 보기]).
     toolbar: { zoom: false, fit: false },
@@ -143,7 +144,7 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
 
   return (
     <div className="arch-run" data-fill-height="">
-      <p className="arch-table-note arch-run-explain">{archMessages.runTab.explain}</p>
+      <p className="arch-table-note arch-run-explain">{am.runTab.explain}</p>
       <div className="arch-run-diagram">
         {popout.mode !== "docked" ? (
           <PopoutPlaceholder popout={popout} />
@@ -155,13 +156,13 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
         )}
       </div>
       {popout.mode !== "docked" ? null : (
-        <SplitHandle orientation="horizontal" size={canvasH} min={ARCH_RUN_HEIGHT.min} max={ARCH_RUN_HEIGHT.max} onChange={changeHeight} label={archMessages.runTab.splitLabel} />
+        <SplitHandle orientation="horizontal" size={canvasH} min={ARCH_RUN_HEIGHT.min} max={ARCH_RUN_HEIGHT.max} onChange={changeHeight} label={am.runTab.splitLabel} />
       )}
       <div className="arch-run-chips"><ArchitectureChips chips={arch.chips} /></div>
       <div className="arch-run-table">{expanded ? null : pane("arch-run-q")}</div>
       <ArchitectureDialog
         open={expanded}
-        title={archMessages.dialog.title(profileTitle, scopeName)}
+        title={am.dialog.title(profileTitle, scopeName)}
         onClose={() => {
           setExpanded(false);
           requestAnimationFrame(() => expandRef.current?.focus());

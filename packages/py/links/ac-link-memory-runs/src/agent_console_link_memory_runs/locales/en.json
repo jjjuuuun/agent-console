@@ -1,0 +1,14 @@
+{
+  "text": {
+    "실행 중인 에이전트가 공유 메모리를 읽고 쓰게 하고 그 기록을 남긴다": "Lets running agents read and write shared memory and records what they do",
+    "실행 중 에이전트가 쓰는 메모리 도구의 한도를 정하는 설치자 설정입니다.": "Server administrator settings for limits on the memory tools agents use during runs.",
+    "실행 하나에서 에이전트들이 메모리에 쓸 수 있는 최대 횟수입니다. 넘으면 쓰기 도구가 rate_limited로 실패하고 실행은 계속됩니다. 비우면 한도가 없습니다.": "Maximum number of memory writes the agents in one run can make. Above it, the write tool fails with rate_limited and the run continues. Leave empty for no limit.",
+    "실행당 쓰기 한도": "Writes per run",
+    "에이전트가 메모리를 너무 많이 쓰거나, 긴 실행에서 쓰기가 막힐 때 바꾸세요.": "Change this when agents write to memory too much, or when writes get blocked in long runs.",
+    "에이전트에게 공유 메모리 도구(검색·읽기·쓰기·지우기)를 주고 범위마다 권한을 정합니다.": "Gives agents shared memory tools (search, read, write, delete) and sets permissions per scope.",
+    "기": "M"
+  },
+  "codes": {
+    "memory.access_invalid": "The merged memory access settings don't match the expected shape, so memory tools aren't given"
+  }
+}

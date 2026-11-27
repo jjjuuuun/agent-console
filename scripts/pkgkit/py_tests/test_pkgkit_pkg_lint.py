@@ -238,11 +238,16 @@ def test_readme_doctest_counts_only_minimal_usage_section(ws: tuple[Path, Config
 
 
 def test_readme_doctest_heading_aliases(ws: tuple[Path, Config]) -> None:
-    """D.4a: 제목 후보 목록(안내 이름 + 별칭) 중 하나면 된다. 안내 이름은 첫 후보."""
+    """D.4a: 제목 후보 목록(안내 이름 + 별칭) 중 하나면 된다. 안내 이름은 첫 후보.
+
+    기본 설정(pkgkit_py.toml)은 "Minimal usage" 하나뿐이다. 별칭은 설정으로 더한다
+    (D.6 뒤 한국어 별칭 없음).
+    """
     root, cfg = ws
+    assert cfg.readme_doctest_headings == ("Minimal usage",)
     readme = pkg(root) / "README.md"
-    readme.write_text("# x\n\n## 최소 사용 예\n\n```python\n>>> 1\n1\n```\n", encoding="utf-8")
-    with_alias = dataclasses.replace(cfg, readme_doctest_headings=("Minimal usage", "최소 사용"))
+    readme.write_text("# x\n\n## Quick start\n\n```python\n>>> 1\n1\n```\n", encoding="utf-8")
+    with_alias = dataclasses.replace(cfg, readme_doctest_headings=("Minimal usage", "Quick start"))
     assert run(root, with_alias, ["readme-doctest"]) == []
     [hit] = run(root, cfg, ["readme-doctest"], package="ac-notes")
     assert '"Minimal usage" 절이 없습니다' in hit.message
@@ -253,14 +258,17 @@ def test_readme_doctest_heading_aliases(ws: tuple[Path, Config]) -> None:
 
 
 def test_readme_section_boundaries() -> None:
-    text = "# t\n## 최소 사용(단독)\na\n### 깊이\nb\n```\n# 아님\n```\n## 다음\nc\n"
-    section = readme_section(text, "최소 사용")
+    text = (
+        "# t\n## Minimal usage (standalone)\na\n### Depth\nb\n"
+        "```\n# not a heading\n```\n## Next\nc\n"
+    )
+    section = readme_section(text, "Minimal usage")
     assert section is not None
     assert "a" in section
     assert "b" in section
-    assert "# 아님" in section
+    assert "# not a heading" in section
     assert "c" not in section
-    assert readme_section(text, "없음") is None
+    assert readme_section(text, "Missing") is None
 
 
 def test_template_root_drift(ws: tuple[Path, Config]) -> None:

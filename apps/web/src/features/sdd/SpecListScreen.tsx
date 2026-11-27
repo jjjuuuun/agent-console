@@ -11,7 +11,7 @@ import { SpecList, type SpecSortState } from "@agent-console/sdd-view";
 import type { SpecSummary } from "@agent-console/contracts/sdd";
 import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
-import { formatRelative } from "../../lib/format";
+import { useLanguageCode } from "../../i18n";
 import { useNow } from "../../app/useNow";
 import { routePath } from "../library";
 import { ProjectChip } from "../projects";
@@ -21,13 +21,16 @@ import { SDD_PARAMS, SDD_ROLE, SDD_STORAGE, SPEC_SORT } from "./sddConfig";
 import { SpecExportDialog } from "./SpecExportDialog";
 import { SpecImportDialog } from "./SpecImportDialog";
 import { SpecRenameDialog } from "./SpecRenameDialog";
-import { describeError } from "../../app/errors";
-import { sddMessages as m, viewMessages } from "./messages";
+import { useDescribeError } from "../../app/errors";
+import { useSddViewMessages } from "./useViewMessages";
 import { useInvalidateSdd, useSddLive, useSddSpace, useSpecList, useSpecTemplates } from "./useSddApi";
 import { useSddContext } from "./useSddContext";
 import { useLibraryTemplateImport } from "./useLibraryTemplateImport";
 import { specTemplatesPath } from "./sddPaths";
 import "./sdd.css";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useFormat } from "../../i18n";
 
 type Dlg =
   | { kind: "new"; name: string }
@@ -36,8 +39,8 @@ type Dlg =
   | null;
 
 /** 정렬 열 id → 비교 함수. 열 목록·기본 정렬·문구는 `SPEC_SORT` 데이터이고, 새 열은 여기에 비교 함수 하나를 더한다. */
-export const SPEC_COMPARATORS: Readonly<Record<string, (a: SpecSummary, b: SpecSummary) => number>> = {
-  name: (a, b) => (a.name && a.name !== "" ? a.name : a.id).localeCompare(b.name && b.name !== "" ? b.name : b.id),
+export const SPEC_COMPARATORS: Readonly<Record<string, (a: SpecSummary, b: SpecSummary, language: string) => number>> = {
+  name: (a, b, language) => (a.name && a.name !== "" ? a.name : a.id).localeCompare(b.name && b.name !== "" ? b.name : b.id, language),
   updated: (a, b) => (a.updated_at ?? 0) - (b.updated_at ?? 0),
 };
 
@@ -49,7 +52,7 @@ export function parseSort(raw: string | null): SpecSortState {
 }
 
 /** 목록 거르기·정렬(순수): 이름·id 부분 일치, 문서 상태(하나라도 가진 스펙), 준비된 작업 있음. 정렬은 열 머리(`SPEC_SORT`), 기본은 갱신 시각 내림차순. */
-export function filterSpecs(specs: readonly SpecSummary[], q: string, states: ReadonlySet<string>, readyOnly: boolean, sort: SpecSortState = SPEC_SORT.default): SpecSummary[] {
+export function filterSpecs(specs: readonly SpecSummary[], q: string, states: ReadonlySet<string>, readyOnly: boolean, sort: SpecSortState, language: string): SpecSummary[] {
   const needle = q.trim().toLowerCase();
   const compare = SPEC_COMPARATORS[sort.id] ?? SPEC_COMPARATORS[SPEC_SORT.default.id] ?? (() => 0);
   const sign = sort.direction === "asc" ? 1 : -1;
@@ -57,11 +60,17 @@ export function filterSpecs(specs: readonly SpecSummary[], q: string, states: Re
     .filter((s) => needle === "" || `${s.name ?? ""} ${s.id}`.toLowerCase().includes(needle))
     .filter((s) => states.size === 0 || (s.documents ?? []).some((d) => d.state !== undefined && d.state !== null && states.has(d.state)))
     .filter((s) => !readyOnly || (s.ready ?? 0) > 0)
-    .sort((a, b) => sign * compare(a, b));
+    .sort((a, b) => sign * compare(a, b, language));
 }
 
 export function SpecListScreen() {
-  usePageTitle(m.title);
+  const fmt = useFormat();
+  const language = useLanguageCode();
+  const describeError = useDescribeError();
+  const t = useT("sdd");
+  const viewMessages = useSddViewMessages();
+  const tm = useMaybeT("sdd");
+  usePageTitle(t("title"));
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const toast = useToast();
@@ -81,15 +90,16 @@ export function SpecListScreen() {
   const [importedTemplate, setImportedTemplate] = useState<string | null>(null);
   const libraryImport = useLibraryTemplateImport(dialog?.kind === "new", setImportedTemplate);
   const specs = useMemo(() => list.data ?? [], [list.data]);
+  const serverText = useServerText();
   const stateOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const s of specs) for (const d of s.documents ?? []) if (d.state !== undefined && d.state !== null && !seen.has(d.state)) seen.set(d.state, d.state_label ?? d.state);
-    return [...seen.entries()].map(([id, label]) => ({ id, label }));
-  }, [specs]);
+    return [...seen.entries()].map(([id, label]) => ({ id, label: serverText.text(label) }));
+  }, [specs, serverText]);
   const sortRaw = search.get(SDD_PARAMS.sort);
   const sort = useMemo(() => parseSort(sortRaw), [sortRaw]);
-  const shown = useMemo(() => filterSpecs(specs, q, states, readyOnly, sort), [specs, q, states, readyOnly, sort]);
-  const sortColumns = useMemo(() => SPEC_SORT.columns.map((c) => ({ id: c.id, label: m.list.sortColumns[c.labelKey] ?? c.id })), []);
+  const shown = useMemo(() => filterSpecs(specs, q, states, readyOnly, sort, language), [specs, q, states, readyOnly, sort, language]);
+  const sortColumns = useMemo(() => SPEC_SORT.columns.map((c) => ({ id: c.id, label: tm(`list.sortColumns.${c.labelKey}`) ?? c.id })), [tm]);
   /** 같은 열을 다시 누르면 방향을 뒤집고, 다른 열이면 그 열의 처음 방향. 기본 정렬과 같아지면 주소에서 뺀다 */
   const changeSort = (columnId: string) => {
     const col = SPEC_SORT.columns.find((c) => c.id === columnId);
@@ -114,20 +124,20 @@ export function SpecListScreen() {
 
   const copyPath = (spec: SpecSummary) => {
     void navigator.clipboard?.writeText(spec.directory ?? "");
-    toast({ tone: "success", text: m.head.copied });
+    toast({ tone: "success", text: t("head.copied") });
   };
   const rowMenu = (spec: SpecSummary) => {
     const name = spec.name && spec.name !== "" ? spec.name : spec.id;
     return (
       <MenuButton
-        label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{m.list.rowMenu(name)}</span></>}
-        panelLabel={m.list.actions}
+        label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{t("list.rowMenu", { name })}</span></>}
+        panelLabel={t("list.actions")}
         items={[
-          { id: "open", label: m.list.open, onSelect: () => open(spec) },
-          ...(ctx.capabilities.import_export ? [{ id: "export", label: m.list.export, disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "export", spec }) }] : []),
-          { id: "rename", label: m.head.rename, disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "rename", spec }) },
-          { id: "copy", label: m.list.copyPath, disabled: (spec.directory ?? "") === "", onSelect: () => copyPath(spec) },
-          { id: "delete", label: m.list.delete, danger: true, disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "delete", spec }) },
+          { id: "open", label: t("list.open"), onSelect: () => open(spec) },
+          ...(ctx.capabilities.import_export ? [{ id: "export", label: t("list.export"), disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "export", spec }) }] : []),
+          { id: "rename", label: t("head.rename"), disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "rename", spec }) },
+          { id: "copy", label: t("list.copyPath"), disabled: (spec.directory ?? "") === "", onSelect: () => copyPath(spec) },
+          { id: "delete", label: t("list.delete"), danger: true, disabled: writeBlock !== undefined, onSelect: () => setDialog({ kind: "delete", spec }) },
         ]}
       />
     );
@@ -148,7 +158,7 @@ export function SpecListScreen() {
       await invalidate();
     } catch (e) {
       setDialog(null);
-      toast({ tone: "danger", text: describeError(e, m.problem.generic).message });
+      toast({ tone: "danger", text: describeError(e, t("problem.generic")).message });
     }
   };
 
@@ -160,13 +170,13 @@ export function SpecListScreen() {
   return (
     <div className="app-screen-frame sdd-screen">
       <PageHeader
-        title={m.title}
+        title={t("title")}
         actions={
           failed !== null ? undefined : (
             <>
               <ProjectChip />
-              <GuardedButton blockedReason={writeBlock} onClick={() => setDialog({ kind: "import", name: "" })}>{m.list.import}</GuardedButton>
-              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => { setImportedTemplate(null); setDialog({ kind: "new", name: "" }); }}>{m.list.new}</GuardedButton>
+              <GuardedButton blockedReason={writeBlock} onClick={() => setDialog({ kind: "import", name: "" })}>{t("list.import")}</GuardedButton>
+              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => { setImportedTemplate(null); setDialog({ kind: "new", name: "" }); }}>{t("list.new")}</GuardedButton>
             </>
           )
         }
@@ -174,40 +184,40 @@ export function SpecListScreen() {
       {ctx.readOnly && failed === null ? (
         <div className="sdd-banner-row">
           <div className="sdd-readonly-note" role="status" data-testid="sdd-readonly">
-            <strong>{m.readonly.title}</strong> <span>{m.readonly.body}</span>
+            <strong>{t("readonly.title")}</strong> <span>{t("readonly.body")}</span>
           </div>
         </div>
       ) : null}
       <div className="sdd-screen-body">
         {failed !== null ? (
-          <FailureBlock error={failed} title={m.list.loadFailed} onRetry={() => void list.refetch()} />
+          <FailureBlock error={failed} title={t("list.loadFailed")} onRetry={() => void list.refetch()} />
         ) : list.isPending ? (
           <ListSkeleton />
         ) : (
           <>
-            <div className="sdd-toolbar" role="group" aria-label={m.list.search}>
-              <SearchBox value={q} onCommit={setQ} label={m.list.search} />
+            <div className="sdd-toolbar" role="group" aria-label={t("list.search")}>
+              <SearchBox value={q} onCommit={setQ} label={t("list.search")} />
               {stateOptions.length === 0 ? null : (
                 <label className="sdd-filter">
-                  <span className="app-muted">{m.list.docState}</span>
+                  <span className="app-muted">{t("list.docState")}</span>
                   <select
                     className="sdd-input"
                     value={[...states][0] ?? ""}
                     onChange={(e) => setStates(e.target.value === "" ? new Set() : new Set([e.target.value]))}
                   >
-                    <option value="">{m.list.docStateAll}</option>
+                    <option value="">{t("list.docStateAll")}</option>
                     {stateOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                   </select>
                 </label>
               )}
-              <Switch checked={readyOnly} onChange={setReadyOnly} label={m.list.readyOnly} onText={m.on} offText={m.off} />
+              <Switch checked={readyOnly} onChange={setReadyOnly} label={t("list.readyOnly")} onText={t("on")} offText={t("off")} />
               <span className="sdd-spacer" />
-              <span className="app-muted" role="status">{m.list.count(shown.length)}</span>
+              <span className="app-muted" role="status">{t("list.count", { count: shown.length })}</span>
             </div>
             {specs.length > 0 && shown.length === 0 && filtering ? (
               <div className="sdd-state">
-                <p role="status">{m.list.noResult(q.trim())}</p>
-                <button type="button" className="app-link-btn" onClick={() => { setQ(""); setStates(new Set()); setReadyOnly(false); }}>{m.list.clearSearch}</button>
+                <p role="status">{t("list.noResult", { q: q.trim() })}</p>
+                <button type="button" className="app-link-btn" onClick={() => { setQ(""); setStates(new Set()); setReadyOnly(false); }}>{t("list.clearSearch")}</button>
               </div>
             ) : (
               <SpecList
@@ -217,9 +227,9 @@ export function SpecListScreen() {
                 sort={sort}
                 onSortChange={changeSort}
                 renderRowMenu={rowMenu}
-                formatTime={(t) => formatRelative(t, now)}
+                formatTime={(t) => fmt.relative(t, now)}
                 messages={viewMessages}
-                emptyActions={<button type="button" className="app-link-btn" onClick={() => setDialog({ kind: "import", name: "" })}>{m.list.import}</button>}
+                emptyActions={<button type="button" className="app-link-btn" onClick={() => setDialog({ kind: "import", name: "" })}>{t("list.import")}</button>}
               />
             )}
           </>
@@ -256,8 +266,8 @@ export function SpecListScreen() {
         <SpecRenameDialog open initialName={dialog.spec.name ?? ""} onClose={() => setDialog(null)} onSubmit={(name) => renameSpec(dialog.spec, name)} />
       ) : null}
       {dialog?.kind === "delete" ? (
-        <ConfirmDialog open title={m.delete.title(dialog.spec.name && dialog.spec.name !== "" ? dialog.spec.name : dialog.spec.id)} confirmLabel={m.delete.confirm} cancelLabel={m.cancel} danger onConfirm={() => void deleteSpec(dialog.spec)} onCancel={() => setDialog(null)}>
-          {m.delete.body(dialog.spec.directory ?? "")}
+        <ConfirmDialog open title={t("delete.title", { name: dialog.spec.name && dialog.spec.name !== "" ? dialog.spec.name : dialog.spec.id })} confirmLabel={t("delete.confirm")} cancelLabel={t("cancel")} danger onConfirm={() => void deleteSpec(dialog.spec)} onCancel={() => setDialog(null)}>
+          {(dialog.spec.directory ?? "") === "" ? t("delete.bodyRoot") : t("delete.body", { path: dialog.spec.directory ?? "" })}
         </ConfirmDialog>
       ) : null}
       {dialog?.kind === "import" ? (
@@ -270,7 +280,7 @@ export function SpecListScreen() {
           onSubmit={async (body) => {
             const created = await space.client.importSpec(body);
             setDialog(null);
-            toast({ tone: "success", text: m.import.done(body.files.length) });
+            toast({ tone: "success", text: t("import.done", { count: body.files.length }) });
             goTo(created.value.spec.id);
           }}
         />

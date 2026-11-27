@@ -1,0 +1,155 @@
+{
+  "backendChooser": {
+    "title": "실행 백엔드를 골라 주세요",
+    "leadNone": "에이전트를 실행할 백엔드가 정해지지 않았습니다.",
+    "explain": "에이전트가 어떤 방식으로 답할지 정하는 설정입니다. 고르면 같은 메시지를 바로 다시 보냅니다.",
+    "leadChange": "지금 쓰는 실행 백엔드를 바꿉니다.",
+    "explainChange": "에이전트가 어떤 방식으로 답할지 정하는 설정입니다. 고르면 기본값만 바뀌고 보낸 메시지는 다시 보내지 않습니다.",
+    "group": "실행 백엔드",
+    "saveNote": "고른 백엔드는 설정 > 공통 > 실행 백엔드에 기본값으로 저장됩니다. 나중에 바꿀 수 있습니다.",
+    "perNode": "노드마다 다르게 쓰려면 노드 패널 설정 탭에서 지정하세요.",
+    "submit": "선택하고 계속",
+    "submitting": "저장하고 다시 보내는 중…",
+    "none": "사용할 수 있는 백엔드가 없습니다. 서버 설정과 확장을 확인하세요.",
+    "saveFailed": "백엔드를 저장하지 못했습니다",
+    "lead": "'{list}'{list, particle.object.only} 실행할 백엔드가 정해지지 않았습니다."
+  },
+  "backendReadiness": {
+    "sectionTitle": "백엔드 인증·실행 준비",
+    "sectionLead": "각 실행 백엔드를 지금 쓸 수 있는지 보여 줍니다. 상태는 설정과 환경만 읽어 확인하며 모델을 부르지 않습니다.",
+    "loadFailed": "백엔드 상태를 확인하지 못했습니다",
+    "recheck": "다시 확인",
+    "recheckBusy": "확인 중…",
+    "checkedAt": "확인: {when} (정적 점검)",
+    "toneLabel": {
+      "ok": "준비됨",
+      "warn": "주의",
+      "error": "문제 있음",
+      "unknown": "확인 불가"
+    },
+    "unknownSummary": "확인할 수 없음",
+    "checks": "점검 항목",
+    "probeButton": "연결 테스트",
+    "probeUnsupported": "이 백엔드는 연결 테스트를 지원하지 않습니다",
+    "probeRunning": "테스트 중…",
+    "probeDialogTitle": "연결 테스트",
+    "probeDialogBody": "아주 짧은 요청 한 번을 실제로 보냅니다. 모델 호출 비용이 조금 들 수 있습니다.",
+    "probeDialogRun": "테스트 실행",
+    "probeDialogCancel": "취소",
+    "probeDialogRemember": "다음부터 묻지 않기",
+    "probePassed": "테스트 통과",
+    "probePassedAgo": "{when} 통과",
+    "probeOk": "연결됨 — 응답 {seconds}초",
+    "probeOkNoTime": "연결됨",
+    "probeCheckedAt": "확인: {when}",
+    "probeFailedTitle": "연결 테스트에 실패했습니다",
+    "probeRequestFailed": "연결 테스트 요청을 보내지 못했습니다",
+    "probeDetails": "상세",
+    "probeReason": "사유 코드",
+    "probeResultLabel": "연결 테스트 결과",
+    "chooserWarn": "이 백엔드는 인증이 필요합니다. 고친 뒤 쓸 수 있습니다.",
+    "chipLabel": "{title} 상태: {summary}",
+    "fixesLabel": "해결 방법"
+  },
+  "textDiff": {
+    "unchangedLines": "변경 없는 $줄 — 펼치기",
+    "split": "나란히",
+    "unified": "통합",
+    "toolbar": "비교 보기 방식",
+    "before": "이전",
+    "after": "이후"
+  },
+  "notifications": {
+    "test": {
+      "body": "테스트 알림입니다"
+    },
+    "request": "브라우저 알림 허용 요청",
+    "sendTest": "테스트 알림 보내기",
+    "hearSound": "소리 듣기",
+    "needPermission": "권한을 허용해야 알림이 옵니다",
+    "soundLocked": "소리는 이 페이지를 한 번 클릭한 뒤부터 납니다",
+    "eventsEmpty": "비어 있으면 알림을 보내지 않습니다",
+    "eventsAdd": "이벤트 이름 추가",
+    "eventsAddButton": "추가",
+    "eventsRemove": "{name} 빼기",
+    "eventsList": "알릴 이벤트",
+    "live": {
+      "permissionChanged": "알림 권한: {label}"
+    },
+    "grant": {
+      "unsupported": "이 브라우저/주소에서는 알림을 쓸 수 없습니다",
+      "insecure": "https 또는 localhost에서만 가능합니다",
+      "default": "아직 허용하지 않았습니다",
+      "granted": "허용됨",
+      "denied": "브라우저에서 차단되었습니다",
+      "deniedHelp": "브라우저의 사이트 설정에서 이 주소의 알림을 허용으로 바꾼 뒤 새로고침하세요",
+      "label": "이 브라우저의 알림 권한"
+    }
+  },
+  "definition": {
+    "attachProblems": {
+      "label": "첨부 오류",
+      "masked": "비밀 값이 가려져 있습니다(***). 비밀 참조(secret://이름)로 바꿔 입력해야 저장할 수 있습니다."
+    },
+    "saved": "저장됨",
+    "dirty": "저장 안 됨",
+    "saving": "저장 중…",
+    "failed": "저장 실패",
+    "retry": "다시 시도",
+    "savedToast": "저장했습니다",
+    "missingVersion": "저장 정보가 없습니다. 새로고침하세요.",
+    "issues": {
+      "title": "저장했지만 확인할 경고가 있습니다",
+      "region": "저장 경고",
+      "pathIndex": "{n}번째"
+    },
+    "conflict": {
+      "region": "저장 충돌",
+      "title": "다른 곳에서 먼저 수정되었습니다",
+      "body": "이 화면의 변경을 저장하려면 서버 버전을 불러오거나 내 변경으로 덮어쓰세요.",
+      "savedAt": "서버 수정 시각 {when}",
+      "loadServer": "서버 버전 불러오기",
+      "saveCopy": "내 변경을 사본으로 저장",
+      "overwrite": "내 변경으로 덮어쓰기",
+      "loadServerTitle": "서버 버전을 불러옵니다",
+      "loadServerBody": "이 화면의 저장하지 않은 변경은 사라집니다.",
+      "overwriteTitle": "서버 버전을 덮어씁니다",
+      "overwriteBody": "다른 곳에서 한 수정이 내 변경으로 바뀝니다.",
+      "saveDisabled": "충돌을 해결한 뒤 저장할 수 있습니다"
+    },
+    "unsaved": {
+      "title": "저장하지 않은 변경이 있습니다",
+      "body": "이 화면을 떠나면 변경 내용이 사라집니다.",
+      "stay": "머무르기",
+      "leave": "변경 버리기"
+    }
+  },
+  "hints": {
+    "dismiss": "안내 닫기"
+  },
+  "severity": {
+    "error": "오류",
+    "warning": "경고",
+    "info": "정보"
+  },
+  "errorByCode": {
+    "project": {
+      "config_readonly": "이 폴더에는 쓸 수 없어 구성을 가져오거나 고치거나 지우지 못했습니다",
+      "memory_unavailable": "이 프로젝트 폴더의 메모리를 열 수 없습니다. 서버를 업데이트했거나 폴더의 메모리 저장소가 더 새 버전일 수 있습니다"
+    }
+  },
+  "issueValidators": {
+    "pattern": "형식이 올바르지 않습니다",
+    "required": "필수 항목이 비어 있습니다",
+    "anyOf": "허용된 형태가 아닙니다",
+    "oneOf": "허용된 형태가 아닙니다",
+    "type": "값의 형식이 올바르지 않습니다",
+    "enum": "허용된 값이 아닙니다",
+    "minLength": "너무 짧습니다",
+    "maxLength": "너무 깁니다",
+    "minItems": "항목이 부족합니다",
+    "maxItems": "항목이 너무 많습니다",
+    "minimum": "값이 너무 작습니다",
+    "maximum": "값이 너무 큽니다"
+  }
+}

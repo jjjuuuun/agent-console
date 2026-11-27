@@ -4,7 +4,7 @@ import type { WikiSummary } from "@agent-console/contracts/wiki";
 import { NewPageDialog } from "./PageDialogs";
 import { usePageList } from "./useWikiApi";
 import { useWikiContext } from "./useWikiContext";
-import { wikiLinkMessages as t } from "./integrationMessages";
+import { useT } from "@agent-console/i18n";
 
 export interface PromoteSource {
   title: string;
@@ -27,6 +27,7 @@ export interface PromoteDialogProps {
  * 위키 고르기와 "복사본입니다" 안내를 끼운다. 원본과 연결하지 않는다. 경로는 비워 둔다.
  */
 export function PromoteDialog({ wikis, initialWiki, source, onClose, onCreated, onOpenExisting }: PromoteDialogProps) {
+  const t = useT("wiki");
   const ctx = useWikiContext();
   const [wikiId, setWikiId] = useState(wikis.some((w) => w.id === initialWiki) ? initialWiki : (wikis[0]?.id ?? ""));
   const pages = usePageList(wikiId, wikiId !== "");
@@ -50,10 +51,10 @@ export function PromoteDialog({ wikis, initialWiki, source, onClose, onCreated, 
       onOpenExisting={(path) => onOpenExisting(wikiId, path)}
       header={
         <div className="wiki-promote-head">
-          <Banner tone="info">{t.fromMemory.note}</Banner>
+          <Banner tone="info">{t("link.fromMemory.note")}</Banner>
           {wikis.length > 1 ? (
             <label htmlFor={selectId}>
-              {t.fromMemory.wiki}{" "}
+              {t("link.fromMemory.wiki")}{" "}
               <select id={selectId} value={wikiId} onChange={(e) => setWikiId(e.target.value)}>
                 {wikis.map((w) => (
                   <option key={w.id} value={w.id}>{w.name || w.id}</option>

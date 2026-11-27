@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-imports"
 version = "0.1.0"
-description = "Agent Console — 외부 설정(~/.claude, 프로젝트 .claude/)에서 정의를 복사해 가져오기(원본 읽기 전용)"
+description = "Agent Console — imports definitions by copying them from external settings (~/.claude, project .claude/); sources are read-only"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -16,6 +16,9 @@ dependencies = [
 
 [project.entry-points."agent_console.import_sources"]
 claude = "agent_console_imports.claude:claude_sources"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-imports = "agent_console_imports"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9"]

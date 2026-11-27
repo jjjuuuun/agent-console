@@ -383,7 +383,7 @@ class InteractionBroker:
         except InteractionClosedError:
             pass
         except RecorderError:
-            _log.warning("상호작용 %s 닫기 기록 실패", entry.stored.id)
+            _log.warning("Recording the close of interaction %s failed", entry.stored.id)
 
     async def _expire_later(self, entry: _Open, timeout: float) -> None:
         await self._sleep(timeout)
@@ -518,4 +518,4 @@ class InteractionBroker:
     def _task_done(self, task: asyncio.Task[Any]) -> None:
         self._tasks.discard(task)
         if not task.cancelled() and (exc := task.exception()) is not None:
-            _log.error("상호작용 작업 실패: %r", exc)
+            _log.error("Interaction task failed: %r", exc)

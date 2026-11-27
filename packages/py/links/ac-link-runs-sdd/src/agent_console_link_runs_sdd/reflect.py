@@ -221,12 +221,12 @@ class StatusReflector:
         try:
             self._reflect(run, outcome, status)
         except Exception:  # pragma: no cover - 방어: 반영 실패가 실행 이벤트 흐름을 깨지 않게
-            _log.exception("작업 상태 반영 실패: %s", run.run_id)
+            _log.exception("Updating the task status failed: %s", run.run_id)
         for listener in list(self._listeners):
             try:
                 listener(run, outcome, finished)
             except Exception:
-                _log.exception("실행 결과 알림 처리기 실패")
+                _log.exception("Run result notification handler failed")
 
     def _reflect(self, run: TrackedRun, outcome: str, status: str) -> None:
         try:
@@ -245,7 +245,7 @@ class StatusReflector:
         try:
             self._reflect_task(run, outcome, status, repo, loaded, profile)
         except Exception:  # pragma: no cover - 방어
-            _log.exception("작업 상태 반영 실패: %s", run.run_id)
+            _log.exception("Updating the task status failed: %s", run.run_id)
         self._reflect_document(run, outcome, status, repo, loaded, profile)
 
     def _reflect_task(
@@ -408,7 +408,7 @@ class StatusReflector:
         try:
             self._sdd.notify(run.space, run.spec_id)
         except Exception:  # pragma: no cover - 알림 실패는 무시
-            _log.exception("sdd.changed 알림 실패")
+            _log.exception("sdd.changed notification failed")
 
 
 _MESSAGES: dict[str, str] = {

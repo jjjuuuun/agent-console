@@ -1,7 +1,9 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { useServerText } from "@agent-console/i18n";
 import type { CopyKindInfo } from "@agent-console/contracts/projects";
 import { reservedIdsByKind } from "@agent-console/projects";
 import { useApi } from "../../app/ApiContext";
+import { useLookupMessage } from "../../app/shellMessages";
 import { kindTitle } from "./useProjectHomeData";
 
 /** 한 공간(공용 또는 프로젝트 사본)에 있는 정의 하나. 종류 이름은 서버가 준 문자열 그대로다. */
@@ -34,6 +36,8 @@ export type CopyKindFlag = keyof Pick<CopyKindInfo, "library" | "portable">;
  * @param enabled false면 읽지 않는다(대화상자가 닫혀 있을 때).
  */
 export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled: boolean): SpaceItems {
+  const lookupMessage = useLookupMessage();
+  const serverText = useServerText();
   const { rest } = useApi();
   const kindsQuery = useQuery({
     queryKey: ["list", "copy-kinds", space ?? ""] as const,
@@ -45,7 +49,7 @@ export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled:
   const kindInfos = (kindsQuery.data ?? []).filter((k) => k[flag]);
   const kinds = kindInfos.map((k) => k.kind);
   const kindTitles: Record<string, string> = {};
-  for (const k of kindInfos) kindTitles[k.kind] = k.title !== undefined && k.title !== null && k.title !== "" ? k.title : kindTitle(k.kind);
+  for (const k of kindInfos) kindTitles[k.kind] = k.title !== undefined && k.title !== null && k.title !== "" ? serverText.text(k.title) : kindTitle(k.kind, lookupMessage);
   const queries = useQueries({
     queries: kinds.map((kind) => ({
       queryKey: ["list", "space-items", space ?? "", kind] as const,

@@ -244,17 +244,17 @@ class BackendReadinessService:
                 backend.status(self._context(backend_id)), self._status_timeout
             )
         except TimeoutError:
-            _log.warning("백엔드 상태 점검 시간 초과: backend=%s", backend_id)
+            _log.warning("Backend status check timed out: backend=%s", backend_id)
             return self._unknown(backend_id, self._texts.failed_detail)
         except Exception as exc:  # 백엔드 오류는 상태 unknown으로(문장 원문은 남기지 않는다)
             _log.warning(
-                "백엔드 상태 점검 실패: backend=%s error=%s", backend_id, type(exc).__name__
+                "Backend status check failed: backend=%s error=%s", backend_id, type(exc).__name__
             )
             return self._unknown(backend_id, self._texts.failed_detail)
         try:
             return self._masked(result.model_copy(update={"backend_id": backend_id}))
         except ValidationError:
-            _log.warning("백엔드 상태 점검 결과 형식 오류: backend=%s", backend_id)
+            _log.warning("Backend status check returned a malformed result: backend=%s", backend_id)
             return self._unknown(backend_id, self._texts.failed_detail)
 
     # ------------------------------------------------------------ 연결 테스트
@@ -341,7 +341,7 @@ class BackendReadinessService:
                 finished_at=self._clock(),
             )
         _log.info(
-            "백엔드 연결 테스트: backend=%s ok=%s reason=%s latency_ms=%s",
+            "Backend connection test: backend=%s ok=%s reason=%s latency_ms=%s",
             backend_id,
             result.ok,
             result.reason,

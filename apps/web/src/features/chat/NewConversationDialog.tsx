@@ -4,26 +4,24 @@ import { useQuery } from "@tanstack/react-query";
 import type { Conversation, GraphSummary } from "@agent-console/contracts";
 import { createProjectsText, projectAbilities, statusInfo } from "@agent-console/projects";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { FixButtons } from "../../app/fix";
-import { messages as appMessages } from "../../app/messages";
+import { useShellMessages } from "../../app/shellMessages";
 import { useApi } from "../../app/ApiContext";
 import { useStorage } from "../../app/StorageContext";
-import { formatRelative } from "../../lib/format";
 import { useImeGuard } from "../../lib/ime";
 import { useGraphLoginGate } from "../backendChoice";
 import { DEFINITION_KINDS, ROUTE_ROLES, routePath } from "../library";
-import { ProjectTargetPicker, startErrorView, targetPickerMessages as pm, useCopyDialog, useProjects, type StartErrorView, type TargetOption } from "../projects";
+import { ProjectTargetPicker, useStartErrorView, useTargetPickerMessages, useCopyDialog, useProjects, type StartErrorView, type TargetOption } from "../projects";
 import { GraphIssuesPreview, ValidationChip, blocksRun, hasEntry } from "../teams";
-import { chatMessages } from "./chatMessages";
+import { useChatMessages } from "./chatMessages";
 import { CONVERSATION_PAGE_SIZE, chatKeys } from "./chatData";
 import { LAST_GRAPH_KEY } from "./lib/drafts";
 import { lastUsedByGraph } from "./lib/conversations";
 import { useConversationActions } from "./useConversationActions";
+import { useFormat } from "../../i18n";
 
 const text = createProjectsText();
-const t = chatMessages.newDialog;
-
 export interface NewConversationDialogProps {
   /** 미리 고를 팀 구성 id(마지막으로 쓴 것 등) */
   preselected?: string | undefined;
@@ -41,6 +39,13 @@ export interface NewConversationDialogProps {
  * 열려 있을 때만 마운트한다. 프로젝트 기능이 꺼져 있으면 쓰지 않는다(호출자가 기존 팀 고르기를 쓴다).
  */
 export function NewConversationDialog(props: NewConversationDialogProps) {
+  const fmt = useFormat();
+  const describeError = useDescribeError();
+  const shell = useShellMessages();
+  const startErrorView = useStartErrorView();
+  const pm = useTargetPickerMessages();
+  const m = useChatMessages();
+  const t = m.newDialog;
   const p = useProjects();
   const { rest, space } = useApi();
   const storage = useStorage();
@@ -88,7 +93,7 @@ export function NewConversationDialog(props: NewConversationDialogProps) {
         const noEntry = hasEntry(g) === false;
         const blocked = noEntry || blocksRun(g.validation);
         const used = lastUsed.get(g.id);
-        const meta = [t.nodes(g.node_count), used === undefined ? null : t.lastUsed(formatRelative(used, props.nowMs))].filter((x): x is string => x !== null).join(" · ");
+        const meta = [t.nodes(g.node_count), used === undefined ? null : t.lastUsed(fmt.relative(used, props.nowMs))].filter((x): x is string => x !== null).join(" · ");
         const hasIssues = g.validation != null && (blocksRun(g.validation) || (g.validation.error_count ?? 0) > 0 || (g.validation.warning_count ?? 0) > 0);
         return {
           id: g.id,
@@ -101,7 +106,7 @@ export function NewConversationDialog(props: NewConversationDialogProps) {
           editHref: projectId === null ? undefined : `${graphPath}/${encodeURIComponent(g.id)}?prj=${encodeURIComponent(projectId)}`,
         };
       }),
-    [graphs.data, lastUsed, props.nowMs, graphPath, projectId],
+    [graphs.data, lastUsed, props.nowMs, graphPath, projectId, t, fmt],
   );
   const selected = picked !== undefined && options.some((o) => o.id === picked && o.blocked !== true) ? picked : options.find((o) => o.blocked !== true)?.id;
 
@@ -198,7 +203,7 @@ export function NewConversationDialog(props: NewConversationDialogProps) {
       onClose={props.onClose}
       actions={
         <>
-          <Button onClick={props.onClose}>{appMessages.common.cancel}</Button>
+          <Button onClick={props.onClose}>{shell.common.cancel}</Button>
           <Button
             variant="primary"
             loading={busy}

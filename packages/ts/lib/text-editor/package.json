@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/text-editor",
   "version": "0.1.0",
-  "description": "텍스트·마크다운·JSON 편집기와 diff 보기",
+  "description": "Text, Markdown, and JSON editors and a diff view",
   "private": true,
   "license": "MIT",
   "type": "module",

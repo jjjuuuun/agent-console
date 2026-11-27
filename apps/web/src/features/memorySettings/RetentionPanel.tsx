@@ -7,9 +7,11 @@ import { Banner, Button, ConfirmDialog, Icon } from "@agent-console/ui";
 import { AutoTargets, type AutoTargetsProps } from "./AutoTargets";
 import { RuleEditorDialog } from "./RuleEditorDialog";
 import { RULE_ACTIONS, RULE_FIELDS } from "./memorySettingsConfig";
-import { memorySettingsMessages as t } from "./messages";
 import { ruleKey, useRetentionPreview } from "./useRetentionPreview";
 import { IssueList } from "./IssueList";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useViewMessages } from "../memory";
 
 type Obj = Record<string, unknown>;
 const idOf = (r: Obj): string => (typeof r[RULE_FIELDS.id] === "string" ? (r[RULE_FIELDS.id] as string) : "");
@@ -54,6 +56,9 @@ type Editor = { index: number; rule: Obj; isNew: boolean } | null;
 
 /** 정리 규칙 목록 + 편집기 + 미리보기/적용(표현 전용). 설정 문서에는 초안만 바꾸고 서버 호출은 props로 받는다. */
 export function RetentionPanel(p: RetentionPanelProps) {
+  const viewMessages = useViewMessages();
+  const t = useT("memorySettings");
+  const tm = useMaybeT("memorySettings");
   const [editor, setEditor] = useState<Editor>(null);
   const [confirm, setConfirm] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -69,7 +74,7 @@ export function RetentionPanel(p: RetentionPanelProps) {
   const items = preview.state.plan?.items ?? [];
   const archives = items.filter((i) => i.action === RULE_ACTIONS.archive).length;
   const deletes = items.filter((i) => i.action === RULE_ACTIONS.delete).length;
-  const reason = p.dirty ? t.retention.blocked.unsaved : preview.state.plan === null ? t.retention.blocked.none : previewedTarget !== targetValue ? t.retention.blocked.targetChanged : preview.state.key !== key ? t.retention.blocked.stale : count === 0 ? t.retention.blocked.empty : null;
+  const reason = p.dirty ? t("retention.blocked.unsaved") : preview.state.plan === null ? t("retention.blocked.none") : previewedTarget !== targetValue ? t("retention.blocked.targetChanged") : preview.state.key !== key ? t("retention.blocked.stale") : count === 0 ? t("retention.blocked.empty") : null;
   const hasDelete = p.rules.some((r) => actionOf(r) === RULE_ACTIONS.delete);
   const savedDelete = p.savedRules.some((r) => actionOf(r) === RULE_ACTIONS.delete);
 
@@ -101,19 +106,19 @@ export function RetentionPanel(p: RetentionPanelProps) {
   const failed = done?.result.issues ?? [];
   const resultLink = done === null ? null : p.resultHref(done.target);
   return (
-    <section className="memset-panel" aria-label={t.retention.label} data-testid="memset-retention">
+    <section className="memset-panel" aria-label={t("retention.label")} data-testid="memset-retention">
       <div className="memset-listhead">
-        <h3 className="memset-title">{t.retention.title(p.rules.length)}</h3>
-        <Button size="sm" disabled={p.disabled === true} onClick={() => open(p.rules.length, true)}>+ {t.retention.add}</Button>
+        <h3 className="memset-title">{t("retention.title", { n: p.rules.length })}</h3>
+        <Button size="sm" disabled={p.disabled === true} onClick={() => open(p.rules.length, true)}>+ {t("retention.add")}</Button>
       </div>
-      <p className="memset-note app-muted">{t.retention.help}</p>
+      <p className="memset-note app-muted">{t("retention.help")}</p>
       {p.rules.length === 0 ? (
         <div className="memset-empty">
-          <p className="memset-strong">{t.retention.empty}</p>
-          <p className="app-muted memset-note">{t.retention.emptyBody}</p>
+          <p className="memset-strong">{t("retention.empty")}</p>
+          <p className="app-muted memset-note">{t("retention.emptyBody")}</p>
         </div>
       ) : (
-        <ol className="memset-rows" aria-label={t.retention.label}>
+        <ol className="memset-rows" aria-label={t("retention.label")}>
           {p.rules.map((r, i) => {
             const id = idOf(r);
             const action = actionOf(r);
@@ -123,8 +128,8 @@ export function RetentionPanel(p: RetentionPanelProps) {
               <li key={`${id}:${i}`} className="memset-rule-row" data-rule-id={id}>
                 <span className="memset-cell memset-order">
                   <span className="memset-num">{i + 1}</span>
-                  <Button size="sm" variant="ghost" aria-label={t.retention.up(id)} disabled={i === 0 || p.disabled === true} onClick={() => move(i, -1)}>↑</Button>
-                  <Button size="sm" variant="ghost" aria-label={t.retention.down(id)} disabled={i === p.rules.length - 1 || p.disabled === true} onClick={() => move(i, 1)}>↓</Button>
+                  <Button size="sm" variant="ghost" aria-label={t("retention.up", { id })} disabled={i === 0 || p.disabled === true} onClick={() => move(i, -1)}>↑</Button>
+                  <Button size="sm" variant="ghost" aria-label={t("retention.down", { id })} disabled={i === p.rules.length - 1 || p.disabled === true} onClick={() => move(i, 1)}>↓</Button>
                 </span>
                 <span className="memset-cell memset-mono ac-ellipsis" title={id}>{id}</span>
                 <span className="memset-cell ac-ellipsis" title={typeof r["description"] === "string" ? (r["description"] as string) : undefined}>
@@ -133,38 +138,38 @@ export function RetentionPanel(p: RetentionPanelProps) {
                 <span className="memset-cell">
                   <span className="memset-chip-static" data-tone={action === RULE_ACTIONS.delete ? "danger" : undefined}>
                     {action === RULE_ACTIONS.delete ? <span className="memset-danger-icon" aria-hidden="true" /> : null}
-                    {t.retention.action[action] ?? action}
+                    {tm(`retention.action.${action}`) ?? action}
                   </span>
-                  {unseen ? <span className="memset-warn-inline"> <span className="app-sev" data-severity="warning" aria-hidden="true">▲</span> {t.retention.noPreview}</span> : null}
+                  {unseen ? <span className="memset-warn-inline"> <span className="app-sev" data-severity="warning" aria-hidden="true">▲</span> {t("retention.noPreview")}</span> : null}
                 </span>
-                <span className="memset-cell memset-actions" role="group" aria-label={t.retention.actionsFor(id)}>
-                  <Button size="sm" disabled={p.disabled === true} onClick={() => open(i, false)}>{t.retention.edit}</Button>
-                  <Button size="sm" variant="danger" disabled={p.disabled === true} onClick={() => p.onChange(p.rules.filter((_, n) => n !== i) as Obj[])}>{t.retention.remove}</Button>
+                <span className="memset-cell memset-actions" role="group" aria-label={t("retention.actionsFor", { id })}>
+                  <Button size="sm" disabled={p.disabled === true} onClick={() => open(i, false)}>{t("retention.edit")}</Button>
+                  <Button size="sm" variant="danger" disabled={p.disabled === true} onClick={() => p.onChange(p.rules.filter((_, n) => n !== i) as Obj[])}>{t("retention.remove")}</Button>
                 </span>
               </li>
             );
           })}
         </ol>
       )}
-      <p className="memset-note app-muted">{p.everyText === null ? t.retention.autoOff : `${t.retention.autoOn(p.everyText)}${p.autoNote ?? ""}`}</p>
+      <p className="memset-note app-muted">{p.everyText === null ? t("retention.autoOff") : `${t("retention.autoOn", { every: p.everyText })}${p.autoNote ?? ""}`}</p>
       {p.autoTargets === undefined ? null : <AutoTargets {...p.autoTargets} />}
-      {p.everyText !== null && savedDelete ? <Banner tone="warning">{t.retention.autoDelete(p.everyText)}</Banner> : null}
-      <div className="memset-preview" aria-label={t.retention.previewTitle} role="group">
+      {p.everyText !== null && savedDelete ? <Banner tone="warning">{t("retention.autoDelete", { every: p.everyText })}</Banner> : null}
+      <div className="memset-preview" aria-label={t("retention.previewTitle")} role="group">
         {p.target === undefined ? null : (
           <div className="memset-target" data-testid="memset-retention-target">
             {p.target.options.length > 1 ? (
               <>
-                <label htmlFor="memset-retention-target" className="memset-target-label">{t.retention.target}</label>
+                <label htmlFor="memset-retention-target" className="memset-target-label">{t("retention.target")}</label>
                 <select id="memset-retention-target" className="memset-target-select" value={p.target.value} onChange={(e) => p.target?.onChange(e.target.value)}>
                   {p.target.options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
               </>
             ) : (
-              <span><span className="memset-target-label">{t.retention.target}</span> <strong>{p.target.options[0]?.label ?? ""}</strong></span>
+              <span><span className="memset-target-label">{t("retention.target")}</span> <strong>{p.target.options[0]?.label ?? ""}</strong></span>
             )}
           </div>
         )}
-        <RetentionPreview
+        <RetentionPreview messages={viewMessages}
           plan={preview.state.plan}
           ruleCount={p.rules.length}
           loading={preview.state.loading}
@@ -178,9 +183,9 @@ export function RetentionPanel(p: RetentionPanelProps) {
           resultAt={done?.at ?? null}
           scopeText={p.scopeText}
         />
-        {applyError ? <p className="memset-warn" role="alert">{t.retention.applyFailed}</p> : null}
-        {failed.length > 0 ? <div><p className="memset-note">{t.retention.failedIssues}</p><IssueList issues={failed} label={t.retention.failedIssues} /></div> : null}
-        {done !== null && resultLink !== null ? <Link className="memset-link" to={resultLink}>{t.retention.viewInMemory} <Icon name="external-link" /></Link> : null}
+        {applyError ? <p className="memset-warn" role="alert">{t("retention.applyFailed")}</p> : null}
+        {failed.length > 0 ? <div><p className="memset-note">{t("retention.failedIssues")}</p><IssueList issues={failed} label={t("retention.failedIssues")} /></div> : null}
+        {done !== null && resultLink !== null ? <Link className="memset-link" to={resultLink}>{t("retention.viewInMemory")} <Icon name="external-link" /></Link> : null}
       </div>
       {editor === null ? null : (
         <RuleEditorDialog
@@ -201,15 +206,15 @@ export function RetentionPanel(p: RetentionPanelProps) {
       )}
       <ConfirmDialog
         open={confirm}
-        title={t.retention.confirmTitle}
-        confirmLabel={t.retention.confirmApply}
-        cancelLabel={t.cancel}
+        title={t("retention.confirmTitle")}
+        confirmLabel={t("retention.confirmApply")}
+        cancelLabel={t("cancel")}
         danger={hasDelete}
         onCancel={() => setConfirm(false)}
         onConfirm={doApply}
       >
-        <p className="ac-text">{t.retention.confirmBody(count, archives, deletes)}</p>
-        {deletes > 0 ? <Banner tone="danger">{t.retention.confirmDanger}</Banner> : null}
+        <p className="ac-text">{t("retention.confirmBody", { n: count, a: archives, d: deletes })}</p>
+        {deletes > 0 ? <Banner tone="danger">{t("retention.confirmDanger")}</Banner> : null}
       </ConfirmDialog>
     </section>
   );

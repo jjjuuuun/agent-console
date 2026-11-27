@@ -1,6 +1,6 @@
 import type { ModuleInfo } from "@agent-console/contracts";
 import { enableSnippet, isProblemStatus, MODULE_STATUS, moduleMatchesText } from "../../modules";
-import { messages as m } from "../../app/messages";
+import type { AppMessages } from "../../app/appMessages";
 
 /** 상태 필터 값: 전체이거나 상태 하나(단일 선택). */
 export type StatusFilter = "all" | string;
@@ -72,10 +72,10 @@ export function showsReasonCollapsed(m: ModuleInfo): boolean {
  * 모듈 하나를 켜거나 끄는 방법(설치자가 서버 설정 파일 또는 실행 옵션에 붙일 텍스트).
  * 켜져 있으면 끄는 조각, 아니면 켜는 조각이다. 웹은 설정을 바꾸지 않고 복사만 돕는다.
  */
-export function moduleCommandSnippet(mod: Pick<ModuleInfo, "id" | "status">): string {
+export function moduleCommandSnippet(mod: Pick<ModuleInfo, "id" | "status">, m: Pick<AppMessages, "modules" | "moduleOff">): string {
   const c = m.modules.cmd;
   if (mod.status === MODULE_STATUS.active) {
     return [c.comment, "modules:", `  disabled: [${mod.id}]`, c.orCli, `agent-console serve --disable-module ${mod.id}`].join("\n");
   }
-  return enableSnippet([mod.id]);
+  return enableSnippet([mod.id], m);
 }

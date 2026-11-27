@@ -1,7 +1,7 @@
 import type { LogSourceInfo } from "@agent-console/contracts";
 import { formatBytes } from "../../lib/bytes";
-import { formatRelative } from "../../lib/format";
-import { logsMessages as t } from "./messages";
+import type { Format } from "../../i18n";
+import type { LogsMessages } from "./messages";
 
 /** 출처 상태 줄의 종류(`screen-logs.md` 6.2). */
 export type SourceStatusKind = "off" | "unsaved" | "before" | "ok" | "error" | "scanning";
@@ -28,12 +28,15 @@ export interface SourceStatusInput {
   dirty?: boolean;
   scanning?: boolean;
   nowMs: number;
+  /** 현재 언어의 문구·서식 */
+  t: LogsMessages;
+  fmt: Pick<Format, "relative">;
   /** `messages.logs.error.<code>` 같은 코드별 문장 사전(없으면 일반 안내) */
   errorMessages?: Readonly<Record<string, string>>;
 }
 
 /** 출처 하나의 상태 줄 데이터. 오류 코드·남은 양은 서버 값을 그대로 쓴다. */
-export function describeSourceStatus({ info, enabled, dirty = false, scanning = false, nowMs, errorMessages = t.settings.sources.errorMessages }: SourceStatusInput): SourceStatusView {
+export function describeSourceStatus({ info, enabled, dirty = false, scanning = false, nowMs, t, fmt, errorMessages = t.settings.sources.errorMessages }: SourceStatusInput): SourceStatusView {
   const s = t.sourceStatus;
   const status = info.status;
   const base = { chip: undefined, parts: [], code: undefined, pending: undefined, errorText: undefined };
@@ -43,15 +46,15 @@ export function describeSourceStatus({ info, enabled, dirty = false, scanning = 
   if (dirty) return { ...base, kind: "unsaved", parts: [s.unsaved] };
   if (status?.error_code != null) {
     const code = status.error_code;
-    return { ...base, kind: "error", chip: s.error, code, errorText: errorMessages[code] ?? s.noServerMessage, parts: status.last_scan_at != null ? [s.lastScan(formatRelative(status.last_scan_at, nowMs))] : [] };
+    return { ...base, kind: "error", chip: s.error, code, errorText: errorMessages[code] ?? s.noServerMessage, parts: status.last_scan_at != null ? [s.lastScan(fmt.relative(status.last_scan_at, nowMs))] : [] };
   }
   if (status?.last_scan_at == null) return { ...base, kind: "before", chip: s.beforeScan, parts: [s.scanBeforeHint] };
   const pending = status.pending_bytes != null && status.pending_bytes > 0 ? s.pending(formatBytes(status.pending_bytes)) : undefined;
-  return { ...base, kind: "ok", chip: s.ok, parts: [s.lastScan(formatRelative(status.last_scan_at, nowMs)), ...(status.refs != null ? [s.refs(status.refs)] : [])], pending };
+  return { ...base, kind: "ok", chip: s.ok, parts: [s.lastScan(fmt.relative(status.last_scan_at, nowMs)), ...(status.refs != null ? [s.refs(status.refs)] : [])], pending };
 }
 
 /** 한 줄 요약(빈 상태 B의 출처별 줄). */
-export function sourceStatusLine(info: LogSourceInfo, nowMs: number): string {
-  const v = describeSourceStatus({ info, enabled: info.enabled, nowMs });
+export function sourceStatusLine(info: LogSourceInfo, nowMs: number, t: LogsMessages, fmt: Pick<Format, "relative">): string {
+  const v = describeSourceStatus({ info, enabled: info.enabled, nowMs, t, fmt });
   return [v.chip, v.code, ...v.parts, v.pending].filter((x): x is string => x !== undefined && x !== "").join(" · ");
 }

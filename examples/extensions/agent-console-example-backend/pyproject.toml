@@ -19,6 +19,9 @@ dependencies = [
 [project.entry-points."agent_console.backends"]
 "example.scripted" = "agent_console_example_backend:ScriptedBackend"
 
+[project.entry-points."agent_console.message_catalogs"]
+agent-console-example-backend = "agent_console_example_backend"
+
 # 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
 [tool.agent-console.example]
 points = ["execution-backend", "backend-session-archive"]

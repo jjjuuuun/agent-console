@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { libraryMessages as t } from "./messages";
+import { useLibraryMessages } from "./messages";
 
 export interface DeleteDialogProps {
   open: boolean;
@@ -20,6 +20,7 @@ export interface DeleteDialogProps {
 
 /** 삭제 확인(`screens.md` 4.3). 사용처가 있으면 목록을 보여 주고 확인 체크를 요구한다. 열 때마다 새로 시작하도록 `open`일 때만 렌더한다. */
 export function DeleteDialog({ open, name, references = [], note, busy, checking, error, onConfirm, onCancel }: DeleteDialogProps) {
+  const t = useLibraryMessages();
   const [understood, setUnderstood] = useState(false);
   const needsAck = references.length > 0;
   return (

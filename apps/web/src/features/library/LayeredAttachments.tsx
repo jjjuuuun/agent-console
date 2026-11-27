@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ResourceAttachment, ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { AttachmentList, type Attachment, type ProvenanceLayer } from "@agent-console/ui";
 import { newAttachment } from "../../lib/serialize";
-import { libraryMessages as t, modeLabel } from "./messages";
+import { useLibraryMessages, modeLabel } from "./messages";
 import { AttachmentProblems } from "../../definition/AttachmentProblems";
 import { DescriptorIcon } from "./DescriptorIcon";
 import { ResourcePicker } from "./ResourcePicker";
@@ -41,6 +41,7 @@ const indexOfKey = (key: string) => Number(key.split(":", 1)[0]);
  * 팀 공용·에이전트·노드 층이 같은 컴포넌트를 쓴다. 서버·층 이름은 모른다.
  */
 export function LayeredAttachments({ layers, resources, types, modes, onChange, onCreateResource, footer, onExclude, excludeLabel }: LayeredAttachmentsProps) {
+  const t = useLibraryMessages();
   const [adding, setAdding] = useState<string | null>(null);
   const byId = new Map(resources.map((r) => [r.id, r]));
   const typeById = new Map(types.map((x) => [x.id, x]));
@@ -61,7 +62,7 @@ export function LayeredAttachments({ layers, resources, types, modes, onChange, 
     <div className="lib-attachments">
       <AttachmentList
         groups={groups}
-        modeOptions={modes.map((m) => ({ value: m, label: modeLabel(m) }))}
+        modeOptions={modes.map((m) => ({ value: m, label: modeLabel(m, t.attach.modes) }))}
         onReorder={(id, keys) => {
           const cur = layerOf(id)?.attachments ?? [];
           onChange(id, keys.map((k) => cur[indexOfKey(k)]!).filter(Boolean));

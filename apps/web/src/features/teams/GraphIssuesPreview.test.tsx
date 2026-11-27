@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { GraphSummary } from "@agent-console/contracts";
 import { ApiError } from "@agent-console/api-client";

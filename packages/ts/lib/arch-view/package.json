@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/arch-view",
-  "version": "0.2.0",
-  "description": "관측 구조도 표현 컴포넌트(ArchitectureView를 칸·연결·영역으로 그림)",
+  "version": "0.2.1",
+  "description": "Observed architecture map presentation component (draws an ArchitectureView as cells, connections, and areas)",
   "private": true,
   "license": "MIT",
   "type": "module",

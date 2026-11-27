@@ -1,0 +1,62 @@
+{
+  "viewLabel": "View",
+  "groupTitle": "Group by",
+  "sortTitle": "Sort",
+  "collapseAll": "Collapse all",
+  "expandAll": "Expand all",
+  "none": "No grouping",
+  "groupNames": {
+    "groupFolder": "Folder",
+    "groupLabels": "Label",
+    "groupProject": "Project",
+    "groupType": "Type",
+    "groupAttribute": "Attribute key…"
+  },
+  "summaryGroup": "By {name}",
+  "noneLabels": {
+    "groupFolder": "(No folder)",
+    "groupLabels": "(No label)",
+    "groupProject": "(Shared)",
+    "groupType": "(No type)",
+    "groupAttribute": "(No value)"
+  },
+  "sortNames": {
+    "sortName": "Name",
+    "sortModified": "Recently modified"
+  },
+  "sortSummaries": {
+    "sortName": "By name",
+    "sortModified": "By recently modified"
+  },
+  "conflict": "Someone changed this first, so it wasn't saved. Try again to apply your change to the latest version.",
+  "retry": "Try again",
+  "noProjects": "No items belong to a project",
+  "attrKey": "Attribute key",
+  "attrKeyPlaceholder": "e.g. team_tag",
+  "move": {
+    "title": "Move to folder",
+    "target": "Folder to move “{name}” to",
+    "search": "Find a folder or type a new name",
+    "listLabel": "Folders",
+    "create": "+ Create folder \"{name}\"",
+    "clear": "No folder",
+    "current": "Current",
+    "cancel": "Cancel",
+    "done": "Moved “{name}” to folder “{folder}”",
+    "doneClear": "Moved “{name}” out of its folder",
+    "undo": "Undo",
+    "undone": "Undone",
+    "failed": "Couldn't move to the folder"
+  },
+  "labels": {
+    "title": "Edit labels",
+    "target": "Labels of “{name}”",
+    "input": "Add label (Enter)",
+    "remove": "Remove label {l}",
+    "empty": "No labels",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Saved labels of “{name}”",
+    "failed": "Couldn't save the labels"
+  }
+}

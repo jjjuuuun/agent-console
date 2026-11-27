@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "plugin_load_failed": "플러그인을 불러오지 못했습니다.",
+    "plugins.config": "플러그인 설정에 문제가 있습니다.",
+    "settings.removed_key": "설정 파일에 없어진 키가 있습니다. 안내에 따라 새 위치로 옮기세요."
+  }
+}

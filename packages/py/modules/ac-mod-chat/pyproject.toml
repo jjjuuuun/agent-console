@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-chat"
 version = "0.1.0"
-description = "Agent Console — 채팅 기능 모듈: 대화·대기열 경로, WS conversation:, 턴·상호작용은 포트로"
+description = "Agent Console — chat feature module: conversation and queue routes, WS conversation:, turns and interactions through ports"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

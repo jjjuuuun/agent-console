@@ -7,7 +7,7 @@ import { resolveRef } from "../../lib/schemaTools";
 import { ConditionList, type ConditionError } from "./ConditionList";
 import { useConfigIssuesUnder } from "./ConfigIssuesContext";
 import type { ConditionSpec } from "./conditions";
-import { delegationMessages } from "./messages";
+import { useDelegationMessages } from "./messages";
 import { useConditionOperators } from "./useConditionOperators";
 
 type Obj = Record<string, unknown>;
@@ -78,9 +78,10 @@ export function ConditionListField({ id, value, onChange, label, disabled, reado
 
 /** 이름을 모르는 위젯이 지정된 객체 필드: 안내와 원본 JSON(읽기 전용)을 보인다. 값은 그대로 보존한다. */
 export function UnknownWidgetField({ id, value, label }: SchemaFormFieldProps) {
+  const dm = useDelegationMessages();
   return (
     <div id={id} role="group" aria-label={label}>
-      <Banner tone="info">{delegationMessages.condition.unknownWidget}</Banner>
+      <Banner tone="info">{dm.condition.unknownWidget}</Banner>
       <pre className="ac-pre app-json">{JSON.stringify(value ?? null, null, 2)}</pre>
     </div>
   );

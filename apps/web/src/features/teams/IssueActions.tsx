@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { Issue, IssueSuggestion } from "@agent-console/contracts";
 import { useResolvedFix } from "../../app/fix";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 import type { RowSuggestion } from "./issueRows";
 
 export interface IssueActionsProps {
@@ -28,6 +28,7 @@ interface Action {
  * 제안·fix는 서버 데이터 그대로이고 이슈 코드는 해석하지 않는다.
  */
 export function IssueActions({ issue, suggestions, canOpenNode, onApply, onOpenNode, maxInline = 2 }: IssueActionsProps) {
+  const t = useTeamMessages();
   const navigate = useNavigate();
   const fixes = useResolvedFix(issue.fix);
   const [open, setOpen] = useState(false);

@@ -26,7 +26,7 @@ describe("정의 목록 공용 묶기·정렬 데이터", () => {
     expect(def.usable?.([mk("a", { project: "p1" })]).ok).toBe(true);
   });
   it("최근 수정 정렬은 수정 시각이 있을 때만 후보다", () => {
-    const def = modifiedSortDef();
+    const def = modifiedSortDef(true, "ko");
     expect(def.available?.([mk("a")])).toBe(false);
     expect(def.available?.([mk("a", { saved_at: 1 })])).toBe(true);
   });

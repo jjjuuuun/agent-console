@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TokenRollupRow, UsageWindowSnapshot } from "@agent-console/contracts";
-import { aggregateRollup, buildIndicatorItems, buildWindowGroups, indicatorFill, pickColorRule, remainingPercent, usedPercent, filterRollupByDays, formatRemaining, hasValue, isStaleObservation, resetState, canRefreshNow, windowDisplayName, groupSetupSnippets, formatTokens, groupWindowsByTrust, type WindowGroup } from "./usageLib";
+import { createFormat } from "../../i18n";
+import { aggregateRollup, buildIndicatorItems, buildWindowGroups, indicatorFill, pickColorRule, remainingPercent, usedPercent, filterRollupByDays, hasValue, isStaleObservation, resetState, canRefreshNow, windowDisplayName, groupSetupSnippets, formatTokens, groupWindowsByTrust, type WindowGroup } from "./usageLib";
 
 // 창 이름·출처 id는 임의 값이다. 코드에 고정된 목록이 없다는 것이 이 테스트의 전제다.
 const snap = (source: string, window: string, observed: number, extra: Partial<UsageWindowSnapshot> = {}): UsageWindowSnapshot => ({ source, window, observed_at: observed, ...extra });
@@ -51,9 +52,9 @@ describe("오래된 관측·초기화 시각", () => {
     expect(resetState(50, 100)).toBe("passed");
   });
   it("남은 시간 문구", () => {
-    expect(formatRemaining(2 * 3600 + 14 * 60)).toBe("2시간 14분");
-    expect(formatRemaining(3 * 86400 + 4 * 3600)).toBe("3일 4시간");
-    expect(formatRemaining(30)).toBe("1분 미만");
+    expect(createFormat("ko").remaining(2 * 3600 + 14 * 60, "1분 미만")).toBe("2시간 14분");
+    expect(createFormat("ko").remaining(3 * 86400 + 4 * 3600, "1분 미만")).toBe("3일 4시간");
+    expect(createFormat("ko").remaining(30, "1분 미만")).toBe("1분 미만");
   });
 });
 
@@ -186,12 +187,12 @@ describe("windowDisplayName·groupSetupSnippets", () => {
 
 describe("formatTokens·groupWindowsByTrust (5.7R.43)", () => {
   it("formatTokens: 10,000 미만은 쉼표 전체, 이상은 한국어 compact", () => {
-    expect(formatTokens(0)).toBe("0");
-    expect(formatTokens(576)).toBe("576");
-    expect(formatTokens(9840)).toBe("9,840");
-    expect(formatTokens(12_345)).toBe("1.2만");
-    expect(formatTokens(54_000)).toBe("5.4만");
-    expect(formatTokens(3_835_480_500)).toMatch(/억/);
+    expect(formatTokens(0, "ko")).toBe("0");
+    expect(formatTokens(576, "ko")).toBe("576");
+    expect(formatTokens(9840, "ko")).toBe("9,840");
+    expect(formatTokens(12_345, "ko")).toBe("1.2만");
+    expect(formatTokens(54_000, "ko")).toBe("5.4만");
+    expect(formatTokens(3_835_480_500, "ko")).toMatch(/억/);
   });
 
   const mk = (window: string, source: string, rule: "recent" | "recent-official" = "recent") =>

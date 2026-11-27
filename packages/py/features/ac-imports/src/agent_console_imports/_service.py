@@ -210,7 +210,7 @@ class ImportService:
                 )
             cache.setdefault(c.kind, set()).add(target)
         except Exception as exc:
-            _log.warning("가져오기 실패: %s/%s (%s)", c.kind, target, type(exc).__name__)
+            _log.warning("Import failed: %s/%s (%s)", c.kind, target, type(exc).__name__)
             return AppliedItemInfo(
                 **info, target_id=target, action="failed", error=type(exc).__name__
             )

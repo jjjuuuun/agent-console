@@ -1,6 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, type RenderOptions, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProfileEditor } from "./ProfileEditor";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
 
 // 관심사는 조합 상태 연결이다. 실제 CodeMirror 대신 같은 props(onChange·onCompositionChange)를 쓰는 textarea로 바꾼다.
 vi.mock("../library", async (orig) => ({

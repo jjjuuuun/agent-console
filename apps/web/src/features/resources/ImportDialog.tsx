@@ -4,13 +4,15 @@ import { Banner, Button, Dialog, Tag } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { useProjectId } from "../../app/projectScope";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { formatCount } from "../../lib/format";
-import { useResourceTypes, Skeleton } from "../settings";
-import { useImportSources, useInvalidateLists, DescriptorIcon, DEFINITION_KINDS, libraryMessages as lm } from "../library";
-import { resourceMessages as t } from "./messages";
+import { useDescribeError, useErrorState, raised } from "../../app/errors";
+import { useServerText } from "@agent-console/i18n";
+import { Skeleton } from "../settings";
+import { useLocalizedResourceTypes } from "./useLocalizedResourceTypes";
+import { useImportSources, useInvalidateLists, DescriptorIcon, DEFINITION_KINDS, useLibraryMessages } from "../library";
+import { useResourceMessages } from "./messages";
 import { buildImportItems, isSecretWarning } from "./resourceLogic";
 import { isImeKeyEvent } from "../../lib/ime";
+import { useFormat, type Format } from "../../i18n";
 
 type Step = "source" | "items" | "result";
 const STEPS: readonly Step[] = ["source", "items", "result"];
@@ -23,9 +25,9 @@ export interface ImportDialogProps {
 
 type PreviewState = { status: "idle" } | { status: "loading" } | { status: "error"; message: string } | { status: "ready"; preview: ImportPreview };
 
-function sizeText(size: number | null | undefined): string {
+function sizeText(size: number | null | undefined, fmt: Format): string {
   if (size == null) return "–";
-  return size < 1024 ? `${formatCount(size)} B` : `${formatCount(Math.round(size / 1024))} KB`;
+  return size < 1024 ? `${fmt.number(size)} B` : `${fmt.number(Math.round(size / 1024))} KB`;
 }
 
 /**
@@ -33,11 +35,16 @@ function sizeText(size: number | null | undefined): string {
  * 원본은 읽기만 하며 선택한 항목을 workspace로 복사한다. 출처 id·종류 이름은 코드에 없다.
  */
 export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
+  const describeError = useDescribeError();
+  const fmt = useFormat();
+  const lm = useLibraryMessages();
+  const t = useResourceMessages();
+  const server = useServerText();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const projectId = useProjectId();
   const sources = useImportSources(projectId);
-  const types = useResourceTypes();
+  const types = useLocalizedResourceTypes();
   const [step, setStep] = useState<Step>("source");
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState>({ status: "idle" });
@@ -46,7 +53,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
   const [kindFilter, setKindFilter] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [importError, setImportError] = useErrorState(t.import.importFailed);
   const [result, setResult] = useState<ImportResult | null>(null);
   const body = useRef<HTMLDivElement>(null);
   // 단계가 바뀌면 눌렀던 버튼이 사라져 포커스가 대화상자 밖으로 빠진다 -> 본문으로 옮겨 Esc·Tab이 계속 동작하게 한다
@@ -86,7 +93,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
       setStep("result");
       await invalidate();
     } catch (e) {
-      setImportError(describeError(e, t.import.importFailed).message);
+      setImportError(raised(e));
     } finally {
       setBusy(false);
     }
@@ -188,8 +195,8 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
                   disabled={s.available === false}
                   onClick={() => setSourceId(s.id)}
                 >
-                  <span className="res-card-title">{s.title}</span>
-                  {s.description ? <span className="app-muted lib-field-note">{s.description}</span> : null}
+                  <span className="res-card-title">{server.text(s.title)}</span>
+                  {s.description ? <span className="app-muted lib-field-note">{server.text(s.description)}</span> : null}
                   {s.path ? <span className="lib-mono app-wrap">{t.import.path}: {s.path}</span> : null}
                   {s.available === false ? <Tag>{t.import.unavailable}</Tag> : null}
                 </button>
@@ -290,7 +297,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
                               : null}
                           </td>
                           <td className="lib-mono lib-cell-clip" title={c.path}>{c.path}</td>
-                          <td className="ac-num">{sizeText(c.size)}</td>
+                          <td className="ac-num">{sizeText(c.size, fmt)}</td>
                         </tr>
                       );
                     })}

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, type RenderOptions, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, NodeRun, RunEvent, TraceSpan } from "@agent-console/contracts";
@@ -6,8 +6,15 @@ import { IconRegistryProvider } from "@agent-console/ui";
 import { appIcons } from "../../app/icons";
 import { AgentsTab } from "./AgentsTab";
 import { RunSessionsChip } from "./RunSessionsChip";
+import { koT } from "../../testing/koText";
+import { createRunsMessages } from "./messages";
 import { buildSessionAnnotations } from "./runSessionView";
 import { EMPTY_SESSIONS, NO_SESSION, deriveRunSessions, sessionOfEvent } from "./runSessions";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
 
 afterEach(cleanup);
 
@@ -99,7 +106,7 @@ describe("세션 칩·팝오버(R0)", () => {
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).slice(0, 6)).toEqual(["세션", "이름", "백엔드", "시작", "소요", "서브"]);
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows[0]!.textContent).toContain("S1");
-    expect(rows[0]!.textContent).toContain("+0.0초");
+    expect(rows[0]!.textContent).toContain("+0초");
     expect(rows[1]!.textContent).toContain("+30초");
     expect(within(table).getAllByRole("link", { name: "로그 보기" })[0]!.getAttribute("href")).toBe("/l?session=sa");
   });
@@ -123,7 +130,7 @@ describe("그래프 세션 표시(R0)", () => {
   const edgeTypes = [{ id: "z-deleg", title: "위임", invocation: { strategy: "m-1" }, scheduling: "none" }] as unknown as EdgeTypeDescriptor[];
   const strategies = [{ id: "m-1", title: "방식", session: "same", member_fields: [], max_depth: 1 }] as unknown as DelegationStrategyDescriptor[];
   const graph = { nodes: [{ id: "L", type: "t" }, { id: "W", type: "t" }, { id: "S1", type: "t" }], edges: [{ id: "e1", kind: "z-deleg", source: { node: "L", port: "o" }, target: { node: "S1", port: "i" } }] } as never;
-  const base = { graph, edgeTypes, strategies, sessions, nodeLabel: label, selectedSessionId: null, calledNodes: new Set<string>(), onOpenSubs: () => {} };
+  const base = { t: createRunsMessages(koT("runs")), graph, edgeTypes, strategies, sessions, nodeLabel: label, selectedSessionId: null, calledNodes: new Set<string>(), onOpenSubs: () => {} };
   it("노드에 띠·S{n}·서브 표식, 같은 세션 대상에는 위임자 세션 안 · S{n} 칩과 호출 전 글자", () => {
     const a = buildSessionAnnotations(base);
     expect(a["L"]!.lead!.text).toBe("S1");

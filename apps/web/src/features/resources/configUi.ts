@@ -1,7 +1,7 @@
 import type { UiSchema } from "@agent-console/schema-form";
 import { STRING_TAGS_FIELD } from "../settings";
 import { resolveRef, unwrapNullable } from "../../lib/schemaTools";
-import { resourceMessages as t } from "./messages";
+import type { ResourceTexts } from "./messages";
 
 type Obj = Record<string, unknown>;
 
@@ -60,7 +60,7 @@ export function namedWidgetUi(node: Obj, root: Obj, names: ReadonlySet<string>, 
  * - 문자열 배열 -> 태그 입력(제안 = 항목 스키마 `examples`, placeholder = 첫 예시).
  * - `examples`가 있는 문자열 -> 입력 위 제안 목록(브라우저 datalist, 목록에 없는 값도 입력 가능)과 한 줄 안내.
  */
-export function buildConfigUi(schema: Obj | undefined, serverUi: Obj | undefined, widgetNames: ReadonlySet<string> = new Set()): UiSchema {
+export function buildConfigUi(schema: Obj | undefined, serverUi: Obj | undefined, widgetNames: ReadonlySet<string>, t: ResourceTexts): UiSchema {
   const out: Obj = { ...(serverUi ?? {}) };
   const props = schema?.["properties"];
   if (!isObj(props)) return out as UiSchema;

@@ -63,7 +63,7 @@ To use English, pass the bundle as `messages` (to the components and to function
 ```tsx
 import en from "@agent-console/memory-view/locales/en";
 
-<MemoryScopeTree kinds={kinds} scopes={scopes} messages={en} /* … */ />
+<MemoryScopeTree kinds={kinds} scopes={scopes} messages={en} locale="en" /* … */ />
 ```
 The Korean bundle is `@agent-console/memory-view/locales/ko`. Both files also export `tree` (the JSON as a tree) for code that takes tree bundles. To change only a few messages, spread and override: `messages={{ ...en, "table.empty": "…" }}`. For a new language, build an object with the same keys. The component sources contain no Korean string literals (the same test checks this).
 
@@ -77,7 +77,7 @@ The Korean bundle is `@agent-console/memory-view/locales/ko`. Both files also ex
 | `MemoryVersionList` | The version list (newest first, with operation chips, author, time, and size change) |
 | `MemoryVersionDiff` | Previous/current comparison, side by side or inline, a text description for an operation with no content, and [Revert to this version] |
 | `RetentionPreview` | A cleanup plan summary + a virtual table (up to 200 rows) + [Apply now]. The call and the confirmation window belong to the app |
-| `groupScopes(kinds, scopes)` | Groups by kind (server order, scopes by label), the entry totals, `selfScope`, and separation of unusable scopes |
+| `groupScopes(kinds, scopes, { locale? })` | Groups by kind (server order, scopes by label in `locale`, default `"en"`), the entry totals, `selfScope`, and separation of unusable scopes |
 | `scopeLabel(scope, kind, resolvers)` | The scope label. Resolves names per context field, and marks deleted or unknown kinds |
 | `visibleScopes(scopes, kinds, project, graphs)` | Filtering for the project switcher (decided only from `context_fields` and the id template) |
 | `formatAuthor(author, options)` | Author display (an agent avatar and name, chips for user, cleanup, and import, and the raw text for an unknown kind) |

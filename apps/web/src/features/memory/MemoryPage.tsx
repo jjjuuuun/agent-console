@@ -19,7 +19,7 @@ import {
   type ScopeLabel,
 } from "@agent-console/memory-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { queryKeys, useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
@@ -37,7 +37,6 @@ import { FloatingMenu, PaneSeparator, ScopeSummaryPanel } from "./MemoryParts";
 import { MemoryToolbar } from "./MemoryToolbar";
 import { IMPORTED_AUTHOR_KIND, MEMORY_LIMITS, MEMORY_PARAMS, MEMORY_STORAGE, MEMORY_STORE_LIBRARY, SETTINGS_SECTION, SORT_KEYS_BY_COLUMN, WARNING_CODES, WARNING_PREFIX } from "./memoryConfig";
 import { hasFilters, parseView, scopeParam, writeView, type MemoryViewState } from "./memoryUrl";
-import { memoryMessages as t } from "./messages";
 import { useContainerWidth } from "./useContainerWidth";
 import { useLeaveGuard } from "./useLeaveGuard";
 import { useMemoryActions } from "./useMemoryActions";
@@ -47,6 +46,11 @@ import { useMemoryStore } from "./useMemoryStore";
 import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryProject, useMemoryRest, useMemoryScopes } from "./useMemoryApi";
 import { useMemoryLive } from "./useMemoryLive";
 import "./memory.css";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useViewMessages } from "./format";
+import { useUiLibMessages } from "../../i18n/useViewLibMessages";
+import { useLanguageCode } from "../../i18n";
 
 type Dlg =
   | { kind: "move"; entry: MemoryEntry | MemoryEntrySummary; dirty: boolean }
@@ -68,7 +72,13 @@ const readWidth = (raw: string | null, spec: { def: number; min: number; max: nu
 const isEditable = (el: EventTarget | null): boolean => el instanceof HTMLElement && (el.closest("input, textarea, select, [contenteditable='true'], [data-ac-editable]") !== null);
 
 export function MemoryPage({ layoutWidth }: MemoryPageProps) {
-  usePageTitle(t.title);
+  const describeError = useDescribeError();
+  const viewMessages = useViewMessages();
+  const language = useLanguageCode();
+  const t = useT("memory");
+  const uiMessages = useUiLibMessages();
+  const tm = useMaybeT("memory");
+  usePageTitle(t("title"));
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const view = useMemo(() => parseView(params), [params]);
@@ -83,7 +93,12 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const kindsQ = useMemoryKinds();
   const scopesQ = useMemoryScopes();
   const entries = useMemoryEntries(view, view.q);
-  const kinds = useMemo(() => kindsQ.data?.kinds ?? [], [kindsQ.data]);
+  const serverText = useServerText();
+  // 범위 종류 이름·설명은 서버 데이터(패키지 기본·플러그인·사용자)라 서버 원문 번역을 거친다.
+  const kinds = useMemo(
+    () => (kindsQ.data?.kinds ?? []).map((k) => ({ ...k, label: serverText.text(k.label), ...(k.description === undefined ? {} : { description: serverText.text(k.description) }) })),
+    [kindsQ.data, serverText],
+  );
   const allScopes = useMemo(() => scopesQ.data ?? [], [scopesQ.data]);
   const info = useApiQuery(queryKeys.descriptors("server-info"), (rest) => rest.getServerInfo(), { retry: false, meta: { silentBackgroundError: true } });
   const warnings = (info.data?.warnings ?? []).filter((w) => w.code.startsWith(WARNING_PREFIX));
@@ -235,7 +250,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
         const now = Date.now();
         if (now - lastAnnounce.current >= MEMORY_LIMITS.announceMs) {
           lastAnnounce.current = now;
-          setAnnounce(t.toast.newChanges(pendingChangesRef.current + batch.length));
+          setAnnounce(t("toast.newChanges", { count: pendingChangesRef.current + batch.length }));
         }
       }
     },
@@ -260,7 +275,11 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const total = allScopes.reduce((n, s) => n + s.entries, 0);
-  const items = entries.items;
+  // 쓴 주체의 이름표(기본 "사용자" 등)는 서버 원문일 수 있어 화면 언어로 옮긴다. 에이전트 이름 같은 사용자 데이터는 묶음에 없어 그대로다.
+  const items = useMemo(() => {
+    const localize = (author: MemoryEntrySummary["updated_by"] | undefined) => (author?.label ? { ...author, label: serverText.text(author.label) } : author);
+    return entries.items.map((e) => ({ ...e, ...(e.updated_by === undefined ? {} : { updated_by: localize(e.updated_by) as MemoryEntrySummary["updated_by"] }) }));
+  }, [entries.items, serverText]);
   const noKinds = kindsQ.isSuccess && kinds.filter((k) => k.disabled !== true).length === 0;
   const workspaceEmpty = scopesQ.isSuccess && total === 0 && !hasFilters(view) && view.scope === null;
   const selectedSummary = items.find((e) => e.id === view.entry);
@@ -282,12 +301,12 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const entryMenuItems = (entry: MemoryEntry | MemoryEntrySummary, onDone?: () => void): MenuItemDef[] => {
     const deleted = entry.deleted_at !== null && entry.deleted_at !== undefined;
     return [
-      { id: "move", label: t.menu.move, disabled: deleted, onSelect: () => setDialog({ kind: "move", entry, dirty: false }) },
-      { id: "history", label: t.menu.history, onSelect: () => setDialog({ kind: "history", entry, dirty: false }) },
+      { id: "move", label: t("menu.move"), disabled: deleted, onSelect: () => setDialog({ kind: "move", entry, dirty: false }) },
+      { id: "history", label: t("menu.history"), onSelect: () => setDialog({ kind: "history", entry, dirty: false }) },
       ...promoteItems(entry),
-      { id: "archive", label: entry.archived === true ? t.menu.unarchive : t.menu.archive, icon: "archive", disabled: deleted, onSelect: () => void actions.archive(entry, entry.archived !== true).then(() => onDone?.()) },
-      { id: "delete", label: t.menu.delete, disabled: deleted, onSelect: () => void actions.remove(entry) },
-      { id: "purge", label: t.menu.purge, danger: true, onSelect: () => setDialog({ kind: "purge", entry }) },
+      { id: "archive", label: entry.archived === true ? t("menu.unarchive") : t("menu.archive"), icon: "archive", disabled: deleted, onSelect: () => void actions.archive(entry, entry.archived !== true).then(() => onDone?.()) },
+      { id: "delete", label: t("menu.delete"), disabled: deleted, onSelect: () => void actions.remove(entry) },
+      { id: "purge", label: t("menu.purge"), danger: true, onSelect: () => setDialog({ kind: "purge", entry }) },
     ];
   };
 
@@ -316,7 +335,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
 
   // ---- 조각들 ---------------------------------------------------------------------------------
   const tree = (
-    <MemoryScopeTree
+    <MemoryScopeTree messages={viewMessages} locale={language}
       kinds={kinds}
       scopes={treeScopes}
       selected={view.scope}
@@ -339,16 +358,16 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
     <Popover
       open={scopeOpen}
       onOpenChange={setScopeOpen}
-      panelLabel={t.scope.picker}
+      panelLabel={t("scope.picker")}
       panelClassName="mem-pop mem-pop-tree"
       renderTrigger={(p) => (
-        <button {...p} type="button" className="mem-tool mem-scope-btn" title={view.scope === null ? t.scope.pickerAll : labelText(view.scope)}>
-          <span className="ac-ellipsis">{view.scope === null ? t.scope.pickerAll : t.scope.pickerButton(labelText(view.scope))}</span> <Icon name="chevron-down" size={12} />
+        <button {...p} type="button" className="mem-tool mem-scope-btn" title={view.scope === null ? t("scope.pickerAll") : labelText(view.scope)}>
+          <span className="ac-ellipsis">{view.scope === null ? t("scope.pickerAll") : t("scope.pickerButton", { label: labelText(view.scope) })}</span> <Icon name="chevron-down" size={12} />
         </button>
       )}
     >
       {({ close }) => (
-        <MemoryScopeTree
+        <MemoryScopeTree messages={viewMessages} locale={language}
           kinds={kinds}
           scopes={treeScopes}
           selected={view.scope}
@@ -366,14 +385,14 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
 
   const chips: ChipItem[] = [];
   const addChip = (id: string, label: string, remove: () => void, title?: string) =>
-    chips.push({ id, label, title: title ?? t.chip.remove(label), icon: "close", active: true, onSelect: remove });
-  if (showAllScopes && ctx.project !== null) addChip("released", t.chip.projectReleased, () => setShowAllScopes(false));
-  if (view.tag !== null) addChip("tag", t.chip.tag(view.tag), () => change({ tag: null }));
-  if (view.authorKind !== null) addChip("authorKind", t.chip.authorKind(t.authorKind[view.authorKind] ?? view.authorKind), () => change({ authorKind: null }));
+    chips.push({ id, label, title: title ?? t("chip.remove", { label }), icon: "close", active: true, onSelect: remove });
+  if (showAllScopes && ctx.project !== null) addChip("released", t("chip.projectReleased"), () => setShowAllScopes(false));
+  if (view.tag !== null) addChip("tag", t("chip.tag", { name: view.tag }), () => change({ tag: null }));
+  if (view.authorKind !== null) addChip("authorKind", t("chip.authorKind", { label: tm(`authorKind.${view.authorKind}`) ?? view.authorKind }), () => change({ authorKind: null }));
   if (view.authorRun !== null) {
     const runId = view.authorRun;
-    addChip("authorRun", t.chip.authorRun(runId), () => change({ authorRun: null }), t.chip.authorRunTip(runId));
-    if (runsOn) chips.push({ id: "openRun", label: t.chip.openRun, icon: "external-link", onSelect: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) });
+    addChip("authorRun", t("chip.authorRun", { id: runId.slice(0, 8) }), () => change({ authorRun: null }), t("chip.authorRunTip", { id: runId }));
+    if (runsOn) chips.push({ id: "openRun", label: t("chip.openRun"), icon: "external-link", onSelect: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) });
   }
   const clearAll = () => {
     setShowAllScopes(false);
@@ -381,33 +400,33 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   };
 
   // ---- 표 자리 상태 ---------------------------------------------------------------------------
-  const clearFiltersButton = <Button onClick={clearAll}>{t.state.clearFilters}</Button>;
+  const clearFiltersButton = <Button onClick={clearAll}>{t("state.clearFilters")}</Button>;
   let tableEmpty: React.ReactNode;
   if (entries.pending) {
-    tableEmpty = <div className="mem-skeleton" role="status" aria-busy="true" aria-label={t.loading}><Spinner /></div>;
+    tableEmpty = <div className="mem-skeleton" role="status" aria-busy="true" aria-label={t("loading")}><Spinner /></div>;
   } else if (entries.error !== null && items.length === 0) {
-    tableEmpty = <ErrorBlock title={t.state.errorList} message={describeError(entries.error, t.state.errorList).message} retryLabel={t.retry} onRetry={entries.refetch} />;
+    tableEmpty = <ErrorBlock title={t("state.errorList")} message={describeError(entries.error, t("state.errorList")).message} retryLabel={t("retry")} onRetry={entries.refetch} />;
   } else if (workspaceEmpty) {
     tableEmpty = (
       <EmptyState
         icon={routeIconNode(ROUTE_ROLES.memory, 32)}
-        title={t.state.emptyTitle}
+        title={t("state.emptyTitle")}
         description={
           <>
-            <p>{t.state.emptyBody}</p>
-            <ul className="mem-benefits">{t.state.benefits.map((b) => <li key={b}>{b}</li>)}</ul>
-            <p className="mem-muted">{t.state.hintResourceNoType}</p>
+            <p>{t("state.emptyBody")}</p>
+            <ul className="mem-benefits">{[1, 2, 3].map((i) => <li key={i}>{t(`state.benefit${i}`)}</li>)}</ul>
+            <p className="mem-muted">{t("state.hintResourceNoType")}</p>
           </>
         }
-        action={<Button onClick={() => setDialog({ kind: "import" })}>{t.actions.import}</Button>}
+        action={<Button onClick={() => setDialog({ kind: "import" })}>{t("actions.import")}</Button>}
       />
     );
   } else if (hasFilters(view)) {
     tableEmpty = (
-      <EmptyState title={view.q.trim() !== "" && view.tag === null && view.authorKind === null && view.authorRun === null ? t.state.filterNoneQ(view.q) : t.state.filterNone} action={clearFiltersButton} />
+      <EmptyState title={view.q.trim() !== "" && view.tag === null && view.authorKind === null && view.authorRun === null ? t("state.filterNoneQ", { q: view.q }) : t("state.filterNone")} action={clearFiltersButton} />
     );
   } else if (view.scope !== null) {
-    tableEmpty = <EmptyState title={t.state.scopeEmptyTitle} />;
+    tableEmpty = <EmptyState title={t("state.scopeEmptyTitle")} />;
   }
 
   // ---- 상세 칸 --------------------------------------------------------------------------------
@@ -473,30 +492,30 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   }
 
   const exportItems: MenuItemDef[] = [
-    { id: "current", label: t.export.current, disabled: view.scope === null || total === 0, title: view.scope === null ? t.export.disabledNoScope : undefined, onSelect: () => void actions.exportScope(view.scope) },
-    { id: "all", label: t.export.all, disabled: total === 0, title: total === 0 ? t.export.disabledEmpty : undefined, onSelect: () => void actions.exportScope(null) },
+    { id: "current", label: t("export.current"), disabled: view.scope === null || total === 0, title: view.scope === null ? t("export.disabledNoScope") : undefined, onSelect: () => void actions.exportScope(view.scope) },
+    { id: "all", label: t("export.all"), disabled: total === 0, title: total === 0 ? t("export.disabledEmpty") : undefined, onSelect: () => void actions.exportScope(null) },
   ];
 
   const headerActions = (
     <>
       <ProjectChip />
       {store.projectsOn ? <MemoryStoreChip library={store.library} project={store.canChoose ? { name: store.currentName ?? "" } : null} onSelect={selectStore} /> : null}
-      <Button variant="primary" icon={<Icon name="plus" />} onClick={() => startCreate()} disabled={noKinds}>{t.actions.new}</Button>
+      <Button variant="primary" icon={<Icon name="plus" />} onClick={() => startCreate()} disabled={noKinds}>{t("actions.new")}</Button>
       <Popover
         open={exportOpen}
         onOpenChange={setExportOpen}
         panelRole="menu"
-        panelLabel={t.export.menuLabel}
+        panelLabel={t("export.menuLabel")}
         align="end"
         renderTrigger={(p) => (
-          <Button {...p} disabled={total === 0}>{t.actions.export} <Icon name="chevron-down" size={12} /></Button>
+          <Button {...p} disabled={total === 0}>{t("actions.export")} <Icon name="chevron-down" size={12} /></Button>
         )}
       >
         <Menu items={exportItems} onClose={() => setExportOpen(false)} />
-        <p className="mem-help mem-pop-note">{t.export.note}</p>
+        <p className="mem-help mem-pop-note">{t("export.note")}</p>
       </Popover>
-      <Button onClick={() => setDialog({ kind: "import" })}>{t.actions.import}</Button>
-      <IconButton label={t.actions.settings} icon={<Icon name="settings" />} onClick={() => void navigate(settingsPath)} />
+      <Button onClick={() => setDialog({ kind: "import" })}>{t("actions.import")}</Button>
+      <IconButton label={t("actions.settings")} icon={<Icon name="settings" />} onClick={() => void navigate(settingsPath)} />
     </>
   );
 
@@ -505,19 +524,19 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const searchSlow = warnings.some((w) => w.code === WARNING_CODES.searchFallback);
 
   return (
-    <div className="app-screen-frame mem-frame" data-screen="memory" data-cols={threeCols ? 3 : 2} role="region" aria-label={t.region} onKeyDown={onKeyDown}>
-      <PageHeader title={t.title} actions={headerActions} />
+    <div className="app-screen-frame mem-frame" data-screen="memory" data-cols={threeCols ? 3 : 2} role="region" aria-label={t("region")} onKeyDown={onKeyDown}>
+      <PageHeader title={t("title")} actions={headerActions} />
       {storageWarning !== undefined ? (
-        <Banner tone="warning" className="mem-banner" actions={<Button size="sm" disabled={total === 0} onClick={() => void actions.exportScope(null)}>{t.actions.export}</Button>}>
-          {t.storageMemory}
+        <Banner tone="warning" className="mem-banner" actions={<Button size="sm" disabled={total === 0} onClick={() => void actions.exportScope(null)}>{t("actions.export")}</Button>}>
+          {t("storageMemory")}
         </Banner>
       ) : null}
       {store.noProjects ? (
-        <Banner tone="info" className="mem-banner" data-memory-store-note="none" actions={<Button size="sm" onClick={() => projects.requestAddFolder()}>{t.store.addFolder}</Button>}>
-          {t.store.noProjectNote}
+        <Banner tone="info" className="mem-banner" data-memory-store-note="none" actions={<Button size="sm" onClick={() => projects.requestAddFolder()}>{t("store.addFolder")}</Button>}>
+          {t("store.noProjectNote")}
         </Banner>
       ) : store.canChoose && store.library ? (
-        <HintBanner id="memory.store.library">{t.store.libraryNote}</HintBanner>
+        <HintBanner id="memory.store.library">{t("store.libraryNote")}</HintBanner>
       ) : null}
       {otherWarnings.map((w) => <Banner key={w.code} tone="warning" className="mem-banner">{w.message}</Banner>)}
       {noKinds ? null : (
@@ -534,25 +553,25 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
       )}
       {chips.length > 0 && !noKinds ? (
         <div className="mem-chips">
-          <ChipRow chips={chips} ariaLabel={t.toolbar.filters} />
-          {chips.filter((c) => c.active).length >= 2 ? <button type="button" className="mem-linkbtn" onClick={clearAll}>{t.toolbar.clearAll}</button> : null}
+          <ChipRow messages={uiMessages} chips={chips} ariaLabel={t("toolbar.filters")} />
+          {chips.filter((c) => c.active).length >= 2 ? <button type="button" className="mem-linkbtn" onClick={clearAll}>{t("toolbar.clearAll")}</button> : null}
         </div>
       ) : null}
       <div ref={bodyRef} className="mem-body">
         {noKinds ? (
           <EmptyState
             icon={routeIconNode(ROUTE_ROLES.memory, 32)}
-            title={t.state.noKindsTitle}
-            description={t.state.noKindsBody}
-            action={<Button variant="primary" onClick={() => void navigate(settingsPath)}>{t.state.openSettings}</Button>}
+            title={t("state.noKindsTitle")}
+            description={t("state.noKindsBody")}
+            action={<Button variant="primary" onClick={() => void navigate(settingsPath)}>{t("state.openSettings")}</Button>}
           />
         ) : (
           <>
             {threeCols ? (
               <>
-                <aside className="mem-tree" style={{ width: treeWidth }} aria-label={t.scope.treeLabel}>
+                <aside className="mem-tree" style={{ width: treeWidth }} aria-label={t("scope.treeLabel")}>
                   {kindsQ.isError || scopesQ.isError ? (
-                    <ErrorBlock title={t.state.errorTree} retryLabel={t.retry} onRetry={() => void invalidate()} />
+                    <ErrorBlock title={t("state.errorTree")} retryLabel={t("retry")} onRetry={() => void invalidate()} />
                   ) : (
                     tree
                   )}
@@ -561,7 +580,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
                   side="left"
                   size={treeWidth}
                   {...MEMORY_LIMITS.tree}
-                  label={t.keyboard.treeSplit}
+                  label={t("keyboard.treeSplit")}
                   onChange={(next) => {
                     setTreeWidth(next);
                     storage.set(MEMORY_STORAGE.treeWidth, String(next));
@@ -572,12 +591,12 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
             <section className="mem-list" data-busy={entries.fetching && !entries.pending ? "" : undefined}>
               {pendingChanges > 0 ? (
                 <button type="button" className="mem-newchanges" onClick={refreshNow}>
-                  {t.live.newChanges(pendingChanges)} — {t.live.toTop}
+                  {t("live.newChanges", { count: pendingChanges })} — {t("live.toTop")}
                 </button>
               ) : null}
               <span className="mem-sr" role="status" aria-live="polite">{announce}</span>
               <div className="mem-table-wrap">
-                <MemoryEntryTable
+                <MemoryEntryTable messages={viewMessages}
                   entries={items}
                   total={entries.total}
                   hasMore={entries.hasMore}
@@ -610,7 +629,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
                   side="right"
                   size={detailWidth}
                   {...MEMORY_LIMITS.detail}
-                  label={t.keyboard.detailSplit}
+                  label={t("keyboard.detailSplit")}
                   onChange={(next) => {
                     setDetailWidth(next);
                     storage.set(MEMORY_STORAGE.detailWidth, String(next));
@@ -624,7 +643,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
       </div>
       {leaveDialog}
       {rowMenu !== null ? (
-        <FloatingMenu anchor={rowMenu.anchor} label={t.menu.label(rowMenu.entry.key)} items={entryMenuItems(rowMenu.entry)} onClose={() => setRowMenu(null)} />
+        <FloatingMenu anchor={rowMenu.anchor} label={t("menu.label", { key: rowMenu.entry.key })} items={entryMenuItems(rowMenu.entry)} onClose={() => setRowMenu(null)} />
       ) : null}
       {promote.dialog}
       {dialog?.kind === "move" ? (

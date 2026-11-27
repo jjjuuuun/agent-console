@@ -7,29 +7,58 @@ import type { MessageTree } from "@agent-console/i18n";
  */
 type Loader = () => Promise<MessageTree>;
 
-const pick = (mod: { default: unknown }): MessageTree => mod.default as MessageTree;
+/** 묶음 모듈이 내보낼 수 있는 모양: 나무(`tree`, 평면 표를 default로 두는 패키지) 또는 default가 곧 나무인 패키지. */
+interface LocaleModule {
+  default: unknown;
+  tree?: unknown;
+}
+
+/**
+ * 점 표기 평면 표(`{ "a.b": "x" }`)를 나무(`{ a: { b: "x" } }`)로 바꾼다. 이미 나무인 값은 그대로 둔다.
+ * 평면 표를 default로 내보내는 패키지(folder-picker)를 i18next 묶음에 올리려고 쓴다.
+ */
+export function nestFlatKeys(flat: unknown): MessageTree {
+  const out: MessageTree = {};
+  if (typeof flat !== "object" || flat === null) return out;
+  for (const [key, value] of Object.entries(flat as Record<string, unknown>)) {
+    const path = key.split(".");
+    let node = out;
+    for (const part of path.slice(0, -1)) {
+      const next = node[part];
+      if (typeof next === "object") node = next;
+      else node = node[part] = {};
+    }
+    const last = path[path.length - 1] as string;
+    if (typeof value === "string") node[last] = value;
+    else if (typeof value === "object" && value !== null) node[last] = nestFlatKeys(value);
+  }
+  return out;
+}
+
+/** 묶음 모듈에서 나무를 꺼낸다: named `tree`가 있으면 그것, 없으면 default(점 표기 평면 표면 나무로 바꾼다). */
+export const pick = (mod: LocaleModule): MessageTree => {
+  if (mod.tree !== undefined) return mod.tree as MessageTree;
+  const flat = typeof mod.default === "object" && mod.default !== null && Object.keys(mod.default).some((key) => key.includes("."));
+  return flat ? nestFlatKeys(mod.default) : (mod.default as MessageTree);
+};
+
+/** 패키지 이름 -> 언어 -> 로더. 새 패키지는 한 줄을 더한다. */
+function both(ko: () => Promise<LocaleModule>, en: () => Promise<LocaleModule>): Readonly<Record<string, Loader>> {
+  return { ko: () => ko().then(pick), en: () => en().then(pick) };
+}
 
 export const LIB_LOCALES: Readonly<Record<string, Readonly<Record<string, Loader>>>> = {
-  ui: { ko: () => import("@agent-console/ui/locales/ko").then(pick), en: () => import("@agent-console/ui/locales/en").then(pick) },
-  "schema-form": {
-    ko: () => import("@agent-console/schema-form/locales/ko").then(pick),
-    en: () => import("@agent-console/schema-form/locales/en").then(pick),
-  },
-  "graph-editor": {
-    ko: () => import("@agent-console/graph-editor/locales/ko").then(pick),
-    en: () => import("@agent-console/graph-editor/locales/en").then(pick),
-  },
-  chat: { ko: () => import("@agent-console/chat/locales/ko").then(pick), en: () => import("@agent-console/chat/locales/en").then(pick) },
-  "log-view": {
-    ko: () => import("@agent-console/log-view/locales/ko").then(pick),
-    en: () => import("@agent-console/log-view/locales/en").then(pick),
-  },
-  "trace-view": {
-    ko: () => import("@agent-console/trace-view/locales/ko").then(pick),
-    en: () => import("@agent-console/trace-view/locales/en").then(pick),
-  },
-  "arch-view": {
-    ko: () => import("@agent-console/arch-view/locales/ko").then(pick),
-    en: () => import("@agent-console/arch-view/locales/en").then(pick),
-  },
+  ui: both(() => import("@agent-console/ui/locales/ko"), () => import("@agent-console/ui/locales/en")),
+  "schema-form": both(() => import("@agent-console/schema-form/locales/ko"), () => import("@agent-console/schema-form/locales/en")),
+  "graph-editor": both(() => import("@agent-console/graph-editor/locales/ko"), () => import("@agent-console/graph-editor/locales/en")),
+  chat: both(() => import("@agent-console/chat/locales/ko"), () => import("@agent-console/chat/locales/en")),
+  "log-view": both(() => import("@agent-console/log-view/locales/ko"), () => import("@agent-console/log-view/locales/en")),
+  "trace-view": both(() => import("@agent-console/trace-view/locales/ko"), () => import("@agent-console/trace-view/locales/en")),
+  "arch-view": both(() => import("@agent-console/arch-view/locales/ko"), () => import("@agent-console/arch-view/locales/en")),
+  "folder-picker": both(() => import("@agent-console/folder-picker/locales/ko"), () => import("@agent-console/folder-picker/locales/en")),
+  "markdown-doc": both(() => import("@agent-console/markdown-doc/locales/ko"), () => import("@agent-console/markdown-doc/locales/en")),
+  "memory-view": both(() => import("@agent-console/memory-view/locales/ko"), () => import("@agent-console/memory-view/locales/en")),
+  "wiki-view": both(() => import("@agent-console/wiki-view/locales/ko"), () => import("@agent-console/wiki-view/locales/en")),
+  "sdd-view": both(() => import("@agent-console/sdd-view/locales/ko"), () => import("@agent-console/sdd-view/locales/en")),
+  projects: both(() => import("@agent-console/projects/locales/ko"), () => import("@agent-console/projects/locales/en")),
 };

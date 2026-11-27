@@ -2,7 +2,8 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { NODE_PATH_SEPARATOR } from "../../lib/nodePath";
 import { RUNS_BLOCK_PORTS } from "./runsBlockPorts";
-import { targetPickerMessages as m } from "./targetPickerMessages";
+import { useCallback } from "react";
+import { useTargetPickerMessages, type TargetPickerMessages } from "./targetPickerMessages";
 
 /** 시작 오류 배너가 붙이는 해결 버튼 종류. 화면이 이 값을 보고 동작을 연결한다(서버가 준 `fix`는 따로 그대로 그린다). */
 export type StartFix = "pickProject" | "importAndRun" | "toLibrary" | "repath" | "checkInHome" | "retry" | "openSettings" | "none";
@@ -23,21 +24,23 @@ const FOLDER_CODES: ReadonlySet<string> = new Set([ERROR_CODES.PROJECT_FOLDER_MI
 const str = (v: unknown): string | undefined => (typeof v === "string" && v !== "" ? v : undefined);
 
 /** `project.records_unavailable`의 `details.reason` → 배너(표 하나, screen-projects §5.4 시작·실행 오류 표). */
-const RECORDS_REASONS: Readonly<Record<string, Omit<StartErrorView, "notImported">>> = {
-  readonly: { tone: "warning", message: m.error.recordsReadonly, fix: "repath" },
-  folder_missing: { tone: "warning", message: m.error.recordsFolderMissing, fix: "repath" },
-  newer: { tone: "warning", message: m.error.recordsNewer, fix: "none" },
-  busy: { tone: "warning", message: m.error.recordsBusy, fix: "retry" },
-  link_disabled: { tone: "info", message: m.error.recordsBroken, fix: "checkInHome" },
-};
-const RECORDS_BROKEN: Omit<StartErrorView, "notImported"> = { tone: "danger", message: m.error.recordsBroken, fix: "checkInHome" };
+function recordsReasons(m: TargetPickerMessages): Readonly<Record<string, Omit<StartErrorView, "notImported">>> {
+  return {
+    readonly: { tone: "warning", message: m.error.recordsReadonly, fix: "repath" },
+    folder_missing: { tone: "warning", message: m.error.recordsFolderMissing, fix: "repath" },
+    newer: { tone: "warning", message: m.error.recordsNewer, fix: "none" },
+    busy: { tone: "warning", message: m.error.recordsBusy, fix: "retry" },
+    link_disabled: { tone: "info", message: m.error.recordsBroken, fix: "checkInHome" },
+  };
+}
 
 /**
  * 시작·실행 요청이 실패했을 때 배너로 보일 내용. 알려진 프로젝트 오류만 풀고 나머지는 null(호출자가 서버 메시지를 그대로 보인다).
  * 서버 이슈 코드의 문구는 만들지 않고, 위 표의 문구와 해결 버튼 종류만 정한다.
+ * @param m 시작 대상 고르기 문구(`useTargetPickerMessages()`).
  * @param nameOf `project.not_imported` 배너에 보일 구성 이름(종류·id로 찾는다, 없으면 id)
  */
-export function startErrorView(error: unknown, nameOf: (kind: string | undefined, id: string | undefined) => string = (_k, id) => id ?? ""): StartErrorView | null {
+export function startErrorView(error: unknown, m: TargetPickerMessages, nameOf: (kind: string | undefined, id: string | undefined) => string = (_k, id) => id ?? ""): StartErrorView | null {
   if (!(error instanceof ApiError)) return null;
   const d = error.details;
   switch (error.code) {
@@ -59,7 +62,7 @@ export function startErrorView(error: unknown, nameOf: (kind: string | undefined
       return { tone: "danger", message: m.error.manifestInvalid, fix: "checkInHome" };
     case ERROR_CODES.PROJECT_RECORDS_UNAVAILABLE: {
       const reason = str(d["reason"]);
-      return RECORDS_REASONS[reason ?? ""] ?? RECORDS_BROKEN;
+      return recordsReasons(m)[reason ?? ""] ?? { tone: "danger", message: m.error.recordsBroken, fix: "checkInHome" };
     }
     case ERROR_CODES.PROJECT_CONFIG_READONLY:
       return { tone: "warning", message: m.error.configReadonly, fix: "repath" };
@@ -78,4 +81,10 @@ export function startErrorView(error: unknown, nameOf: (kind: string | undefined
     default:
       return FOLDER_CODES.has(error.code) ? { tone: "danger", message: m.error.folderUnusable, fix: "repath" } : null;
   }
+}
+
+/** 현재 언어의 문구로 `startErrorView`를 부르는 함수(렌더 때 만든다). */
+export function useStartErrorView(): (error: unknown, nameOf?: (kind: string | undefined, id: string | undefined) => string) => StartErrorView | null {
+  const m = useTargetPickerMessages();
+  return useCallback((error, nameOf) => startErrorView(error, m, nameOf), [m]);
 }

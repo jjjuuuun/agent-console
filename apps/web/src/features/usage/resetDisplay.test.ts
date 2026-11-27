@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatResetClock, formatResetsPhrase, isFarReset, formatShortClock, formatResetLine } from "./resetDisplay";
+import { createFormat } from "../../i18n";
 import { RESET_DATE_AFTER_SECONDS } from "./usageConfig";
+
+const fmt = createFormat("ko");
+const UNDER = "1분 미만";
 
 const rel = (r: string) => `까지 ${r}`;
 const on = (d: string) => `날짜 ${d}`;
@@ -12,13 +16,13 @@ describe("먼 미래 resets_at 표시", () => {
   it("기준 이하는 남은 시간, 넘으면 날짜(기준값은 설정 데이터)", () => {
     expect(isFarReset(now + RESET_DATE_AFTER_SECONDS, now)).toBe(false);
     expect(isFarReset(now + RESET_DATE_AFTER_SECONDS + 1, now)).toBe(true);
-    expect(formatResetsPhrase(now + 3 * 86400, now, rel, on)).toEqual({ text: "까지 3일", far: false });
-    const far = formatResetsPhrase(now + 45 * 86400, now, rel, on);
+    expect(formatResetsPhrase(now + 3 * 86400, now, fmt, UNDER, rel, on)).toEqual({ text: "까지 3일", far: false });
+    const far = formatResetsPhrase(now + 45 * 86400, now, fmt, UNDER, rel, on);
     expect(far.far).toBe(true);
     expect(far.text.startsWith("날짜 ")).toBe(true);
   });
   it("기준을 인자로 바꿀 수 있다", () => {
-    expect(formatResetsPhrase(now + 2 * 86400, now, rel, on, 86400).far).toBe(true);
+    expect(formatResetsPhrase(now + 2 * 86400, now, fmt, UNDER, rel, on, 86400).far).toBe(true);
   });
 });
 
@@ -37,28 +41,28 @@ describe("사이드바 초기화 줄(사용자 요청 10/28)", () => {
   const at = (y: number, mo: number, d: number, h: number, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime() / 1000;
   const now = at(2026, 10, 28, 9);
   it("오늘이면 시각만", () => {
-    expect(formatResetClock(at(2026, 10, 28, 14, 20), now, text)).toBe("오후 2:20에 초기화");
+    expect(formatResetClock(at(2026, 10, 28, 14, 20), now, text, "ko")).toBe("오후 2:20에 초기화");
   });
   it("다른 날이면 요일을 앞에(일주일 이내), 더 멀면 날짜", () => {
-    expect(formatResetClock(at(2026, 11, 1, 12), now, text)).toBe("(일요일) 오후 12:00에 초기화");
-    expect(formatResetClock(at(2026, 11, 30, 0, 5), now, text)).toBe("(11월 30일) 오전 12:05에 초기화");
+    expect(formatResetClock(at(2026, 11, 1, 12), now, text, "ko")).toBe("(일요일) 오후 12:00에 초기화");
+    expect(formatResetClock(at(2026, 11, 30, 0, 5), now, text, "ko")).toBe("(11월 30일) 오전 12:05에 초기화");
   });
   it("기준 일수·로케일은 인자", () => {
-    expect(formatResetClock(at(2026, 11, 1, 12), now, text, 2)).toBe("(11월 1일) 오후 12:00에 초기화");
+    expect(formatResetClock(at(2026, 11, 1, 12), now, text, "ko", 2)).toBe("(11월 1일) 오후 12:00에 초기화");
   });
 });
 
 describe("formatShortClock·formatResetLine (5.7R.43)", () => {
   const base = new Date(2026, 9, 28, 15, 0, 0).getTime() / 1000;
   it("같은 날은 시각만, 다른 날은 월/일(요일), 다른 해는 연도 포함", () => {
-    expect(formatShortClock(base + 45 * 60, base)).toBe("오후 3:45");
-    expect(formatShortClock(new Date(2026, 9, 31, 14, 45).getTime() / 1000, base)).toBe("10/31(토) 오후 2:45");
-    expect(formatShortClock(new Date(2027, 0, 3, 14, 45).getTime() / 1000, base)).toMatch(/^2027\. 1\. 3\. 오후 2:45$/);
+    expect(formatShortClock(base + 45 * 60, base, "ko")).toBe("오후 3:45");
+    expect(formatShortClock(new Date(2026, 9, 31, 14, 45).getTime() / 1000, base, "ko")).toBe("10. 31. (토) 오후 2:45");
+    expect(formatShortClock(new Date(2027, 0, 3, 14, 45).getTime() / 1000, base, "ko")).toMatch(/^2027\. 1\. 3\. 오후 2:45$/);
   });
   it("한 줄 형식과 초 포함 전체 시각", () => {
     const at = new Date(2026, 9, 31, 14, 45, 12).getTime() / 1000;
-    const r = formatResetLine(at, base, { line: (rel, abs) => `초기화까지 ${rel} · ${abs}` });
-    expect(r.text).toBe("초기화까지 2일 23시간 · 10/31(토) 오후 2:45");
+    const r = formatResetLine(at, base, { line: (rel, abs) => `초기화까지 ${rel} · ${abs}` }, fmt, UNDER);
+    expect(r.text).toBe("초기화까지 2일 23시간 · 10. 31. (토) 오후 2:45");
     expect(r.full).toContain("2026. 10. 31.");
   });
 });

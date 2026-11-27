@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "memory.invalid_request": "메모리 요청의 인자나 본문이 올바르지 않습니다"
+  }
+}

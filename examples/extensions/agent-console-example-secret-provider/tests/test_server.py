@@ -177,7 +177,7 @@ def test_missing_file_only_warns(tmp_path: Path, caplog: pytest.LogCaptureFixtur
         # 값이 없으면 그 노드만 "비밀을 찾을 수 없음"으로 실패한다(오류 문장에 값·경로가 없다).
         assert snap["run"]["status"] == "failed"
         assert "secrets.env" not in json.dumps(snap)
-    assert any("비밀 파일이 없습니다" in r.getMessage() for r in caplog.records)
+    assert any("Secret file not found" in r.getMessage() for r in caplog.records)
 
 
 def test_installer_setting_gives_the_path_without_environment(
@@ -205,7 +205,7 @@ def test_installer_setting_gives_the_path_without_environment(
         shown = info.text + json.dumps(snap)
     assert VALUE not in shown
     assert VALUE not in "\n".join(r.getMessage() for r in caplog.records)
-    assert not any("경로가 설정되지 않아" in r.getMessage() for r in caplog.records)
+    assert not any("No secret file path is set" in r.getMessage() for r in caplog.records)
 
 
 def test_bad_installer_setting_refuses_to_start(tmp_path: Path) -> None:
@@ -221,7 +221,8 @@ def test_bad_installer_setting_refuses_to_start(tmp_path: Path) -> None:
 def test_setting_for_unknown_provider_is_a_server_warning(tmp_path: Path) -> None:
     with _server(tmp_path, {"not-installed": {"x": 1}}) as client:
         info = client.get(f"{API}/server-info").json()
-    texts = [w["message"] for w in info["warnings"] if w["code"] == "plugins.config"]
-    assert any("'not-installed'" in t for t in texts)
+    # 설정 경고는 코드와 details로 온다(화면이 현재 언어로 문구를 고른다).
+    unknown = [w for w in info["warnings"] if w["code"] == "secrets.provider_unknown"]
+    assert any(w["details"]["provider"] == "not-installed" for w in unknown)
     (view,) = [v for v in info["plugin_options"] if v["name"] == PROVIDER_ID]
     assert view["configured"] is False  # 설정이 없으면 entry point가 만든 그대로(환경변수 경로)

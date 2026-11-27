@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
 import { ARCH_LIMITS } from "./archConfig";
 
 export interface ArchitectureBreadcrumbProps {
@@ -13,6 +13,7 @@ export interface ArchitectureBreadcrumbProps {
 
 /** 빵 부스러기. 마지막은 현재 위치(링크 아님), 4단계 이상이면 가운데를 `…` 단추로 접는다. */
 export function ArchitectureBreadcrumb({ rootLabel, steps, onGoTo }: ArchitectureBreadcrumbProps) {
+  const t = useArchMessages();
   const [open, setOpen] = useState(false);
   const items = [{ index: -1, label: rootLabel }, ...steps.map((label, i) => ({ index: i, label }))];
   const fold = items.length >= ARCH_LIMITS.crumbFoldFrom;

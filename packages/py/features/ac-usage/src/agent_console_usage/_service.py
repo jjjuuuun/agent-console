@@ -252,7 +252,9 @@ class UsageService:
             if key in taken:
                 if key not in self._warned:
                     self._warned.add(key)
-                    _log.warning("사용량 출처 id가 겹쳐 레지스트리 출처를 씁니다: %s", key)
+                    _log.warning(
+                        "Usage source id is duplicated; using the registry source: %s", key
+                    )
                 continue
             out.append((key, extras[key]))
         return out
@@ -279,7 +281,7 @@ class UsageService:
                 try:
                     values.update(own(ctx))
                 except Exception:  # 안내 값이 없어도 목록은 답한다(자리표시자 그대로)
-                    _log.warning("사용량 출처 %s의 연결 안내 값을 만들지 못했습니다", key)
+                    _log.warning("Could not build the setup help values of usage source %s", key)
             update["setup_snippets"] = fill_setup_snippets(descriptor.setup_snippets, values)
         return descriptor.model_copy(update=update)
 

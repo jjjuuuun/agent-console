@@ -12,8 +12,8 @@ import { Banner, Button, Dialog, useToast } from "@agent-console/ui";
 import type { ParsedTask, TaskActionResult } from "@agent-console/contracts/sdd";
 import { ROUTE_ROLES, routePath } from "../library";
 import { ListSkeleton } from "./parts";
-import { sddMessages as m } from "./messages";
 import { sddKeys, useBulkActions, useSddSpace } from "./useSddApi";
+import { useT } from "@agent-console/i18n";
 
 export interface BulkStartDialogProps {
   open: boolean;
@@ -30,6 +30,7 @@ export interface BulkStartDialogProps {
 }
 
 export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTasks = [], limit, blockedReason }: BulkStartDialogProps) {
+  const t = useT("sdd");
   const space = useSddSpace();
   const qc = useQueryClient();
   const toast = useToast();
@@ -73,12 +74,12 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
       const ok = items.filter((i) => i.status === KNOWN_TASK_ACTION_STATUSES.STARTED).length;
       if (items.length > 0 && ok === items.length) {
         onClose();
-        toast({ tone: "success", text: m.bulk.allStarted(ok), durationMs: 8000, action: { label: m.bulk.openRuns, onClick: () => void navigate(routePath(ROUTE_ROLES.runs)) } });
+        toast({ tone: "success", text: t("bulk.allStarted", { count: ok }), durationMs: 8000, action: { label: t("bulk.openRuns"), onClick: () => void navigate(routePath(ROUTE_ROLES.runs)) } });
       } else {
         setResults(items);
       }
     } catch (e) {
-      setError(e instanceof ApiError && e.message !== "" ? e.message : m.bulk.failedAll);
+      setError(e instanceof ApiError && e.message !== "" ? e.message : t("bulk.failedAll"));
     } finally {
       setBusy(false);
     }
@@ -89,30 +90,30 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
   return (
     <Dialog
       open={open}
-      title={m.bulk.title(readyTasks.length + skippedTasks.length, chosen.length)}
+      title={t("bulk.title", { n: readyTasks.length + skippedTasks.length, m: chosen.length })}
       onClose={onClose}
       actions={
         results === null ? (
           <>
-            <Button onClick={onClose}>{m.cancel}</Button>
+            <Button onClick={onClose}>{t("cancel")}</Button>
             <Button variant="primary" loading={busy} aria-disabled={blocked || undefined} title={blockedReason} onClick={() => void submit()}>
-              {busy ? m.bulk.starting : m.bulk.submit(chosen.length)}
+              {busy ? t("bulk.starting") : t("bulk.submit", { m: chosen.length })}
             </Button>
           </>
         ) : (
-          <Button onClick={onClose}>{m.bulk.close}</Button>
+          <Button onClick={onClose}>{t("bulk.close")}</Button>
         )
       }
     >
       <div className="sdd-form" data-testid="sdd-bulk">
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
-        {overLimit ? <Banner tone="warning">{m.bulk.limit(limit as number)}</Banner> : null}
+        {overLimit ? <Banner tone="warning">{t("bulk.limit", { count: limit as number })}</Banner> : null}
         {results === null ? (
           <>
             <fieldset className="sdd-field" disabled={busy}>
-              <legend className="sdd-label">{m.bulk.action}</legend>
+              <legend className="sdd-label">{t("bulk.action")}</legend>
               {bulk.isPending && chosen.length > 0 ? <ListSkeleton rows={2} /> : null}
-              {bulk.isSuccess && usable.length === 0 ? <p className="app-muted" role="status">{m.bulk.actionNone}</p> : null}
+              {bulk.isSuccess && usable.length === 0 ? <p className="app-muted" role="status">{t("bulk.actionNone")}</p> : null}
               <div className="sdd-radios">
                 {actions.map((a) => {
                   const disabled = (a.disabled ?? null) !== null;
@@ -129,8 +130,8 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
               </div>
             </fieldset>
             <fieldset className="sdd-field" disabled={busy}>
-              <legend className="sdd-label">{m.bulk.tasks}</legend>
-              <ul className="sdd-files" aria-label={m.bulk.tasks}>
+              <legend className="sdd-label">{t("bulk.tasks")}</legend>
+              <ul className="sdd-files" aria-label={t("bulk.tasks")}>
                 {readyTasks.map((t) => (
                   <li key={t.key} className="sdd-bulk-row">
                     <label className="ac-choice">
@@ -140,19 +141,19 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
                     </label>
                   </li>
                 ))}
-                {skippedTasks.map((t) => (
-                  <li key={t.key} className="sdd-bulk-row app-muted" data-skipped="">
-                    <span className="sdd-mono">{t.key}</span> <span className="ac-ellipsis">{t.title ?? t.key}</span> <span>{m.bulk.skipped}</span>
+                {skippedTasks.map((task) => (
+                  <li key={task.key} className="sdd-bulk-row app-muted" data-skipped="">
+                    <span className="sdd-mono">{task.key}</span> <span className="ac-ellipsis">{task.title ?? task.key}</span> <span>{t("bulk.skipped")}</span>
                   </li>
                 ))}
               </ul>
             </fieldset>
-            <p className="sdd-note">{m.bulk.hint}</p>
+            <p className="sdd-note">{t("bulk.hint")}</p>
           </>
         ) : (
           <>
-            <p role="status">{m.bulk.summary(results.length, okCount)}</p>
-            <ul className="sdd-files" aria-label={m.bulk.tasks}>
+            <p role="status">{t("bulk.summary", { m: results.length, ok: okCount })}</p>
+            <ul className="sdd-files" aria-label={t("bulk.tasks")}>
               {results.map((r, idx) => {
                 const key = r.task_key ?? `#${idx}`;
                 const started = r.status === KNOWN_TASK_ACTION_STATUSES.STARTED;
@@ -162,8 +163,8 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
                     <span className="sdd-mono">{key}</span> <span className="ac-ellipsis">{titleOf(key)}</span>{" "}
                     {started ? (
                       <>
-                        <span>{m.bulk.started}</span>{" "}
-                        {runId === undefined ? null : <button type="button" className="app-link-btn" onClick={() => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`)}>{m.bulk.openRun}</button>}
+                        <span>{t("bulk.started")}</span>{" "}
+                        {runId === undefined ? null : <button type="button" className="app-link-btn" onClick={() => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`)}>{t("bulk.openRun")}</button>}
                       </>
                     ) : (
                       <span className="sdd-danger-note" role="alert">{r.issue?.message ?? r.status}</span>

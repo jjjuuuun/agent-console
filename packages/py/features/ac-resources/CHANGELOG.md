@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-resources`, so the web can show the `prepend` merge strategy and the `resource.*` issues in English (data only, no API change).
 - 안전 치환 구현을 기반 패키지 `ac-text-template`로 옮김(6R.4). `render_template`·`fill_value`·`DEFAULT_MAX_RENDER_CHARS`는 같은 이름으로 다시 내보낸다(공개 API·동작 불변).
 
 ## 0.1.0

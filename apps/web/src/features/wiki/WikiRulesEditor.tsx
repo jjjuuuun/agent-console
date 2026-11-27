@@ -24,8 +24,9 @@ import { classifyWikiError, type WikiFailure } from "./wikiErrors";
 import { useInvalidateWiki } from "./useWikiApi";
 import { useWikiRuleFiles, useWikiRulesView, type WikiRulesSpace } from "./useWikiRulesApi";
 import { WIKI_LIMITS, WIKI_RULES_SCREEN, type WikiRulesTabId } from "./wikiConfig";
-import { wikiRulesMessages as t } from "./rulesScreenMessages";
-import { localizeIssue } from "../../app/wikiIssueMessages";
+import { localizeIssue } from "./wikiIssueText";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 type Obj = Record<string, unknown>;
 const P = WIKI_RULES_SCREEN.params;
@@ -35,7 +36,6 @@ const failureMessage = (kind: WikiFailure): string | undefined => {
   const rec = kind as WikiFailure & { message?: unknown };
   return typeof rec.message === "string" && rec.message !== "" ? rec.message : undefined;
 };
-const asSpecIssue = (i: WikiIssue): SpecIssue => localizeIssue(i) as unknown as SpecIssue;
 
 /** 규칙 문서가 가리키는 본문 파일(한 파일 참조들 먼저, 그 다음 목록 항목의 파일). 어느 속성이 파일을 가리키는지는 데이터(`wikiData.json`)다. */
 export function ruleFileLinks(def: Readonly<Obj>, fields: typeof WIKI_RULES_SCREEN.fileFields = WIKI_RULES_SCREEN.fileFields): RuleFileLink[] {
@@ -73,6 +73,9 @@ export interface WikiRulesEditorProps {
 }
 
 export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, onDeleted }: WikiRulesEditorProps) {
+  const t = useT("wiki");
+  const serverText = useServerText();
+  const tm = useMaybeT("wiki");
   const ruleQ = useWikiRulesView(space, id);
   const filesQ = useWikiRuleFiles(space, id);
   const invalidate = useInvalidateWiki();
@@ -145,7 +148,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
         setFailure(null);
       }
     } catch (e) {
-      if (mine === ticket.current) setFailure(e instanceof Error && e.message !== "" ? e.message : t.editor.checkFailed);
+      if (mine === ticket.current) setFailure(e instanceof Error && e.message !== "" ? e.message : t("rules.editor.checkFailed"));
     } finally {
       if (mine === ticket.current) setChecking(false);
     }
@@ -181,7 +184,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       if (rulesDirty && rulesDraft !== null) {
         const saved = await space.client.putWikiRules(id, rulesDraft as unknown as WikiRulesDefinition, hash);
         hash = saved.version_hash ?? hash;
-        warns.push(...(saved.issues ?? []).map(localizeIssue));
+        warns.push(...(saved.issues ?? []));
         setRulesDraft(null);
       }
       if (filesDraft !== null && filesDirty) {
@@ -190,10 +193,10 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
           try {
             const saved = await space.client.putWikiRulesFile(id, f.path, f.bytes ?? f.text ?? "", hash, f.mediaType);
             hash = saved.version_hash ?? hash;
-            warns.push(...(saved.issues ?? []).map(localizeIssue));
+            warns.push(...(saved.issues ?? []));
           } catch (e) {
             if (isConflict(e) || (e instanceof ApiError && e.status === 428)) throw e;
-            errors[f.path] = e instanceof Error && e.message !== "" ? e.message : t.editor.saveFailed;
+            errors[f.path] = e instanceof Error && e.message !== "" ? e.message : t("rules.editor.saveFailed");
           }
         }
         if (Object.keys(errors).length === 0) {
@@ -204,7 +207,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
             } catch (e) {
               if (e instanceof ApiError && e.status === 404) continue;
               if (isConflict(e) || (e instanceof ApiError && e.status === 428)) throw e;
-              errors[path] = e instanceof Error && e.message !== "" ? e.message : t.editor.saveFailed;
+              errors[path] = e instanceof Error && e.message !== "" ? e.message : t("rules.editor.saveFailed");
               break;
             }
           }
@@ -223,8 +226,8 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
     } catch (e) {
       if (isConflict(e)) setConflict(true);
       else {
-        const kind = classifyWikiError(e, t.editor.saveFailed);
-        setFailure(kind.kind === "unavailable" || kind.kind === "notFound" ? t.editor.saveFailed : failureMessage(kind) ?? t.editor.saveFailed);
+        const kind = classifyWikiError(e, t("rules.editor.saveFailed"), t);
+        setFailure(kind.kind === "unavailable" || kind.kind === "notFound" ? t("rules.editor.saveFailed") : failureMessage(kind) ?? t("rules.editor.saveFailed"));
       }
       setBaseHash(hash);
     } finally {
@@ -246,12 +249,12 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       onDeleted(name);
     } catch (e) {
       setConfirmDelete(false);
-      setFailure(e instanceof Error && e.message !== "" ? e.message : t.delete.failed);
+      setFailure(e instanceof Error && e.message !== "" ? e.message : t("rules.delete.failed"));
     }
   };
 
   if (ruleQ.isPending) return <ListSkeleton rows={6} />;
-  if (ruleQ.isError || server === undefined || view === undefined) return <FailureBlock error={ruleQ.error} title={t.editor.loadFailed} onRetry={() => void ruleQ.refetch()} />;
+  if (ruleQ.isError || server === undefined || view === undefined) return <FailureBlock error={ruleQ.error} title={t("rules.editor.loadFailed")} onRetry={() => void ruleQ.refetch()} />;
 
   const name = typeof value["name"] === "string" && value["name"] !== "" ? (value["name"] as string) : id;
   const wanted = params.get(P.tab);
@@ -272,21 +275,21 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
         schema={schema}
         value={value}
         onChange={editRules}
-        issues={issues.map(asSpecIssue)}
+        issues={issues.map((i) => localizeIssue(i, serverText) as unknown as SpecIssue)}
         readonly={readonly || saving}
         sectionId={params.get(P.section)}
         onSectionChange={(sid) => setParam(P.section, sid)}
-        navLabel={t.editor.sections}
+        navLabel={t("rules.editor.sections")}
         idPrefix="wiki-rules-form"
         extraFields={WIKI_RULE_WIDGET_FIELDS}
         includeAdvanced={advanced}
-        sectionNote={(section) => (advanced.includes(section.path[0] as string) ? <p className="app-muted wiki-hint">{t.editor.syntaxHint}</p> : null)}
+        sectionNote={(section) => (advanced.includes(section.path[0] as string) ? <p className="app-muted wiki-hint">{t("rules.editor.syntaxHint")}</p> : null)}
       />
     ),
     files: filesQ.isPending ? (
       <ListSkeleton rows={4} />
     ) : filesQ.isError ? (
-      <ErrorBlock title={t.files.loadFailed} message={filesQ.error.message} retryLabel={t.editor.reload} onRetry={() => void filesQ.refetch()} />
+      <ErrorBlock title={t("rules.files.loadFailed")} message={filesQ.error.message} retryLabel={t("rules.editor.reload")} onRetry={() => void filesQ.refetch()} />
     ) : (
       <WikiRuleFilesPanel
         links={ruleFileLinks(value)}
@@ -301,7 +304,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
     ),
     versions: (
       <div className="wiki-rule-versions">
-        <p className="app-muted">{t.versions.note}</p>
+        <p className="app-muted">{t("rules.versions.note")}</p>
         <VersionHistory
           base={definitionBase(WIKI_RULES_SCREEN.collection, id)}
           currentHash={serverHash}
@@ -316,7 +319,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       </div>
     ),
   };
-  const items: TabItem[] = WIKI_RULES_SCREEN.tabs.map((x) => ({ id: x.id, label: t.tabs[x.labelKey] ?? x.id, title: t.tabs[x.labelKey] ?? x.id, content: panels[x.id] }));
+  const items: TabItem[] = WIKI_RULES_SCREEN.tabs.map((x) => ({ id: x.id, label: tm(`rules.tabs.${x.labelKey}`) ?? x.id, title: tm(`rules.tabs.${x.labelKey}`) ?? x.id, content: panels[x.id] }));
 
   return (
     <div
@@ -329,16 +332,16 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
         }
       }}
     >
-      <div className="wiki-toolbar" role="group" aria-label={t.editor.toolbar}>
+      <div className="wiki-toolbar" role="group" aria-label={t("rules.editor.toolbar")}>
         <h2 className="wiki-section-title ac-ellipsis">{name}</h2>
-        <Button size="sm" loading={checking} onClick={check}>{checking ? t.editor.checking : t.editor.check}</Button>
+        <Button size="sm" loading={checking} onClick={check}>{checking ? t("rules.editor.checking") : t("rules.editor.check")}</Button>
         {checked === null && (view.issues ?? []).length === 0 ? null : issues.length === 0 ? (
-          <span className="app-muted" role="status">{t.editor.checkOk}</span>
+          <span className="app-muted" role="status">{t("rules.editor.checkOk")}</span>
         ) : (
-          <span className="wiki-check-chip" role="status" data-testid="wiki-rule-check" data-tone={errorCount > 0 ? "danger" : "warning"}>{t.editor.checkChip(warnCount, errorCount)}</span>
+          <span className="wiki-check-chip" role="status" data-testid="wiki-rule-check" data-tone={errorCount > 0 ? "danger" : "warning"}>{t("rules.editor.checkChip", { w: warnCount, e: errorCount })}</span>
         )}
         <span className="wiki-spacer" />
-        <span className="app-muted" role="status">{saving ? t.editor.saving : dirty ? t.editor.unsaved : t.editor.saved}</span>
+        <span className="app-muted" role="status">{saving ? t("rules.editor.saving") : dirty ? t("rules.editor.unsaved") : t("rules.editor.saved")}</span>
         <Button
           size="sm"
           variant="primary"
@@ -349,50 +352,50 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
             if (dirty && !readonly && !showConflict) void save(baseHash ?? serverHash);
           }}
         >
-          {t.editor.save}
+          {t("rules.editor.save")}
         </Button>
         <MenuButton
-          label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{t.editor.more}</span></>}
-          panelLabel={t.editor.more}
+          label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{t("rules.editor.more")}</span></>}
+          panelLabel={t("rules.editor.more")}
           blockedReason={readonly ? space.readOnlyReason : undefined}
-          items={[{ id: "delete", label: t.editor.delete, danger: true, onSelect: () => setConfirmDelete(true) }]}
+          items={[{ id: "delete", label: t("rules.editor.delete"), danger: true, onSelect: () => setConfirmDelete(true) }]}
         />
       </div>
-      {usedBy.length === 0 ? null : <Banner tone="info" data-testid="wiki-rule-usedby">{t.usedBy(usedNames)}</Banner>}
-      {readonly ? <Banner tone="warning" data-testid="wiki-rule-readonly">{space.readOnlyReason ?? t.editor.readonly}</Banner> : null}
+      {usedBy.length === 0 ? null : <Banner tone="info" data-testid="wiki-rule-usedby">{t("rules.usedBy", { names: usedNames })}</Banner>}
+      {readonly ? <Banner tone="warning" data-testid="wiki-rule-readonly">{space.readOnlyReason ?? t("rules.editor.readonly")}</Banner> : null}
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
       {warnings.length === 0 ? null : (
-        <Banner tone="warning" actions={<Button size="sm" onClick={() => setWarnings([])}>{t.editor.dismiss}</Button>}>
-          {t.editor.savedWithIssues}
-          <ul className="wiki-issue-lines">{warnings.map((w, i) => <li key={`${w.code}:${i}`}>{localizeIssue(w).message}</li>)}</ul>
+        <Banner tone="warning" actions={<Button size="sm" onClick={() => setWarnings([])}>{t("rules.editor.dismiss")}</Button>}>
+          {t("rules.editor.savedWithIssues")}
+          <ul className="wiki-issue-lines">{warnings.map((w, i) => <li key={`${w.code}:${i}`}>{localizeIssue(w, serverText).message}</li>)}</ul>
         </Banner>
       )}
       {showConflict ? (
         <Banner
           tone="warning"
-          title={t.editor.conflictTitle}
+          title={t("rules.editor.conflictTitle")}
           data-testid="wiki-rule-conflict"
           actions={
             <>
-              <Button size="sm" onClick={() => { discard(); void invalidate(); }}>{t.editor.reload}</Button>
-              <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t.editor.overwrite}</Button>
+              <Button size="sm" onClick={() => { discard(); void invalidate(); }}>{t("rules.editor.reload")}</Button>
+              <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t("rules.editor.overwrite")}</Button>
             </>
           }
         >
-          {t.editor.conflictBody}
+          {t("rules.editor.conflictBody")}
         </Banner>
       ) : null}
       {issues.length === 0 ? null : (
-        <Disclosure summary={t.editor.issuesFold(warnCount, errorCount)}>
+        <Disclosure summary={t("rules.editor.issuesFold", { w: warnCount, e: errorCount })}>
           <ul className="wiki-issue-lines" data-testid="wiki-rule-issues">
-            {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{localizeIssue(i).message}{i.path ? <span className="app-muted wiki-mono"> {i.path}</span> : null}</li>)}
+            {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{localizeIssue(i, serverText).message}{i.path ? <span className="app-muted wiki-mono"> {i.path}</span> : null}</li>)}
           </ul>
         </Disclosure>
       )}
-      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t.tabsLabel} lazy />
-      <ConfirmDialog open={confirmDelete} title={t.delete.title(name)} confirmLabel={t.delete.confirm} cancelLabel={t.delete.cancel} danger onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)}>
-        <p>{t.delete.body}</p>
-        {usedBy.length > 0 ? <p data-testid="wiki-rule-delete-usedby">{t.delete.usedBy(usedBy.length)}: {usedNames}</p> : space.projectId === null ? <p className="app-muted">{t.delete.library}</p> : null}
+      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t("rules.tabsLabel")} lazy />
+      <ConfirmDialog open={confirmDelete} title={t("rules.delete.title", { name })} confirmLabel={t("rules.delete.confirm")} cancelLabel={t("rules.delete.cancel")} danger onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)}>
+        <p>{t("rules.delete.body")}</p>
+        {usedBy.length > 0 ? <p data-testid="wiki-rule-delete-usedby">{t("rules.delete.usedBy", { count: usedBy.length })}: {usedNames}</p> : space.projectId === null ? <p className="app-muted">{t("rules.delete.library")}</p> : null}
       </ConfirmDialog>
     </div>
   );

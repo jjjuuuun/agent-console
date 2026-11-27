@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { RestClient } from "@agent-console/api-client";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
-import { createResourceDoc, newResourceDoc } from "./resourceLogic";
+import { koMessages } from "../../testing/messageTables";
+import { createResourceMessages } from "./messages";
+import { createResourceDoc as createResourceDocWith, newResourceDoc } from "./resourceLogic";
+
+const rm = koMessages("resources", createResourceMessages);
+const createResourceDoc = (...a: Parameters<typeof createResourceDocWith> extends [infer R, infer D, infer T, unknown] ? [R, D, T] : never) => createResourceDocWith(...a, rm);
 
 const docType = { id: "t-doc", title: "문서", content: { media_types: ["text/markdown"], editor: "markdown" } } as unknown as ResourceTypeDescriptor;
 const cfgType = { id: "t-cfg", title: "설정", config_schema: { type: "object", properties: {} } } as unknown as ResourceTypeDescriptor;

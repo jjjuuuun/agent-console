@@ -131,7 +131,8 @@ factory (`agent_console.host_registries`), plugin loaders (`agent_console.host_p
 
 `enabled` (allow list) and `disabled` (exclude list) follow the same rule in every group: the exclude list is subtracted within the allow list. Loaders
 receive the combined result as `PluginLoadContext.enabled` (for keys that are not entry points, `ctx.allows(name)`), and excluded names that appear in no report
-are kept in `HostPlugins.warnings`.
+are kept in `HostPlugins.notices` (`SettingsNotice`: `code` from `SettingsNoticeCodes`, source `message`, `details` for the
+web text; `HostPlugins.warnings` lists the messages).
 
 Removed settings keys, environment variables, command-line aliases, and defaults are announced by modules through `ModuleDescriptor.settings_compat` (`SettingsCompat`).
 Old keys are not read and migrated. A module that moved or removed a key declares `RemovedSetting(old, new=..., reason=...)`,
@@ -200,7 +201,7 @@ modules:
   options:
     mod-opts:
       limit: 3
-      # token: <가린 값 — secret://이름으로 넣으세요>
+      # token: <masked value: set it as secret://name>
 
 ```
 
@@ -289,7 +290,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `BaseServices` / `Paths` | Host base services |
 | `DatabaseHandle` (protocol) / `MigrationBranch(name, versions, scopes=("app",))` | The shared database handle and the migration lineages modules declare in `ModuleDescriptor.migrations`. `assemble` upgrades, right before build, only the lineages of enabled modules whose `scopes` include `"app"` with `database.upgrade` (other scopes, for example `"project"` for project records databases, are read with `ModuleContext.active_migrations(scope)` and upgraded by the module that opens that database) (on failure only that module is `failed`, with a masked message). The implementation is in the storage layer (`agent_console_store.SqliteDatabase`) |
 | `load_installed_modules(group=MODULES_GROUP)` | Reads modules from entry points (the ac-registry loader) |
-| `load_host_plugins(*, enabled, disabled, paths, modules, options, entry_points)` → `HostPlugins` (`registries`, `reports`, `warnings`) / `PluginLoadContext` (`enabled`, `disabled`, `allows(name)`) / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` / `REASON_PLUGINS_DISABLED`, `REASON_PLUGINS_NOT_ENABLED` | Host plugin registries: bundle factory (`HOST_REGISTRIES_GROUP`, the first by name, otherwise `ExtensionRegistries`) → loaders (`HOST_PLUGIN_LOADERS_GROUP`, by name) → `register(registries)` plugins. Failures are reported, and excluded items carry a reason (`reason`) |
+| `load_host_plugins(*, enabled, disabled, paths, modules, options, entry_points)` → `HostPlugins` (`registries`, `reports`, `notices`, `warnings`) / `SettingsNotice`, `SettingsNoticeCodes` / `PluginLoadContext` (`enabled`, `disabled`, `allows(name)`) / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` / `REASON_PLUGINS_DISABLED`, `REASON_PLUGINS_NOT_ENABLED` | Host plugin registries: bundle factory (`HOST_REGISTRIES_GROUP`, the first by name, otherwise `ExtensionRegistries`) → loaders (`HOST_PLUGIN_LOADERS_GROUP`, by name) → `register(registries)` plugins. Failures are reported, and excluded items carry a reason (`reason`) |
 | `open_host_database(path)` | Database factory (`HOST_DATABASE_GROUP`) → `DatabaseHandle` (None if absent) |
 | `env_secret_lookup`, `secret_lookup`, `secret_providers_of`, `SECRET_PROVIDERS_REGISTRY` | The secret resolution chain (environment variables → the bundle's secret providers) |
 | `SettingsCompat` (`RemovedSetting`, `EnvSetting`, `FlagSetting`, `SeedSetting`) / `compat_of`, `removed_settings`, `env_settings`, `compat_flags`, `flag_settings`, `seed_settings` | Host settings compatibility declared by modules (refusing removed keys; environment variables, command-line options, and other settings values → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()` is the refusal text (with the new location) |

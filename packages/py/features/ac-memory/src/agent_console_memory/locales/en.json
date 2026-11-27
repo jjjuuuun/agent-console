@@ -1,0 +1,13 @@
+{
+  "text": {
+    "공용": "Shared",
+    "모든 팀·프로젝트가 함께 보는 기록": "Entries shared by every team and project",
+    "실행한 프로젝트의 기록": "Entries of the project that ran"
+  },
+  "codes": {
+    "memory.import_duplicate": "The same scope and key appear twice in the bundle; the later one wasn't accepted.",
+    "memory.import_invalid_file": "An entry file is invalid (location, YAML header, UTF-8 or compressed data).",
+    "memory.import_unsafe_path": "An unsafe path inside the zip wasn't accepted.",
+    "memory.import_unsupported": "An item that isn't .md or is encrypted wasn't accepted."
+  }
+}

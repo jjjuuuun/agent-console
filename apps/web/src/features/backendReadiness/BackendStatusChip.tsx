@@ -1,6 +1,6 @@
 import type { BackendReadiness } from "@agent-console/contracts";
 import { StatusIcon } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { READINESS_TONES, resolveTone } from "./tones";
 
 export interface BackendStatusChipProps {
@@ -11,6 +11,7 @@ export interface BackendStatusChipProps {
 
 /** 선택 카드 항목의 짧은 상태 칩: 톤 아이콘 + `short_summary`(없으면 `summary`). 툴팁은 `summary` 전문. */
 export function BackendStatusChip({ readiness, title }: BackendStatusChipProps) {
+  const m = useAppMessages();
   const tone = resolveTone(readiness.tone);
   const full = readiness.summary || m.backendReadiness.unknownSummary;
   const text = readiness.short_summary || full;

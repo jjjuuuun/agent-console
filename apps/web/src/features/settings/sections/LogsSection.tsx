@@ -2,7 +2,7 @@ import { useLocation } from "react-router";
 import { Link } from "react-router";
 import { contractsSchema } from "@agent-console/contracts";
 import { Button, Disclosure } from "@agent-console/ui";
-import { logsMessages as t, useLogScan, useLogSources } from "../../logs";
+import { useLogScan, useLogSources, useLogsMessages } from "../../logs";
 import type { SectionEditProps } from "./FormSections";
 import { LogsSourcesBlock } from "./logs/LogsSourcesBlock";
 
@@ -27,6 +27,7 @@ export interface LogsSectionProps extends SectionEditProps {
 
 /** 설정 "로그 출처": 수집 출처(프로젝트 묶기는 5.7R.33p에서 삭제, K33-15). 분류 체계는 `LogTaxonomySection`(섹션 "로그 분류"). `logs.dashboards`는 이 화면이 그리지 않고(로그 > 대시보드에서 편집) 저장해도 그대로 둔다. */
 export function LogsSection(props: LogsSectionProps) {
+  const t = useLogsMessages();
   const { hash } = useLocation();
   const target = readHash(hash);
   const sources = useLogSources();

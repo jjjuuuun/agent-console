@@ -1,0 +1,14 @@
+{
+  "text": {
+    "앞에 붙이기: 이 층 목록을 위 층 목록 앞에 둔다. 목록이 아니면 교체.": "Prepend: puts this layer's list before the list from the layer above. Replaces if it isn't a list."
+  },
+  "codes": {
+    "resource.content_missing": "The content is missing.",
+    "resource.invalid_config": "The resource settings are invalid.",
+    "resource.invalid_type_schema": "The resource type's settings schema is invalid.",
+    "resource.override_secret_suspected": "This value looks like a secret. Use a secret:// reference.",
+    "resource.plain_secret": "A value looks like a plain-text secret. Use a secret:// reference.",
+    "resource.type_failed": "An error occurred while checking the resource type.",
+    "resource.unknown_type": "This resource type isn't registered."
+  }
+}

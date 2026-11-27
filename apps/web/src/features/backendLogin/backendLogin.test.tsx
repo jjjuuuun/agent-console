@@ -9,6 +9,7 @@ import { createAppQueryClient } from "../../app/queries";
 import { StorageProvider } from "../../app/StorageContext";
 import { createSafeStorage } from "../../app/storage";
 import { createFakeClients } from "../../testing/fakes";
+import { TestI18n } from "../../testing/TestI18n";
 import { BackendReadinessSection } from "../backendReadiness";
 import { formatRemaining, isOpenableUrl } from "./types";
 
@@ -37,13 +38,15 @@ function setup(overrides: Record<string, unknown> = {}) {
   const router = createMemoryRouter([{ path: "*", element: <BackendReadinessSection backends={[backend]} /> }], { initialEntries: ["/x"] });
   const queryClient = createAppQueryClient({ retry: false });
   render(
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider clients={clients}>
-        <StorageProvider storage={storage}>
-          <RouterProvider router={router} />
-        </StorageProvider>
-      </ApiProvider>
-    </QueryClientProvider>,
+    <TestI18n>
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider clients={clients}>
+          <StorageProvider storage={storage}>
+            <RouterProvider router={router} />
+          </StorageProvider>
+        </ApiProvider>
+      </QueryClientProvider>
+    </TestI18n>,
   );
   return { rest, queryClient };
 }

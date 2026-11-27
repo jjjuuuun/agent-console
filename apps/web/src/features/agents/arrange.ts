@@ -29,10 +29,10 @@ export function agentGroupDefs({ attrKey, roleReason }: AgentGroupInput): GroupB
 }
 
 /** 정렬 데이터. `usage`는 사용 팀 수가 있을 때만 쓸 수 있다(정의-팀 연동이 꺼지면 숨김). */
-export function agentSortDefs(usage: ((id: string) => number | undefined) | undefined): SortDef<Agent>[] {
-  const defs: SortDef<Agent>[] = [{ id: "name", titleKey: "sort.name", compare: byText((a) => a.name) }];
+export function agentSortDefs(usage: ((id: string) => number | undefined) | undefined, language: string): SortDef<Agent>[] {
+  const defs: SortDef<Agent>[] = [{ id: "name", titleKey: "sort.name", compare: byText((a) => a.name, language) }];
   if (usage !== undefined) {
-    const nameCmp = byText<Agent>((a) => a.name);
+    const nameCmp = byText<Agent>((a) => a.name, language);
     const byUsage = byNumber<Agent>((a) => usage(a.id), true);
     defs.push({ id: "usage", titleKey: "sort.usage", compare: (a, b) => byUsage(a, b) || nameCmp(a, b) });
   }
@@ -40,11 +40,11 @@ export function agentSortDefs(usage: ((id: string) => number | undefined) | unde
 }
 
 /** 속성 키 후보: 항목들의 `attributes` 최상위 키 중 스칼라 값이 있는 것(`ui` 제외), 이름순. */
-export function attributeKeys(agents: readonly Agent[]): string[] {
+export function attributeKeys(agents: readonly Agent[], language: string): string[] {
   const keys = new Set<string>();
   for (const a of agents) for (const [k, v] of Object.entries(a.attributes ?? {})) if (k !== "ui" && scalar(v).length > 0) keys.add(k);
-  return [...keys].sort((x, y) => x.localeCompare(y, "ko"));
+  return [...keys].sort((x, y) => x.localeCompare(y, language));
 }
 
 /** 이미 있는 폴더 경로들(중복 없음, 이름순; 이동 후보). */
-export const folderPaths = (agents: readonly Agent[]): string[] => folderPathsOf(agents);
+export const folderPaths = (agents: readonly Agent[], language: string): string[] => folderPathsOf(agents, language);

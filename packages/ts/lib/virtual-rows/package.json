@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/virtual-rows",
   "version": "0.1.0",
-  "description": "가상 스크롤 행 훅(@tanstack/react-virtual 어댑터)",
+  "description": "Virtual scrolling row hook (@tanstack/react-virtual adapter)",
   "private": true,
   "license": "MIT",
   "type": "module",

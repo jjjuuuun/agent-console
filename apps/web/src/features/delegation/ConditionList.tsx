@@ -16,7 +16,7 @@ import {
   type ConditionOperatorDescriptor,
   type ConditionSpec,
 } from "./conditions";
-import { delegationMessages } from "./messages";
+import { useDelegationMessages, type ConditionMessages } from "./messages";
 import { ValueEditor } from "./ValueEditor";
 
 export type OperatorsState = "loading" | "ready" | "error" | "absent";
@@ -41,7 +41,7 @@ export interface ConditionListProps {
   /** 접근성 이름(필드 라벨) */
   label?: string | undefined;
   idPrefix?: string | undefined;
-  messages?: typeof delegationMessages.condition;
+  messages?: ConditionMessages;
   /** 이 개수를 넘으면 안내를 보인다(기본 20) */
   manyThreshold?: number;
 }
@@ -54,7 +54,8 @@ const DEFAULT_MANY = 20;
  * `all`·`any`가 함께 있는 값은 폼으로 그릴 수 없어 JSON 편집만 열어 두고 데이터는 그대로 보존한다.
  */
 export function ConditionList(p: ConditionListProps) {
-  const m = p.messages ?? delegationMessages.condition;
+  const dm = useDelegationMessages();
+  const m = p.messages ?? dm.condition;
   const uid = useId();
   const prefix = p.idPrefix ?? `cond-${uid}`;
   const root = useRef<HTMLDivElement>(null);
@@ -171,7 +172,7 @@ export function ConditionList(p: ConditionListProps) {
   );
 }
 
-function MixedModes({ value, onChange, disabled, messages: m, idPrefix, label }: ConditionListProps & { messages: typeof delegationMessages.condition; idPrefix: string }) {
+function MixedModes({ value, onChange, disabled, messages: m, idPrefix, label }: ConditionListProps & { messages: ConditionMessages; idPrefix: string }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(() => JSON.stringify(value, null, 2));
   const [bad, setBad] = useState(false);
@@ -220,7 +221,7 @@ interface RowProps {
   suggestions: readonly { value: string; title?: string }[] | undefined;
   errors: readonly ConditionError[];
   disabled: boolean;
-  messages: typeof delegationMessages.condition;
+  messages: ConditionMessages;
   onItem(patch: Partial<ConditionItem>): void;
   onMove(delta: -1 | 1): void;
   onInsertBelow(): void;

@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { TraceTimeline, defaultTraceMessages, type MethodBadge, type SpanLabel } from "@agent-console/trace-view";
+import { TraceTimeline, type MethodBadge, type SpanLabel } from "@agent-console/trace-view";
 import { Button } from "@agent-console/ui";
 import { LaneRibbon, clipTraceAt, type LaneEvent, type LogTaxonomyView } from "@agent-console/log-view";
 import type { LogLane, Trace, TraceSpan } from "@agent-console/contracts";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { messages as appMessages } from "../../app/messages";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { slotFor } from "./slots";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
+import { useTraceViewMessages } from "../../i18n";
 
 /** 위임 흐름의 span이 가리키는 레인 id. span id가 레인 id와 같거나 `<접두>:<레인 id>` 꼴이면 그 레인이다(모르면 undefined). */
 export function laneOfSpan(spanId: string, laneIds: readonly string[]): string | undefined {
@@ -15,7 +16,6 @@ export function laneOfSpan(spanId: string, laneIds: readonly string[]): string |
 
 /** 흐름 패널 세그먼트: 레인 · 위임 흐름(`logs:trace`). 구조도는 5.7R.32부터 세션 상세의 뷰 탭 [구조도]다(`SessionArchView`). */
 export type FlowView = "lane" | "trace";
-const FLOW_LABELS: Readonly<Record<FlowView, string>> = { lane: t.detail.flowLanes, trace: t.detail.flowTrace };
 
 export interface SessionFlowProps {
   view: FlowView;
@@ -38,6 +38,10 @@ export interface SessionFlowProps {
 
 /** 흐름 패널 본문: [레인] 띠 또는 [위임 흐름](재생 위치까지 자른 `Trace`). */
 export function SessionFlow(p: SessionFlowProps) {
+  const traceLib = useTraceViewMessages();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const t = useLogsMessages();
   const [scale, setScale] = useState(1);
   const [spanId, setSpanId] = useState<string | null>(null);
   const [wait, setWait] = useState(true);
@@ -46,7 +50,7 @@ export function SessionFlow(p: SessionFlowProps) {
 
   if (p.view === "lane") {
     return (
-      <LaneRibbon
+      <LaneRibbon messages={lv} formatters={lvFormatters}
         lanes={p.lanes}
         events={p.events}
         cursorTime={p.cursorTime}
@@ -61,7 +65,7 @@ export function SessionFlow(p: SessionFlowProps) {
     );
   }
   if (p.trace.error !== null && p.trace.data === undefined) {
-    return <ErrorBlock title={t.detail.traceFailed} message={p.trace.error.message} retryLabel={appMessages.common.retry} onRetry={p.trace.refetch} />;
+    return <ErrorBlock title={t.detail.traceFailed} message={p.trace.error.message} retryLabel={t.retry} onRetry={p.trace.refetch} />;
   }
   if (clipped === undefined) return <div className="app-loading" role="status">{t.loading}</div>;
   const labelFor = (span: TraceSpan): SpanLabel => {
@@ -90,18 +94,19 @@ export function SessionFlow(p: SessionFlowProps) {
       onShowUserWaitChange={setWait}
       timeScale={scale}
       onTimeScaleChange={setScale}
-      messages={{ empty: t.detail.traceEmpty, statusText: { ...appMessages.runStatus, ...appMessages.nodeStatus, ...defaultTraceMessages.statusText } }}
+      messages={{ ...traceLib, empty: t.detail.traceEmpty }}
     />
   );
 }
 
 /** 세그먼트 컨트롤. `views`는 지금 쓸 수 있는 보기들(연동이 없는 보기는 호출하는 쪽이 뺀다). 하나뿐이면 그리지 않는다. */
 export function FlowSegments({ view, views, onChange }: { view: FlowView; views: readonly FlowView[]; onChange(v: FlowView): void }) {
+  const t = useLogsMessages();
   if (views.length < 2) return null;
   return (
     <div role="group" aria-label={t.detail.flowView} className="logs-segments">
       {views.map((v) => (
-        <Button key={v} size="sm" aria-pressed={view === v} onClick={() => onChange(v)}>{FLOW_LABELS[v]}</Button>
+        <Button key={v} size="sm" aria-pressed={view === v} onClick={() => onChange(v)}>{v === "lane" ? t.detail.flowLanes : t.detail.flowTrace}</Button>
       ))}
     </div>
   );

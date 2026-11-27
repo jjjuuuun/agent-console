@@ -1,11 +1,12 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { DefinitionVersion } from "@agent-console/contracts";
 import { Button, Tag } from "@agent-console/ui";
-import { formatDateTime, formatRelative, shortId } from "../../lib/format";
+import { shortId } from "../../lib/format";
 import { isImeKeyEvent } from "../../lib/ime";
 import { ActionMenu } from "../library";
-import { versionMessages as t } from "./messages";
 import type { CompareMode } from "./versionsLogic";
+import { useT } from "@agent-console/i18n";
+import { useFormat } from "../../i18n";
 
 export interface VersionListProps {
   /** 최신순(0번 = 현재) */
@@ -32,6 +33,8 @@ export interface VersionListProps {
 
 /** 버전 목록(체크박스 최대 2, 키보드 `↑↓ Space Enter D R`). 서버·비교 계산을 모른다. */
 export function VersionList({ versions, now, checked, mode, onModeChange, onToggle, onCompareCurrent, onComparePair, onRestore, onViewRaw, onCopyHash, pageSize = 20, compare = true }: VersionListProps) {
+  const fmt = useFormat();
+  const t = useT("versions");
   const [shown, setShown] = useState(pageSize);
   const [active, setActive] = useState(0);
   const rows = useRef(new Map<string, HTMLDivElement>());
@@ -84,15 +87,15 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
   return (
     <div className="ver-list-pane">
       {compare ? (
-        <div role="radiogroup" aria-label={t.mode.label} className="ver-mode">
+        <div role="radiogroup" aria-label={t("mode.label")} className="ver-mode">
           {(["current", "pair"] as const).map((m) => (
             <label key={m} className="ver-mode-opt">
-              <input type="radio" name="ver-mode" checked={mode === m} onChange={() => onModeChange(m)} /> {t.mode[m]}
+              <input type="radio" name="ver-mode" checked={mode === m} onChange={() => onModeChange(m)} /> {t(`mode.${m}`)}
             </label>
           ))}
         </div>
       ) : null}
-      <div role="list" aria-label={t.list.label} className="ver-list">
+      <div role="list" aria-label={t("list.label")} className="ver-list">
         {visible.map((v, i) => {
           const hash8 = shortId(v.version_hash);
           const isCurrent = i === 0;
@@ -121,32 +124,32 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
                   tabIndex={-1}
                   checked={isChecked}
                   disabled={mode === "current" && isCurrent}
-                  aria-label={t.list.checkLabel(hash8)}
+                  aria-label={t("list.checkLabel", { hash: hash8 })}
                   onChange={() => onToggle(v.version_hash)}
                 />
               ) : null}
               <span className="lib-mono">{hash8}</span>
-              {isCurrent ? <Tag>{t.list.currentChip}</Tag> : null}
-              <span className="app-muted ver-time" title={formatDateTime(v.saved_at)}>
-                {formatRelative(v.saved_at, now)}
+              {isCurrent ? <Tag>{t("list.currentChip")}</Tag> : null}
+              <span className="app-muted ver-time" title={fmt.dateTimeFull(v.saved_at)}>
+                {fmt.relative(v.saved_at, now)}
               </span>
               <span className="ver-msg ac-ellipsis" title={v.message ?? ""}>
                 {v.message ?? ""}
               </span>
               <ActionMenu
-                label={`${t.list.rowMenu} ${hash8}`}
+                label={`${t("list.rowMenu")} ${hash8}`}
                 items={[
-                  { id: "raw", label: t.menu.viewRaw, onSelect: () => onViewRaw(v.version_hash) },
-                  { id: "copy", label: t.menu.copyHash, onSelect: () => onCopyHash(v.version_hash) },
-                  { id: "restore", label: t.menu.restore, disabled: isCurrent, onSelect: () => onRestore(v.version_hash) },
+                  { id: "raw", label: t("menu.viewRaw"), onSelect: () => onViewRaw(v.version_hash) },
+                  { id: "copy", label: t("menu.copyHash"), onSelect: () => onCopyHash(v.version_hash) },
+                  { id: "restore", label: t("menu.restore"), disabled: isCurrent, onSelect: () => onRestore(v.version_hash) },
                 ]}
               />
             </div>
           );
         })}
       </div>
-      {versions.length > shown ? <Button onClick={() => setShown(shown + pageSize)}>{t.list.more}</Button> : null}
-      {compare ? <p className="app-muted ver-keys">{t.list.keysHint}</p> : null}
+      {versions.length > shown ? <Button onClick={() => setShown(shown + pageSize)}>{t("list.more")}</Button> : null}
+      {compare ? <p className="app-muted ver-keys">{t("list.keysHint")}</p> : null}
     </div>
   );
 }

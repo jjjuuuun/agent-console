@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/example-web",
   "version": "0.1.0",
-  "description": "웹 확장 예제: 대시보드 위젯·구조도 칸 그리기·설정 폼 위젯 각 하나",
+  "description": "Web extension example: one dashboard widget, one architecture cell renderer, and one settings form widget",
   "private": true,
   "license": "MIT",
   "type": "module",

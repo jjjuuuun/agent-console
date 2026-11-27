@@ -7,11 +7,12 @@ import { Banner, Button, Choice, Dialog, Icon, StatusIcon } from "@agent-console
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryImportProblem, MemoryImportResult } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
-import { sizeMessages } from "./format";
+import { useErrorState, raised, raisedAs } from "../../app/errors";
+import { useViewMessages } from "./format";
 import { DEFAULT_IMPORT_POLICY, IMPORT_POLICIES } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 export interface ImportDialogProps {
   onClose: () => void;
@@ -28,14 +29,15 @@ interface Preview {
 }
 
 function ProblemList({ problems }: { problems: readonly MemoryImportProblem[] }) {
+  const t = useT("memory");
   return (
-    <ul className="mem-issue-list" aria-label={t.import.errorList}>
+    <ul className="mem-issue-list" aria-label={t("import.errorList")}>
       {problems.map((p, i) => (
         <li key={`${p.path}-${i}`}>
           <StatusIcon status="failed" kind="run" size={14} />
           <span className="mem-mono mem-issue-path" title={p.path}>{p.path}</span>
           <span className="mem-mono mem-muted">{p.code}</span>
-          <span>{p.code === ERROR_CODES.MEMORY_SECRET_REJECTED ? t.import.secretReason : (p.message ?? "")}</span>
+          <span>{p.code === ERROR_CODES.MEMORY_SECRET_REJECTED ? t("import.secretReason") : (p.message ?? "")}</span>
         </li>
       ))}
     </ul>
@@ -43,12 +45,15 @@ function ProblemList({ problems }: { problems: readonly MemoryImportProblem[] })
 }
 
 export function ImportDialog({ onClose, onViewImported, onImported }: ImportDialogProps) {
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
+  const tm = useMaybeT("memory");
   const rest = useMemoryRest();
   const [file, setFile] = useState<File | null>(null);
   const [policy, setPolicy] = useState(DEFAULT_IMPORT_POLICY);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState<"preview" | "import" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("import.failed"), { notZip: t("import.notZip"), previewInvalid: t("import.previewInvalid") });
   const [result, setResult] = useState<MemoryImportResult | null>(null);
   const [dragging, setDragging] = useState(false);
   const token = useRef(0);
@@ -58,7 +63,7 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
   const pick = (next: File | null) => {
     setError(null);
     if (next !== null && !next.name.toLowerCase().endsWith(".zip")) {
-      setError(t.import.notZip);
+      setError(raisedAs("notZip"));
       return;
     }
     setFile(next);
@@ -79,14 +84,14 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
       const out = await rest.importMemory(bytes, { policy, dryRun });
       if (token.current !== mine) return; // 취소한 요청의 응답은 버린다
       if (dryRun) {
-        if (out.dry_run !== true) setError(t.import.previewInvalid);
+        if (out.dry_run !== true) setError(raisedAs("previewInvalid"));
         else setPreview({ result: out, policy, file });
       } else {
         setResult(out);
         onImported();
       }
     } catch (e) {
-      if (token.current === mine) setError(describeError(e, t.import.failed).message);
+      if (token.current === mine) setError(raised(e));
     } finally {
       if (token.current === mine) setBusy(null);
     }
@@ -104,23 +109,23 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
       <Dialog
         open
         size="lg"
-        title={t.import.resultTitle}
+        title={t("import.resultTitle")}
         onClose={onClose}
         actions={
           <>
-            <Button onClick={onViewImported}>{t.import.viewImported}</Button>
-            <Button variant="primary" onClick={onClose}>{t.close}</Button>
+            <Button onClick={onViewImported}>{t("import.viewImported")}</Button>
+            <Button variant="primary" onClick={onClose}>{t("close")}</Button>
           </>
         }
       >
-        <Banner tone={ok ? "success" : "warning"} title={ok ? t.import.allOk : t.import.partial}>
+        <Banner tone={ok ? "success" : "warning"} title={ok ? t("import.allOk") : t("import.partial")}>
           <span className="mem-counts">
-            <span>{t.import.created(result.created ?? 0)}</span>
-            <span>{t.import.overwritten(result.overwritten ?? 0)}</span>
-            {(result.renamed ?? 0) > 0 ? <span>{t.import.renamed(result.renamed ?? 0)}</span> : null}
-            <span>{t.import.skipped(result.skipped ?? 0)}</span>
-            <span>{t.import.errors(errors.length)}</span>
-            {secrets > 0 ? <span>{t.import.secretCount(secrets)}</span> : null}
+            <span>{t("import.created", { n: result.created ?? 0 })}</span>
+            <span>{t("import.overwritten", { n: result.overwritten ?? 0 })}</span>
+            {(result.renamed ?? 0) > 0 ? <span>{t("import.renamed", { n: result.renamed ?? 0 })}</span> : null}
+            <span>{t("import.skipped", { n: result.skipped ?? 0 })}</span>
+            <span>{t("import.errors", { n: errors.length })}</span>
+            {secrets > 0 ? <span>{t("import.secretCount", { n: secrets })}</span> : null}
           </span>
         </Banner>
         {errors.length > 0 ? <ProblemList problems={errors} /> : null}
@@ -131,26 +136,26 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
   const stale = preview !== null && (preview.policy !== policy || preview.file !== file);
   const previewErrors = preview?.result.errors ?? [];
   const overwritten = preview?.result.overwritten ?? 0;
-  const policyName = (id: string) => t.import.policies[id]?.label ?? id;
+  const policyName = (id: string) => tm(`import.policies.${id}.label`) ?? id;
   return (
     <Dialog
       open
       size="lg"
-      title={t.import.title}
+      title={t("import.title")}
       onClose={busy === null ? onClose : cancelRequest}
       initialFocus={pickRef}
       actions={
         <>
-          {busy !== null ? <span className="mem-help">{t.import.cancelNote}</span> : null}
-          <Button onClick={busy === null ? onClose : cancelRequest}>{busy === null ? t.cancel : t.import.cancelRequest}</Button>
-          <Button disabled={file === null || busy !== null} loading={busy === "preview"} onClick={() => void run(true)}>{preview === null ? t.import.preview : t.import.previewAgain}</Button>
-          <Button variant="primary" disabled={file === null || busy !== null} loading={busy === "import"} onClick={() => void run(false)}>{t.import.submit}</Button>
+          {busy !== null ? <span className="mem-help">{t("import.cancelNote")}</span> : null}
+          <Button onClick={busy === null ? onClose : cancelRequest}>{busy === null ? t("cancel") : t("import.cancelRequest")}</Button>
+          <Button disabled={file === null || busy !== null} loading={busy === "preview"} onClick={() => void run(true)}>{preview === null ? t("import.preview") : t("import.previewAgain")}</Button>
+          <Button variant="primary" disabled={file === null || busy !== null} loading={busy === "import"} onClick={() => void run(false)}>{t("import.submit")}</Button>
         </>
       }
     >
       <div className="mem-form">
         <div className="mem-field">
-          <span className="mem-label">{t.import.fileLabel}</span>
+          <span className="mem-label">{t("import.fileLabel")}</span>
           <div
             className="mem-drop"
             data-drag={dragging ? "" : undefined}
@@ -158,13 +163,13 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
           >
-            <input ref={input} type="file" accept=".zip,application/zip" hidden aria-label={t.import.pickFile} onChange={(e) => pick(e.target.files?.[0] ?? null)} />
-            <Button ref={pickRef} onClick={() => input.current?.click()}>{t.import.pickFile}</Button>
-            <span className="mem-muted">{t.import.drop}</span>
+            <input ref={input} type="file" accept=".zip,application/zip" hidden aria-label={t("import.pickFile")} onChange={(e) => pick(e.target.files?.[0] ?? null)} />
+            <Button ref={pickRef} onClick={() => input.current?.click()}>{t("import.pickFile")}</Button>
+            <span className="mem-muted">{t("import.drop")}</span>
             {file !== null ? (
               <span className="mem-file">
-                <span className="mem-mono ac-ellipsis" title={file.name}>{file.name}</span> · {formatBytes(file.size, sizeMessages)}
-                <button type="button" className="mem-iconbtn" aria-label={t.import.removeFile} title={t.import.removeFile} onClick={() => (pick(null), setPreview(null))}>
+                <span className="mem-mono ac-ellipsis" title={file.name}>{file.name}</span> · {formatBytes(file.size, viewMessages)}
+                <button type="button" className="mem-iconbtn" aria-label={t("import.removeFile")} title={t("import.removeFile")} onClick={() => (pick(null), setPreview(null))}>
                   <Icon name="close" />
                 </button>
               </span>
@@ -172,40 +177,40 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
           </div>
         </div>
         <fieldset className="mem-policy">
-          <legend className="mem-label">{t.import.policy}</legend>
+          <legend className="mem-label">{t("import.policy")}</legend>
           {IMPORT_POLICIES.map((p) => {
-            const text = t.import.policies[p.id];
+            const text = { label: tm(`import.policies.${p.id}.label`), help: tm(`import.policies.${p.id}.help`), warn: tm(`import.policies.${p.id}.warn`) };
             return (
               <Choice key={p.id} kind="radio" name="mem-import-policy" checked={policy === p.id} onChange={() => setPolicy(p.id)}>
-                <strong>{text?.label ?? p.id}</strong>
-                <span className="mem-help"> {text?.help ?? ""}</span>
-                {p.warns && text?.warn !== undefined ? (
+                <strong>{text.label ?? p.id}</strong>
+                <span className="mem-help"> {text.help ?? ""}</span>
+                {p.warns && text.warn !== undefined ? (
                   <span className="mem-warn mem-warn-line"><span className="mem-mark" aria-hidden="true" /> {text.warn}</span>
                 ) : null}
               </Choice>
             );
           })}
-          {policy !== "" && IMPORT_POLICIES.find((p) => p.id === policy)?.warns === true ? <span className="mem-help">{t.import.undoHint}</span> : null}
+          {policy !== "" && IMPORT_POLICIES.find((p) => p.id === policy)?.warns === true ? <span className="mem-help">{t("import.undoHint")}</span> : null}
         </fieldset>
-        <p className="mem-help">{t.import.note}</p>
+        <p className="mem-help">{t("import.note")}</p>
         {error !== null ? <Banner tone="danger">{error}</Banner> : null}
         {preview !== null ? (
-          <section className="mem-preview" data-stale={stale ? "" : undefined} aria-label={t.import.previewTitle(policyName(preview.policy))}>
-            <h3 className="mem-preview-title">{t.import.previewTitle(policyName(preview.policy))}</h3>
+          <section className="mem-preview" data-stale={stale ? "" : undefined} aria-label={t("import.previewTitle", { policy: policyName(preview.policy) })}>
+            <h3 className="mem-preview-title">{t("import.previewTitle", { policy: policyName(preview.policy) })}</h3>
             <p className="mem-sr" aria-live="polite">
-              {t.import.previewSummary(preview.result.created ?? 0, preview.result.overwritten ?? 0, preview.result.skipped ?? 0, previewErrors.length)}
+              {t("import.previewSummary", { c: preview.result.created ?? 0, o: preview.result.overwritten ?? 0, s: preview.result.skipped ?? 0, e: previewErrors.length })}
             </p>
             <span className="mem-counts">
-              <span>{t.import.previewCreated(preview.result.created ?? 0)}</span>
-              <span>{t.import.previewOverwritten(overwritten)}</span>
-              <span>{t.import.previewRenamed(preview.result.renamed ?? 0)}</span>
-              <span>{t.import.previewSkipped(preview.result.skipped ?? 0)}</span>
-              <span>{t.import.previewErrors(previewErrors.length)}</span>
+              <span>{t("import.previewCreated", { n: preview.result.created ?? 0 })}</span>
+              <span>{t("import.previewOverwritten", { n: overwritten })}</span>
+              <span>{t("import.previewRenamed", { n: preview.result.renamed ?? 0 })}</span>
+              <span>{t("import.previewSkipped", { n: preview.result.skipped ?? 0 })}</span>
+              <span>{t("import.previewErrors", { n: previewErrors.length })}</span>
             </span>
-            {overwritten > 0 ? <p className="mem-warn"><span className="mem-mark" aria-hidden="true" /> {t.import.previewOverwriteWarn(overwritten)}</p> : null}
-            {stale ? <p className="mem-help" role="status">{t.import.previewStale}</p> : null}
+            {overwritten > 0 ? <p className="mem-warn"><span className="mem-mark" aria-hidden="true" /> {t("import.previewOverwriteWarn", { count: overwritten })}</p> : null}
+            {stale ? <p className="mem-help" role="status">{t("import.previewStale")}</p> : null}
             {previewErrors.length > 0 ? <ProblemList problems={previewErrors} /> : null}
-            <p className="mem-help">{t.import.previewNote}</p>
+            <p className="mem-help">{t("import.previewNote")}</p>
           </section>
         ) : null}
       </div>

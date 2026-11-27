@@ -1,0 +1,10 @@
+{
+  "codes": {
+    "import.fields_ignored": "Some items weren't carried over into the settings.",
+    "import.hook_unsupported": "hook handlers that aren't commands aren't imported.",
+    "import.secret_replaced": "Plain-text values were replaced with secret:// references instead of being stored. Register secrets with the same names, for example as environment variables.",
+    "import.secret_suspected": "Masked values that look like plain-text secrets. Keep secrets as references (secret://).",
+    "import.skipped_link": "Skipped a symbolic link (or a path that points outside the source).",
+    "import.unreadable": "Skipped an item that couldn't be read."
+  }
+}

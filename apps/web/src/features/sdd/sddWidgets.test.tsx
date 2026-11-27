@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { renderWithI18n as render } from "../../testing/TestI18n";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { KNOWN_UI_WIDGETS } from "@agent-console/contracts/constants";

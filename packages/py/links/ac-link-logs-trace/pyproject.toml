@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-logs-trace"
 version = "0.1.0"
-description = "Agent Console — 로그·추적 연동 모듈: 세션 로그 위임 흐름(/logs/sessions/{id}/trace)"
+description = "Agent Console — logs and trace link module: session log delegation flow (/logs/sessions/{id}/trace)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-logs-trace = "agent_console_link_logs_trace.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-logs-trace = "agent_console_link_logs_trace"
 
 [dependency-groups]
 dev = [

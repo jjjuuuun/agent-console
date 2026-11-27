@@ -4,11 +4,12 @@ import { Button } from "./Button";
 
 export interface ToastInput {
   tone?: Tone;
-  text: string;
+  /** 알림 글. 글자 대신 화면 언어를 따라 다시 그려지는 요소를 주면, 이미 떠 있는 알림도 언어 전환 때 문구만 바뀐다 */
+  text: ReactNode;
   /** 표시 시간(ms). 기본 5000(danger는 8000) */
   durationMs?: number;
   /** 액션 버튼 1개(예: 되돌리기). 누르면 알림을 닫는다. */
-  action?: { label: string; onClick: () => void };
+  action?: { label: ReactNode; onClick: () => void };
 }
 
 interface ToastItem extends ToastInput {

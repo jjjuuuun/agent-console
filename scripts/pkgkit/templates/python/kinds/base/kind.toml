@@ -1,4 +1,4 @@
-# 기반(L0): 계약·레지스트리처럼 거의 모든 패키지가 쓰는 얇은 층. 다른 사내 패키지에 되도록 의존하지 않는다.
+# Base (L0): a thin layer that almost every package uses, such as contracts and registries. Avoid depending on other in-house packages.
 folder = "base"
 description = "{{product_name}} base package"
 dependencies = []

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-logs"
 version = "0.1.0"
-description = "Agent Console — 로그 분석 코어: 출처·분류기 확장 지점(X5·X6), 증분 jsonl 수집, 정규화 이벤트 초안·식별, 색인 프로토콜, 상관·프로젝트 묶기·토큰 창(순수 함수)"
+description = "Agent Console — log analysis core: source and classifier extension points (X5, X6), incremental jsonl collection, normalized event drafts and identity, index protocol, correlation, project grouping, and token windows (pure functions)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ mapped-jsonl = "agent_console_logs.plugins.mapped:MappedJsonlSource"
 [project.entry-points."agent_console.log_classifiers"]
 normalized-v1 = "agent_console_logs.plugins.normalized:NormalizedV1Classifier"
 mapped-jsonl = "agent_console_logs.plugins.mapped:MappedJsonlClassifier"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-logs = "agent_console_logs"
 
 [dependency-groups]
 dev = [

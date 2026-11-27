@@ -17,7 +17,12 @@ from types import ModuleType
 
 import pytest
 
-from agent_console_modkit import HOST_PLUGIN_LOADERS_GROUP, MODULES_GROUP, load_host_plugins
+from agent_console_modkit import (
+    HOST_PLUGIN_LOADERS_GROUP,
+    MODULES_GROUP,
+    SettingsNoticeCodes,
+    load_host_plugins,
+)
 
 PLUGIN_GROUP = "test.operators"
 
@@ -147,3 +152,33 @@ def test_entry_point_name_needs_no_hint(loader: ModuleType, tmp_path: Path) -> N
         ("mine.max_chars", "skipped"),
         ("mine.min_chars", "loaded"),
     ]
+
+
+def test_notices_carry_code_and_details_for_the_web(loader: ModuleType, tmp_path: Path) -> None:
+    """I.7c: 웹이 문구 묶음 ``codes``로 문구를 고르도록 경고마다 코드·``details``가 붙는다."""
+    eps = [
+        *_ops(tmp_path),
+        *_dist(tmp_path / "site2", "only-module", f"[{MODULES_GROUP}]\nmod-only = builtins:len\n"),
+    ]
+    loader.EPS = eps  # type: ignore[attr-defined]
+    loader_ep = EntryPoint("hint", f"{loader.__name__}:loader", HOST_PLUGIN_LOADERS_GROUP)
+    names = ["my-console-ops", "mod-mine", "mod-only", "only-module", "typo-name"]
+    plugins = load_host_plugins(entry_points=[loader_ep, *eps], disabled=names)
+    got = {n.details["name"]: (n.code, dict(n.details)) for n in plugins.notices}
+    listed = "mine.max_chars, mine.min_chars"
+    codes = SettingsNoticeCodes
+    assert got == {
+        "my-console-ops": (
+            codes.PLUGINS_DISABLED_DISTRIBUTION,
+            {"name": "my-console-ops", "entry_points": listed},
+        ),
+        "mod-mine": (
+            codes.PLUGINS_DISABLED_MODULE_ID,
+            {"name": "mod-mine", "entry_points": listed},
+        ),
+        "mod-only": (codes.PLUGINS_DISABLED_MODULE_ID_NOTHING, {"name": "mod-only"}),
+        "only-module": (codes.PLUGINS_DISABLED_DISTRIBUTION_NOTHING, {"name": "only-module"}),
+        "typo-name": (codes.PLUGINS_UNKNOWN_DISABLED, {"name": "typo-name"}),
+    }
+    assert plugins.warnings == [n.message for n in plugins.notices]
+    assert all(str(n) == n.message for n in plugins.notices)

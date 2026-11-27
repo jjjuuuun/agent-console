@@ -219,13 +219,17 @@ class PlatformRunsSource:
         try:
             project_ids = list(dict.fromkeys(self._project_ids()))
         except Exception:
-            _log.warning("프로젝트 목록을 읽지 못해 공용 실행만 수집합니다", exc_info=True)
+            _log.warning(
+                "Couldn't read the project list; collecting shared runs only", exc_info=True
+            )
             return found
         for project_id in project_ids:
             try:
                 runs = self._runs.list(project_id=project_id, limit=limit)
             except Exception:
-                _log.warning("프로젝트 %s의 실행 기록을 읽지 못했습니다", project_id, exc_info=True)
+                _log.warning(
+                    "Couldn't read the run records of project %s", project_id, exc_info=True
+                )
                 continue
             for run in reversed(runs):
                 if run.id not in seen:  # 공간 포트가 없으면 공용 기록의 같은 Run이 온다

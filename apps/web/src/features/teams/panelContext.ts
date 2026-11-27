@@ -1,6 +1,7 @@
 import type { Agent, DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, InteractionKindDescriptor, Issue, IssueSuggestion, NodeTypeDescriptor, ResourceSummary, ResourceTypeDescriptor, TeamPlanSummary, WorkspaceSettings } from "@agent-console/contracts";
 import type { NestedInfo } from "../delegation";
 import type { DraftPreviewResult } from "./useDraftPreview";
+import type { TeamMessages } from "./messages";
 import type { StrategiesStatus } from "./widgets/DelegationStrategyField";
 
 /** 오른쪽 패널들이 공유하는 읽기 전용 데이터와 편집 콜백. 서버·라우터를 모르고, 컨테이너(`TeamEditorPage`)가 채운다. */
@@ -33,7 +34,8 @@ export interface TeamPanelContext {
   /** 초안 그래프를 바꾼다(편집기 `onChange`와 같은 정리를 거친다) */
   onGraphChange: (next: Graph) => void;
   /** 되돌리기 가능한 변경(토스트의 [되돌리기]가 이전 그래프로 돌린다) */
-  onUndoableChange: (next: Graph, text: string) => void;
+  /** `text`는 문구 표를 받아 글을 만드는 함수다(떠 있는 알림이 언어를 바꾸면 따라 바뀌도록 그릴 때 만든다). */
+  onUndoableChange: (next: Graph, text: (messages: TeamMessages) => string) => void;
   /** 연결을 골라 패널을 연다(노드 패널의 [연결 보기]). 없으면 단추가 숨는다 */
   onSelectEdge?: (edgeId: string, sourceNodeId: string) => void;
   onApplySuggestion: (issue: Issue, suggestion: IssueSuggestion) => void;

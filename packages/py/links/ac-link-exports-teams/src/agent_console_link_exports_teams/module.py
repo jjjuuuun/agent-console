@@ -63,7 +63,7 @@ class ExportsTeamsLink:
                 try:
                     found.extend(source.scope_layers(scope).layers)
                 except Exception:  # 제공 모듈의 오류 타입을 모른다 — 그 공급자 층만 빼고 계속
-                    _log.exception("범위 층을 읽지 못했습니다: %s", scope)
+                    _log.exception("Couldn't read scope layer: %s", scope)
             return found
 
         ctx.provide(

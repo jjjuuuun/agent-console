@@ -12,12 +12,18 @@ import { useModuleList, useModules, useRequires, useRequiresPartition } from "..
 import { useStorage } from "../../app/StorageContext";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { SettingsNav } from "./SettingsNav";
+
+function useSettingsToastText() {
+  return { app: useAppMessages(), t: useT("settings") };
+}
+const SettingsToast = createToastText(useSettingsToastText);
 import { fieldTexts, filterSections } from "./sectionSearch";
 import { useCollapsedGroups, useNarrowViewport } from "./useSettingsNavState";
 import { countModules } from "./modulesView";
 import { countSectionChanges, groupSections, sectionIdFromHash } from "./sectionState";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useDescribeError } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
+import { createToastText } from "../../app/ToastText";
 import { queryKeys } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveStatus } from "../../definition/SaveStatus";
@@ -116,6 +122,8 @@ export interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS }: SettingsScreenProps) {
+  const describeError = useDescribeError();
+  const m = useAppMessages();
   const t = useT("settings");
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -163,7 +171,7 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
 
   const onSave = () => {
     void editor.save().then((ok) => {
-      if (ok) toast({ tone: "success", text: `${m.definition.savedToast}. ${t("savedNextRun")}` });
+      if (ok) toast({ tone: "success", text: <SettingsToast render={({ app, t: tt }) => `${app.definition.savedToast}. ${tt("savedNextRun")}`} /> });
     });
   };
   useShortcuts([{ id: "settings.save", scope: "settings", keys: "Mod+S", titleKey: "shortcuts.save", modifierRequired: true, run: onSave }]);

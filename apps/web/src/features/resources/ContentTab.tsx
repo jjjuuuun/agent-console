@@ -3,7 +3,7 @@ import { Markdown } from "@agent-console/chat";
 import type { TextEditorStatus } from "@agent-console/text-editor";
 import { LazyTextEditor } from "../library";
 import { Banner, useShortcuts } from "@agent-console/ui";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 import { MAX_EDIT_BYTES, WARN_BYTES } from "./resourceLogic";
 
 export interface ContentTabProps {
@@ -29,6 +29,7 @@ function byteSize(text: string): number {
 
 /** 문서형 리소스 본문 편집: CodeMirror 편집기 + 마크다운 미리보기 분할 + 상태 줄. 저장·서버를 모른다. */
 export function ContentTab({ text, onChange, language, mediaTypes, mediaType, onMediaTypeChange, onSave, readOnly }: ContentTabProps) {
+  const t = useResourceMessages();
   const [preview, setPreview] = useState(true);
   const [status, setStatus] = useState<TextEditorStatus>({ line: 1, col: 1, chars: text.length });
   const bytes = byteSize(text);

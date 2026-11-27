@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-project-space"
 version = "0.1.0"
-description = "Agent Console — 프로젝트 폴더의 구성 사본 공간: .agent-console/ 정의 저장소, project.yaml 매니페스트, .gitignore 틀, 비밀 저장 거부"
+description = "Agent Console — the configuration copy space in a project folder: .agent-console/ definition store, project.yaml manifest, .gitignore template, refusal to store secrets"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

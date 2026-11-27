@@ -5,11 +5,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
 import type { SpecCreateRequest, SpecTemplateSummary } from "@agent-console/contracts/sdd";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
+import { useCollator } from "../../i18n";
 import { useImeGuard } from "../../lib/ime";
 import { SearchBox } from "./parts";
 import { SDD_LIMITS } from "./sddConfig";
-import { sddMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface NewSpecDialogProps {
   open: boolean;
@@ -40,11 +41,11 @@ export interface NewSpecDialogProps {
   onTemplateChosen?: ((id: string | null) => void) | undefined;
 }
 
-const collator = new Intl.Collator("ko");
-
 export function NewSpecDialog(props: NewSpecDialogProps) {
+  const collator = useCollator();
+  const t = useT("sdd");
   const { open, onClose, folder, specRoot, templates, templatesLoading = false, initialTemplate = null, initialName = "", selectTemplate = null, templatesHref, blockedReason, onSubmit, onImport, onImportFromLibrary, onTemplateChosen } = props;
-  const sorted = useMemo(() => [...templates].sort((a, b) => collator.compare(a.name ?? a.id, b.name ?? b.id)), [templates]);
+  const sorted = useMemo(() => [...templates].sort((a, b) => collator.compare(a.name ?? a.id, b.name ?? b.id)), [templates, collator]);
   const [name, setName] = useState(initialName);
   const [id, setId] = useState("");
   const [pick, setPick] = useState<string | null>(initialTemplate !== null && templates.some((t) => t.id === initialTemplate) ? initialTemplate : null);
@@ -57,7 +58,7 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
     setPick(selectTemplate);
   }, [selectTemplate, templates]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("problem.generic"));
   const [touched, setTouched] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const ime = useImeGuard();
@@ -76,7 +77,7 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
       onTemplateChosen?.(selectedTemplate);
       await onSubmit({ name: name.trim(), ...(id.trim() === "" ? {} : { id: id.trim() }), ...(selectedTemplate === null ? {} : { template: selectedTemplate }) });
     } catch (e) {
-      setError(describeError(e, m.problem.generic).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -88,14 +89,14 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
   return (
     <Dialog
       open={open}
-      title={m.new.title}
+      title={t("new.title")}
       onClose={guardedClose}
       size="md"
       initialFocus={nameRef}
       actions={
         <>
-          {specRoot === undefined || specRoot === "" ? null : <span className="sdd-dialog-note app-muted">{m.new.saveLocation(specRoot)}</span>}
-          <Button onClick={guardedClose} disabled={busy}>{m.cancel}</Button>
+          {specRoot === undefined || specRoot === "" ? null : <span className="sdd-dialog-note app-muted">{t("new.saveLocation", { path: specRoot })}</span>}
+          <Button onClick={guardedClose} disabled={busy}>{t("cancel")}</Button>
           <Button
             variant="primary"
             loading={busy}
@@ -103,7 +104,7 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
             title={blocked ? blockedReason : undefined}
             onClick={() => void submit()}
           >
-            {busy ? m.new.submitting : m.new.submit}
+            {busy ? t("new.submitting") : t("new.submit")}
           </Button>
         </>
       }
@@ -112,12 +113,12 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
         {folder === undefined ? null : (
           <div className="sdd-field">
-            <span className="sdd-label">{m.new.folder}</span>
+            <span className="sdd-label">{t("new.folder")}</span>
             <span className="sdd-readonly"><strong>{folder.name}</strong> <span className="ac-mono-wrap app-muted">{folder.path}</span></span>
           </div>
         )}
         <label className="sdd-field" htmlFor={`${uid}-name`}>
-          <span className="sdd-label">{m.new.name} *</span>
+          <span className="sdd-label">{t("new.name")} *</span>
           <input
             id={`${uid}-name`}
             ref={nameRef}
@@ -129,29 +130,29 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
             onChange={(e) => setName(e.target.value)}
             {...ime.handlers}
           />
-          {touched && nameMissing ? <span className="app-field-error" role="alert">{m.new.nameRequired}</span> : null}
+          {touched && nameMissing ? <span className="app-field-error" role="alert">{t("new.nameRequired")}</span> : null}
         </label>
         <fieldset className="sdd-field sdd-radios">
-          <legend className="sdd-label">{m.new.template}</legend>
-          {templates.length >= SDD_LIMITS.templateSearchMin ? <SearchBox value={query} onCommit={setQuery} label={m.new.search} delayMs={150} /> : null}
-          {templatesLoading ? <p className="app-muted" role="status">{m.loading}</p> : null}
+          <legend className="sdd-label">{t("new.template")}</legend>
+          {templates.length >= SDD_LIMITS.templateSearchMin ? <SearchBox value={query} onCommit={setQuery} label={t("new.search")} delayMs={150} /> : null}
+          {templatesLoading ? <p className="app-muted" role="status">{t("loading")}</p> : null}
           {!templatesLoading && templates.length === 0 ? (
             <p className="app-muted" data-testid="sdd-no-templates">
-              {m.new.noTemplates}
-              {templatesHref === undefined ? null : <> <a className="app-link-btn" href={templatesHref}>{m.templatesTitle}</a></>}
+              {t("new.noTemplates")}
+              {templatesHref === undefined ? null : <> <a className="app-link-btn" href={templatesHref}>{t("templatesTitle")}</a></>}
             </p>
           ) : null}
-          {shown.map((t) => {
-            const warnings = (t.issues ?? []).length;
+          {shown.map((tpl) => {
+            const warnings = (tpl.issues ?? []).length;
             return (
-              <label key={t.id} className="sdd-radio" data-checked={selectedTemplate === t.id || undefined}>
-                <input type="radio" name={`${uid}-tpl`} checked={selectedTemplate === t.id} onChange={() => setPick(t.id)} />
+              <label key={tpl.id} className="sdd-radio" data-checked={selectedTemplate === tpl.id || undefined}>
+                <input type="radio" name={`${uid}-tpl`} checked={selectedTemplate === tpl.id} onChange={() => setPick(tpl.id)} />
                 <span className="sdd-radio-body">
-                  <span className="sdd-radio-title ac-ellipsis">{t.name !== undefined && t.name !== "" ? t.name : t.id}</span>
-                  <span className="app-muted">{m.new.templateMeta((t.documents ?? []).length, (t.run_profiles ?? []).length)}</span>
-                  {t.description === undefined || t.description === "" ? null : <span className="app-muted ac-ellipsis">{t.description}</span>}
+                  <span className="sdd-radio-title ac-ellipsis">{tpl.name !== undefined && tpl.name !== "" ? tpl.name : tpl.id}</span>
+                  <span className="app-muted">{(tpl.run_profiles ?? []).length > 0 ? t("new.templateMetaProfiles", { docs: (tpl.documents ?? []).length, profiles: (tpl.run_profiles ?? []).length }) : t("new.templateMeta", { docs: (tpl.documents ?? []).length })}</span>
+                  {tpl.description === undefined || tpl.description === "" ? null : <span className="app-muted ac-ellipsis">{tpl.description}</span>}
                 </span>
-                {warnings > 0 ? <span className="sdd-warn-chip" data-tone="warning">{m.new.templateWarn(warnings)}</span> : null}
+                {warnings > 0 ? <span className="sdd-warn-chip" data-tone="warning">{t("new.templateWarn", { count: warnings })}</span> : null}
               </label>
             );
           })}
@@ -164,27 +165,27 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
               title={blocked ? blockedReason : undefined}
               onClick={() => { if (!blocked) onImportFromLibrary(); }}
             >
-              ＋ {m.new.importFromLibrary}
+              ＋ {t("new.importFromLibrary")}
             </button>
           )}
           <label className="sdd-radio" data-checked={selectedTemplate === null || undefined}>
             <input type="radio" name={`${uid}-tpl`} checked={selectedTemplate === null} onChange={() => setPick(null)} />
             <span className="sdd-radio-body">
-              <span className="sdd-radio-title">{m.new.blank}</span>
-              <span className="app-muted">{m.new.blankHint}</span>
+              <span className="sdd-radio-title">{t("new.blank")}</span>
+              <span className="app-muted">{t("new.blankHint")}</span>
             </span>
           </label>
         </fieldset>
-        <Disclosure summary={m.new.advanced}>
+        <Disclosure summary={t("new.advanced")}>
           <label className="sdd-field" htmlFor={`${uid}-id`}>
-            <span className="sdd-label">{m.new.id}</span>
-            <input id={`${uid}-id`} className="sdd-input sdd-mono" placeholder={m.new.idAuto} value={id} onChange={(e) => setId(e.target.value)} />
+            <span className="sdd-label">{t("new.id")}</span>
+            <input id={`${uid}-id`} className="sdd-input sdd-mono" placeholder={t("new.idAuto")} value={id} onChange={(e) => setId(e.target.value)} />
           </label>
         </Disclosure>
         {onImport === undefined ? null : (
           <p className="app-muted">
-            {m.new.haveFolder}{" "}
-            <button type="button" className="app-link-btn" disabled={busy} onClick={() => onImport(name)}>{m.list.import}</button>
+            {t("new.haveFolder")}{" "}
+            <button type="button" className="app-link-btn" disabled={busy} onClick={() => onImport(name)}>{t("list.import")}</button>
           </p>
         )}
       </div>

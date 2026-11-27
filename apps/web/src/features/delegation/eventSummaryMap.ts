@@ -1,6 +1,6 @@
 import type { RunEvent } from "@agent-console/contracts";
 import { formatRunOrdinal } from "./ordinal";
-import { delegationMessages as t } from "./messages";
+import type { DelegationMessages } from "./messages";
 
 /**
  * 반복·자식 실행 RunEvent 매핑 표 — **이 파일이 이 이벤트 타입 문자열과 payload 키를 쓰는 앱 안의 유일한 곳**이다
@@ -68,6 +68,8 @@ export function isChildRunNotice(event: Pick<RunEvent, "type">): boolean {
 }
 
 export interface EventSummaryContext {
+  /** 위임 문구 표(화면 언어) */
+  messages: DelegationMessages;
   nodeLabel(nodeId: string): string;
   /** 연결 칩 텍스트(반복 한도 도달 요약에 붙인다). 없으면 생략 */
   edgeLabel?(edgeId: string): string;
@@ -90,9 +92,10 @@ export interface EventSummary {
 export function summarizeDelegationEvent(event: Pick<RunEvent, "type" | "payload">, ctx: EventSummaryContext): EventSummary | null {
   const view = parseDelegationEvent(event);
   if (view === null) return null;
+  const t = ctx.messages;
   if (view.kind === "loop-iteration") {
     // 화면 번호는 formatRunOrdinal 한 곳에서 +1 한다. 첫 되돌림 = 값 1 → "2회차"
-    return { text: t.run.event.loopIteration(formatRunOrdinal(view.iteration, "iteration"), view.nodeIds.map(ctx.nodeLabel).join(", ")), tone: "neutral" };
+    return { text: t.run.event.loopIteration(formatRunOrdinal(view.iteration, "iteration", t), view.nodeIds.map(ctx.nodeLabel).join(", ")), tone: "neutral" };
   }
   if (view.kind === "loop-exhausted") {
     // 이 이벤트의 iteration은 loop.iteration과 기준이 달라 화면에 쓰지 않는다(max_iterations만).

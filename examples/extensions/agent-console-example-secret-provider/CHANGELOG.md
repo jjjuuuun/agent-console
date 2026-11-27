@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Internal log messages are now in English.
 - REL.31: 설치자 설정 스키마에 사람이 읽는 제목·설명을 준다(설정 화면 "확장 옵션" 머리말에 클래스 이름과 코드 문서가 보이던 것).
 - REL.20: 개발 의존 범위를 `agent-console-server>=1.0,<2`로 올렸다(서버 표시 버전 1.0.0). 코드 변경 없음.
 

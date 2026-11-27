@@ -1,0 +1,22 @@
+{
+  "text": {
+    "구성의 이전 버전을 보고 비교하고 되돌린다": "View, compare and revert earlier versions of items",
+    "버전 기록을 남길 정의 종류 하나입니다(예: 에이전트).": "One definition kind that keeps a version history (for example agents).",
+    "버전 기록을 붙일 목록 경로.": "List path that gets the version history routes.",
+    "경로": "Path",
+    "저장된 정의의 종류 이름.": "Kind name of the stored definition.",
+    "정의 종류": "Definition kind",
+    "경로에서 정의 id가 들어가는 자리 이름. 비우면 하나뿐인 정의(id = 종류 이름).": "Name of the path parameter that holds the definition id. Leave empty for a single definition (id = kind name).",
+    "id 자리 이름": "Id parameter name",
+    "오류·검사 메시지에 쓰는 이름.": "Name used in error and check messages.",
+    "버전 경로·보존 개수.": "Version routes and retention count.",
+    "정의마다 남길 버전 수(현재 포함, 실행이 쓴 팀 구성 버전은 더 남는다). 비우면 모두 남긴다.": "Number of versions kept per definition (current included; team versions used by runs are kept beyond this). Leave empty to keep all.",
+    "정의마다 남길 버전 수": "Versions kept per definition",
+    "버전 기록이 너무 많이 쌓일 때 줄입니다.": "Lower this when version history builds up too much.",
+    "버전 기록 경로를 붙일 정의 종류 표(기본: 에이전트·팀 구성·리소스·공통 설정).": "Table of definition kinds that get version history routes (default: agents, teams, resources, common settings).",
+    "버전을 남길 정의 종류": "Definition kinds with versions",
+    "버전 비교에서 값을 가릴 저장 전 검사 문제 코드(평문 비밀).": "Pre-save check problem codes whose values are masked in version comparisons (plain-text secrets).",
+    "값을 가릴 문제 코드": "Problem codes to mask",
+    "리소스 설정": "Resource settings"
+  }
+}

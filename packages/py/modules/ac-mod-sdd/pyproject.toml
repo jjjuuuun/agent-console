@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-sdd"
 version = "0.2.0"
-description = "Agent Console — 스펙(SDD) 기능 모듈: REST /sdd/*·WS sdd.changed, 정의 종류 기여(문서 틀·스펙), 설정 섹션 sdd, 포트 sdd.service"
+description = "Agent Console — specs (SDD) feature module: REST /sdd/*, WS sdd.changed, definition kind contributions (document templates, specs), settings section sdd, port sdd.service"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -23,6 +23,9 @@ mod-sdd = "agent_console_mod_sdd.module:module"
 
 [project.entry-points."agent_console.host_plugin_loaders"]
 sdd = "agent_console_mod_sdd.plugins:load_plugins"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-sdd = "agent_console_mod_sdd"
 
 [dependency-groups]
 dev = [

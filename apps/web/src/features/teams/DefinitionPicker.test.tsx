@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DefinitionPicker, sortPickItems, type DefinitionPickItem } from "./DefinitionPicker";
 
@@ -12,12 +13,12 @@ const items: DefinitionPickItem[] = [
 
 describe("sortPickItems", () => {
   it("최근 사용을 앞으로(최근 순), 나머지는 이름 순", () => {
-    expect(sortPickItems(items, ["b", "c"], "").map((i) => i.id)).toEqual(["b", "c", "a"]);
+    expect(sortPickItems(items, ["b", "c"], "", "ko").map((i) => i.id)).toEqual(["b", "c", "a"]);
   });
   it("검색어는 이름·설명·id 부분 일치", () => {
-    expect(sortPickItems(items, [], "검토").map((i) => i.id)).toEqual(["b"]);
-    expect(sortPickItems(items, [], "ARI").map((i) => i.id)).toEqual([]);
-    expect(sortPickItems(items, [], "c").map((i) => i.id)).toEqual(["c"]);
+    expect(sortPickItems(items, [], "검토", "ko").map((i) => i.id)).toEqual(["b"]);
+    expect(sortPickItems(items, [], "ARI", "ko").map((i) => i.id)).toEqual([]);
+    expect(sortPickItems(items, [], "c", "ko").map((i) => i.id)).toEqual(["c"]);
   });
 });
 

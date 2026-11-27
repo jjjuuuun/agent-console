@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-runs-sdd"
 version = "0.1.0"
-description = "Agent Console — 스펙·실행 연동 모듈: 스펙 작업을 팀 구성으로 실행, 결과를 작업 상태·추적 표에 반영"
+description = "Agent Console — specs and runs link module: runs spec tasks with a team and reflects the results in task status and the trace table"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-runs-sdd = "agent_console_link_runs_sdd.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-runs-sdd = "agent_console_link_runs_sdd"
 
 [dependency-groups]
 dev = [

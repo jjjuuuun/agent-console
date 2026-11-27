@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { archSettingsMessages as t } from "./messages";
+import { useArchSettingsMessages } from "./messages";
 import { parseProfileYaml } from "./yamlProfile";
 
 export interface ImportDialogProps {
@@ -11,6 +11,7 @@ export interface ImportDialogProps {
 
 /** YAML 붙여넣기 다이얼로그. [검사]는 형식만 본다(내용 검사는 편집기가 서버에 맡긴다). */
 export function ImportDialog({ onImport, onCancel }: ImportDialogProps) {
+  const t = useArchSettingsMessages();
   const [text, setText] = useState("");
   const [checked, setChecked] = useState(false);
   const parsed = useMemo(() => parseProfileYaml(text), [text]);

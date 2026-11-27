@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { InteractionCard, type FallbackArgs, type RenderEditor } from "@agent-console/chat";
 import type { FieldError } from "@agent-console/chat";
 import type { Interaction, InteractionKindDescriptor } from "@agent-console/contracts";
+import { useChatLocale } from "../../i18n";
 import { InteractionSchemaForm } from "../interactions";
 import { LazyTextEditor } from "../library";
 /** 큰 텍스트 편집기를 카드에 주입한다(`text-editor` 패키지, 지연 로딩). */
@@ -39,8 +40,10 @@ export interface InteractionItemProps {
 
 /** 상호작용 카드 하나: `InteractionCard`에 응답 호출·폴백·편집기를 연결한다(종류 이름을 모른다). */
 export function InteractionItem({ interaction, descriptor, now, actorLabel, onRespond, errors, disabled, onEscape, onResendAsMessage, contextChip, answerVia, answerPaused, onDraftChange }: InteractionItemProps) {
+  const chat = useChatLocale();
   return (
     <InteractionCard
+      messages={chat.interaction}
       interaction={interaction}
       descriptor={descriptor}
       now={now}

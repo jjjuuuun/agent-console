@@ -27,12 +27,12 @@ const text = linkifySource(content, [link]);
 ## Components
 | Component | Purpose |
 | --- | --- |
-| `PageTree` | The page tree (virtual list, `role="tree"`, folders first, natural number ordering) |
+| `PageTree` | The page tree (virtual list, `role="tree"`, folders first, natural number ordering in `locale`, default `"en"`) |
 | `PageView` | The content view. Runs `linkifySource` with the server's link ranges, then `MarkdownPreview` (markdown-doc), with a link style per status |
 | `OutlinksPanel` | The list of outgoing links (callbacks to jump to the position in the content and to sync highlighting) |
 | `PageHistory` / `HistoryDiff` | The history list (operation and author chips) / the comparison (text-editor `TextDiff`) |
 | `LinkGraph` / `LinkList` | The link graph (@xyflow/react + elkjs stress, a cheap layered layout when there are many nodes, read-only) / the same information as text |
-| `LintTable` | The check table (virtual grid, filtering, sorting) |
+| `LintTable` | The check table (virtual grid, filtering, sorting; `locale` sets the text sort order, default `"en"`) |
 | `SearchResults` | Search results (highlighting from the server's `marks`) |
 | `NewPageForm` / `MovePageForm` | A new page (template and variables) / rename (with a preview of link fixes) |
 | `RuleListEditor` / `SyntaxValueTree` | Order, remove, and add the rules in use / the effective syntax value tree with source badges |

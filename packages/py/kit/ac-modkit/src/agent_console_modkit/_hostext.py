@@ -66,6 +66,49 @@ REASON_PLUGINS_NOT_ENABLED = "설정 plugins.enabled에 없음"
 SECRET_PROVIDERS_REGISTRY = "secret_providers"
 """비밀 공급자 레지스트리 이름. 묶음의 같은 이름 속성(``Registry``) 또는 ``extension(이름)``."""
 
+_REASON_TERMINAL = {
+    REASON_PLUGINS_DISABLED: "listed in plugins.disabled",
+    REASON_PLUGINS_NOT_ENABLED: "not listed in plugins.enabled",
+}
+"""보고 이유의 터미널(로그) 영어 문구. 웹은 원문 이유를 문구 묶음 ``text``로 옮긴다."""
+
+
+class SettingsNoticeCodes:
+    """설정 경고 코드(``SettingsNotice.code``). 웹은 이 코드와 ``details``로 문구를 고른다."""
+
+    PLUGINS_UNKNOWN_DISABLED = "plugins.unknown_disabled"
+    """``plugins.disabled``의 이름이 어느 보고에도 없다(``details.name``)."""
+    PLUGINS_DISABLED_MODULE_ID = "plugins.disabled_module_id"
+    """그 이름이 서버 모듈 id다(``details.name``·``details.entry_points`` = 같은 배포의 이름)."""
+    PLUGINS_DISABLED_MODULE_ID_NOTHING = "plugins.disabled_module_id_nothing"
+    """그 이름이 서버 모듈 id이고 같은 배포에 끌 수 있는 entry point가 없다(``details.name``)."""
+    PLUGINS_DISABLED_DISTRIBUTION = "plugins.disabled_distribution"
+    """그 이름이 배포 이름이다(``details.name``·``details.entry_points``)."""
+    PLUGINS_DISABLED_DISTRIBUTION_NOTHING = "plugins.disabled_distribution_nothing"
+    """그 이름이 배포 이름이고 끌 수 있는 entry point가 없다(``details.name``)."""
+    SECRET_PROVIDER_NO_SETTINGS_HOOK = "secrets.provider_no_settings_hook"
+    """설정이 있는 비밀 공급자에 설정 훅이 없다(``details.setting``·``provider``·``hook``)."""
+    SECRET_PROVIDER_UNKNOWN = "secrets.provider_unknown"
+    """설정의 key가 등록된 비밀 공급자가 아니다(``details.setting``·``provider``)."""
+
+
+@dataclass(frozen=True)
+class SettingsNotice:
+    """설정 경고 하나(호스트가 서버 정보 경고 ``Issue``로 내보낸다).
+
+    Attributes:
+        code: 경고 코드(``SettingsNoticeCodes``). 웹이 문구 묶음 ``codes``에서 문구를 찾는다.
+        message: 사람이 읽는 원문 문장(값·비밀 없음).
+        details: 문구 틀을 채울 값(JSON 값).
+    """
+
+    code: str
+    message: str
+    details: Mapping[str, Any] = field(default_factory=dict)
+
+    def __str__(self) -> str:
+        return self.message
+
 
 @dataclass(frozen=True)
 class PluginLoadContext:
@@ -144,12 +187,17 @@ class HostPlugins:
     Attributes:
         registries: 레지스트리 묶음(``BaseServices.registries``).
         reports: ``(그룹, 보고)`` 목록(서버 정보의 플러그인 목록).
-        warnings: 설정 경고(예: ``plugins.disabled``의 모르는 이름). 사람이 읽는 문장.
+        notices: 설정 경고(예: ``plugins.disabled``의 모르는 이름) — 코드·원문·``details``.
     """
 
     registries: Any
     reports: list[tuple[str, LoadReport]] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    notices: list[SettingsNotice] = field(default_factory=list)
+
+    @property
+    def warnings(self) -> list[str]:
+        """``notices``의 원문 문장(사람이 읽는 문장 목록)."""
+        return [n.message for n in self.notices]
 
     @property
     def secret_providers(self) -> list[Any]:
@@ -237,8 +285,8 @@ def _unknown_disabled_warning(
     entry_points: Iterable[importlib.metadata.EntryPoint],
     *,
     modules_group: str = MODULES_GROUP,
-) -> str:
-    """``plugins.disabled``의 이름 ``name``이 어느 보고에도 없을 때의 경고 문장.
+) -> SettingsNotice:
+    """``plugins.disabled``의 이름 ``name``이 어느 보고에도 없을 때의 경고.
 
     흔한 실수 두 가지를 알아보고 고칠 이름을 보인다.
 
@@ -255,15 +303,16 @@ def _unknown_disabled_warning(
         modules_group: 서버 모듈 entry point 그룹.
 
     Returns:
-        사람이 읽는 한 문장(알아본 실수가 없으면 기본 경고만).
+        ``SettingsNotice``: 원문은 한 문장(알아본 실수가 없으면 기본 경고만), 코드는 알아본 실수별
+        (``SettingsNoticeCodes.PLUGINS_*``), ``details``는 ``name``(+ ``entry_points`` = 쉼표 목록).
     """
     base = f"plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함)"
     eps = list(entry_points)
     modules = [ep for ep in eps if ep.group == modules_group and ep.name == name]
     dists: set[str] = set()
-    hints: list[str] = []
+    hint = ""
     if modules:
-        hints.append(
+        hint = (
             f"'{name}'은(는) 서버 모듈 id입니다. "
             "모듈은 modules.disabled(또는 --disable-module)로 끕니다"
         )
@@ -271,27 +320,50 @@ def _unknown_disabled_warning(
     else:
         wanted = _normalized_dist(name)
         if any((d := _dist_name(ep)) is not None and _normalized_dist(d) == wanted for ep in eps):
-            hints.append(
+            hint = (
                 f"'{name}'은(는) 배포 이름입니다. plugins.disabled에는 entry point 이름을 적습니다"
             )
             dists = {wanted}
-    if dists:
-        candidates = sorted(
-            {
-                ep.name
-                for ep in eps
-                if ep.group != modules_group
-                and ep.name in known
-                and (d := _dist_name(ep)) is not None
-                and _normalized_dist(d) in dists
-            }
+    if not hint:
+        return SettingsNotice(
+            code=SettingsNoticeCodes.PLUGINS_UNKNOWN_DISABLED, message=base, details={"name": name}
         )
-        hints.append(
-            "이 배포의 entry point 이름: " + ", ".join(candidates)
-            if candidates
-            else "이 배포에는 plugins.disabled로 끌 수 있는 entry point가 없습니다"
+    candidates = sorted(
+        {
+            ep.name
+            for ep in eps
+            if ep.group != modules_group
+            and ep.name in known
+            and (d := _dist_name(ep)) is not None
+            and _normalized_dist(d) in dists
+        }
+    )
+    nothing = f"{base} — {hint}. 이 배포에는 plugins.disabled로 끌 수 있는 entry point가 없습니다"
+    listed = ", ".join(candidates)
+    found = f"{base} — {hint}. 이 배포의 entry point 이름: {listed}"
+    if modules and not candidates:
+        return SettingsNotice(
+            code=SettingsNoticeCodes.PLUGINS_DISABLED_MODULE_ID_NOTHING,
+            message=nothing,
+            details={"name": name},
         )
-    return f"{base} — " + ". ".join(hints) if hints else base
+    if modules:
+        return SettingsNotice(
+            code=SettingsNoticeCodes.PLUGINS_DISABLED_MODULE_ID,
+            message=found,
+            details={"name": name, "entry_points": listed},
+        )
+    if not candidates:
+        return SettingsNotice(
+            code=SettingsNoticeCodes.PLUGINS_DISABLED_DISTRIBUTION_NOTHING,
+            message=nothing,
+            details={"name": name},
+        )
+    return SettingsNotice(
+        code=SettingsNoticeCodes.PLUGINS_DISABLED_DISTRIBUTION,
+        message=found,
+        details={"name": name, "entry_points": listed},
+    )
 
 
 def _with_reason(
@@ -386,14 +458,15 @@ def load_host_plugins(
         if not report.ok:
             _log.warning("Couldn't load plugin: %s (%s)", report.source, report.error)
         elif report.reason is not None:
-            _log.info("Plugin %s: %s (%s)", report.status, report.source, report.reason)
+            reason = _REASON_TERMINAL.get(report.reason, report.reason)
+            _log.info("Plugin %s: %s (%s)", report.status, report.source, reason)
     seen = {r.key for _, r in reports if r.key is not None}
     unknown = sorted(blocked - seen)
     found = _all_entry_points(entry_points) if unknown else []
-    warnings = [_unknown_disabled_warning(name, seen, found) for name in unknown]
-    for name in unknown:  # 웹(server-info) 문구는 한국어 원문 `warnings`, 터미널은 영어 한 줄
+    notices = [_unknown_disabled_warning(name, seen, found) for name in unknown]
+    for name in unknown:  # 웹(server-info)은 코드·details로 문구를 고른다, 터미널은 영어 한 줄
         _log.warning("plugins.disabled: '%s' is not an installed plugin name (ignored)", name)
-    return HostPlugins(registries=registries, reports=reports, warnings=warnings)
+    return HostPlugins(registries=registries, reports=reports, notices=notices)
 
 
 def open_host_database(
@@ -486,6 +559,8 @@ __all__ = [
     "PluginLoadContext",
     "PluginLoader",
     "RegistryBundle",
+    "SettingsNotice",
+    "SettingsNoticeCodes",
     "env_secret_lookup",
     "load_host_plugins",
     "open_host_database",

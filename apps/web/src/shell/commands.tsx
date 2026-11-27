@@ -5,6 +5,12 @@ export interface CommandDef {
   id: string;
   /** `messages`의 점 표기 키 */
   titleKey: string;
+  /** 이미 번역된 이름(있으면 `titleKey`보다 우선) */
+  title?: string;
+  /** 항목 오른쪽 부제(이미 번역된 글자, 예: 현재 상태) */
+  hint?: string;
+  /** 검색에만 쓰는 별칭(공백 구분, 화면에는 안 보임) */
+  keywords?: string;
   run: () => void;
   /** 표시용 단축키(선택) */
   shortcut?: string;
@@ -49,11 +55,14 @@ export function useRegisterCommands(defs: readonly CommandDef[]): void {
   useEffect(() => {
     ref.current = defs;
   });
-  const signature = JSON.stringify(defs.map((d) => [d.id, d.titleKey, d.shortcut ?? null]));
+  const signature = JSON.stringify(defs.map((d) => [d.id, d.titleKey, d.shortcut ?? null, d.title ?? null, d.hint ?? null, d.keywords ?? null]));
   useEffect(() => {
-    const wrapped = (JSON.parse(signature) as [string, string, string | null][]).map(([id, titleKey, shortcut]): CommandDef => ({
+    const wrapped = (JSON.parse(signature) as [string, string, string | null, string | null, string | null, string | null][]).map(([id, titleKey, shortcut, title, hint, keywords]): CommandDef => ({
       id,
       titleKey,
+      ...(title === null ? {} : { title }),
+      ...(hint === null ? {} : { hint }),
+      ...(keywords === null ? {} : { keywords }),
       ...(shortcut === null ? {} : { shortcut }),
       run: () => ref.current.find((d) => d.id === id)?.run(),
     }));

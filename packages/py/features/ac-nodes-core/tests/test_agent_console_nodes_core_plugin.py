@@ -93,6 +93,8 @@ def test_entry_points_register_v2_types_only() -> None:
     assert _eps(DELEGATION_STRATEGIES_GROUP) == {SDK_SUBAGENTS}
     assert _eps(INTERACTION_KINDS_GROUP) == {"question", "tool_permission", "review"}
     for ep in importlib.metadata.distribution(DIST).entry_points:
+        if ep.group == "agent_console.message_catalogs":
+            continue  # 문구 묶음은 locales/를 가진 모듈을 가리킨다(서술자 아님)
         obj = ep.load()
         desc = getattr(obj, "descriptor", obj)  # 상호작용 종류는 디스크립터 객체를 바로 가리킨다
         assert desc.id == ep.name  # 이름 = 레지스트리 key = 디스크립터 id

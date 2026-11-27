@@ -6,7 +6,7 @@ export interface CanvasToastInput extends ToastInput {
   /** 같은 종류 식별자. 떠 있는 알림과 같으면 새로 쌓지 않고 개수만 올린다. */
   mergeKey?: string;
   /** 합쳐진 개수(2 이상)일 때의 문구. 없으면 첫 문구 그대로. */
-  mergeText?: (count: number) => string;
+  mergeText?: (count: number) => ReactNode;
 }
 
 interface Shown extends CanvasToastInput {

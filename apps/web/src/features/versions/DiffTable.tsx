@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { DiffChange } from "@agent-console/contracts";
 import { Icon } from "@agent-console/ui";
-import { versionMessages as t } from "./messages";
 import { countOps, matchesQuery, previewValue, type DiffOpName } from "./versionsLogic";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 export interface DiffTableProps {
   changes: readonly DiffChange[];
@@ -29,6 +30,8 @@ function ValueCell({ change, side, expanded }: { change: DiffChange; side: "befo
  * 필터(동작)·검색(경로·값)·정렬은 서버 순서 유지. 도메인·API를 모른다.
  */
 export function DiffTable({ changes, readable }: DiffTableProps) {
+  const t = useT("versions");
+  const tm = useMaybeT("versions");
   const [ops, setOps] = useState<ReadonlySet<DiffOpName>>(new Set());
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
@@ -87,34 +90,34 @@ export function DiffTable({ changes, readable }: DiffTableProps) {
     }
   };
 
-  if (changes.length === 0) return <p className="app-muted">{t.fields.none}</p>;
+  if (changes.length === 0) return <p className="app-muted">{t("fields.none")}</p>;
   const activePos = Math.min(active, Math.max(visible.length - 1, 0));
 
   return (
     <div className="ver-diff" onKeyDown={onRegionKey}>
       <div className="ver-diff-tools">
-        <span className="app-muted ac-num">{t.fields.counts(counts.add, counts.remove, counts.replace)}</span>
-        <div role="group" aria-label={t.fields.filterLabel} className="ver-filter">
+        <span className="app-muted ac-num">{t("fields.counts", { a: counts.add, r: counts.remove, c: counts.replace })}</span>
+        <div role="group" aria-label={t("fields.filterLabel")} className="ver-filter">
           {OPS.map((op) => (
             <button key={op} type="button" className="ac-btn" data-size="sm" data-variant={ops.has(op) ? "primary" : "secondary"} aria-pressed={ops.has(op)} onClick={() => toggleOp(op)}>
               <span className="ac-btn-label">
-                <span aria-hidden="true">{t.fields.opIcons[op]}</span> {t.fields.ops[op]}
+                <span aria-hidden="true">{tm(`fields.opIcons.${op}`)}</span> {tm(`fields.ops.${op}`)}
               </span>
             </button>
           ))}
         </div>
-        <input ref={search} type="search" className="ac-input ver-search" aria-label={t.fields.searchLabel} placeholder={t.fields.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input ref={search} type="search" className="ac-input ver-search" aria-label={t("fields.searchLabel")} placeholder={t("fields.searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       {visible.length === 0 ? (
-        <p className="app-muted">{t.fields.noMatch}</p>
+        <p className="app-muted">{t("fields.noMatch")}</p>
       ) : (
-        <table className="lib-grid ver-table" aria-label={t.fields.table}>
+        <table className="lib-grid ver-table" aria-label={t("fields.table")}>
           <thead>
             <tr>
-              <th scope="col">{t.fields.op}</th>
-              <th scope="col">{t.fields.path}</th>
-              <th scope="col">{t.fields.before}</th>
-              <th scope="col">{t.fields.after}</th>
+              <th scope="col">{t("fields.op")}</th>
+              <th scope="col">{t("fields.path")}</th>
+              <th scope="col">{t("fields.before")}</th>
+              <th scope="col">{t("fields.after")}</th>
             </tr>
           </thead>
           <tbody>
@@ -133,12 +136,12 @@ export function DiffTable({ changes, readable }: DiffTableProps) {
                   className="ver-row"
                   data-op={change.op}
                   data-secret={secret ? "true" : undefined}
-                  aria-label={secret ? `${labelOf(change)} — ${t.fields.secretRow}` : undefined}
+                  aria-label={secret ? `${labelOf(change)} — ${t("fields.secretRow")}` : undefined}
                   onFocus={() => setActive(position)}
                   onKeyDown={(e) => onRowKey(e, position, index, complex)}
                 >
                   <td className="ver-op">
-                    <span aria-hidden="true">{t.fields.opIcons[change.op] ?? "?"}</span> {t.fields.ops[change.op] ?? change.op}
+                    <span aria-hidden="true">{tm(`fields.opIcons.${change.op}`) ?? "?"}</span> {tm(`fields.ops.${change.op}`) ?? change.op}
                   </td>
                   <td className="ver-path">
                     <span className="app-wrap">{labelOf(change)}</span>
@@ -149,10 +152,10 @@ export function DiffTable({ changes, readable }: DiffTableProps) {
                   </td>
                   <td>
                     <ValueCell change={change} side="after" expanded={expanded} />
-                    {secret ? <span className="ver-secret"> <Icon name="lock" size={12} fallbackText="L" /> {t.fields.secretChip}</span> : null}
+                    {secret ? <span className="ver-secret"> <Icon name="lock" size={12} fallbackText="L" /> {t("fields.secretChip")}</span> : null}
                     {complex ? (
                       <button type="button" className="app-link-btn ver-expand" aria-expanded={expanded} onClick={() => toggleOpen(index)}>
-                        {expanded ? t.fields.collapse : t.fields.expand}
+                        {expanded ? t("fields.collapse") : t("fields.expand")}
                       </button>
                     ) : null}
                   </td>

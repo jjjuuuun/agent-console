@@ -1,9 +1,10 @@
 import { useState, type KeyboardEvent } from "react";
 import { Link } from "react-router";
 import { Icon, Popover, useIconRegistry } from "@agent-console/ui";
-import { formatCount, formatDuration } from "../../lib/format";
-import { runsMessages as t } from "./messages";
+
+import { useRunsMessages } from "./messages";
 import type { RunSessions, SessionInfo } from "./runSessions";
+import { useFormat } from "../../i18n";
 
 export interface RunSessionsChipProps {
   sessions: RunSessions;
@@ -21,6 +22,7 @@ export interface RunSessionsChipProps {
 
 /** 세션 번호 배지: 색 점(8px) + `S{n}`. 색만으로 뜻을 전하지 않는다(번호가 같이 간다). */
 export function SessionBadge({ session, className }: { session: Pick<SessionInfo, "number" | "color">; className?: string | undefined }) {
+  const t = useRunsMessages();
   return (
     <span className={["ses-badge", className].filter(Boolean).join(" ")}>
       <span className="ses-dot" aria-hidden="true" style={{ background: session.color }} />
@@ -34,6 +36,8 @@ export function SessionBadge({ session, className }: { session: Pick<SessionInfo
  * 행을 고르면 그래프가 그 세션의 노드를 강조한다(`Esc`로 해제). 백엔드는 `backendOf`가 알려 줄 때만 mono로 보이고 모르면 `–`다.
  */
 export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, originSec, nowSec, backendOf }: RunSessionsChipProps) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
   const [open, setOpen] = useState(false);
   const registry = useIconRegistry();
   if (sessions.list.length === 0) return null;
@@ -89,9 +93,9 @@ export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, origi
                 <td><SessionBadge session={s} /></td>
                 <td className="ac-ellipsis" title={s.name}>{s.name}</td>
                 <td className="ac-ellipsis">{backendOf?.(s.id) ? <span className="lib-mono" title={t.sessions.backendNote}>{backendOf(s.id)}</span> : "–"}</td>
-                <td className="ac-num">{origin === undefined || s.startedAt === undefined ? "–" : t.sessions.relativeStart(formatDuration((s.startedAt - origin) * 1000))}</td>
-                <td className="ac-num">{s.startedAt === undefined ? "–" : formatDuration(((s.endedAt ?? nowSec) - s.startedAt) * 1000)}</td>
-                <td className="ac-num">{s.subCalls > 0 ? formatCount(s.subCalls) : "–"}</td>
+                <td className="ac-num">{origin === undefined || s.startedAt === undefined ? "–" : t.sessions.relativeStart(fmt.duration((s.startedAt - origin) * 1000))}</td>
+                <td className="ac-num">{s.startedAt === undefined ? "–" : fmt.duration(((s.endedAt ?? nowSec) - s.startedAt) * 1000)}</td>
+                <td className="ac-num">{s.subCalls > 0 ? fmt.number(s.subCalls) : "–"}</td>
                 {logHref !== undefined ? (
                   <td>
                     <Link to={logHref(s.id)} onClick={(e) => e.stopPropagation()}>{t.sessions.log}</Link>

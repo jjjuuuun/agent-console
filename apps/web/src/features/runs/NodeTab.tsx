@@ -1,10 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { NodeRun, Run, RunEvent } from "@agent-console/contracts";
 import { Button, StatusChip, Tabs } from "@agent-console/ui";
-import { messages as appMessages } from "../../app/messages";
-import { formatCount, formatDuration, stringifyValue } from "../../lib/format";
-import { runsMessages as t } from "./messages";
+import { stringifyValue } from "../../lib/format";
+import { useRunsMessages } from "./messages";
 import { summarizeEvent } from "./runsLib";
+import { useFormat, useUiLibMessages } from "../../i18n";
 
 export interface NodeTabProps {
   run: Run;
@@ -37,6 +37,9 @@ function Json({ value }: { value: unknown }) {
 
 /** 탭 ⑤ 노드: 선택한 노드의 출력/입력/사용량/이벤트. 선택이 없으면 실행 전체 요약. */
 export function NodeTab(p: NodeTabProps) {
+  const fmt = useFormat();
+  const t = useRunsMessages();
+  const ui = useUiLibMessages();
   const [sub, setSub] = useState("out");
   const nr = p.nodeRun;
   const eventsView = useMemo(
@@ -50,7 +53,7 @@ export function NodeTab(p: NodeTabProps) {
         ))}
       </ul>
     ),
-    [p.events],
+    [p.events, t],
   );
 
   if (p.edgeView !== undefined) return <div className="runs-node">{p.edgeView}</div>;
@@ -71,7 +74,7 @@ export function NodeTab(p: NodeTabProps) {
           ) : null}
           <dt>{t.node.totals}</dt>
           <dd>
-            {run.totals ? `${formatCount(run.totals.input_tokens)} / ${formatCount(run.totals.output_tokens)}` : "–"} · {formatDuration(run.started_at != null && run.ended_at != null ? (run.ended_at - run.started_at) * 1000 : undefined)}
+            {run.totals ? `${fmt.number(run.totals.input_tokens)} / ${fmt.number(run.totals.output_tokens)}` : "–"} · {fmt.duration(run.started_at != null && run.ended_at != null ? (run.ended_at - run.started_at) * 1000 : undefined)}
           </dd>
         </dl>
         {p.replies && p.replies.length > 0 ? (
@@ -89,7 +92,7 @@ export function NodeTab(p: NodeTabProps) {
   const header = (
     <div className="runs-node-head">
       <h3 className="app-block-subtitle">{p.nodeLabel(p.nodeId)}</h3>
-      {nr ? <StatusChip status={nr.status} label={appMessages.nodeStatus[nr.status] ?? nr.status} /> : null}
+      {nr ? <StatusChip status={nr.status} label={t.nodeStatus[nr.status] ?? nr.status} /> : null}
       {nr ? <span className="app-muted">{p.ordinalText ?? t.node.attemptOnly(nr.attempt ?? 1)}</span> : null}
     </div>
   );
@@ -113,6 +116,7 @@ export function NodeTab(p: NodeTabProps) {
       {p.invokedNote ? <p className="app-muted runs-note">{p.invokedNote}</p> : null}
       {nr?.error ? <p className="runs-result-error" role="alert">{t.node.error}: {nr.error.message}</p> : null}
       <Tabs
+        messages={ui}
         ariaLabel={t.node.subTabs}
         activeId={sub}
         onChange={setSub}
@@ -136,11 +140,11 @@ export function NodeTab(p: NodeTabProps) {
             label: t.node.usage,
             content: nr?.usage ? (
               <dl className="app-meta">
-                <dt>{t.trace.usageInput}</dt><dd>{formatCount(nr.usage.input_tokens)}</dd>
-                <dt>{t.trace.usageOutput}</dt><dd>{formatCount(nr.usage.output_tokens)}</dd>
-                <dt>{t.trace.usageCache}</dt><dd>{formatCount(nr.usage.cache_read_tokens)}</dd>
+                <dt>{t.trace.usageInput}</dt><dd>{fmt.number(nr.usage.input_tokens)}</dd>
+                <dt>{t.trace.usageOutput}</dt><dd>{fmt.number(nr.usage.output_tokens)}</dd>
+                <dt>{t.trace.usageCache}</dt><dd>{fmt.number(nr.usage.cache_read_tokens)}</dd>
                 <dt>{t.trace.usageCost}</dt><dd>{nr.usage.cost_usd == null ? "–" : `$${nr.usage.cost_usd}`}</dd>
-                <dt>{t.node.duration}</dt><dd>{formatDuration(nr.duration_ms)}</dd>
+                <dt>{t.node.duration}</dt><dd>{fmt.duration(nr.duration_ms)}</dd>
               </dl>
             ) : (
               <p className="app-muted">–</p>

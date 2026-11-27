@@ -1,8 +1,7 @@
 import { useId, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { scopeMessages } from "./scopeMessages";
+import { useScopeMessages } from "./scopeMessages";
 
-const t = scopeMessages.settings;
 
 export interface AssignTarget {
   id: string;
@@ -28,6 +27,7 @@ export interface AssignProjectDialogProps {
 
 /** 프로젝트 없는 이전 기록을 프로젝트에 넣는 대화상자(screen-projects §8.3). 표현 전용. */
 export function AssignProjectDialog({ feature, count, targets, directDefault, busy, error, onSubmit, onClose }: AssignProjectDialogProps) {
+  const t = useScopeMessages().settings;
   const name = useId();
   const sorted = [...targets].sort((a, b) => Number(b.recommended === true) - Number(a.recommended === true));
   const [picked, setPicked] = useState<string | null>(null);

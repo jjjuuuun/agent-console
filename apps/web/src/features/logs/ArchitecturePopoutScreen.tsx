@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import type { LogQueryParams } from "@agent-console/api-client";
 import { Banner, Button } from "@agent-console/ui";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
-import { ARCH_POPOUT, ArchitecturePanel, archMessages as t, createArchSync, useArchSync, useArchitectureController, type ArchSyncMessage, type ChannelFactory } from "../architecture";
+import { ARCH_POPOUT, ArchitecturePanel, createArchSync, useArchSync, useArchitectureController, type ArchSyncMessage, type ChannelFactory, useArchMessages } from "../architecture";
 import { LogsLiveProvider, useLogsIngested } from "./LogsLive";
 import { LOGS_LIMITS } from "./logsConfig";
 
@@ -41,6 +41,7 @@ export function ArchitecturePopoutScreen(props: ArchitecturePopoutProps) {
 }
 
 function PopoutBody({ channelFactory, closeWindow }: ArchitecturePopoutProps) {
+  const t = useArchMessages();
   const [params] = useSearchParams();
   const key = params.get(ARCH_POPOUT.queryKey) ?? "";
   const raw = params.get(ARCH_POPOUT.queryScope);
@@ -77,7 +78,7 @@ function PopoutBody({ channelFactory, closeWindow }: ArchitecturePopoutProps) {
   }, [sync]);
   useEffect(() => {
     document.title = t.popout.windowTitle(key);
-  }, [key]);
+  }, [key, t]);
 
   const redock = () => {
     sync?.post({ kind: "bye" });

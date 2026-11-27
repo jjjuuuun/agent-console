@@ -168,7 +168,7 @@ def spec_recorded(spec_kind: str, notify: Callable[[str, str], None]) -> Version
         try:
             notify(item_id, version_hash)
         except Exception:
-            _log.warning("스펙 변경 알림 실패: %s/%s", kind, item_id, exc_info=True)
+            _log.warning("Spec change notification failed: %s/%s", kind, item_id, exc_info=True)
 
     return recorded
 

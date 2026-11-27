@@ -214,7 +214,7 @@ class SpecAutomation:
         try:
             self._sdd.notify(key[0], key[1], automation=True)
         except Exception:  # pragma: no cover - 알림 실패가 자동 진행을 깨지 않게
-            _log.exception("sdd.changed 알림 실패")
+            _log.exception("sdd.changed notification failed")
 
     # ------------------------------------------------------------ 차례 맡기기
     def kick(self, space: str | None, spec_id: str) -> None:
@@ -253,7 +253,7 @@ class SpecAutomation:
         try:
             await make()
         except Exception:
-            _log.exception("자동 진행 차례 실패")
+            _log.exception("Auto-advance step failed")
 
     def _done(self, future: concurrent.futures.Future[None]) -> None:
         with self._guard:
@@ -365,7 +365,7 @@ class SpecAutomation:
             loaded = scope.repository.load(spec_id)
             ctx = self._sdd.context(scope, loaded)
         except Exception:
-            _log.info("자동 진행: 스펙을 읽지 못했습니다(%s, %s)", space, spec_id)
+            _log.info("Auto-advance: couldn't read the spec (%s, %s)", space, spec_id)
             return
         auto = ctx.spec.rules.automation
         st.enabled = bool(auto is not None and auto.enabled)
@@ -474,7 +474,9 @@ class SpecAutomation:
         try:
             runs = self._integration.spec_runs(ctx)
         except Exception:
-            _log.info("자동 진행: 실행 기록을 읽지 못했습니다(%s, %s)", ctx.space, ctx.spec.id)
+            _log.info(
+                "Auto-advance: couldn't read the run records (%s, %s)", ctx.space, ctx.spec.id
+            )
             return
         task_label = self._sdd.label_key(LABEL_TASK)
         profile_label = self._sdd.label_key(LABEL_PROFILE)

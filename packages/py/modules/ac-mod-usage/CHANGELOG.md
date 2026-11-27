@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-usage`, so the web can show the module description and settings and the `usage.source_conflict` issue in English (data only, no API change). Log lines are now English.
 - 5.2R.22: `resolve_command`가 `PATH`에서 못 찾으면 서버를 실행한 파이썬 폴더(`extra_dirs`)에서 찾고, 경로로 준 값도 절대 경로로 바꾼다(조각을 그대로 붙여 넣어 동작하게).
 - 5.2R.27: 연결 안내 조각의 `{agent_console_cmd}`를 채움(옵션 `agent_console_command`, `resolve_command`). 적지 않은 출처의 자동 켜기는 `agent_console_usage.auto_enabled`.
 - 4R.13 후속: `definitions.checks` 제공(`UsageSettingsCheck` — 공통 설정 저장 전 출처 설정을 출처 `config_schema`로 검증, error면 422), `server.warnings`에 저장된 설정 오류 `usage.source_config_invalid` 추가.

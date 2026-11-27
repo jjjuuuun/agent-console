@@ -2,12 +2,10 @@ import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ConversationSummary } from "@agent-console/contracts";
 import { Button, ListPane, StatusIcon, type ListPaneGroup } from "@agent-console/ui";
 import { LoadMoreFooter } from "../../app/LoadMoreFooter";
-import { messages as appMessages } from "../../app/messages";
-import { formatRelative } from "../../lib/format";
+import { useShellMessages } from "../../app/shellMessages";
 import { ActionMenu, type ActionMenuItem } from "./ActionMenu";
-import { chatMessages } from "./chatMessages";
-
-const t = chatMessages.list;
+import { useChatMessages, type ChatMessages } from "./chatMessages";
+import { useFormat } from "../../i18n";
 
 export interface ConversationListProps {
   /** 정렬·검색·보관 필터가 끝난 목록 */
@@ -44,7 +42,7 @@ export interface ConversationListProps {
   sourceLabel?: (source: string) => string;
 }
 
-function statusOf(c: ConversationSummary): { status: string; label: string } | null {
+function statusOf(c: ConversationSummary, t: ChatMessages["list"]): { status: string; label: string } | null {
   if ((c.pending_interactions ?? 0) > 0) return { status: "waiting", label: t.status["waiting"] ?? "waiting" };
   const s = c.last_status;
   if (s === "running" || s === "failed" || s === "interrupted" || s === "queued" || s === "waiting") return { status: s, label: t.status[s] ?? s };
@@ -56,6 +54,10 @@ function statusOf(c: ConversationSummary): { status: string; label: string } | n
  * 키: `↑↓ Enter`(ListPane), `N` 새 대화, `F2` 이름 바꾸기, `Delete` 삭제, `Shift+F10` 행 메뉴, `/` 검색.
  */
 export function ConversationList(props: ConversationListProps) {
+  const fmt = useFormat();
+  const shell = useShellMessages();
+  const m = useChatMessages();
+  const t = m.list;
   const { conversations, selectedId, query } = props;
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -97,10 +99,10 @@ export function ConversationList(props: ConversationListProps) {
   };
 
   const menuItems = (c: ConversationSummary): ActionMenuItem[] => [
-    { id: "rename", label: chatMessages.menu.rename, onSelect: () => props.onRename(c) },
-    { id: "archive", label: c.archived ? chatMessages.menu.unarchive : chatMessages.menu.archive, onSelect: () => props.onToggleArchive(c) },
-    { id: "open-team", label: chatMessages.menu.openTeam, onSelect: () => props.onOpenTeam(c), disabled: props.teamName(c.graph_id) === undefined },
-    { id: "delete", label: chatMessages.menu.delete, onSelect: () => props.onDelete(c), danger: true },
+    { id: "rename", label: m.menu.rename, onSelect: () => props.onRename(c) },
+    { id: "archive", label: c.archived ? m.menu.unarchive : m.menu.archive, onSelect: () => props.onToggleArchive(c) },
+    { id: "open-team", label: m.menu.openTeam, onSelect: () => props.onOpenTeam(c), disabled: props.teamName(c.graph_id) === undefined },
+    { id: "delete", label: m.menu.delete, onSelect: () => props.onDelete(c), danger: true },
   ];
 
   const empty = (
@@ -140,7 +142,7 @@ export function ConversationList(props: ConversationListProps) {
         {...(props.error ? { error: <ListError message={props.error} onRetry={props.onRetry} /> } : {})}
         empty={empty}
         renderItem={(c) => {
-          const status = statusOf(c);
+          const status = statusOf(c, t);
           const title = c.title || t.untitled;
           const team = props.teamName(c.graph_id);
           const waiting = c.pending_interactions ?? 0;
@@ -152,7 +154,7 @@ export function ConversationList(props: ConversationListProps) {
                     {status ? <StatusIcon status={status.status} kind={status.status === "waiting" ? "node" : "run"} size={14} label={status.label} /> : null}
                   </span>
                   <span className="chat-row-title ac-ellipsis" title={title}>{title}</span>
-                  <span className="chat-row-time app-muted">{formatRelative(c.updated_at, props.nowMs)}</span>
+                  <span className="chat-row-time app-muted">{fmt.relative(c.updated_at, props.nowMs)}</span>
                 </div>
                 <div className="chat-row-line chat-row-sub app-muted">
                   <span className="ac-ellipsis" title={team ?? t.deletedTeam} data-deleted-team={team === undefined ? "true" : undefined}>{team ?? t.deletedTeam}</span>
@@ -167,7 +169,7 @@ export function ConversationList(props: ConversationListProps) {
         }}
         renderRowAction={(c) => <ActionMenu label={t.rowMenu(c.title || t.untitled)} items={menuItems(c)} size="sm" open={menuFor === c.id} onOpenChange={(open) => setMenuFor(open ? c.id : null)} />}
       />
-      {props.paging ? <LoadMoreFooter hasMore={props.paging.hasMore} loading={props.paging.loading} onLoadMore={props.paging.onLoadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} auto={false} /> : null}
+      {props.paging ? <LoadMoreFooter hasMore={props.paging.hasMore} loading={props.paging.loading} onLoadMore={props.paging.onLoadMore} label={shell.common.loadMore} loadingLabel={shell.common.loadingMore} auto={false} /> : null}
     </div>
   );
 }
@@ -181,10 +183,11 @@ function ListSkeleton() {
 }
 
 function ListError({ message, onRetry }: { message: string; onRetry?: (() => void) | undefined }) {
+  const shell = useShellMessages();
   return (
     <div className="chat-list-empty">
       <p>{message}</p>
-      {onRetry ? <Button size="sm" onClick={onRetry}>{appMessages.common.retry}</Button> : null}
+      {onRetry ? <Button size="sm" onClick={onRetry}>{shell.common.retry}</Button> : null}
     </div>
   );
 }

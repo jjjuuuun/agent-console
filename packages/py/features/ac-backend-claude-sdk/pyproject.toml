@@ -29,6 +29,9 @@ claude-agent-sdk = "agent_console_backend_claude_sdk:ClaudeSdkBackend"
 sdk-hooks = "agent_console_backend_claude_sdk.collectors:SdkHooksCollector"
 mcp-calls = "agent_console_backend_claude_sdk.collectors:McpCallsCollector"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-backend-claude-sdk = "agent_console_backend_claude_sdk"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

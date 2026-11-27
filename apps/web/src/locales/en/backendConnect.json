@@ -1,0 +1,46 @@
+{
+  "buttonName": "Backend connection",
+  "tip": "Backend connection: {name} — {summary}",
+  "tipChecking": "Backend connection: checking…",
+  "tipUnavailable": "Backend connection: couldn't load status",
+  "chipLabel": "Backend",
+  "chipChecking": "Checking…",
+  "command": {
+    "title": "Backend connection…",
+    "keywords": "sign in login test connection subscription backend",
+    "hint": "{tone}"
+  },
+  "dialog": {
+    "title": "Backend connection",
+    "lead": "Sign-in and readiness for the backends that run your agents. You can sign in and test the connection right here.",
+    "loading": "Loading backend status…",
+    "off": "The backend status feature is turned off."
+  },
+  "default": "Default",
+  "defaultTip": "This is the default backend in common settings.",
+  "moreInSettings": "More in Settings",
+  "models": {
+    "fetching": "Fetching models…",
+    "okForm_one": "{count} model from your account · as of {when}",
+    "okForm_other": "{count} models from your account · as of {when}",
+    "okDialog_one": "{count} model available to this account · as of {when}",
+    "okDialog_other": "{count} models available to this account · as of {when}",
+    "none": "No models were found for this account.",
+    "stale_one": "Last fetched {count} model · as of {when} — couldn't refresh",
+    "stale_other": "Last fetched {count} models · as of {when} — couldn't refresh",
+    "failed": "Couldn't fetch the model list. Only models set in configuration are shown.",
+    "disabled": "Automatic model lookup is off. Only models set in configuration are shown.",
+    "unsupported": "This sign-in method can't list models. Only models set in configuration are shown; you can type one in.",
+    "refresh": "Refresh",
+    "check": "Check connection…",
+    "fetched_one": "Fetched {count} model.",
+    "fetched_other": "Fetched {count} models.",
+    "moreActions": "More"
+  },
+  "source": {
+    "config": "Config",
+    "configTip": "Listed in configuration.",
+    "discovered": "Account",
+    "discoveredTip": "Found for this account."
+  }
+}

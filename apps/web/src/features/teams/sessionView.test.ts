@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeTypeDescriptor } from "@agent-console/contracts";
-import { edgeLeadChips, edgeSessionMap, incomingSessions, nodeFootAnnotations, nodeSessionMode, sessionSummary } from "./sessionView";
+import { koMessages } from "../../testing/messageTables";
+import { createTeamMessages } from "./messages";
+import { createDelegationMessages } from "../delegation";
+import { edgeLeadChips as edgeLeadChipsWith, edgeSessionMap, incomingSessions, nodeFootAnnotations as nodeFootAnnotationsWith, nodeSessionMode, sessionSummary } from "./sessionView";
+
+const delegationText = koMessages("delegation", createDelegationMessages);
+const edgeLeadChips = (...a: Parameters<typeof edgeLeadChipsWith> extends [infer G, infer E, infer S, unknown] ? [G, E, S] : never) => edgeLeadChipsWith(...a, delegationText);
+const sessionText = koMessages("teams", createTeamMessages).sessions;
+const nodeFootAnnotations = (...a: Parameters<typeof nodeFootAnnotationsWith> extends [infer G, infer E, infer S, unknown] ? [G, E, S] : never) => nodeFootAnnotationsWith(...a, sessionText);
 
 /** 임의 id·임의 값. 화면은 디스크립터 속성만 본다. */
 const nodeTypes = [

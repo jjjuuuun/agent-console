@@ -107,6 +107,11 @@ describe("MemoryEntryMeta", () => {
     const [draft, setDraft] = useState<MemoryMetaDraft>({ tags: ["a"], contentType: "text/markdown", pinned: false });
     return <MemoryEntryMeta entry={entry} scope={scopeLabel(entry.scope, kinds[1], {})} draft={draft} onDraftChange={setDraft} {...(onCopy ? { onCopy } : {})} contentTypeSuggestions={["text/markdown"]} />;
   }
+  it("locale prop formats the exact byte count", () => {
+    const big = { ...entry, bytes: 1234567 };
+    const { container } = render(<MemoryEntryMeta entry={big} scope={scopeLabel(big.scope, kinds[1], {})} locale="de" />);
+    expect(container.querySelector('[title*="1.234.567"]')).not.toBeNull();
+  });
   it("태그: Enter·쉼표로 추가, 중복 무시, ✕로 지움", () => {
     render(<Harness />);
     const input = screen.getByLabelText("태그 추가");

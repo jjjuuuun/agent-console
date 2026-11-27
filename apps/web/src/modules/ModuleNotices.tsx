@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useToast } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
+import { ToastText } from "../app/ToastText";
 import { useModules } from "./ModulesContext";
 import { modulesSignature, problemModules } from "./resolve";
 
@@ -46,7 +46,7 @@ export function ModuleNotices({ modulesHref, navigate }: ModuleNoticesProps) {
     const first = lastSignature.current === null;
     const changed = !first && lastSignature.current !== signature;
     lastSignature.current = signature;
-    if (changed) toast({ tone: "info", text: m.modules.configChanged, durationMs: CHANGED_TOAST_MS });
+    if (changed) toast({ tone: "info", text: <ToastText render={({ app }) => app.modules.configChanged} />, durationMs: CHANGED_TOAST_MS });
 
     const problems = problemModules(state.modules);
     if (problems.length === 0) return;
@@ -55,9 +55,9 @@ export function ModuleNotices({ modulesHref, navigate }: ModuleNoticesProps) {
     writeSeen(problemKey);
     toast({
       tone: "warning",
-      text: m.modules.problemToast(problems.length),
+      text: <ToastText render={({ app }) => app.modules.problemToast(problems.length)} />,
       durationMs: PROBLEM_TOAST_MS,
-      ...(modulesHref === undefined ? {} : { action: { label: m.modules.problemToastAction, onClick: () => navigate(modulesHref) } }),
+      ...(modulesHref === undefined ? {} : { action: { label: <ToastText render={({ app }) => app.modules.problemToastAction} />, onClick: () => navigate(modulesHref) } }),
     });
   }, [state, toast, modulesHref, navigate]);
   return null;

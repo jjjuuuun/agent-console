@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-architecture"
 version = "0.1.0"
-description = "Agent Console — 구조도 기능 모듈: 프로필 목록·상세·검사·단독 투영(/architecture/*), 포트 architecture.catalog"
+description = "Agent Console — architecture feature module: profile list, details, checks, and standalone projection (/architecture/*), port architecture.catalog"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

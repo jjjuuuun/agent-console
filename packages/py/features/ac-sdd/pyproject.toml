@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-sdd"
 version = "0.1.0"
-description = "Agent Console — SDD 핵심: 작업 문법·파싱·줄 고치기, 계획·추적·관문·규칙 검사, 틀·스펙 저장소, 가져오기/내보내기"
+description = "Agent Console — SDD core: task syntax, parsing, and line edits; plan, trace, gate, and rule checks; template and spec stores; import and export"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -15,6 +15,9 @@ dependencies = [
     "markdown-it-py>=3.0",
     "ruamel-yaml>=0.18",
 ]
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-sdd = "agent_console_sdd"
 
 [dependency-groups]
 dev = [

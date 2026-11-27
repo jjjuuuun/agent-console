@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-chat-runs"
 version = "0.1.0"
-description = "Agent Console — 채팅·실행 연동 모듈: 턴 시작·대화 알림·상호작용·턴 이어 가기·재시작 대기열 정책·종료 순서"
+description = "Agent Console — chat and runs link module: turn start, conversation notices, interactions, turn continuation, restart queue policy, shutdown order"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -16,6 +16,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-chat-runs = "agent_console_link_chat_runs.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-chat-runs = "agent_console_link_chat_runs"
 
 [dependency-groups]
 dev = [

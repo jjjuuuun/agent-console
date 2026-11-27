@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-conditions"
 version = "0.1.0"
-description = "선언형 조건(JSON Pointer + 연산자) 평가·저장 전 검사와 조건 연산자 레지스트리(X22)"
+description = "Declarative conditions (JSON Pointer + operator): evaluation, pre-save checks, and the condition operator registry (X22)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-exports"
 version = "0.1.0"
-description = "Agent Console — 내보내기 확장 지점(X8): 형식 플러그인·레지스트리·보관 파일(zip)·허용 폴더 쓰기 + 기본 형식 claude-dir"
+description = "Agent Console — export extension point (X8): format plugins, registry, archive files (zip), writing to allowed folders, and the default claude-dir format"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 # 등록은 entry point로. 이름 = 레지스트리 key = 디스크립터 id. 값은 형식 공장(옵션 → Exporter).
 [project.entry-points."agent_console.exporters"]
 claude-dir = "agent_console_exports.claude_dir:claude_dir_exporter"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-exports = "agent_console_exports"
 
 [dependency-groups]
 dev = [

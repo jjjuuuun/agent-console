@@ -12,7 +12,7 @@ import { KNOWN_DOCUMENT_ROLES } from "@agent-console/contracts/constants";
 import { Banner, EmptyState, Switch, useToast } from "@agent-console/ui";
 import { TaskTable, type TaskTableHandle } from "@agent-console/sdd-view";
 import type { ParsedTask, SddGateBlockedDetails, SddTaskChangedDetails, TaskLink } from "@agent-console/contracts/sdd";
-import { messages as appMessages } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
 import { useStorage } from "../../app/StorageContext";
 import { ROUTE_ROLES, routePath } from "../library";
 import { BulkStartDialog } from "./BulkStartDialog";
@@ -23,15 +23,14 @@ import { FieldChips, FieldFilter } from "./FieldFilter";
 import { useTaskShortcuts } from "./taskShortcuts";
 import { TaskActionsMenu } from "./TaskActionsMenu";
 import { useTaskRunner } from "./useTaskRunner";
-import { sddMessages as m, viewMessages } from "./messages";
+import { useSddViewMessages } from "./useViewMessages";
 import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecSyntax, useSpecTasks } from "./useSddApi";
 import { collectFieldValues, readTaskFilter, setList, taskQueryOf } from "./params";
+import { useServerText, useT } from "@agent-console/i18n";
 
 const P = SDD_PARAMS;
 
-/** 실행 칩의 상태 라벨·톤: 라벨은 앱 공용 실행 상태 표, 톤은 표시 데이터(`sddData.json`). 모르는 상태는 원문 + 중립. */
-const LINK_STATUSES = Object.entries(appMessages.runStatus).map(([id, label]) => ({ id, label, tone: RUN_STATUS_TONES[id] ?? null }));
 
 /** 저장된 단계 접힘(사용자가 바꾼 단계만). 깨진 값은 버리고 기본값으로 돌아간다. */
 function parseCollapsed(raw: string | null): Record<string, boolean> {
@@ -53,6 +52,12 @@ export interface TasksTabProps extends SddTabProps {
 }
 
 export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashes, refresh, renderActions, toolbarExtra }: TasksTabProps) {
+  const t = useT("sdd");
+  const language = t.language;
+  const { runStatus } = useAppMessages();
+  /** 실행 칩의 상태 라벨·톤: 라벨은 앱 공용 실행 상태 표, 톤은 표시 데이터(`sddData.json`). 모르는 상태는 원문 + 중립. */
+  const linkStatuses = useMemo(() => Object.entries(runStatus).map(([id, label]) => ({ id, label, tone: RUN_STATUS_TONES[id] ?? null })), [runStatus]);
+  const viewMessages = useSddViewMessages();
   const space = useSddSpace();
   const qc = useQueryClient();
   const toast = useToast();
@@ -72,13 +77,14 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
     ctx,
     onTaskChanged: (task, details) => {
       setConflicts((c) => ({ ...c, [task.key]: details }));
-      toast({ tone: "warning", text: m.tasks.statusFail409(task.title ?? task.key), durationMs: 8000, action: { label: m.tasks.openInDoc, onClick: () => goTab("documents", { [P.doc]: task.document, [P.line]: String(task.line) }) } });
+      toast({ tone: "warning", text: t("tasks.statusFail409", { title: task.title ?? task.key }), durationMs: 8000, action: { label: t("tasks.openInDoc"), onClick: () => goTab("documents", { [P.doc]: task.document, [P.line]: String(task.line) }) } });
       void tasksQ.refetch();
       void refresh();
     },
   });
 
-  const statuses = useMemo(() => (view.task_statuses ?? []).length > 0 ? view.task_statuses ?? [] : syntax.data?.statuses ?? [], [view.task_statuses, syntax.data]);
+  const serverText = useServerText();
+  const statuses = useMemo(() => ((view.task_statuses ?? []).length > 0 ? view.task_statuses ?? [] : syntax.data?.statuses ?? []).map((s) => ({ ...s, label: serverText.text(s.label) })), [view.task_statuses, syntax.data, serverText]);
   const stages = view.index?.stages ?? [];
   const docs = useMemo(() => view.spec.documents ?? [], [view.spec.documents]);
   const hasTaskDoc = docs.some((d) => (d.roles ?? []).includes(KNOWN_DOCUMENT_ROLES.TASKS));
@@ -111,13 +117,13 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
     } catch (e) {
       if (e instanceof ApiError && e.code === ERROR_CODES.SDD_TASK_CHANGED) {
         setConflicts((c) => ({ ...c, [task.key]: e.details as unknown as SddTaskChangedDetails }));
-        toast({ tone: "warning", text: m.tasks.statusFail409(task.title ?? task.key), durationMs: 8000, action: { label: m.tasks.openInDoc, onClick: () => openDocument(task) } });
+        toast({ tone: "warning", text: t("tasks.statusFail409", { title: task.title ?? task.key }), durationMs: 8000, action: { label: t("tasks.openInDoc"), onClick: () => openDocument(task) } });
         void tasksQ.refetch();
         void refresh();
       } else if (e instanceof ApiError && e.code === ERROR_CODES.SDD_GATE_BLOCKED) {
         setGate({ details: e.details as unknown as SddGateBlockedDetails, taskKey: task.key });
       } else {
-        setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.tasks.statusFailed);
+        setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("tasks.statusFailed"));
       }
     }
   };
@@ -128,7 +134,7 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
 
   const doneIds = useMemo(() => new Set(statuses.filter((s) => s.done === true).map((s) => s.id)), [statuses]);
   const readyTasks = useMemo(() => (view.index?.tasks ?? []).filter((x) => x.ready === true && !doneIds.has(x.status)), [view.index?.tasks, doneIds]);
-  const fieldOptions = useMemo(() => collectFieldValues(view.index?.tasks ?? tasks), [view.index?.tasks, tasks]);
+  const fieldOptions = useMemo(() => collectFieldValues(view.index?.tasks ?? tasks, language), [view.index?.tasks, tasks, language]);
   const visibleKeys = useMemo(() => new Set(tasks.map((t) => t.key)), [tasks]);
   // 보이는 작업 중 고른 것만 시작 대상이다(거르기로 가려진 선택은 시작하지 않는다)
   const selectedTasks = useMemo(() => tasks.filter((t) => selected.has(t.key)), [tasks, selected]);
@@ -166,18 +172,18 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
   };
 
   if (syntax.isPending) return <ListSkeleton rows={8} />;
-  if (syntax.isError) return <FailureBlock error={syntax.error} title={m.tasks.loadFailed} onRetry={() => void syntax.refetch()} />;
+  if (syntax.isError) return <FailureBlock error={syntax.error} title={t("tasks.loadFailed")} onRetry={() => void syntax.refetch()} />;
   if (syntaxEmpty) {
     return (
       <div className="sdd-state" data-testid="sdd-syntax-missing">
-        <EmptyState title={m.tasks.syntaxMissing.title} description={m.tasks.syntaxMissing.body} action={<button type="button" className="app-link-btn" onClick={openRules}>{m.tasks.syntaxMissing.open}</button>} />
+        <EmptyState title={t("tasks.syntaxMissing.title")} description={t("tasks.syntaxMissing.body")} action={<button type="button" className="app-link-btn" onClick={openRules}>{t("tasks.syntaxMissing.open")}</button>} />
       </div>
     );
   }
   if (!hasTaskDoc) {
     return (
       <div className="sdd-state" data-testid="sdd-no-task-doc">
-        <EmptyState title={m.tasks.noTaskDoc.title} description={m.tasks.noTaskDoc.body} action={<button type="button" className="app-link-btn" onClick={openRules}>{m.tasks.noTaskDoc.open}</button>} />
+        <EmptyState title={t("tasks.noTaskDoc.title")} description={t("tasks.noTaskDoc.body")} action={<button type="button" className="app-link-btn" onClick={openRules}>{t("tasks.noTaskDoc.open")}</button>} />
       </div>
     );
   }
@@ -186,21 +192,21 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
 
   return (
     <div className="sdd-tasks">
-      <div className="sdd-toolbar" role="group" aria-label={m.tasks.search}>
-        <SearchBox value={filter.q} onCommit={(q) => patch((p) => (q.trim() === "" ? p.delete(P.q) : p.set(P.q, q)))} label={m.tasks.search} />
-        <MultiFilter label={m.tasks.status} options={statuses.map((s) => ({ id: s.id, label: s.label }))} selected={filter.status} onChange={(next) => patch((p) => setList(p, P.status, next))} />
-        {stages.length === 0 ? null : <MultiFilter label={m.tasks.stage} options={stages.map((s) => ({ id: s.id, label: s.title ?? s.id }))} selected={filter.stage} onChange={(next) => patch((p) => setList(p, P.stage, next))} />}
+      <div className="sdd-toolbar" role="group" aria-label={t("tasks.search")}>
+        <SearchBox value={filter.q} onCommit={(q) => patch((p) => (q.trim() === "" ? p.delete(P.q) : p.set(P.q, q)))} label={t("tasks.search")} />
+        <MultiFilter label={t("tasks.status")} options={statuses.map((s) => ({ id: s.id, label: s.label }))} selected={filter.status} onChange={(next) => patch((p) => setList(p, P.status, next))} />
+        {stages.length === 0 ? null : <MultiFilter label={t("tasks.stage")} options={stages.map((s) => ({ id: s.id, label: s.title ?? s.id }))} selected={filter.stage} onChange={(next) => patch((p) => setList(p, P.stage, next))} />}
         <FieldFilter options={fieldOptions} selected={filter.field} onChange={(next) => patch((p) => setList(p, P.field, next))} />
-        <Switch checked={filter.ready} onChange={(on) => patch((p) => (on ? p.set(P.ready, "1") : p.delete(P.ready)))} label={m.tasks.readyOnly} onText={m.on} offText={m.off} />
+        <Switch checked={filter.ready} onChange={(on) => patch((p) => (on ? p.set(P.ready, "1") : p.delete(P.ready)))} label={t("tasks.readyOnly")} onText={t("on")} offText={t("off")} />
         <span className="sdd-spacer" />
         {toolbarExtra}
-        {view.automation_state?.enabled === true ? <button type="button" className="sdd-auto-chip" onClick={openRules} data-testid="sdd-auto-chip">⟳ {m.automation.on}</button> : null}
+        {view.automation_state?.enabled === true ? <button type="button" className="sdd-auto-chip" onClick={openRules} data-testid="sdd-auto-chip">⟳ {t("automation.on")}</button> : null}
         {runsOn ? (
-          <GuardedButton blockedReason={selectedReady.length === 0 ? m.bulk.selectReady : startBlocked} onClick={() => setBulkOpen(true)}>{m.bulk.open}</GuardedButton>
+          <GuardedButton blockedReason={selectedReady.length === 0 ? t("bulk.selectReady") : startBlocked} onClick={() => setBulkOpen(true)}>{t("bulk.open")}</GuardedButton>
         ) : null}
-        <span className="app-muted" role="status">{m.tasks.count(tasks.length)}</span>
+        <span className="app-muted" role="status">{t("tasks.count", { count: tasks.length })}</span>
       </div>
-      {!runsOn ? <p className="app-muted sdd-note" data-testid="sdd-runs-off">{m.runsOff}</p> : null}
+      {!runsOn ? <p className="app-muted sdd-note" data-testid="sdd-runs-off">{t("runsOff")}</p> : null}
       <FieldChips selected={filter.field} onChange={(next) => patch((p) => setList(p, P.field, next))} />
       {/* 탭 머리: 특정 행에 속하지 않는 안내(동작 목록의 막힌 항목 등)와 보이는 행이 없는 작업의 안내. 행에 속한 안내는 그 행 아래에 보인다 */}
       <RunNoticeView
@@ -217,18 +223,18 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
       {issues.length > 0 ? (
         <details className="sdd-issues">
-          <summary>{m.tasks.issuesBar(issues.length)}</summary>
+          <summary>{t("tasks.issuesBar", { count: issues.length })}</summary>
           <ul>{issues.map((i, idx) => <li key={`${i.code}:${i.line ?? ""}:${idx}`}>{i.message}</li>)}</ul>
         </details>
       ) : null}
       {tasksQ.isPending ? (
         <ListSkeleton rows={8} />
       ) : tasksQ.isError ? (
-        <FailureBlock error={tasksQ.error} title={m.tasks.loadFailed} onRetry={() => void tasksQ.refetch()} />
+        <FailureBlock error={tasksQ.error} title={t("tasks.loadFailed")} onRetry={() => void tasksQ.refetch()} />
       ) : filtering && tasks.length === 0 ? (
         <div className="sdd-state">
-          <p role="status">{m.tasks.noMatch}</p>
-          <button type="button" className="app-link-btn" onClick={() => patch((p) => [P.status, P.stage, P.field, P.ready, P.q].forEach((k) => p.delete(k)))}>{m.tasks.clear}</button>
+          <p role="status">{t("tasks.noMatch")}</p>
+          <button type="button" className="app-link-btn" onClick={() => patch((p) => [P.status, P.stage, P.field, P.ready, P.q].forEach((k) => p.delete(k)))}>{t("tasks.clear")}</button>
         </div>
       ) : (
         <div className="sdd-task-table">
@@ -247,8 +253,8 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
             showLinks={runsOn}
             openableKinds={OPENABLE_LINK_KINDS}
             onOpenLink={openLink}
-            linkStatuses={LINK_STATUSES}
-            locale={appMessages.locale}
+            linkStatuses={linkStatuses}
+            locale={t.language}
             {...(runsOn
               ? {
                   renderActions:
@@ -279,10 +285,10 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
               )
             }
             rowMenuItems={(task) => [
-              { id: "status", label: m.tasks.rowMenu.status, onSelect: () => table.current?.openStatusMenu(task.key), disabled: ctx.readOnly },
-              ...(runsOn ? [{ id: "run", label: m.tasks.rowMenu.run, onSelect: () => table.current?.openActionsMenu(task.key), disabled: startBlocked !== undefined && startBlocked !== "" }] : []),
-              { id: "open", label: m.tasks.rowMenu.open, onSelect: () => openDocument(task) },
-              { id: "copy", label: m.tasks.rowMenu.copyKey, onSelect: () => void navigator.clipboard?.writeText(task.key).catch(() => undefined) },
+              { id: "status", label: t("tasks.rowMenu.status"), onSelect: () => table.current?.openStatusMenu(task.key), disabled: ctx.readOnly },
+              ...(runsOn ? [{ id: "run", label: t("tasks.rowMenu.run"), onSelect: () => table.current?.openActionsMenu(task.key), disabled: startBlocked !== undefined && startBlocked !== "" }] : []),
+              { id: "open", label: t("tasks.rowMenu.open"), onSelect: () => openDocument(task) },
+              { id: "copy", label: t("tasks.rowMenu.copyKey"), onSelect: () => void navigator.clipboard?.writeText(task.key).catch(() => undefined) },
             ]}
             expandedKey={params.get(P.task)}
             onExpandedChange={(key) => patch((p) => (key === null ? p.delete(P.task) : p.set(P.task, key)))}

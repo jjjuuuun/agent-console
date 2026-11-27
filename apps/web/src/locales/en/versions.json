@@ -1,0 +1,124 @@
+{
+  "tab": "Versions",
+  "title": "Version history",
+  "list": {
+    "label": "Version list",
+    "current": "Current",
+    "currentChip": "Current",
+    "checkLabel": "Select {hash} to compare",
+    "more": "More",
+    "rowMenu": "Version menu",
+    "emptyMessage": "(no message)",
+    "empty": "No saved versions.",
+    "onlyCurrent": "There are no earlier versions. A version is added each time you save.",
+    "failed": "Couldn't load the version list",
+    "keysHint": "↑↓ Move · Space Select · Enter Compare with current · D Compare two versions · R Revert"
+  },
+  "mode": {
+    "label": "Compare against",
+    "current": "With current",
+    "pair": "Two versions",
+    "pairHint": "Select two versions"
+  },
+  "menu": {
+    "viewRaw": "View raw",
+    "copyHash": "Copy hash",
+    "restore": "Revert…",
+    "copied": "Copied the hash"
+  },
+  "unsavedInfo": "Unsaved changes aren't in the version history.",
+  "compare": {
+    "region": "Version comparison",
+    "heading": "{from} → {to}",
+    "currentOf": "Current ({hash})",
+    "summary": "Changes {fields} · Content {content}",
+    "same": "The two versions are the same",
+    "loading": "Comparing",
+    "failed": "Couldn't compare",
+    "restore": "Revert…",
+    "restoreOnlyCurrent": "You can revert only when the right side is the current version",
+    "pickTwo": "Select versions to compare"
+  },
+  "fields": {
+    "title": "Field changes",
+    "none": "No field changes",
+    "table": "Field changes table",
+    "op": "Action",
+    "path": "Path",
+    "before": "Before",
+    "after": "After",
+    "counts": "Added {a} · Removed {r} · Changed {c}",
+    "filterLabel": "Action filter",
+    "searchLabel": "Search paths and values",
+    "searchPlaceholder": "Search ( / )",
+    "noMatch": "No changes match",
+    "expand": "Expand value",
+    "collapse": "Collapse value",
+    "secretChip": "Secret values aren't shown",
+    "secretRow": "Secret values aren't shown",
+    "secretChanged": "Changed",
+    "ops": {
+      "add": "Added",
+      "remove": "Removed",
+      "replace": "Changed"
+    },
+    "opIcons": {
+      "add": "＋",
+      "remove": "−",
+      "replace": "~"
+    }
+  },
+  "content": {
+    "title": "Content changes",
+    "table": "Content changes table",
+    "status": {
+      "added": "Added",
+      "removed": "Removed",
+      "changed": "Changed"
+    },
+    "statusIcon": {
+      "added": "＋",
+      "removed": "−",
+      "changed": "~"
+    },
+    "open": "Text diff ▸",
+    "close": "Text diff ▾",
+    "tooLarge": "Can't compare as text — size {a} → {b}, comparing hashes only",
+    "binary": "Can't compare as text — not a text file. Comparing hashes only",
+    "loading": "Loading",
+    "failed": "Couldn't load the file",
+    "retry": "Try again",
+    "diffLabel": "Text diff of {path}",
+    "unchangedLines": "Expand $ unchanged lines",
+    "split": "Side by side",
+    "unified": "Unified",
+    "viewToolbar": "Diff view mode"
+  },
+  "restore": {
+    "title": "Revert to version {hash}",
+    "body": "Saves a new version that replaces the current content with this version's content. Your history isn't deleted.",
+    "scope": "This reverts only this item. Other items it refers to don't change.",
+    "summary": "Fields changed: {fields} · Content changed: {content}",
+    "summaryLoading": "Working out what changes",
+    "unsaved": "Unsaved changes are discarded.",
+    "messageLabel": "Message (optional)",
+    "messagePlaceholder": "restored from {hash}",
+    "cancel": "Cancel",
+    "confirm": "Revert",
+    "issuesTitle": "This version can't be saved under the current rules.",
+    "issuesHelp": "Replace secret values with secret:// references, then edit it yourself.",
+    "failed": "Couldn't revert",
+    "done": "Reverted to version {from} → new version {to}",
+    "undo": "Undo",
+    "undone": "Undid the revert → new version {to}",
+    "undoFailed": "Couldn't undo"
+  },
+  "raw": {
+    "title": "Raw content of version {hash}",
+    "loading": "Loading",
+    "failed": "Couldn't load the raw content",
+    "close": "Close"
+  },
+  "retry": "Try again",
+  "shortTime": "Saved at"
+}

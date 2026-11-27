@@ -1,8 +1,7 @@
 import type { ProjectView } from "@agent-console/contracts/projects";
 import type { ConversationSummary, Run } from "@agent-console/contracts";
 import { KNOWN_PROJECT_STATUSES } from "@agent-console/contracts/constants";
-import { folderHomeMessages as m } from "./folderHomeMessages";
-import { messages as appMessages } from "../../app/messages";
+import type { FolderHomeMessages } from "./folderHomeMessages";
 
 /** 배너 한 개의 종류. 같은 종류는 한 화면에 하나뿐이다. */
 export type BannerKind = "folder" | "records" | "manifest" | "readonly" | "gitignore" | "network" | "archived";
@@ -35,14 +34,14 @@ function dirOf(view: ProjectView): string | undefined {
 }
 
 /** 기록 배너의 이유별 제목. 모르는 이유는 서버 메시지 원문. */
-function recordsReasonTitle(view: ProjectView): string {
+function recordsReasonTitle(view: ProjectView, m: FolderHomeMessages): string {
   const reason = view.records_issue?.details?.["reason"];
   if (typeof reason === "string" && Object.hasOwn(m.recordsReason, reason)) return m.recordsReason[reason] ?? m.problem.recordsUnknown;
   return view.records_issue?.message ?? m.problem.recordsUnknown;
 }
 
 /** 폴더 문제 배너(상태 → 제목·본문·버튼, screen-projects §6.1 표). */
-function folderBanner(view: ProjectView): BannerSpec | null {
+function folderBanner(view: ProjectView, m: FolderHomeMessages): BannerSpec | null {
   switch (view.status) {
     case KNOWN_PROJECT_STATUSES.FOLDER_MISSING:
       return { id: "folder", kind: "folder", tone: "danger", title: m.problem.missingTitle, body: (dirOf(view) === undefined ? m.problem.missingBodyUnknown() : m.problem.missingBody(dirOf(view) as string)), actions: ["repath", "recheck", "unregister"] };
@@ -64,13 +63,13 @@ function folderBanner(view: ProjectView): BannerSpec | null {
  * 폴더 문제 → 기록 상태 → 설정 파일 오류 → 읽기 전용 → 안내 줄(.gitignore 오래됨·네트워크 드라이브).
  * 모르는 `status`는 일반 경고 하나. 같은 원인(폴더 없음)의 기록 배너는 따로 그리지 않는다. 보관된 프로젝트는 안내 한 줄뿐이다.
  */
-export function problemBanners(view: ProjectView): BannerSpec[] {
+export function problemBanners(view: ProjectView, m: FolderHomeMessages): BannerSpec[] {
   if (view.project.archived === true) {
     return [{ id: "archived", kind: "archived", tone: "info", title: m.problem.archivedNote, body: "", actions: ["reregister"] }];
   }
   const out: BannerSpec[] = [];
   const known = FOLDER_PROBLEMS.has(view.status) || view.status === KNOWN_PROJECT_STATUSES.READY || view.status === KNOWN_PROJECT_STATUSES.MANIFEST_INVALID;
-  const folder = folderBanner(view);
+  const folder = folderBanner(view, m);
   if (folder !== null) out.push(folder);
   else if (!known) {
     out.push({ id: "folder", kind: "folder", tone: "warning", title: m.problem.unknownTitle(view.status), body: view.status_detail ?? "", actions: ["recheck", "repath", "unregister"] });
@@ -94,7 +93,7 @@ export function problemBanners(view: ProjectView): BannerSpec[] {
         id: "records",
         kind: "records",
         tone: reason === "link_disabled" ? "info" : "danger",
-        title: recordsReasonTitle(view),
+        title: recordsReasonTitle(view, m),
         body: reason === "corrupt" || reason === "migration_failed" ? "" : (view.records_issue?.message ?? ""),
         actions,
       });
@@ -142,15 +141,15 @@ export function configUnreadable(view: ProjectView): boolean {
   return FOLDER_PROBLEMS.has(view.status);
 }
 
-/** 상대 시간("방금"·"5분 전"·"3시간 전"·"2일 전"). 한 달이 넘으면 날짜. 입력은 초 단위 시각. */
-export function relativeTime(nowMs: number, epochSeconds: number | null | undefined): string {
+/** 상대 시간(방금·분·시간·일 전). 한 달이 넘으면 `locale` 서식의 날짜. 입력은 초 단위 시각. */
+export function relativeTime(nowMs: number, epochSeconds: number | null | undefined, m: FolderHomeMessages, locale: string): string {
   if (epochSeconds === null || epochSeconds === undefined) return "";
   const diff = Math.max(0, Math.floor((nowMs - epochSeconds * 1000) / 1000));
   if (diff < 45) return m.home.relative.now;
   if (diff < 3600) return m.home.relative.minutes(Math.max(1, Math.round(diff / 60)));
   if (diff < 86400) return m.home.relative.hours(Math.round(diff / 3600));
   if (diff < 86400 * 30) return m.home.relative.days(Math.round(diff / 86400));
-  return new Date(epochSeconds * 1000).toLocaleDateString(appMessages.locale);
+  return new Date(epochSeconds * 1000).toLocaleDateString(locale);
 }
 
 /** 최근 활동 한 줄(채팅·실행을 합친 목록). */

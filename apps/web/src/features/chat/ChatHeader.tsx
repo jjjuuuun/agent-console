@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Button, Icon } from "@agent-console/ui";
 import { ActionMenu, type ActionMenuItem } from "./ActionMenu";
-import { chatMessages } from "./chatMessages";
+import { useChatMessages } from "./chatMessages";
 import { useImeGuard } from "../../lib/ime";
-
-const t = chatMessages.header;
 
 export interface ChatHeaderProps {
   title: string;
@@ -32,6 +30,8 @@ export interface ChatHeaderProps {
 
 /** 제목 편집 입력: 열릴 때 현재 제목으로 시작해 선택된다. Enter 저장, Esc 취소, 포커스를 잃으면 저장. */
 function TitleInput({ title, onCommit, onCancel }: { title: string; onCommit: (value: string) => void; onCancel: () => void }) {
+  const m = useChatMessages();
+  const t = m.header;
   const [draft, setDraft] = useState(title);
   const input = useRef<HTMLInputElement>(null);
   const done = useRef(false);
@@ -69,6 +69,8 @@ function TitleInput({ title, onCommit, onCancel }: { title: string; onCommit: (v
 
 /** 채팅 영역 헤더(48px). 제목 인라인 편집, 팀 구성 칩, 마지막 실행 상세 아이콘 링크(글자 버튼 없음), 응답 대기 칩, 더보기 메뉴. 표현 전용. */
 export function ChatHeader(props: ChatHeaderProps) {
+  const m = useChatMessages();
+  const t = m.header;
   const { title, renaming } = props;
   return (
     <header className="chat-header">
@@ -91,13 +93,13 @@ export function ChatHeader(props: ChatHeaderProps) {
       )}
       <div className="chat-header-team">
         {props.teamName === undefined ? (
-          <span className="chat-chip" data-tone="missing">{chatMessages.list.deletedTeam}</span>
+          <span className="chat-chip" data-tone="missing">{m.list.deletedTeam}</span>
         ) : props.teamHref ? (
           <Link className="chat-chip chat-team-chip" to={props.teamHref} title={t.teamTooltip}>{t.team(props.teamName)} ↗</Link>
         ) : (
           <span className="chat-chip">{t.team(props.teamName)}</span>
         )}
-        {props.teamMenu.length > 0 ? <ActionMenu label={chatMessages.menu.changeTeam} items={props.teamMenu} icon="▾" size="sm" /> : null}
+        {props.teamMenu.length > 0 ? <ActionMenu label={m.menu.changeTeam} items={props.teamMenu} icon="▾" size="sm" /> : null}
       </div>
       <span className="app-spacer" />
       {props.projectSlot}
@@ -111,7 +113,7 @@ export function ChatHeader(props: ChatHeaderProps) {
           <Icon name="external-link" />
         </Link>
       ) : null}
-      <ActionMenu label={chatMessages.menu.more} items={props.moreMenu} footer={props.moreFooter} />
+      <ActionMenu label={m.menu.more} items={props.moreMenu} footer={props.moreFooter} />
     </header>
   );
 }

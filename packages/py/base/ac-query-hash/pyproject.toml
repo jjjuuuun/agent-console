@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-query-hash"
 version = "0.1.0"
-description = "Agent Console — 검색어 해시(솔트 HMAC·sha256·끔) 기반 패키지"
+description = "Agent Console — base package for search query hashing (salted HMAC, sha256, or off)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

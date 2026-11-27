@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-logs-architecture"
 version = "0.1.0"
-description = "Agent Console — 로그·구조도 연동 모듈: 로그 범위 구조도(/logs/architecture)·이벤트 멤버십·이벤트 표 필터 arch"
+description = "Agent Console — logs and architecture link module: log-scoped architecture map (/logs/architecture), event membership, arch filter for the event table"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -18,6 +18,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-logs-architecture = "agent_console_link_logs_architecture.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-logs-architecture = "agent_console_link_logs_architecture"
 
 [dependency-groups]
 dev = [

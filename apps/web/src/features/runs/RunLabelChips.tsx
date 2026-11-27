@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Popover } from "@agent-console/ui";
-import { runsMessages as t } from "./messages";
+import { useRunsMessages } from "./messages";
 import type { LabelChipModel, LabelChips } from "./runLabels";
 
 /** 칩 최대 개수(넘으면 `+N` 팝오버). 화면 규칙 상수다. */
@@ -36,6 +36,7 @@ export interface RunLabelChipsProps {
  * 라벨이 없는 실행에는 아무것도 그리지 않는다.
  */
 export function RunLabelChips({ model }: RunLabelChipsProps) {
+  const t = useRunsMessages();
   const [open, setOpen] = useState(false);
   const extra = Object.entries(model.unmatched);
   if (model.chips.length === 0 && extra.length === 0) return null;

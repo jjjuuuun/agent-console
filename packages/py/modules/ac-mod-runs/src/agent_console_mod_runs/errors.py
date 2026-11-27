@@ -249,7 +249,7 @@ def child_resume_fix_of(
     try:
         text = path.read_text(encoding="utf-8")
     except (FileNotFoundError, NotADirectoryError):
-        _log.warning("해결 버튼 표 파일이 없어 버튼 없이 씁니다: %s", path)
+        _log.warning("Fix button table file not found; continuing without buttons: %s", path)
         return None
     return load_child_resume_fix(text)
 

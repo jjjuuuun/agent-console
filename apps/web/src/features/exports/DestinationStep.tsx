@@ -3,7 +3,7 @@ import type { ExportFile, ExportRootInfo } from "@agent-console/contracts";
 import { Spinner } from "@agent-console/ui";
 import type { ConflictPolicy, SubdirProblem } from "./exportLogic";
 import { CONFLICT_POLICIES } from "./exportLogic";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 
 export interface DestinationStepProps {
   destination: "archive" | "folder";
@@ -27,6 +27,7 @@ export interface DestinationStepProps {
 
 /** ④ 내보낼 곳: 보관 파일(항상) / 폴더에 쓰기(루트가 있을 때만). 기본 충돌 처리는 `fail`. */
 export function DestinationStep(p: DestinationStepProps) {
+  const t = useExportMessages();
   const base = useId();
   const root = p.roots.find((r) => r.id === p.rootId);
   const conflicts = (p.planFiles ?? []).filter((f) => f.action === "conflict");

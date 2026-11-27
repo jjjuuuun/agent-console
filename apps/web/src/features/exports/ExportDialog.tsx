@@ -12,7 +12,7 @@ import { PreviewStep } from "./PreviewStep";
 import { ResultStep } from "./ResultStep";
 import { overwriteCount } from "./exportLogic";
 import { ITEM_SOURCES, sourceKind } from "./exportSources";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 import { useExportFlow, type Step } from "./useExportFlow";
 import "./exports.css";
 
@@ -36,6 +36,7 @@ const STEP_KEYS = ["exporter", "items", "preview", "destination"] as const;
  * 형식·옵션은 서버 디스크립터(`GET /exporters`)로 그리고, 덮어쓰기는 확인을 거친다(끌 수 없음).
  */
 export function ExportDialog({ initialItems, onClose, dirty = false, onSave, infoLink, download = saveBlob }: ExportDialogProps) {
+  const t = useExportMessages();
   const flow = useExportFlow(initialItems, download);
   const names = useApiQuery(
     ["list", "export-names"],

@@ -1,7 +1,6 @@
 import type { RestClient } from "@agent-console/api-client";
 import type { CommandGroup, CommandItem } from "@agent-console/ui";
-import { lookupMessage } from "../app/messages";
-import { messages as m } from "../app/messages";
+import type { ShellMessages } from "../app/shellMessages";
 import type { CommandDef } from "./commands";
 import { ROUTE_ROLES } from "../features/library/paths";
 import type { RouteDef } from "./routeConfig";
@@ -81,6 +80,10 @@ export interface BuildGroupsArgs {
   query: string;
   go: (path: string) => void;
   icon?: (name: string) => CommandItem["icon"];
+  /** 셸 문구 표(화면 언어) */
+  text: ShellMessages;
+  /** `titleKey`(점 표기 경로) → 현재 언어의 글자 */
+  lookup: (key: string) => string;
 }
 
 /**
@@ -88,7 +91,7 @@ export interface BuildGroupsArgs {
  * 질의가 비면 "최근 이동"을 맨 앞에 둔다. 목록이 실패한 그룹(rows 없음)은 생략한다.
  */
 export function buildQuickGroups(args: BuildGroupsArgs): CommandGroup[] {
-  const { routes, results, commands, recent, query, go, icon } = args;
+  const { routes, results, commands, recent, query, go, icon, text: m, lookup: lookupMessage } = args;
   const groups: CommandGroup[] = [];
   if (query.trim() === "" && recent.length > 0) {
     groups.push({ id: "recent", title: m.palette.groups.recent, items: recent.slice(0, 5).map((r) => ({ id: `recent:${r.path}`, label: r.label, hint: r.path, run: () => go(r.path) })) });
@@ -117,7 +120,14 @@ export function buildQuickGroups(args: BuildGroupsArgs): CommandGroup[] {
     groups.push({
       id: "actions",
       title: m.palette.groups.actions,
-      items: commands.map((c) => ({ id: `action:${c.id}`, label: lookupMessage(c.titleKey), ...(c.shortcut === undefined ? {} : { shortcut: c.shortcut }), run: c.run })),
+      items: commands.map((c) => ({
+        id: `action:${c.id}`,
+        label: c.title ?? lookupMessage(c.titleKey),
+        ...(c.hint === undefined ? {} : { hint: c.hint }),
+        ...(c.keywords === undefined ? {} : { keywords: c.keywords }),
+        ...(c.shortcut === undefined ? {} : { shortcut: c.shortcut }),
+        run: c.run,
+      })),
     });
   }
   return groups;

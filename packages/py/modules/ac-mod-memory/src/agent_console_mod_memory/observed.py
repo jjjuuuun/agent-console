@@ -98,7 +98,7 @@ class ObservedMemoryStore:
         try:
             self._sink(changed(entry, op, author_kind))
         except Exception:
-            _log.warning("메모리 변경 알림을 보내지 못했습니다", exc_info=True)
+            _log.warning("Couldn't send a memory change notification", exc_info=True)
 
     def _emit_if_bumped(
         self, before: int | None, entry: MemoryEntry, op: str, author: MemoryAuthor

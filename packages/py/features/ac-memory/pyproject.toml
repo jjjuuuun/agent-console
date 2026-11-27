@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-memory"
 version = "0.1.0"
-description = "Agent Console — 공유 메모리: 저장소 프로토콜(X31)·메모리 구현, 범위 종류(X29)·접근 판단, 에이전트 도구 묶음(런타임 무관), 비밀 검사"
+description = "Agent Console — shared memory: store protocol (X31) and in-memory implementation, scope kinds (X29) and access decisions, agent tool set (runtime-independent), secret checks"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -20,6 +20,9 @@ dependencies = [
 [project.optional-dependencies]
 # 하위 모듈 `sqlite`(SQLite 저장소)와 `testing`의 규모 측정 도구. 최상위는 이것 없이 동작한다.
 sqlite = ["sqlalchemy>=2.0"]
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-memory = "agent_console_memory"
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,79 @@
+{
+  "create": "Create",
+  "cancel": "Cancel",
+  "close": "Close",
+  "retry": "Try again",
+  "copy": "Copy",
+  "copied": "Copied",
+  "more": "More",
+  "rowMenu": "Row menu",
+  "detailMenu": "More actions",
+  "search": "Search",
+  "loading": "Loading…",
+  "none": "None",
+  "newDialog": {
+    "name": "Name",
+    "id": "id",
+    "idHint": "Becomes the file name. Use letters, digits, hyphens, underscores, and dots only. You can't change it later.",
+    "description": "Description",
+    "idErrors": {
+      "empty": "Enter an id",
+      "pattern": "Start with a letter or digit; use letters, digits, hyphens, underscores, and dots only",
+      "duplicate": "This id already exists",
+      "reserved": "This is a reserved word and can't be used. Enter a different id"
+    },
+    "nameRequired": "Enter a name"
+  },
+  "delete": {
+    "title": "Delete “{name}”?",
+    "body": "You can't undo this.",
+    "action": "Delete",
+    "usedBy_one": "Used in {n} place",
+    "usedBy_other": "Used in {n} places",
+    "understood": "I understand",
+    "checking": "Checking where it's used…",
+    "failed": "Couldn't delete"
+  },
+  "picker": {
+    "title": "Attach resource",
+    "search": "Search by name or description",
+    "allTypes": "All",
+    "empty": "No resources to attach",
+    "noMatch": "No matching resources",
+    "createNew": "Create a new resource →",
+    "pick": "Attach {name}"
+  },
+  "attach": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "modeLabel": "Attach mode",
+    "add": "+ Attach resource",
+    "empty": "No resources attached",
+    "readOnly": "Read-only",
+    "missing": "(Not found)",
+    "modes": {
+      "add": "Add",
+      "replace": "Replace",
+      "remove": "Exclude"
+    }
+  },
+  "usage": {
+    "kindTeam": "Team",
+    "kindAgent": "Agent",
+    "kindResource": "Resource",
+    "kindCommon": "Common",
+    "nodes": "Nodes {labels}",
+    "layer": "Attached layer"
+  },
+  "menu": {
+    "label": "Menu"
+  },
+  "agentForm": {
+    "customModel": "Enter manually",
+    "modelsFailed": "Couldn't load the model list. You can enter one manually.",
+    "addTag": "Add item",
+    "removeTag": "Remove {tag}"
+  },
+  "avatarLabel": "{name} icon"
+}

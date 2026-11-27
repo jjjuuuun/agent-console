@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-registry"
 version = "0.1.0"
-description = "Agent Console — 타입드 레지스트리와 플러그인(entry point·모듈 목록) 로딩"
+description = "Agent Console — typed registries and plugin loading (entry points and module lists)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -3,7 +3,7 @@ import type { ResourceSummary, ResourceTypeDescriptor } from "@agent-console/con
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { AttachmentList, Button, type Attachment } from "@agent-console/ui";
 import { newAttachment } from "../../../lib/serialize";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 import { AttachmentProblems } from "../../../definition/AttachmentProblems";
 export const ATTACHMENTS_FIELD = "attachments";
 
@@ -30,6 +30,7 @@ interface Row {
 
 /** 첨부(`ResourceAttachment[]`) 편집: `AttachmentList` 위의 얇은 필드. 리소스 종류 이름은 코드에 없다(디스크립터 힌트). */
 export function AttachmentsField({ value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const m = useAppMessages();
   const opts = options as unknown as AttachmentsOptions;
   const rows: Row[] = Array.isArray(value) ? (value as Row[]) : [];
   const [pick, setPick] = useState("");

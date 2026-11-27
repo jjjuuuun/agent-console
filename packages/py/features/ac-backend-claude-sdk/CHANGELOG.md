@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-backend-claude-sdk`, so the web can show the backend description, option schema, readiness and sign-in texts and the backend issue and reason codes in English (data only, no API change). Default texts that carried values are now fixed or language-neutral so they can be looked up by source text: `ClaudeSdkLoginTexts.writes_credentials` is `{path}`, `ClaudeSdkReadinessTexts.note_files` is `{found}/{count}`, and `login_required_detail` no longer names the folder (the path is in the credentials location check).
 - 5.2R.82(F14 구독 로그인): 선택 능력 `start_login`·`logout`(`capabilities.login/logout`, `login_methods = [cli-login]`).
   `claude auth login`을 PTY로 중계하고 `claude auth status` 종료 코드 + `authMethod`로 판정한다. 앱은 토큰을 받거나
   저장하지 않는다. 설치자 설정 `login`(`ClaudeSdkLoginOptions`, 기본 켜짐, 화면 글자 규칙 `login.rules`), 상태 점검

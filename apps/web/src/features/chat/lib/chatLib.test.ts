@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Agent, ChatTurn, ConversationSummary, EdgeTypeDescriptor, Graph, Interaction, InteractionKindDescriptor, NodeTypeDescriptor, RunEvent, TeamPlanSummary } from "@agent-console/contracts";
 import { ApiError } from "@agent-console/api-client";
+import { koT } from "../../../testing/koText";
+import { createDelegationMessages } from "../../delegation";
 import { actorLabel, buildAgentView } from "./actors";
 import { buildResponse, quoteForResend } from "./answer";
 import { assembleTurns, mergeInteractions, streamPlaceholders } from "./assemble";
@@ -152,7 +154,7 @@ describe("진행 줄", () => {
       ev(4, "node.completed", { status: "succeeded", duration_ms: 2000 }, ["n2"]),
       ev(5, "agent.subagent_started", { subagent_id: "s1", name: "n2" }, ["n1"]),
     ]);
-    const steps = buildProgressSteps({ live, graph, kinds: edgeKinds, naming });
+    const steps = buildProgressSteps({ live, graph, kinds: edgeKinds, naming, delegation: createDelegationMessages(koT("delegation")) });
     expect(steps).toHaveLength(2); // 입구 연결은 제외
     expect(steps[0]).toMatchObject({ fromLabel: "하나", toLabel: "둘", methodLabel: "넘기기 방식", methodDashed: true, status: "succeeded", durationMs: 2000, indent: 0 });
     expect(steps[1]).toMatchObject({ methodLabel: "위임 방식", status: "running", indent: 1 });

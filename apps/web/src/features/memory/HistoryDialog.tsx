@@ -6,15 +6,15 @@ import { useMemo, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryVersionDiff, MemoryVersionList, type VersionCompareTarget } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { useStorage } from "../../app/StorageContext";
 import { useToast } from "@agent-console/ui";
-import { viewMessages } from "./format";
+import { useViewMessages } from "./format";
 import { MEMORY_STORAGE } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { useInvalidateMemory, useMemoryVersion, useMemoryVersions } from "./useMemoryApi";
 import type { MemoryContext } from "./useMemoryContext";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
 
 export interface HistoryDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -29,6 +29,9 @@ export interface HistoryDialogProps {
 }
 
 export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose, onRestored }: HistoryDialogProps) {
+  const describeError = useDescribeError();
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
   const rest = useMemoryRest();
   const toast = useToast();
   const invalidate = useInvalidateMemory();
@@ -59,10 +62,10 @@ export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose
     try {
       const out = await rest.restoreMemoryEntry(entry.id, v);
       await invalidate();
-      toast({ tone: "success", text: t.history.restored });
+      toast({ tone: "success", text: t("history.restored") });
       onRestored(out);
     } catch (e) {
-      toast({ tone: "danger", text: `${t.history.failed}: ${describeError(e, t.history.failed).message}` });
+      toast({ tone: "danger", text: `${t("history.failed")}: ${describeError(e, t("history.failed")).message}` });
     } finally {
       setBusy(false);
       setConfirm(null);
@@ -71,9 +74,9 @@ export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose
 
   return (
     <>
-      <Dialog open size="xl" title={`${viewMessages["history.title"]} · ${entry.key}`} onClose={onClose} actions={<Button onClick={onClose}>{t.close}</Button>}>
+      <Dialog open size="xl" title={`${viewMessages["history.title"]} · ${entry.key}`} onClose={onClose} actions={<Button onClick={onClose}>{t("close")}</Button>}>
         <div className="mem-history">
-          <MemoryVersionList
+          <MemoryVersionList messages={viewMessages}
             versions={versions}
             selected={selected}
             onSelect={setPicked}
@@ -83,7 +86,7 @@ export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose
             onRetry={() => void list.refetch()}
             authorOptions={ctx.authorOptions}
           />
-          <MemoryVersionDiff
+          <MemoryVersionDiff messages={viewMessages}
             version={version}
             base={base}
             {...(content.data === undefined ? {} : { versionContent: content.data.content })}
@@ -114,16 +117,16 @@ export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose
         <Dialog
           open
           size="sm"
-          title={t.history.restoreConfirm}
+          title={t("history.restoreConfirm")}
           onClose={() => setConfirm(null)}
           actions={
             <>
-              <Button onClick={() => setConfirm(null)}>{t.cancel}</Button>
-              <Button variant="danger" loading={busy} onClick={() => void restore(confirm)}>{t.history.restoreSubmit}</Button>
+              <Button onClick={() => setConfirm(null)}>{t("cancel")}</Button>
+              <Button variant="danger" loading={busy} onClick={() => void restore(confirm)}>{t("history.restoreSubmit")}</Button>
             </>
           }
         >
-          <p className="ac-text">{t.history.restoreConfirm}</p>
+          <p className="ac-text">{t("history.restoreConfirm")}</p>
         </Dialog>
       ) : null}
     </>

@@ -9,8 +9,7 @@ import type { WikiPageView } from "@agent-console/contracts/wiki";
 import type { Versioned } from "@agent-console/api-client";
 import { classifyWikiError, type WikiFailure } from "./wikiErrors";
 import { ownWriteKey, useWikiSpace, wikiKeys, type OwnWrites } from "./useWikiApi";
-import { wikiMessages as m } from "./messages";
-import { localizeIssue } from "../../app/wikiIssueMessages";
+import { useServerText, useT } from "@agent-console/i18n";
 
 export interface SaveOutcome {
   /** 저장은 됐지만 경고할 이슈(규칙 경고·비밀 의심) */
@@ -35,6 +34,8 @@ export interface PageSaver {
 }
 
 export function usePageSaver(wikiId: string, ownWrites: { readonly current: OwnWrites }, onWritten: () => void): PageSaver {
+  const t = useT("wiki");
+  const server = useServerText();
   const space = useWikiSpace();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -46,7 +47,7 @@ export function usePageSaver(wikiId: string, ownWrites: { readonly current: OwnW
       ownWrites.current.set(ownWriteKey(wikiId, path), Date.now());
       qc.setQueryData(wikiKeys.page(space.key, wikiId, path), saved);
       setFailure(null);
-      setWarnings((saved.issues ?? []).map(localizeIssue));
+      setWarnings(saved.issues ?? []);
       onWritten();
     },
     [ownWrites, wikiId, qc, space.key, onWritten],
@@ -61,14 +62,14 @@ export function usePageSaver(wikiId: string, ownWrites: { readonly current: OwnW
         finish(path, saved);
         return { saved, failure: null };
       } catch (e) {
-        const failure = classifyWikiError(e, m.band.saveFailed);
+        const failure = classifyWikiError(e, t("band.saveFailed"), t, server);
         setFailure(failure);
         return { saved: null, failure };
       } finally {
         setSaving(false);
       }
     },
-    [space, wikiId, finish],
+    [space, wikiId, finish, t, server],
   );
 
   const restore = useCallback<PageSaver["restore"]>(
@@ -80,14 +81,14 @@ export function usePageSaver(wikiId: string, ownWrites: { readonly current: OwnW
         finish(path, saved);
         return { saved, failure: null };
       } catch (e) {
-        const failure = classifyWikiError(e, m.history.restoreFailed);
+        const failure = classifyWikiError(e, t("history.restoreFailed"), t, server);
         setFailure(failure);
         return { saved: null, failure };
       } finally {
         setSaving(false);
       }
     },
-    [space, wikiId, finish],
+    [space, wikiId, finish, t, server],
   );
 
   return { saving, failure, warnings, clearFailure: () => setFailure(null), clearWarnings: () => setWarnings([]), save, restore };

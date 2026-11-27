@@ -14,17 +14,21 @@ import { useMediaQuery } from "../../lib/useMediaQuery";
 import { useStorage } from "../../app/StorageContext";
 import { SDD_PARAMS, SDD_STORAGE, HUMAN_ACTOR, SDD_LIMITS, SECRET_SUSPECT_CODE } from "./sddConfig";
 import { useDocShortcuts, useSaveShortcut } from "./docShortcuts";
-import { sddMessages as m, viewMessages } from "./messages";
+import { useSddEditorMessages, useSddViewMessages } from "./useViewMessages";
 import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecDocument } from "./useSddApi";
 import { hasCode } from "./sddErrors";
 import { FailureBlock, ListSkeleton, MenuButton } from "./parts";
+import { useT } from "@agent-console/i18n";
 
 const P = SDD_PARAMS;
 
 type Draft = { text: string; baseHash: string | undefined };
 
 export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownHashes, refresh, reportDirty }: SddTabProps) {
+  const t = useT("sdd");
+  const viewMessages = useSddViewMessages();
+  const editorMessages = useSddEditorMessages();
   const space = useSddSpace();
   const qc = useQueryClient();
   const docs = useMemo(() => view.spec.documents ?? [], [view.spec.documents]);
@@ -113,8 +117,8 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
       }
       else if (e instanceof ApiError && e.code === ERROR_CODES.SDD_SECRET_REJECTED) {
         const lines = secretLines(e.details["issues"]);
-        setFailure(m.doc.secretRejected(lines));
-      } else setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.doc.saveFailed);
+        setFailure(lines === "" ? t("doc.secretRejected") : t("doc.secretRejectedAt", { lines: lines }));
+      } else setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("doc.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -131,8 +135,8 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
     await save(fresh.data?.version_hash ?? serverHash);
   };
   const copyMine = () => {
-    const done = () => toast({ tone: "success", text: m.doc.copyMine });
-    const fail = () => toast({ tone: "danger", text: m.doc.copyFailed });
+    const done = () => toast({ tone: "success", text: t("doc.copyMine") });
+    const fail = () => toast({ tone: "danger", text: t("doc.copyFailed") });
     const clip = typeof navigator === "undefined" ? undefined : navigator.clipboard;
     if (clip === undefined) fail();
     else void clip.writeText(value).then(done, fail);
@@ -143,7 +147,7 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
       await space.client.putSpecDocument(specId, docId, "", { createOnly: true });
       await docQ.refetch();
     } catch (e) {
-      setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.doc.saveFailed);
+      setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("doc.saveFailed"));
     }
   };
 
@@ -164,31 +168,31 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
       if (changed.version_hash !== undefined) ownHashes.current.add(changed.version_hash);
       qc.setQueryData(sddKeys.spec(space.key, specId), changed);
       void qc.invalidateQueries({ queryKey: sddKeys.specs(space.key) });
-      setTransitionNote(m.doc.stateChanged(stateLabel(to)));
+      setTransitionNote(t("doc.stateChanged", { label: stateLabel(to) }));
     } catch (e) {
       if (e instanceof ApiError && e.code === ERROR_CODES.SDD_GATE_BLOCKED) setGate(e.details as unknown as SddGateBlockedDetails);
-      else setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.problem.generic);
+      else setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("problem.generic"));
     }
   };
-  const blockedTransition = ctx.readOnly ? ctx.readOnlyReason : dirty ? m.doc.saveFirst : undefined;
+  const blockedTransition = ctx.readOnly ? ctx.readOnlyReason : dirty ? t("doc.saveFirst") : undefined;
   const onEdit = states.length === 0 || current === null ? undefined : (view.spec.rules?.document_states ?? []).find((s) => s.id === current)?.on_edit?.to;
   const transitionMenu =
     states.length === 0 ? null : targets.length === 0 ? (
-      <span className="app-muted">{m.doc.noTransition}</span>
+      <span className="app-muted">{t("doc.noTransition")}</span>
     ) : targets.length <= 2 ? (
       <>
         {targets.map((to) => (
           <Button key={to} size="sm" aria-disabled={blockedTransition !== undefined || undefined} title={blockedTransition} onClick={() => { if (blockedTransition === undefined) void transition(to); }}>
-            {m.doc.transitionTo(stateLabel(to))}
+            {t("doc.transitionTo", { label: stateLabel(to) })}
           </Button>
         ))}
       </>
     ) : (
       <MenuButton
-        label={`${m.doc.changeState} ▾`}
-        panelLabel={m.doc.changeState}
+        label={`${t("doc.changeState")} ▾`}
+        panelLabel={t("doc.changeState")}
         blockedReason={blockedTransition}
-        items={targets.map((to) => ({ id: to, label: m.doc.transitionTo(stateLabel(to)), onSelect: () => void transition(to) }))}
+        items={targets.map((to) => ({ id: to, label: t("doc.transitionTo", { label: stateLabel(to) }), onSelect: () => void transition(to) }))}
       />
     );
 
@@ -220,8 +224,8 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
   if (docs.length === 0) {
     return (
       <div className="sdd-state" data-testid="sdd-no-docs">
-        <p role="status">{m.doc.noDocs}</p>
-        <button type="button" className="app-link-btn" onClick={() => goTab("rules")}>{m.doc.noDocsAction}</button>
+        <p role="status">{t("doc.noDocs")}</p>
+        <button type="button" className="app-link-btn" onClick={() => goTab("rules")}>{t("doc.noDocsAction")}</button>
       </div>
     );
   }
@@ -230,19 +234,19 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
     <div className="sdd-docs">
       <div className="sdd-docs-nav">
         <DocumentNav documents={summaries} selectedId={docId} onSelect={(d) => select(d.id)} messages={viewMessages} />
-        {dirtyIds.size > 0 ? <p className="app-muted" role="status">{m.doc.unsaved}: {[...dirtyIds].map((id) => docs.find((d) => d.id === id)?.title ?? id).join(", ")}</p> : null}
+        {dirtyIds.size > 0 ? <p className="app-muted" role="status">{t("doc.unsaved")}: {[...dirtyIds].map((id) => docs.find((d) => d.id === id)?.title ?? id).join(", ")}</p> : null}
         <p className="app-muted sdd-docs-foot">
-          {m.doc.listFooter}{" "}
-          <button type="button" className="app-link-btn" onClick={() => goTab("rules")}>{m.doc.openRules}</button>
+          {t("doc.listFooter")}{" "}
+          <button type="button" className="app-link-btn" onClick={() => goTab("rules")}>{t("doc.openRules")}</button>
         </p>
       </div>
       <div className="sdd-docs-main">
         {docQ.isPending ? <ListSkeleton rows={10} /> : null}
-        {docQ.isError && !missing ? <FailureBlock error={docQ.error} title={m.doc.readFail} onRetry={() => void docQ.refetch()} /> : null}
+        {docQ.isError && !missing ? <FailureBlock error={docQ.error} title={t("doc.readFail")} onRetry={() => void docQ.refetch()} /> : null}
         {transitionNote === null ? null : <p role="status" className="sdd-note">{transitionNote}</p>}
         {gate === null ? null : <GateNotice details={gate} documentTitles={Object.fromEntries(docs.map((d) => [d.id, d.title]))} onOpenDocument={(id) => select(id)} onDismiss={() => setGate(null)} messages={viewMessages} />}
         {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
-        {dirty && onEdit !== undefined ? <p className="sdd-note" role="status">{m.doc.onEditWarn(stateLabel(onEdit))}</p> : null}
+        {dirty && onEdit !== undefined ? <p className="sdd-note" role="status">{t("doc.onEditWarn", { label: stateLabel(onEdit) })}</p> : null}
         {!docQ.isPending && (!docQ.isError || missing) ? (
           <DocumentEditor
             key={docId ?? ""}
@@ -261,7 +265,7 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
             onReload={() => setConfirm("reload")}
             onOverwrite={() => setConfirm("overwrite")}
             onCopyMine={copyMine}
-            {...(server === undefined || !dirty ? {} : { compare: { before: server.content, beforeLabel: conflict ? m.doc.serverVersion : m.doc.savedVersion } })}
+            {...(server === undefined || !dirty ? {} : { compare: { before: server.content, beforeLabel: conflict ? t("doc.serverVersion") : t("doc.savedVersion") } })}
             {...(initialLine === undefined ? {} : { initialLine })}
             mode={mode}
             onModeChange={changeMode}
@@ -272,26 +276,26 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
             onStatus={setCursor}
             statusBar={
               <>
-                {cursor === null ? null : <span>{m.doc.statusLine(cursor.line, cursor.col, cursor.chars)}</span>}
-                {docTasks > 0 ? <span>· {m.doc.statusTasks(docTasks)}</span> : null}
-                {docIssues > 0 ? <span>· {m.doc.statusIssues(docIssues)}</span> : null}
+                {cursor === null ? null : <span>{t("doc.statusLine", { line: cursor.line, col: cursor.col, chars: cursor.chars })}</span>}
+                {docTasks > 0 ? <span>· {t("doc.statusTasks", { count: docTasks })}</span> : null}
+                {docIssues > 0 ? <span>· {t("doc.statusIssues", { n: docIssues })}</span> : null}
               </>
             }
-            messages={viewMessages}
+            messages={editorMessages}
           />
         ) : null}
         <ConfirmDialog
           open={confirm !== null}
-          title={confirm === "overwrite" ? m.doc.overwriteTitle : m.doc.reloadTitle}
-          confirmLabel={confirm === "overwrite" ? m.doc.overwriteOk : m.doc.reloadOk}
-          cancelLabel={m.cancel}
+          title={confirm === "overwrite" ? t("doc.overwriteTitle") : t("doc.reloadTitle")}
+          confirmLabel={confirm === "overwrite" ? t("doc.overwriteOk") : t("doc.reloadOk")}
+          cancelLabel={t("cancel")}
           danger
           onConfirm={() => { const which = confirm; setConfirm(null); if (which === "overwrite") void overwrite(); else if (which === "reload") void reload(); }}
           onCancel={() => setConfirm(null)}
         >
-          {confirm === "overwrite" ? m.doc.overwriteBody : m.doc.reloadBody}
+          {confirm === "overwrite" ? t("doc.overwriteBody") : t("doc.reloadBody")}
         </ConfirmDialog>
-        {secret.length > 0 ? <span className="ac-sr-only">{m.doc.secretSuspect(secret.length, secret.map((i) => i.line).filter((l) => l !== null && l !== undefined).join(", "))}</span> : null}
+        {secret.length > 0 ? <span className="ac-sr-only">{secret.map((i) => i.line).filter((l) => l !== null && l !== undefined).join(", ") === "" ? t("doc.secretSuspect", { count: secret.length }) : t("doc.secretSuspectAt", { count: secret.length, lines: secret.map((i) => i.line).filter((l) => l !== null && l !== undefined).join(", ") })}</span> : null}
       </div>
     </div>
   );

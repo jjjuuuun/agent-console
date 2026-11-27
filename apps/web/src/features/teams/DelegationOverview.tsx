@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeTypeDescriptor, WorkspaceSettings } from "@agent-console/contracts";
-import { delegationMessages as dm, numberAt, resolveCycleLimit, stringAt, DEFAULT_TEAM_CONVENTIONS } from "../delegation";
+import { useDelegationMessages, numberAt, resolveCycleLimit, stringAt, DEFAULT_TEAM_CONVENTIONS } from "../delegation";
 import type { NestedInfo } from "../delegation";
-import { teamMessages } from "./messages";
+import { useTeamMessages } from "./messages";
 import { sessionSummary } from "./sessionView";
 import { nodeLabel } from "./teamsLogic";
 
@@ -23,6 +23,8 @@ export interface DelegationOverviewProps {
  * 중첩된 팀 구성 목록([열기]). 반복 연결은 디스크립터 `cycle`, 중첩 노드는 `binds.kind`로 판정한다. 해당하는 것이 없으면 아무것도 그리지 않는다.
  */
 export function DelegationOverview({ graph, nodeTypes, edgeTypes, strategies = [], workspace, nested, onSelectEdge, onSelectNode }: DelegationOverviewProps) {
+  const dm = useDelegationMessages();
+  const teamMessages = useTeamMessages();
   const kinds = useMemo(() => new Map(edgeTypes.map((e) => [e.id, e])), [edgeTypes]);
   const types = useMemo(() => new Map(nodeTypes.map((n) => [n.id, n])), [nodeTypes]);
   const nodes = graph.nodes ?? [];

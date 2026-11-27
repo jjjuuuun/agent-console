@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-collector"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 도구 호출 수 관측 수집기(example.tool_count)"
+description = "Agent Console example extension — an observation collector that counts tool calls (example.tool_count)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

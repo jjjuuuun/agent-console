@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [미출시]
+- Locale (0.2.1): `groupScopes` takes `options.locale` and `MemoryScopeTree` a `locale` prop for sorting scope labels; `MemoryEntryMeta` takes `locale` for the exact byte count. Defaults are `"en"` / `"en-US"` instead of a fixed Korean locale.
 - Messages (0.2.0, I.9c): moved the default messages to `src/locales/ko.json` (`defaultMessages` is still the Korean table) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`messages={en}`), plus `flattenMessageTree` and the `MessageTree` type. Added tests for matching keys and placeholders and for no Korean string literals in the source. The public API only grew and the default behavior is the same.
 
 ## [0.1.0]

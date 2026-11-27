@@ -2,6 +2,7 @@ import { folderOf } from "@agent-console/list-arrange";
 import { FolderMoveDialog } from "./FolderMoveDialog";
 import { LabelEditDialog } from "./LabelEditDialog";
 import { folderPathsOf, type ArrangeableDefinition } from "./arrangeDefs";
+import { useLanguageCode } from "../../i18n/collation";
 import type { ArrangeMessages } from "./arrangeMessages";
 import type { DefinitionEdits } from "./useDefinitionEdits";
 
@@ -20,6 +21,7 @@ export interface ListEditDialogsProps<T extends ArrangeableDefinition & { id: st
 
 /** 폴더 이동·라벨 편집 대화상자 한 쌍(M·L 단축키 대상). 저장은 `edits`가 한다. 에이전트·팀·리소스 목록이 함께 쓴다. */
 export function ListEditDialogs<T extends ArrangeableDefinition & { id: string }>({ moving, labeling, onCloseMove, onCloseLabels, items, edits, messages: m }: ListEditDialogsProps<T>) {
+  const language = useLanguageCode();
   return (
     <>
       {moving === undefined ? null : (
@@ -27,7 +29,7 @@ export function ListEditDialogs<T extends ArrangeableDefinition & { id: string }
           open
           itemName={moving.name}
           current={folderOf(moving.attributes)}
-          folders={folderPathsOf(items)}
+          folders={folderPathsOf(items, language)}
           messages={m.move}
           onClose={onCloseMove}
           onPick={(folder) => {

@@ -3,14 +3,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router";
 import { Banner, Disclosure, EmptyState, Icon, IconButton, PageHeader, useShortcuts } from "@agent-console/ui";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { lookupMessage, messages as appMessages } from "../../app/messages";
+import { useDescribeError } from "../../app/errors";
+import { useAppMessages } from "../../app/appMessages";
+import { useLookupMessage } from "../../app/shellMessages";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { queryKeys, useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { useProjectId, useProjectScopeReady } from "../../app/projectScope";
 import { useNow } from "../../app/useNow";
-import { formatRelative } from "../../lib/format";
+
 import { AccountWideNote, ProjectUsageSection } from "../projects";
+import { BackendConnectChip, useBackendConnectMessages, useBackendConnectSummary, useOpenBackendConnect } from "../backendConnect";
 import { ROUTE_ROLES, routeIconNode } from "../library";
 import { RollupPanel, buildLinesByView } from "./RollupPanel";
 import { SourcesPanel } from "./SourcesPanel";
@@ -18,10 +20,12 @@ import { UsageSetupGuide, type SetupGuideState } from "./UsageSetupGuide";
 import { TrustGroupCard } from "./TrustGroupCard";
 import { WindowCard } from "./WindowCard";
 import { basisKind } from "./cardParts";
-import { usageMessages as t } from "./messages";
+import { useTranslatedSources } from "./useTranslatedSources";
+import { useUsageMessages } from "./messages";
 import { OFFICIAL_TRUST, USAGE_TRUST_ORDER, USAGE_POLL_MS, USAGE_REPORT_KEY, USAGE_SOURCES_KEY, USAGE_ROLLUP_PERIODS, USAGE_ROLLUP_VIEWS, USAGE_SETUP_HASH, DEFAULT_ROLLUP_PERIOD, DEFAULT_ROLLUP_VIEW } from "./usageConfig";
 import { buildWindowGroups, groupWindowsByTrust, plainText, filterRollupByDays, sourceIndex, windowDisplayName, windowNameIndex, type RollupDimension } from "./usageLib";
 import "./usage.css";
+import { useFormat } from "../../i18n";
 
 const NO_SOURCES: readonly string[] = [];
 const usageKey = USAGE_REPORT_KEY;
@@ -29,6 +33,11 @@ const sourcesKey = USAGE_SOURCES_KEY;
 
 /** 사용량 화면(컨테이너): `/usage`·`/usage/sources`·공통 설정(`usage`)을 읽어 카드·집계·출처 패널에 나눠 준다. */
 export function UsageScreen() {
+  const describeError = useDescribeError();
+  const appMessages = useAppMessages();
+  const lookupMessage = useLookupMessage();
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const qc = useQueryClient();
   // 토큰 합계는 현재 프로젝트 것만(R15.3). 프로젝트가 없거나 기능이 꺼졌으면 생략(전체). 창 스냅샷은 계정 값 그대로.
   const projectId = useProjectId();
@@ -36,6 +45,7 @@ export function UsageScreen() {
   const scopeReady = useProjectScopeReady();
   const report = useApiQuery([...usageKey, projectId], (rest) => (projectId === null ? rest.getUsage() : rest.getUsage(undefined, projectId)), { refetchInterval: USAGE_POLL_MS, enabled: scopeReady });
   const sources = useApiQuery(sourcesKey, (rest) => rest.listUsageSources(), { refetchInterval: USAGE_POLL_MS });
+  const sourcesData = useTranslatedSources(sources.data);
   // 플랫폼 실행분 토큰 집계는 사용량-실행 연동이 켜져 있을 때만 있다. 꺼졌으면 집계 자리에 안내 한 줄만 남고,
   // 집계 이름 표시에만 쓰던 목록(에이전트·팀 구성)도 부르지 않는다.
   const rollupPart = useLinkPart(LINK_PART_IDS.usageTokenRollup);
@@ -54,8 +64,8 @@ export function UsageScreen() {
   const rawOrder = usageSettings?.primary_source_order;
   const order = useMemo(() => rawOrder ?? NO_SOURCES, [rawOrder]);
   const staleAfter = usageSettings?.stale_after_seconds ?? null;
-  const index = useMemo(() => sourceIndex(sources.data ?? []), [sources.data]);
-  const windowInfo = useMemo(() => windowNameIndex(sources.data ?? []), [sources.data]);
+  const index = useMemo(() => sourceIndex(sourcesData ?? []), [sourcesData]);
+  const windowInfo = useMemo(() => windowNameIndex(sourcesData ?? []), [sourcesData]);
   const sourceInfo = (id: string) => {
     const d = index.get(id)?.descriptor;
     return { title: d?.title ?? id, trust: d?.trust ?? "" };
@@ -77,8 +87,8 @@ export function UsageScreen() {
   const observedSources = useMemo(() => new Set(latestBySource.keys()), [latestBySource]);
 
   const setupSources = useMemo(
-    () => (sources.data ?? []).filter((s) => s.enabled !== false && s.descriptor.needs_setup === true && (s.descriptor.setup_snippets?.length ?? 0) > 0),
-    [sources.data],
+    () => (sourcesData ?? []).filter((s) => s.enabled !== false && s.descriptor.needs_setup === true && (s.descriptor.setup_snippets?.length ?? 0) > 0),
+    [sourcesData],
   );
   const connectedIds = useMemo(
     () => new Set(setupSources.filter((s) => observedSources.has(s.descriptor.id) || s.last_received_at != null).map((s) => s.descriptor.id)),
@@ -121,13 +131,24 @@ export function UsageScreen() {
     return value;
   };
 
+  // 백엔드 연결 바로가기: 앱 셸이 공급자를 두지 않았거나 숨김이면 둘 다 없고 아무것도 그리지 않는다.
+  const backendLabel = useBackendConnectMessages().chipLabel;
+  const openBackendConnect = useOpenBackendConnect();
+  const backendSummary = useBackendConnectSummary();
   const fetching = report.isFetching || sources.isFetching;
   const updated = report.dataUpdatedAt > 0 ? Math.floor(report.dataUpdatedAt / 1000) : undefined;
   const header = (
     <PageHeader
       title={t.title}
-      status={<><AccountWideNote /><span className="app-muted" aria-live="polite">{fetching ? t.refreshing : updated === undefined ? "" : t.lastUpdated(formatRelative(updated, nowMs))}</span></>}
-      actions={<IconButton size="sm" label={t.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={fetching && !report.isPending ? "true" : undefined} onClick={refresh} />}
+      status={<><AccountWideNote /><span className="app-muted" aria-live="polite">{fetching ? t.refreshing : updated === undefined ? "" : t.lastUpdated(fmt.relative(updated, nowMs))}</span></>}
+      actions={
+        <>
+          {openBackendConnect === undefined || backendSummary === undefined ? null : (
+            <BackendConnectChip tone={backendSummary.tone} summary={backendSummary.summary} label={backendLabel} tip={backendSummary.tip} onClick={() => openBackendConnect()} />
+          )}
+          <IconButton size="sm" label={t.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={fetching && !report.isPending ? "true" : undefined} onClick={refresh} />
+        </>
+      }
     />
   );
 
@@ -144,7 +165,7 @@ export function UsageScreen() {
     cards = <ErrorBlock title={t.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={refresh} />;
   } else if (groups.length === 0) {
     // 값이 전혀 없을 때: 켜진 일반 출처마다 한 줄(설명). 시험용(test_only)은 출처 목록의 "개발용" 접힘에만 있다.
-    const rows = (sources.data ?? []).filter((x) => x.enabled !== false && x.descriptor.test_only !== true);
+    const rows = (sourcesData ?? []).filter((x) => x.enabled !== false && x.descriptor.test_only !== true);
     cards = (
       <EmptyState
         icon={routeIconNode(ROUTE_ROLES.usage)}
@@ -237,11 +258,11 @@ export function UsageScreen() {
         )}
         <section aria-labelledby="usage-sources-title" className="usage-sources-section">
           <h2 id="usage-sources-title" className="app-block-title">{t.sources.title}</h2>
-          {sources.isError && sources.data === undefined ? (
+          {sources.isError && sourcesData === undefined ? (
             <ErrorBlock title={t.sources.loadFailed} retryLabel={appMessages.common.retry} onRetry={refresh} />
           ) : (
-            <Disclosure summary={t.sources.summary(sources.data?.length ?? 0, (sources.data ?? []).filter((x) => x.enabled !== false).length)}>
-              <SourcesPanel sources={sources.data ?? []} nowMs={nowMs} settingsHref="/settings#usage" hasObservation={(id) => observedSources.has(id)} latestObservedAt={(id) => latestBySource.get(id)} />
+            <Disclosure summary={t.sources.summary(sourcesData?.length ?? 0, (sourcesData ?? []).filter((x) => x.enabled !== false).length)}>
+              <SourcesPanel sources={sourcesData ?? []} nowMs={nowMs} settingsHref="/settings#usage" hasObservation={(id) => observedSources.has(id)} latestObservedAt={(id) => latestBySource.get(id)} />
             </Disclosure>
           )}
         </section>

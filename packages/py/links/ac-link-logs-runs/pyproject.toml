@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-logs-runs"
 version = "0.1.0"
-description = "Agent Console — 로그·실행 연동 모듈: 플랫폼 실행 이벤트 → 로그(런타임 출처 platform-runs)·실행 세션 로그(/runs/{id}/logs)"
+description = "Agent Console — logs and runs link module: platform run events → logs (runtime source platform-runs), run session logs (/runs/{id}/logs)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -20,6 +20,9 @@ link-logs-runs = "agent_console_link_logs_runs.module:module"
 
 [project.entry-points."agent_console.config_schemas"]
 log-source-platform-runs = "agent_console_link_logs_runs.source:SOURCE_SCHEMA"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-logs-runs = "agent_console_link_logs_runs"
 
 [dependency-groups]
 dev = [

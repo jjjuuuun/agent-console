@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-claude-format"
 version = "0.1.0"
-description = "Agent Console — Claude Code `.claude` 산출물(에이전트·skill·rule·settings·.mcp.json) 읽기·쓰기 변환(순수 함수)"
+description = "Agent Console — reads and writes Claude Code `.claude` artifacts (agents, skills, rules, settings, .mcp.json) as pure functions"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

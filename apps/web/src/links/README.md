@@ -1,8 +1,8 @@
 # apps/web/src/links
 
-두 기능 이상을 함께 쓰는 연결 층이다. 연동 부분이 보일지는 필요한 모듈·역할이 켜져 있는지로 정한다(없으면 숨김 또는 비활성).
+The integration layer for parts that use two or more features together. Whether an integration part is shown depends on whether the modules and roles it needs are on (otherwise it is hidden or disabled).
 
-- `linkParts.ts`: 연동 부분 등록 데이터(부분 id, 필요한 모듈 id·역할, 숨김/비활성). 화면은 부분 id만 안다.
-- 두 기능을 한 컴포넌트에서 쓰는 경우 `links/<a>-<b>/`에 둔다. 기능 폴더(`features/*`)는 이 폴더를 import하지 않고,
-  앱 조립 층(`app/`, `shell/`)이 이 폴더를 가져다 쓴다.
-- 부분이 켜졌는지 판정은 `modules/`의 `useLinkPart`·`LinkPart` 하나만 거친다.
+- `linkParts.ts`: integration part registration data (part id, required module ids and roles, hidden or disabled). Screens know only the part id.
+- A component that uses two features goes in `links/<a>-<b>/`. Feature folders (`features/*`) do not import this folder;
+  the app assembly layers (`app/`, `shell/`) use it.
+- Whether a part is on is decided only through `useLinkPart` and `LinkPart` in `modules/`.

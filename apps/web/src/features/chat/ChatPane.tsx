@@ -8,19 +8,20 @@ import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { FixButtons } from "../../app/fix";
 import { ConnectedBackendChooserCard, unresolvedBackendOf, useSaveDefaultBackend, type UnresolvedBackend } from "../backendChoice";
-import { describeError } from "../../app/errors";
+import { useDescribeError, useErrorState, raised } from "../../app/errors";
 import { useDelegationStrategies } from "../settings";
-import { messages as appMessages } from "../../app/messages";
+import { useShellMessages } from "../../app/shellMessages";
 import { useConnectionStatus } from "../../app/useConnectionStatus";
 import { useSessionStorage, useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
-import { delegationMessages as dm } from "../delegation";
+import { useDelegationMessages } from "../delegation";
 import { countHandled, failedChildOf, hasRunningChild } from "./lib/progress";
 import { usePageTitle } from "../../shell/titles";
 import { ChatHeader } from "./ChatHeader";
 import { useWorkspaceSettings } from "../../app/queries";
 import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationScope, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList, useConversationSessions } from "./chatData";
-import { chatMessages } from "./chatMessages";
+import { useChatMessages } from "./chatMessages";
+import { createToastText, ToastText } from "../../app/ToastText";
 import { SessionMissingBanner } from "./SessionMissingBanner";
 import { sessionViewOf } from "./lib/sessions";
 import { EmptyConversation } from "./EmptyViews";
@@ -44,8 +45,7 @@ import { useInteractionRespond } from "../interactions";
 import { useConversationList } from "./chatData";
 import { ProjectChip, useProjectRunsBlocked } from "../projects";
 import { useQueryClient } from "@tanstack/react-query";
-
-const t = chatMessages;
+import { useChatLocale, useLanguageCode, useServerTranslate } from "../../i18n";
 
 export interface ChatPaneProps {
   conversationId: string;
@@ -61,6 +61,8 @@ export interface ChatPaneProps {
   onGone: () => void;
 }
 
+const ChatToast = createToastText(useChatMessages);
+
 const NO_PROGRESS: Record<string, never[]> = {};
 
 type Notice = { text: string; tone: "info" | "warning" | "danger"; fix?: Fix | undefined };
@@ -70,6 +72,14 @@ const badgeNoteKey = "chat.backendNote.hiddenForSession";
 
 /** 열린 대화 하나(컨테이너): 데이터·실시간 연결을 조립하고 `@agent-console/chat`의 표현 컴포넌트에 넘긴다. */
 export function ChatPane(props: ChatPaneProps) {
+  const describeError = useDescribeError();
+  const language = useLanguageCode();
+  const chatLocale = useChatLocale();
+  const serverText = useServerTranslate();
+  const shell = useShellMessages();
+  const m = useChatMessages();
+  const dm = useDelegationMessages();
+  const t = m;
   const { conversationId: id, nowMs } = props;
   const { rest, ws } = useApi();
   const storage = useStorage();
@@ -131,19 +141,21 @@ export function ChatPane(props: ChatPaneProps) {
   const backendById = useMemo(() => indexById<BackendDescriptor>(backendList.data), [backendList.data]);
   const teamBackendRaw: unknown = graph.data?.graph.settings?.["backend"];
   const teamBackend = typeof teamBackendRaw === "string" && teamBackendRaw !== "" ? teamBackendRaw : undefined;
+  // 백엔드 칩 문구는 서버(디스크립터) 원문이라 화면 언어로 옮긴다
+  const translateBadge = useCallback((badge: string | undefined) => (badge === undefined ? undefined : serverText(badge)), [serverText]);
   const agentView = useMemo(
-    () => buildAgentView(turns, actorCtx, feed.delegators, (agent, node) => badgeOfBackend(backendById, effectiveBackendId(agent, node, defaultBackend, teamBackend))),
-    [turns, actorCtx, feed.delegators, backendById, defaultBackend, teamBackend],
+    () => buildAgentView(turns, actorCtx, feed.delegators, (agent, node) => translateBadge(badgeOfBackend(backendById, effectiveBackendId(agent, node, defaultBackend, teamBackend)))),
+    [turns, actorCtx, feed.delegators, backendById, defaultBackend, teamBackend, translateBadge],
   );
   // 팀이 칩이 붙는 백엔드로 도는지(문구는 디스크립터 데이터). 팀 노드 중 하나라도 해당하면 한 줄 안내를 보인다
   const teamBadge = useMemo(() => {
     for (const node of graph.data?.graph.nodes ?? []) {
       const agent = agentOfNode(node, naming);
       const badge = badgeOfBackend(backendById, effectiveBackendId(agent, node, defaultBackend, teamBackend));
-      if (badge !== undefined) return badge;
+      if (badge !== undefined) return translateBadge(badge);
     }
     return undefined;
-  }, [graph.data, naming, backendById, defaultBackend, teamBackend]);
+  }, [graph.data, naming, backendById, defaultBackend, teamBackend, translateBadge]);
   const tabStorage = useSessionStorage();
   const [badgeNoteDismissed, setBadgeNoteDismissed] = useState(() => tabStorage.get(badgeNoteKey) === "1");
   // 같은 탭의 다른 대화로 옮겨도 숨김을 유지한다(컴포넌트가 재사용되어도 저장소 값을 다시 읽는다).
@@ -158,7 +170,7 @@ export function ChatPane(props: ChatPaneProps) {
       const names = nested.path.filter((n) => n !== "");
       return names.length === 0 ? own : dm.run.child.nestedActor(names.length > 3 ? `${names[0]} › … › ${names[names.length - 1]}` : names.join(" › "), own);
     },
-    [actorCtx, naming, feed],
+    [actorCtx, naming, feed, t.interaction.actorInside, dm],
   );
   const pending = useMemo(() => (cardPart.visible ? turns.flatMap((turn) => (turn.interactions ?? []).filter((i) => i.status === "pending")) : []), [turns, cardPart.visible]);
   const activeTurn = useMemo(() => [...turns].reverse().find((turn) => isActiveStatus(turn.status)), [turns]);
@@ -193,7 +205,7 @@ export function ChatPane(props: ChatPaneProps) {
     prevOwner.current = { composerId, pendingCount: pending.length };
     if (prev.composerId !== undefined && composerId === undefined && pending.length >= 2) {
       // 입력창 → 카드(대기가 늘었다): 입력창 내용은 그대로 둔다
-      toast({ tone: "info", text: t.answer.movedToCard });
+      toast({ tone: "info", text: <ChatToast render={(c) => c.answer.movedToCard} /> });
     } else if (prev.composerId === undefined && composerId !== undefined && prev.pendingCount >= 2) {
       // 카드 → 입력창(하나만 남았다): 입력창이 비어 있을 때만 카드 초안을 옮기고, 아니면 입력창을 우선한다
       const draft = cardDrafts.current.get(composerId);
@@ -218,7 +230,8 @@ export function ChatPane(props: ChatPaneProps) {
 
   // ---- 멈춘 대기열(재시작 뒤 `ask`): 실행·취소·입력창으로 가져오기. 낙관적 변경 없이 서버 응답 뒤 다시 읽는다 ----
   const [queuedBusy, setQueuedBusy] = useState<readonly string[]>([]);
-  const [queuedErrors, setQueuedErrors] = useState<Record<string, string>>({});
+  const [queuedRaw, setQueuedErrors] = useState<Record<string, unknown>>({});
+  const queuedErrors = useMemo(() => Object.fromEntries(Object.entries(queuedRaw).map(([k, e]) => [k, describeError(e, t.held.failed).message])), [queuedRaw, describeError, t.held.failed]);
   const [confirmCancelAll, setConfirmCancelAll] = useState(false);
   const runQueued = async (keys: readonly string[], op: (key: string) => Promise<unknown>): Promise<boolean> => {
     setQueuedBusy((cur) => [...cur, ...keys]);
@@ -229,7 +242,7 @@ export function ChatPane(props: ChatPaneProps) {
         await op(key);
       } catch (e) {
         ok = false;
-        setQueuedErrors((cur) => ({ ...cur, [key]: describeError(e, t.held.failed).message }));
+        setQueuedErrors((cur) => ({ ...cur, [key]: e }));
         break;
       }
     }
@@ -287,7 +300,7 @@ export function ChatPane(props: ChatPaneProps) {
       void queryClient.invalidateQueries({ queryKey: chatKeys.sessions(id, project) });
     }
     if ("queued" in res) {
-      toast({ tone: "info", text: t.composer.queuedToast(res.queued.position) });
+      toast({ tone: "info", text: <ChatToast render={(c) => c.composer.queuedToast(res.queued.position)} /> });
       void queryClient.invalidateQueries({ queryKey: chatKeys.queue(id) });
     } else if (res.run.status === "cancelled") {
       // 시작하는 동안 대화가 지워졌을 수 있다(서버는 404로 알리지만 취소된 Run만 돌려주는 경로도 확인한다).
@@ -297,16 +310,16 @@ export function ChatPane(props: ChatPaneProps) {
   };
 
   const [unresolved, setUnresolved] = useState<UnresolvedBackend | null>(null);
-  const [chooserError, setChooserError] = useState<string | undefined>(undefined);
+  const [chooserError, setChooserError] = useErrorState(m.composer.backendSaveFailed);
   const [choosing, setChoosing] = useState(false);
   const saveDefaultBackend = useSaveDefaultBackend();
   const chooseBackend = async (backendId: string) => {
     setChoosing(true);
-    setChooserError(undefined);
+    setChooserError(null);
     try {
       await saveDefaultBackend(backendId);
     } catch (e) {
-      setChooserError(describeError(e, appMessages.backendChooser.saveFailed).message);
+      setChooserError(raised(e));
       setChoosing(false);
       return;
     }
@@ -314,7 +327,7 @@ export function ChatPane(props: ChatPaneProps) {
     if (changingBackend) {
       // 안내줄의 [백엔드 바꾸기]로 연 카드: 기본값만 바꾸고 메시지는 다시 보내지 않는다
       setChangingBackend(false);
-      toast({ tone: "info", text: t.composer.backendChanged });
+      toast({ tone: "info", text: <ChatToast render={(c) => c.composer.backendChanged} /> });
       return;
     }
     setUnresolved(null);
@@ -344,12 +357,12 @@ export function ChatPane(props: ChatPaneProps) {
         setArmedFor(null);
         void sessions.refetch();
       } else if (e instanceof ApiError && e.status === 404) {
-        toast({ tone: "info", text: t.conversation.deleted });
+        toast({ tone: "info", text: <ChatToast render={(c) => c.conversation.deleted} /> });
         props.onGone();
       } else if (unresolvedBackendOf(e) !== undefined) {
         // 백엔드 미지정은 실패가 아니다: 입력을 그대로 두고 해결 카드를 띄운다(고르면 같은 메시지를 다시 보낸다)
         setUnresolved(unresolvedBackendOf(e) ?? null);
-        setChooserError(undefined);
+        setChooserError(null);
       } else {
         const view = describeError(e, target !== null && mode === ANSWER_MODES.answer && !asMessage ? t.composer.answerFailed : t.composer.sendFailed);
         // 닫힌 요청(409 interaction_closed)은 실패가 아니라 상태 안내다(screen-chat §10.4: info 줄). 진짜 실패만 danger.
@@ -371,7 +384,7 @@ export function ChatPane(props: ChatPaneProps) {
       feed.refresh();
     } catch (e) {
       setCancelling((cur) => cur.filter((r) => r !== runId));
-      toast({ tone: "danger", text: describeError(e, t.turn.stopFailed).message });
+      toast({ tone: "danger", text: <ChatToast render={(c, d) => d(e, c.turn.stopFailed).message} /> });
     }
   };
   const requestStop = (runId: string) => {
@@ -417,13 +430,13 @@ export function ChatPane(props: ChatPaneProps) {
   const [renaming, setRenaming] = useState(false);
   const [teamDialog, setTeamDialog] = useState(false);
   const [teamBusy, setTeamBusy] = useState(false);
-  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamError, setTeamError] = useErrorState(t.switchTeam.failed);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const guarded = async (fn: () => Promise<unknown>, failed: string) => {
+  const guarded = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
     } catch (e) {
-      toast({ tone: "danger", text: describeError(e, failed).message });
+      toast({ tone: "danger", text: <ToastText render={({ shell: s }, d) => d(e, s.common.requestFailed).message} /> });
     }
   };
 
@@ -475,12 +488,12 @@ export function ChatPane(props: ChatPaneProps) {
     const view = describeError(conversation.error, t.conversation.loadFailed);
     return (
       <div className="chat-pane">
-        <ErrorBlock title={t.conversation.loadFailed} message={view.message} fix={view.fix} details={errorDetails(view)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={() => void conversation.refetch()} />
+        <ErrorBlock title={t.conversation.loadFailed} message={view.message} fix={view.fix} details={errorDetails(view)} detailsLabel={shell.common.details} retryLabel={shell.common.retry} onRetry={() => void conversation.refetch()} />
       </div>
     );
   }
 
-  const replyLabelTable = appMessages.settings.replyDisplayPreview as Record<string, string>;
+  const replyLabelTable = m.replyDisplayLabel as Record<string, string>;
   const moreFooter = (
     <span className="chat-menu-readonly">
       {t.menu.replyDisplay(replyLabelTable[replyDisplay] ?? replyDisplay)} <Link to={`${chatPaths.settings()}#chat`}>{t.menu.replyDisplayLink}</Link>
@@ -516,7 +529,7 @@ export function ChatPane(props: ChatPaneProps) {
         title={title}
         renaming={renaming}
         onRenamingChange={setRenaming}
-        onRename={(next) => void guarded(() => actions.rename(id, next, project), appMessages.common.requestFailed)}
+        onRename={(next) => void guarded(() => actions.rename(id, next, project))}
         teamName={teamMissing ? undefined : team?.name}
         teamHref={team ? chatPaths.team(team.id) : undefined}
         runHref={lastRunId ? chatPaths.run(lastRunId) : undefined}
@@ -528,7 +541,7 @@ export function ChatPane(props: ChatPaneProps) {
         moreMenu={[
           { id: "rename", label: t.menu.rename, onSelect: () => setRenaming(true) },
           { id: "same-team", label: t.menu.sameTeamNew, disabled: team === undefined, onSelect: () => conversation.data && props.onNewWithTeam(conversation.data.graph_id) },
-          { id: "archive", label: archived ? t.menu.unarchive : t.menu.archive, onSelect: () => void guarded(() => actions.setArchived(id, !archived, project), appMessages.common.requestFailed) },
+          { id: "archive", label: archived ? t.menu.unarchive : t.menu.archive, onSelect: () => void guarded(() => actions.setArchived(id, !archived, project)) },
           { id: "runs", label: t.menu.runsFilter, onSelect: () => void navigate(chatPaths.runsOfConversation(id)) },
           { id: "delete", label: t.menu.delete, danger: true, onSelect: () => setConfirmDelete(true) },
         ]}
@@ -540,7 +553,7 @@ export function ChatPane(props: ChatPaneProps) {
           tone="info"
           actions={
             <>
-              <Button size="sm" onClick={() => { setChooserError(undefined); setChangingBackend(true); }}>{t.composer.backendChange}</Button>
+              <Button size="sm" onClick={() => { setChooserError(null); setChangingBackend(true); }}>{t.composer.backendChange}</Button>
               <Button size="sm" variant="ghost" onClick={() => { tabStorage.set(badgeNoteKey, "1"); setBadgeNoteDismissed(true); }}>{t.composer.hideNoteForSession}</Button>
             </>
           }
@@ -570,11 +583,13 @@ export function ChatPane(props: ChatPaneProps) {
         />
       ) : null}
       {feed.error && turns.length === 0 ? (
-        <ErrorBlock title={t.conversation.turnsLoadFailed} message={describeError(feed.error, t.conversation.turnsLoadFailed).message} retryLabel={appMessages.common.retry} onRetry={feed.refetch} />
+        <ErrorBlock title={t.conversation.turnsLoadFailed} message={describeError(feed.error, t.conversation.turnsLoadFailed).message} retryLabel={shell.common.retry} onRetry={feed.refetch} />
       ) : feed.loading ? (
         <div className="chat-loading" role="status" aria-busy="true"><Spinner /><span>{t.conversation.loading}</span></div>
       ) : (
         <MessageList
+          locale={language}
+          messages={chatLocale.chat}
           turns={turns}
           replyDisplay={replyDisplay}
           streaming={feed.streaming}
@@ -644,7 +659,7 @@ export function ChatPane(props: ChatPaneProps) {
             tone="warning"
             actions={
               archived && !teamMissing && !noEntry ? (
-                <Button size="sm" onClick={() => void guarded(() => actions.setArchived(id, false, project), appMessages.common.requestFailed)}>{t.composer.unarchive}</Button>
+                <Button size="sm" onClick={() => void guarded(() => actions.setArchived(id, false, project))}>{t.composer.unarchive}</Button>
               ) : noEntry && team ? (
                 <Link className="ac-btn" data-variant="secondary" data-size="sm" to={chatPaths.team(team.id)}>{t.composer.editTeam}</Link>
               ) : undefined
@@ -666,14 +681,15 @@ export function ChatPane(props: ChatPaneProps) {
           </Banner>
         ) : null}
         {unresolved !== null ? (
-          <ConnectedBackendChooserCard options={unresolved.options} nodeLabels={unresolved.labels} busy={choosing} error={chooserError} onConfirm={(b) => void chooseBackend(b)} />
+          <ConnectedBackendChooserCard options={unresolved.options} nodeLabels={unresolved.labels} busy={choosing} error={chooserError ?? undefined} onConfirm={(b) => void chooseBackend(b)} />
         ) : changingBackend ? (
-          <ConnectedBackendChooserCard mode="change" options={backendList.data ?? []} initialId={teamBackend ?? defaultBackend} busy={choosing} error={chooserError} onConfirm={(b) => void chooseBackend(b)} />
+          <ConnectedBackendChooserCard mode="change" options={backendList.data ?? []} initialId={teamBackend ?? defaultBackend} busy={choosing} error={chooserError ?? undefined} onConfirm={(b) => void chooseBackend(b)} />
         ) : null}
         {notice?.fix ? <FixButtons fix={notice.fix} /> : null}
         <div className="ac-sr-only" role="status" aria-live="polite">{movedNote}</div>
         <Composer
           ref={composer}
+          messages={chatLocale.composer}
           value={text}
           onChange={setText}
           onSend={() => void send(false)}
@@ -720,9 +736,10 @@ export function ChatPane(props: ChatPaneProps) {
             .switchTeam(id, graphId, project)
             .then(() => {
               setTeamDialog(false);
-              toast({ tone: "success", text: t.switchTeam.switchedToast(graphs.data?.find((g) => g.id === graphId)?.name ?? graphId) });
+              const teamName = graphs.data?.find((g) => g.id === graphId)?.name ?? graphId;
+              toast({ tone: "success", text: <ChatToast render={(c) => c.switchTeam.switchedToast(teamName)} /> });
             })
-            .catch((e: unknown) => setTeamError(describeError(e, t.switchTeam.failed).message))
+            .catch((e: unknown) => setTeamError(raised(e)))
             .finally(() => setTeamBusy(false));
         }}
       />
@@ -731,14 +748,14 @@ export function ChatPane(props: ChatPaneProps) {
         danger
         title={t.remove.title}
         confirmLabel={t.remove.confirm}
-        cancelLabel={appMessages.common.cancel}
+        cancelLabel={shell.common.cancel}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);
           void guarded(async () => {
             await actions.remove(id, project);
             props.onGone();
-          }, appMessages.common.requestFailed);
+          });
         }}
       >
         <p className="ac-text">{t.remove.body}</p>
@@ -748,7 +765,7 @@ export function ChatPane(props: ChatPaneProps) {
         danger
         title={t.held.cancelAllTitle}
         confirmLabel={t.held.cancelAllConfirm}
-        cancelLabel={appMessages.common.cancel}
+        cancelLabel={shell.common.cancel}
         onCancel={() => setConfirmCancelAll(false)}
         onConfirm={() => {
           setConfirmCancelAll(false);
@@ -774,7 +791,7 @@ export function ChatPane(props: ChatPaneProps) {
         danger
         title={t.turn.stopConfirmTitle}
         confirmLabel={t.turn.stopConfirm}
-        cancelLabel={appMessages.common.cancel}
+        cancelLabel={shell.common.cancel}
         onCancel={() => setConfirmStop(null)}
         onConfirm={() => {
           const run = confirmStop;

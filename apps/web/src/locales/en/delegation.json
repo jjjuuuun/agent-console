@@ -1,0 +1,296 @@
+{
+  "settings": {
+    "title": "Delegation settings"
+  },
+  "edge": {
+    "cycleChip": "Max {m}",
+    "cycleInheritedKind": "From the edge type default",
+    "cycleInheritedTeam": "From team settings",
+    "cycleInheritedCommon": "From common settings",
+    "cycleNoLimit": "No limit ▲",
+    "strategyChip": "Strategy: {title}",
+    "strategyChipHint": "Changed on the edge",
+    "conditionEmpty": "No condition ▲"
+  },
+  "condition": {
+    "title": "Conditions",
+    "mode": {
+      "label": "How conditions combine",
+      "all": "Match all",
+      "any": "Match any"
+    },
+    "negate": "Negate",
+    "add": "Add condition",
+    "empty": "With no condition, this edge always passes",
+    "emptySummary": "The condition is empty, so it always passes.",
+    "many": "There are many conditions. Consider having the agent return its decision as a structured result.",
+    "mixedModes": "A condition that mixes “Match all” and “Match any” can't be edited in the form",
+    "editJson": "Edit as JSON",
+    "jsonLabel": "Condition JSON",
+    "jsonInvalid": "The JSON isn't valid",
+    "row": {
+      "group": "Condition {n}/{total}",
+      "path": "Target",
+      "pathPlaceholder": "Path starting with /",
+      "operator": "Operator",
+      "operatorUnset": "Choose an operator",
+      "value": "Value",
+      "menu": "Row menu",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "duplicate": "Duplicate",
+      "remove": "Delete",
+      "added": "Added condition {n}",
+      "removed": "Deleted condition {n}",
+      "movedUp": "Moved condition {n} up",
+      "movedDown": "Moved condition {n} down"
+    },
+    "pathInvalid": "The path must start with / (for example, /output)",
+    "operatorUnknown": "Unknown: {id}",
+    "operatorUnknownWarn": "The operator “{id}” is unknown. This item is treated as false when the run happens.",
+    "operatorLoading": "Loading operators",
+    "operatorError": "Couldn't load operators, so enter one yourself",
+    "operatorRetry": "Try again",
+    "operatorFree": "Enter an operator id",
+    "valueNone": "This operator needs no value",
+    "valueType": {
+      "label": "Value type",
+      "string": "Text",
+      "number": "Number",
+      "boolean": "True/false"
+    },
+    "valueTrue": "True",
+    "valueArrayAdd": "Add an item (Enter)",
+    "valueArrayRemove": "Remove {v}",
+    "valueJsonInvalid": "The JSON isn't valid",
+    "summary": {
+      "label": "Summary",
+      "and": " and ",
+      "or": " or ",
+      "negate": "Not: ",
+      "none": "No condition",
+      "more_one": " and {count} more",
+      "more_other": " and {count} more",
+      "valueMore_one": "and {count} more",
+      "valueMore_other": "and {count} more"
+    },
+    "unknownWidget": "No widget was found to draw this setting, so it's shown as JSON."
+  },
+  "nested": {
+    "open": "Open",
+    "openAria": "Open team {name}",
+    "self": "Itself",
+    "missing": "Not found",
+    "missingSubtitle": "Team not found: {id}",
+    "pinned": "Pinned {hash}",
+    "pinnedHint": "Pinned to this hash's team version",
+    "notAllowedSelf": "A team can't contain itself",
+    "paletteEmpty": "No other teams to add",
+    "paletteCreate": "Create a team",
+    "breadcrumb": {
+      "more": "Back",
+      "back": "Parent team"
+    },
+    "overviewTitle": "Nested teams",
+    "loopsTitle": "Loop edges",
+    "nodeCount_one": "{count} node",
+    "nodeCount_other": "{count} nodes",
+    "entryCount_one": "{count} entry",
+    "entryCount_other": "{count} entries",
+    "infoMeta_one": "{count} node",
+    "infoMeta_other": "{count} nodes",
+    "infoMetaEntries_one": "{count} node · entries {entries}",
+    "infoMetaEntries_other": "{count} nodes · entries {entries}",
+    "loopsInfoUnset_one": "This team has {count} loop edge. The total node runs in one run are limited to the set number.",
+    "loopsInfoUnset_other": "This team has {count} loop edges. The total node runs in one run are limited to the set number.",
+    "loopsInfo_one": "This team has {count} loop edge. The total node runs in one run are limited to {m}.",
+    "loopsInfo_other": "This team has {count} loop edges. The total node runs in one run are limited to {m}."
+  },
+  "run": {
+    "iteration": "Iteration {n}",
+    "call": "Call {n}",
+    "attempt": "Attempt {n}",
+    "tabNode": "Nodes and edges",
+    "handled": "Handled",
+    "handledHint": "It failed, but a failure-handling edge let the run continue",
+    "exhaustedBadge": "↻×{k} hit the limit of {m}",
+    "exhaustedLine": "Hit the loop limit (limit {m})",
+    "loopBadgeAria": "Passed through a loop edge {k} times",
+    "exhaustedAria": "Passed through a loop edge {k} times and hit the loop limit of {m}",
+    "list": {
+      "label": "Runs",
+      "colRun": "Run",
+      "colStatus": "Status",
+      "colStarted": "Started",
+      "colElapsed": "Elapsed",
+      "colCaller": "Caller",
+      "colChild": "Child runs",
+      "waiting": "Waiting for you",
+      "answer": "Answer in the Interactions tab",
+      "first": "This is the first run",
+      "latest": "This is the latest run",
+      "toLatest": "To latest",
+      "loading": "Loading runs",
+      "childMany": "{n} ▾",
+      "invokedNote": "A separate session started by {caller}'s delegation.",
+      "title_one": "{count} run",
+      "title_other": "{count} runs"
+    },
+    "breadcrumb": {
+      "label": "Run location",
+      "root": "Root {short}",
+      "more": "Parent levels"
+    },
+    "child": {
+      "title": "Child runs",
+      "menuLabel": "Child run list",
+      "open": "Open",
+      "parentLink": "Child run · node “{node}” of parent {short}",
+      "parentOpen": "Parent run ↗",
+      "cancelFromParent": "Cancel from the parent run ↗",
+      "loadingChildren": "Child runs …",
+      "cardLine": "Child run {short} · {status}",
+      "cardMenu": "{n} ▾",
+      "interruptedNote": "The child run was interrupted too",
+      "includesChildren": "Includes child runs",
+      "pastNote": "Past requests of child runs are in each run's screen.",
+      "nestedActor": "{node} (nested team) › {own}",
+      "menu_one": "{count} child run",
+      "menu_other": "{count} child runs",
+      "cancelNote_one": "The {count} running child run is canceled too.",
+      "cancelNote_other": "The {count} running child runs are canceled too.",
+      "eventsNote_one": "The events of {count} child run are in its run screen",
+      "eventsNote_other": "The events of {count} child runs are in each run's screen",
+      "failedSome_one": "{k} of {count} child run failed",
+      "failedSome_other": "{k} of {count} child runs failed",
+      "fromChildNoTeam": "Child run {short}",
+      "fromChild": "Child run {short} · {team}"
+    },
+    "judgement": {
+      "title": "Edge: {from} → {to}",
+      "state": "State",
+      "passed": "Passed",
+      "skippedCondition": "Skipped — the condition wasn't met",
+      "skippedUpstream": "Skipped — upstream was skipped",
+      "notYet": "Hasn't passed yet",
+      "basis": "Basis for the decision",
+      "history": "Past passes",
+      "all": "Match all",
+      "any": "Match any",
+      "resultPass": "Pass",
+      "resultSkip": "Skip",
+      "resultLine": "{mode} → result: {result}",
+      "negated": "(negated)",
+      "itemOk": "Met",
+      "itemNo": "Not met",
+      "actual": "Actual value",
+      "showFull": "Show all",
+      "fullTitle": "Full actual value",
+      "rawFallback": "Couldn't read the basis, so the original is shown",
+      "colSeq": "No.",
+      "colTime": "Time",
+      "colResult": "Result",
+      "colIter": "Iteration",
+      "startsAt": "→ {node} {iter} starts",
+      "exhausted": "Hit the loop limit (limit {m})",
+      "exhaustedNoLimit": "Hit the loop limit",
+      "close": "Close",
+      "loading": "Loading the edge history",
+      "failed": "Couldn't load the edge history",
+      "conditionFalse": "Didn't pass because the condition wasn't met"
+    },
+    "event": {
+      "conditionPass": "Condition passed",
+      "conditionFalse": "Condition false",
+      "loopIteration": "↻ Iteration {ordinal} started",
+      "loopIterationNodes": "↻ Iteration {ordinal} started · {nodes}",
+      "loopExhausted": "↻ Hit the loop limit (limit {m})",
+      "loopExhaustedChip": "↻ Hit the loop limit (limit {m}) · {chip}",
+      "childStarted": "▣ Child run started · {short}",
+      "childStartedTeam": "▣ Child run started · {team} · {short}",
+      "childFinished": "▣ Child run {status} · {short}",
+      "childFinishedTeam": "▣ Child run {status} · {team} · {short}"
+    },
+    "separateSession": "Separate session",
+    "toggleGroup": "Child run group",
+    "nodeKeys": "Move between nodes",
+    "handledLine_one": "Handled {count} failed node through a failure-handling edge",
+    "handledLine_other": "Handled {count} failed nodes through failure-handling edges",
+    "badgeAria": "{name}, {parts}, {status}. Run {at} of {total}",
+    "badgeAriaPicked": "{name}, {parts}, {status}. Run {at} of {total} (selected)"
+  },
+  "chat": {
+    "separateSession": "Separate session",
+    "nestedChip": "Nested team",
+    "nestedChipHint": "Request inside {node}",
+    "nestedStep": "▣ {name} (nested team)",
+    "iteration": "Iteration {n}",
+    "loopStarted": "Started",
+    "exhaustedStep": "Hit the loop limit (limit {m})",
+    "handledStatus": "Failed → handled",
+    "delegatedBy": "{target}, assigned by {delegator}",
+    "childFailed": "Failed in the nested team “{name}”",
+    "childFailedAction": "See the cause in the child run",
+    "stopNested": "The running nested team run stops too.",
+    "handledFooter_one": "{count} failure handled",
+    "handledFooter_other": "{count} failures handled"
+  },
+  "session": {
+    "value": {
+      "separate": "Separate session",
+      "same": "Same session"
+    },
+    "tipSame": "Runs inside {delegator}'s session",
+    "tipSameNoDelegator": "Runs inside the delegator's session",
+    "tipSeparate": "Opens its own session",
+    "unknownTip": "Session type: {value}"
+  },
+  "attr": {
+    "session": {
+      "label": "Run session",
+      "long": {
+        "separate": "The target opens its own session",
+        "same": "Runs inside {delegator}'s session"
+      },
+      "short": {
+        "separate": "Separate session",
+        "same": "Same session"
+      }
+    },
+    "max_depth": {
+      "label": "Delegation depth",
+      "long": {
+        "one": "1 level — the target can't delegate again",
+        "n": "Up to {n} levels",
+        "none": "No limit (up to the “Delegation depth” setting)"
+      },
+      "short": {
+        "n": "Depth {n}",
+        "none": "No depth limit"
+      }
+    },
+    "backend": {
+      "label": "Backend used",
+      "long": {
+        "delegator": "Uses the delegator's backend",
+        "target": "Uses the target's own backend"
+      },
+      "short": {
+        "delegator": "Delegator backend",
+        "target": "Target backend"
+      }
+    },
+    "nestable": {
+      "label": "Nested delegation",
+      "long": {
+        "yes": "Yes — the target can delegate again",
+        "no": "No"
+      },
+      "short": {
+        "yes": "Nestable"
+      }
+    },
+    "empty": "Strategy info isn't available",
+    "delegatorFallback": "the delegator"
+  }
+}

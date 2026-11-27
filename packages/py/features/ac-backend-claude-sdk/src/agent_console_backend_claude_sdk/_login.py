@@ -194,7 +194,8 @@ class ClaudeSdkLoginTexts(BaseModel):
         "구독 로그인 사용은 본인 책임입니다. 로그아웃은 상태 카드의 … 메뉴 또는 터미널에서 "
         "claude auth logout으로 합니다."
     )
-    writes_credentials: str = "Claude Code 로그인 정보: {path}"
+    # 경로만(언어 없는 줄): 값이 섞인 문장은 화면 번역 키가 될 수 없다. ``{path}`` 틀도 된다.
+    writes_credentials: str = "{path}"
     writes_shared: str = "터미널의 Claude Code도 같은 로그인을 씁니다"
     writes_private: str = (
         "앱 전용 자격 폴더(앱 작업 공간 안)입니다. 모든 프로젝트가 이 로그인 하나를 함께 쓰고, "

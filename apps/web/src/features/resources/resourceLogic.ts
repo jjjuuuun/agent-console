@@ -1,8 +1,8 @@
 import { ApiError, type RestClient, type Versioned } from "@agent-console/api-client";
 import type { ImportCandidate, Issue, Resource, ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { PartialSaveResult } from "../../definition/useDefinitionEditor";
-import { describeError } from "../../app/errors";
-import { resourceMessages as t } from "./messages";
+import { describeError as plainDescribeError, type DescribeErrorFn } from "../../app/errors";
+import type { ResourceTexts } from "./messages";
 import { planFileChanges, sortEntries, type FileEntry } from "./fileTreeLogic";
 
 /** 편집 중인 리소스 한 건: 정의 + 문서 본문(문서형일 때). `origin`은 서버에 있는 상태(무엇이 바뀌었는지 알기 위해). */
@@ -102,7 +102,7 @@ export async function loadResource(rest: RestClient, id: string, descriptors: re
  */
 export class PartialSaveError extends Error {
   readonly failed: "definition" | "content";
-  constructor(failed: "definition" | "content", cause: unknown) {
+  constructor(failed: "definition" | "content", cause: unknown, t: ResourceTexts) {
     super(failed === "content" ? t.detail.saveContentFailed : t.detail.saveDefFailed, { cause });
     this.failed = failed;
   }
@@ -124,8 +124,8 @@ export function collectIssues(...parts: ReadonlyArray<readonly Issue[] | undefin
   return out.length === 0 ? {} : { issues: out };
 }
 
-export async function saveResource(rest: RestClient, doc: ResourceDoc, versionHash: string | undefined, descriptors: readonly ResourceTypeDescriptor[]): Promise<Versioned<ResourceDoc>> {
-  if (doc.files != null) return saveResourceFiles(rest, doc, versionHash);
+export async function saveResource(rest: RestClient, doc: ResourceDoc, versionHash: string | undefined, descriptors: readonly ResourceTypeDescriptor[], t: ResourceTexts, describeError: DescribeErrorFn = plainDescribeError): Promise<Versioned<ResourceDoc>> {
+  if (doc.files != null) return saveResourceFiles(rest, doc, versionHash, t, describeError);
   const mediaType = mediaTypeOf(doc.resource, descriptors.find((x) => x.id === doc.resource.type));
   const defChanged = JSON.stringify(doc.resource) !== JSON.stringify(doc.origin.resource);
   const textChanged = doc.text !== null && doc.text !== doc.origin.text;
@@ -142,7 +142,7 @@ export async function saveResource(rest: RestClient, doc: ResourceDoc, versionHa
     }
   } catch (e) {
     if (e instanceof ApiError) throw e;
-    throw new PartialSaveError("definition", e);
+    throw new PartialSaveError("definition", e, t);
   }
   try {
     if (textChanged && doc.text !== null) {
@@ -152,7 +152,7 @@ export async function saveResource(rest: RestClient, doc: ResourceDoc, versionHa
     }
   } catch (e) {
     if (e instanceof ApiError && !done) throw e;
-    throw new PartialSaveError("content", e);
+    throw new PartialSaveError("content", e, t);
   }
   return { value: { ...doc, origin: { resource: doc.resource, text: doc.text, files: doc.origin.files } }, version_hash: hash, ...collectIssues(defIssues, contentIssues) };
 }
@@ -168,7 +168,7 @@ function withoutFileErrors(doc: ResourceDoc): ResourceDoc {
  * 파일 하나마다 `If-Match`가 새 해시로 이어진다. 일부가 실패하면 성공한 만큼 반영한 상태를 `PartialSaveResult`로
  * 알린다(실패한 변경은 초안에 남고 `fileErrors`에 서버 메시지가 붙는다). 해시가 어긋난 412는 그대로 던져 충돌로 다룬다.
  */
-export async function saveResourceFiles(rest: RestClient, doc: ResourceDoc, versionHash: string | undefined): Promise<Versioned<ResourceDoc>> {
+export async function saveResourceFiles(rest: RestClient, doc: ResourceDoc, versionHash: string | undefined, t: ResourceTexts, describeError: DescribeErrorFn = plainDescribeError): Promise<Versioned<ResourceDoc>> {
   const id = doc.resource.id;
   const originFiles = doc.origin.files ?? [];
   const draftFiles = doc.files ?? [];
@@ -250,14 +250,14 @@ export interface CreateResourceOutcome {
  * 새 리소스를 만든다: 정의 `POST /resources`, 이어서 본문(문서 텍스트 또는 파일들)을 올린다. 정의 생성 실패는 던진다.
  * 본문 저장만 실패하면 던지지 않고 `bodyError`로 알린다(정의는 이미 서버에 있다).
  */
-export async function createResourceDoc(rest: RestClient, doc: ResourceDoc, descriptors: readonly ResourceTypeDescriptor[]): Promise<CreateResourceOutcome> {
+export async function createResourceDoc(rest: RestClient, doc: ResourceDoc, descriptors: readonly ResourceTypeDescriptor[], t: ResourceTexts): Promise<CreateResourceOutcome> {
   const created = await rest.createResource(doc.resource);
   const resource = created.value;
   const emptyBody = doc.text === "" || (doc.text === null && (doc.files ?? []).length === 0);
   const issues = created.issues === undefined ? {} : { issues: created.issues };
   if (emptyBody) return { resource, ...issues };
   try {
-    await saveResource(rest, { ...doc, resource, origin: { resource, text: doc.text === null ? null : "", files: doc.files == null ? doc.files : [] } }, created.version_hash, descriptors);
+    await saveResource(rest, { ...doc, resource, origin: { resource, text: doc.text === null ? null : "", files: doc.files == null ? doc.files : [] } }, created.version_hash, descriptors, t);
     return { resource, ...issues };
   } catch (e) {
     return { resource, bodyError: e, ...issues };

@@ -68,6 +68,8 @@ export interface ArchitectureDiagramProps {
   edgeStyles?: Readonly<Record<string, EdgeStyleSpec>>;
   cellRenderers?: Readonly<Record<string, CellRenderer>>;
   metricKinds?: Readonly<Record<string, MetricKindSpec>>;
+  /** 숫자 자릿수 표기 로캘(BCP 47, 보통 화면 언어). 생략하면 "en-US". */
+  locale?: string;
   /** 범례 글자(연결 style 이름 → 글자). */
   edgeLegend?: Readonly<Record<string, string>>;
   /** 범례의 영역 견본 줄. 기본은 `defaultZoneLegend`. */
@@ -99,7 +101,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   const {
     view, selection = null, highlight = null, onSelect, onBlocked, onDrill, onBack, onSkip,
     scale: scaleProp, onScaleChange, fullScaleMin = 0.45, autoContainMin, containerSize,
-    mode = "live", tones = defaultTones, edgeStyles = defaultEdgeStyles, cellRenderers, metricKinds = defaultMetricKinds,
+    mode = "live", tones = defaultTones, edgeStyles = defaultEdgeStyles, cellRenderers, metricKinds = defaultMetricKinds, locale,
     edgeLegend, zoneLegend, toolbar = true, toolbarLead, toolbarExtra, afterToolbar, infoBar = true, className,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
@@ -122,7 +124,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   const rects = useMemo(() => (view ? gridLayout(view) : {}), [view]);
   const size = useMemo(() => (view ? canvasSize(view, rects) : { width: 0, height: 0 }), [view, rects]);
   const container = useElementSize(canvasRef, containerSize, viewMode);
-  const models = useMemo(() => (view ? buildEdgeModels(view, rects, { edgeStyles, messages }) : []), [view, rects, edgeStyles, messages]);
+  const models = useMemo(() => (view ? buildEdgeModels(view, rects, { edgeStyles, messages, ...(locale === undefined ? {} : { locale }) }) : []), [view, rects, edgeStyles, messages, locale]);
   const hl = useMemo(() => highlightSets(highlight), [highlight]);
   if (fitMode !== "none") lastFit.current = fitMode;
 
@@ -225,14 +227,14 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
 
   const ctx = useMemo<DiagramContextValue>(
     () => ({
-      level, mode, messages, tones, metricKinds,
+      level, mode, messages, tones, metricKinds, ...(locale === undefined ? {} : { locale }),
       cellRenderers: cellRenderers ?? {},
       cells: cellsById,
       edges: edgesById,
       cellLabels: Object.fromEntries(cells.map((c) => [c.id, c.label])),
       selection, highlight: hl, activate, drill,
     }),
-    [level, mode, messages, tones, metricKinds, cellRenderers, cells, cellsById, edgesById, selection, hl, activate, drill],
+    [level, mode, messages, tones, metricKinds, locale, cellRenderers, cells, cellsById, edgesById, selection, hl, activate, drill],
   );
 
   // ---- 노드: 영역(넓은 것부터, 칸 뒤) → 칸(선언 순서 = Tab 순서)
@@ -369,7 +371,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
       {afterToolbar}
       {mode === "layout" ? <p className="ac-arch-note">{messages.layoutNote}</p> : null}
       {viewMode === "list" ? (
-        <ArchitectureCellList view={view} selection={selection} highlight={highlight} onSelect={onSelect} onBlocked={onBlocked} tones={tones} metricKinds={metricKinds} messages={messages} />
+        <ArchitectureCellList view={view} selection={selection} highlight={highlight} onSelect={onSelect} onBlocked={onBlocked} tones={tones} metricKinds={metricKinds} messages={messages} {...(locale === undefined ? {} : { locale })} />
       ) : (
         <div className="ac-arch-canvas" ref={canvasRef} data-arch-canvas="" data-fit={fitMode} data-fit-resolved={auto?.resolved} data-clipped={clipped ? "" : undefined} data-cells-below={clipped ? cellsBelow : undefined}>
           <DiagramContext.Provider value={ctx}>
@@ -422,7 +424,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
       {infoBar && mode === "live" ? (
         <ArchitectureInfoBar
           view={view} target={infoTarget} preview={!!focusTarget && !sameSelection(focusTarget, selection)} selection={selection}
-          messages={messages} metricKinds={metricKinds} onSelect={onSelect} onDrill={onDrill}
+          messages={messages} metricKinds={metricKinds} {...(locale === undefined ? {} : { locale })} onSelect={onSelect} onDrill={onDrill}
         />
       ) : null}
     </div>

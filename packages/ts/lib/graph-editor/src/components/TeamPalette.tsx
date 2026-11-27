@@ -6,7 +6,7 @@ import { categoryColorVar } from "../logic/color";
 import { firstGlyph, resolveHints, safeIconText } from "../logic/hints";
 import { isHiddenType, latestVersions } from "../logic/team";
 import type { DefinitionItem, PaletteAddSpec } from "../types";
-import { PALETTE_DEFINITION_MIME, PALETTE_DRAG_MIME, PaletteItem, groupNodeTypes } from "./NodePalette";
+import { DEFAULT_PALETTE_LOCALE, PALETTE_DEFINITION_MIME, PALETTE_DRAG_MIME, PaletteItem, groupNodeTypes } from "./NodePalette";
 
 export interface TeamPaletteProps {
   nodeTypes: readonly NodeTypeDescriptor[];
@@ -23,6 +23,10 @@ export interface TeamPaletteProps {
   error?: string | null;
   onRetry?: () => void;
   messages?: GraphEditorMessages;
+  /** 정렬·검색 로캘(BCP 47, 보통 화면 언어). 기본 "en" */
+  locale?: string;
+  /** 그룹 이름 표시용 변환(보통 서버 원문 category를 화면 언어로). 묶음·색은 원래 category 기준이라 언어가 바뀌어도 같다. 기본: 그대로 */
+  categoryLabel?: (category: string) => string;
 }
 
 export interface DefinitionSubgroup {
@@ -38,8 +42,8 @@ export interface DefinitionSection {
   subgroups: DefinitionSubgroup[];
 }
 
-const matches = (q: string, ...fields: (string | null | undefined)[]): boolean =>
-  q === "" || fields.join("\n").toLocaleLowerCase().includes(q);
+const matches = (locale: string, q: string, ...fields: (string | null | undefined)[]): boolean =>
+  q === "" || fields.join("\n").toLocaleLowerCase(locale).includes(q);
 
 /**
  * 팔레트 구역 계산(순수 함수).
@@ -53,14 +57,18 @@ export function buildTeamPalette(
   kindTitles: Readonly<Record<string, string>>,
   query: string,
   uncategorized: string,
+  locale: string = DEFAULT_PALETTE_LOCALE,
+  categoryLabel?: (category: string) => string,
 ): { sections: DefinitionSection[]; base: ReturnType<typeof groupNodeTypes> } {
-  const q = query.trim().toLocaleLowerCase();
+  const q = query.trim().toLocaleLowerCase(locale);
   const visible = latestVersions(nodeTypes).filter((t) => !isHiddenType(t));
   const bound = visible.filter((t) => t.binds !== null && t.binds !== undefined);
   const base = groupNodeTypes(
     visible.filter((t) => t.binds === null || t.binds === undefined),
     query,
     uncategorized,
+    locale,
+    categoryLabel,
   );
   const kinds = [...new Set(bound.map((t) => (t.binds as { kind: string }).kind))];
   const sections: DefinitionSection[] = kinds.map((kind) => {
@@ -70,12 +78,12 @@ export function buildTeamPalette(
       .filter((t) => (t.binds as { kind: string }).kind === kind)
       .map((type) => ({
         type,
-        items: list.filter((it) => matches(q, it.name, it.description, it.meta, type.title, type.category)),
+        items: list.filter((it) => matches(locale, q, it.name, it.description, it.meta, type.title, type.category, type.category ? categoryLabel?.(type.category) : undefined)),
       }))
       .filter((g) => g.items.length > 0);
     return { kind, title, empty: list.length === 0, subgroups };
   });
-  return { sections: sections.sort((a, b) => a.title.localeCompare(b.title, "ko")), base };
+  return { sections: sections.sort((a, b) => a.title.localeCompare(b.title, locale)), base };
 }
 
 /**
@@ -86,12 +94,13 @@ export function TeamPalette(props: TeamPaletteProps) {
   const m = props.messages ?? defaultMessages;
   const [inner, setInner] = useState("");
   const query = props.searchValue ?? inner;
+  const locale = props.locale ?? DEFAULT_PALETTE_LOCALE;
   const lists = props.definitionLists ?? {};
   const titles = props.definitionKindTitles ?? {};
   const { sections, base } = useMemo(
-    () => buildTeamPalette(props.nodeTypes, lists, titles, query, m.paletteUncategorized),
+    () => buildTeamPalette(props.nodeTypes, lists, titles, query, m.paletteUncategorized, locale, props.categoryLabel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.nodeTypes, props.definitionLists, props.definitionKindTitles, query, m.paletteUncategorized],
+    [props.nodeTypes, props.definitionLists, props.definitionKindTitles, query, m.paletteUncategorized, locale, props.categoryLabel],
   );
   const hasAnyType = props.nodeTypes.some((t) => !isHiddenType(t));
   const visibleSections = sections.filter((s) => s.subgroups.length > 0 || (s.empty && query.trim() === ""));
@@ -177,10 +186,10 @@ export function TeamPalette(props: TeamPaletteProps) {
           <section className="ac-ge-palette-section" aria-label={m.paletteBaseSection}>
             <h3 className="ac-ge-palette-section-title ac-ellipsis">{m.paletteBaseSection}</h3>
             {base.map((g) => (
-              <section key={g.category} className="ac-ge-palette-group" aria-label={g.category}>
-                <h4 className="ac-ge-palette-group-title ac-ellipsis" title={g.category}>
-                  <span className="ac-ge-dot" style={{ background: categoryColorVar(g.category === m.paletteUncategorized ? "" : g.category) }} aria-hidden="true" />
-                  {g.category} ({g.items.length})
+              <section key={g.category} className="ac-ge-palette-group" aria-label={g.label}>
+                <h4 className="ac-ge-palette-group-title ac-ellipsis" title={g.label}>
+                  <span className="ac-ge-dot" style={{ background: categoryColorVar(g.colorKey) }} aria-hidden="true" />
+                  {g.label} ({g.items.length})
                 </h4>
                 <ul className="ac-ge-palette-list">
                   {g.items.map((t) => {

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { HandoffCount, HandoffMatrix } from "@agent-console/contracts";
-import { runsMessages as t } from "./messages";
+import { useRunsMessages } from "./messages";
 
 export interface HandoffMatrixViewProps {
   matrix: HandoffMatrix;
@@ -37,6 +37,7 @@ export function buildCells(cells: readonly HandoffCount[]): { rows: string[]; co
 }
 
 export function HandoffMatrixView({ matrix, nameOf, methodOf, onSelectCell }: HandoffMatrixViewProps) {
+  const t = useRunsMessages();
   const cells = useMemo(() => matrix.cells ?? [], [matrix.cells]);
   const { rows, cols, byKey, max } = useMemo(() => buildCells(cells), [cells]);
   if (cells.length === 0) return <p className="app-muted app-pad" role="status">{t.handoffs.empty}</p>;

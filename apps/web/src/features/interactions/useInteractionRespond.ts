@@ -4,7 +4,7 @@ import type { FieldError } from "@agent-console/chat";
 import type { Interaction } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { closedInteraction, fieldProblems, isNetworkError } from "./errors";
-import { interactionMessages, type InteractionMessages } from "./messages";
+import { useInteractionMessages, type InteractionMessages } from "./messages";
 
 const NO_ERRORS: readonly FieldError[] = [];
 
@@ -37,6 +37,7 @@ export interface InteractionResponder {
  */
 export function useInteractionRespond({ applyInteraction, refresh, notify, messages }: InteractionRespondOptions = {}): InteractionResponder {
   const { rest } = useApi();
+  const interactionMessages = useInteractionMessages();
   const [errors, setErrors] = useState<Readonly<Record<string, readonly FieldError[]>>>({});
   const closed = messages?.closed ?? interactionMessages.closed;
   const notFound = messages?.notFound ?? interactionMessages.notFound;

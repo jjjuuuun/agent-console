@@ -84,7 +84,7 @@ def lookups_from(
                 document = source.get_version(graph_kind, graph_id, version).content
             return Graph.model_validate(document or {})
         except _MISSING:
-            _log.debug("팀 구성 읽기 실패: %s@%s", graph_id, version, exc_info=True)
+            _log.debug("Reading the team failed: %s@%s", graph_id, version, exc_info=True)
             return None
 
     def find_resource(ref: str) -> Resource | None:

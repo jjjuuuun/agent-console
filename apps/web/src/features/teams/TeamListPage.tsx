@@ -5,26 +5,27 @@ import type { GraphSummary, Issue } from "@agent-console/contracts";
 import { Button, EmptyState, GroupHeader, Icon, PageHeader, StatusChip } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as m } from "../../app/messages";
+import { useErrorState, raised } from "../../app/errors";
+import { useLanguageCode } from "../../i18n";
+import { useAppMessages } from "../../app/appMessages";
 import { useApiQuery } from "../../app/queries";
-import { formatDateTime, formatDuration, formatRelative } from "../../lib/format";
 import { useNow } from "../../app/useNow";
 import { Skeleton, useEdgeTypes } from "../settings";
-import { ActionMenu, type ActionMenuHandle, useGraphList, useInvalidateLists, useNodeTypes, DeleteDialog, useListView, useDefinitionEdits, ListEditDialogs, DEFINITION_KINDS, definitionKey, libraryMessages as lm, routePath, ROUTE_ROLES, useListShortcuts } from "../library";
+import { ActionMenu, type ActionMenuHandle, useGraphList, useInvalidateLists, useNodeTypes, DeleteDialog, useListView, useDefinitionEdits, ListEditDialogs, DEFINITION_KINDS, definitionKey, useLibraryMessages, routePath, ROUTE_ROLES, useListShortcuts } from "../library";
 import { useRegisterCommands } from "../../shell/commands";
 import { StartGuide } from "../start";
 import { SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
-import { ExportDialog, exportMessages } from "../exports";
+import { ExportDialog, useExportMessages } from "../exports";
 import { savedIssuesState } from "../../definition/savedIssuesState";
 import { DuplicateTeamDialog, NewTeamDialog, RenameTeamDialog, useStartChat } from "./TeamDialogs";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 import { summarizeEntries } from "./teamsLogic";
 import { summaryFromServer } from "./sessionView";
 import { DEFAULT_DIRECTION, teamGroupDefs, teamSortDefs, type SortDirection } from "./arrange";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { blocksRun, ValidationChip, validationChipOf } from "./ValidationChip";
 import "./teams.css";
+import { useFormat } from "../../i18n";
 
 const idOfGraph = (g: GraphSummary) => g.id;
 const nameOfGraph = (g: GraphSummary) => g.name;
@@ -36,6 +37,9 @@ type Dialog = { kind: "new" } | { kind: "rename" | "duplicate" | "export" | "del
 
 /** 행의 "최근 사용" 칸: 이 팀 구성의 가장 최근 실행(행이 보일 때 지연 조회, 실패해도 행은 유지). */
 function LastRunCell({ graphId }: { graphId: string }) {
+  const fmt = useFormat();
+  const m = useAppMessages();
+  const t = useTeamMessages();
   const q = useApiQuery(["list", "graph-last-run", graphId], (rest) => rest.listRuns({ graph_id: graphId, limit: 1 }), { retry: false });
   const run = q.data?.[0];
   if (run === undefined) return <span className="app-muted">{t.list.noRun}</span>;
@@ -43,18 +47,19 @@ function LastRunCell({ graphId }: { graphId: string }) {
   return (
     <Link to={`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(run.id)}`} className="team-lastrun" onClick={(e) => e.stopPropagation()}>
       <StatusChip status={run.status} kind="run" label={m.runStatus[run.status] ?? run.status} />
-      {ms === undefined ? null : <span className="app-muted">{formatDuration(ms)}</span>}
+      {ms === undefined ? null : <span className="app-muted">{fmt.duration(ms)}</span>}
     </Link>
   );
 }
 
 function DeleteTeam({ graph, onClose, onDone }: { graph: GraphSummary; onClose: () => void; onDone: () => void }) {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const invalidate = useInvalidateLists();
   const convs = useApiQuery(["list", "conversations", { graph_id: graph.id }], (r) => r.listConversations({ graph_id: graph.id }));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.delete.failed);
   const n = convs.data?.length ?? 0;
   return (
     <DeleteDialog
@@ -73,7 +78,7 @@ function DeleteTeam({ graph, onClose, onDone }: { graph: GraphSummary; onClose: 
             await invalidate();
             onDone();
           })
-          .catch((e: unknown) => setError(describeError(e, t.delete.failed).message))
+          .catch((e: unknown) => setError(raised(e)))
           .finally(() => setBusy(false));
       }}
     />
@@ -82,6 +87,11 @@ function DeleteTeam({ graph, onClose, onDone }: { graph: GraphSummary; onClose: 
 
 /** 팀 구성 목록(`/teams`): 만들기·복제·이름 바꾸기·삭제·버전 목록·이 팀으로 대화 시작. 표는 `role=grid`이고 방향키로 움직인다. */
 export function TeamListPage({ basePath }: { basePath: string }) {
+  const fmt = useFormat();
+  const m = useAppMessages();
+  const lm = useLibraryMessages();
+  const exportMessages = useExportMessages();
+  const t = useTeamMessages();
   const navigate = useNavigate();
   // 검증 요약은 팀 검증 연동이 켜져 있을 때만 있다. 꺼졌으면 칩이 없고 모든 팀 구성을 같은 모양으로 보인다.
   const validationPart = useLinkPart(LINK_PART_IDS.teamsValidationColumn);
@@ -120,8 +130,9 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     return (scoped.items ?? []).filter((g) => q === "" || `${g.name} ${g.description ?? ""} ${g.id}`.toLowerCase().includes(q));
   }, [scoped.items, query]);
   // 묶는 기준·정렬은 데이터다. 열 머리의 정렬 단추와 "보기" 메뉴가 같은 정렬 상태를 쓴다.
-  const sortDefs = useMemo(() => teamSortDefs(dirs), [dirs]);
-  const groupDefs = useMemo(() => teamGroupDefs(t.arrange.noProjects), []);
+  const language = useLanguageCode();
+  const sortDefs = useMemo(() => teamSortDefs(dirs, language), [dirs, language]);
+  const groupDefs = useMemo(() => teamGroupDefs(t.arrange.noProjects), [t]);
   const view = useListView<GraphSummary>({
     listId: LIST_ID,
     items: filtered,
@@ -293,7 +304,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                       <span title={(g.entry_labels ?? []).join(", ")}>{entry}</span>
                     )}
                   </td>
-                  <td title={formatDateTime(g.saved_at)}>{formatRelative(g.saved_at, now)}</td>
+                  <td title={fmt.dateTimeFull(g.saved_at)}>{fmt.relative(g.saved_at, now)}</td>
                   <td><LastRunCell graphId={g.id} /></td>
                   <td className="lib-cell-actions">
                     <ActionMenu

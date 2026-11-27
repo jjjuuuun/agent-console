@@ -1,0 +1,170 @@
+{
+  "settings": {
+    "loading": "설정을 불러오는 중…",
+    "saved": "설정을 저장했습니다",
+    "layerCommon": "공통",
+    "layerDefault": "기본값",
+    "editingLayer": "편집 중인 층",
+    "versionsUi": {
+      "inherit": "비어 있음: 기본 목록({defaults})을 씁니다",
+      "remove": "{key} 키 삭제"
+    },
+    "commonResourcesWarning": "모든 에이전트에 적용됩니다",
+    "overridable": "팀 구성에서 덮어쓰기 가능",
+    "schemaLoadFailed": "설정 스키마를 읽지 못했습니다",
+    "optionsFailed": "선택 목록을 불러오지 못했습니다. 현재 값은 유지됩니다.",
+    "edgeKind": {
+      "first": "(맞는 첫 종류)",
+      "label": "새 연결 기본 종류"
+    },
+    "chatSort": {
+      "empty": "(기본: 응답 대기 우선)",
+      "pending_first": {
+        "title": "응답 대기 우선",
+        "description": "응답을 기다리는 대화를 맨 위에 두고 나머지는 최근 갱신순으로 정렬합니다."
+      },
+      "updated": {
+        "title": "최근 갱신순",
+        "description": "응답 대기 여부와 관계없이 가장 최근에 갱신된 대화부터 보여 줍니다."
+      }
+    },
+    "replyDisplayPreview": {
+      "separate": "말풍선 여러 개",
+      "merged": "하나로 합침",
+      "final_only": "최종만"
+    },
+    "nullable": {
+      "unset": "정하지 않음",
+      "unsetHint": "비워 두면 기본 동작을 따릅니다"
+    },
+    "keyValue": {
+      "add": "규칙 추가",
+      "remove": "삭제",
+      "key": "키",
+      "value": "값",
+      "empty": "항목이 없습니다",
+      "duplicate": "같은 키가 이미 있습니다"
+    },
+    "merge": {
+      "path": "경로(JSON Pointer)",
+      "strategy": "전략",
+      "add": "규칙 추가",
+      "schemaDefault": "스키마 기본: {name}",
+      "noSchemaDefault": "스키마 기본 없음(교체)",
+      "widenWarning": "기본과 다른 전략은 값의 범위를 넓힐 수 있습니다",
+      "pointerInvalid": "슬래시(/)로 시작해야 합니다",
+      "table": "적용 중인 규칙"
+    },
+    "delegationTable": {
+      "title": "위임 방식",
+      "name": "방식",
+      "maxDepth": "최대 깊이",
+      "downstream": "아래 흐름 연결",
+      "fields": "위임받는 노드에 적용되는 필드",
+      "interactions": "위임받는 노드가 여는 상호작용",
+      "allowed": "허용",
+      "denied": "허용 안 함",
+      "unlimited": "제한 없음",
+      "anyField": "전부",
+      "empty": "등록된 위임 방식이 없습니다"
+    },
+    "usage": {
+      "windowLabels": "창 표시 이름",
+      "windowLabelsHelp": "창 id → 화면 이름. 비워 두면 사용량 화면에 창 id 원문이 나옵니다.",
+      "windowKey": "창 id",
+      "windowValue": "표시 이름",
+      "windowAdd": "창 이름 추가",
+      "sources": "출처",
+      "sourcesHelp": "켜면 사용량 화면에 반영됩니다.",
+      "sourcesEmpty": "등록된 사용량 출처가 없습니다",
+      "enable": "{title} 사용",
+      "config": "출처 설정",
+      "lastObserved": "마지막 관측 {when}",
+      "sourceError": "출처 오류",
+      "unofficialTitle": "공식 문서가 없는 방식입니다",
+      "unofficialBody": "약관·변경 위험이 있습니다. 그래도 켤까요?",
+      "unofficialConfirm": "켜기",
+      "stale": "오래된 관측 기준(초)",
+      "staleNone": "판정하지 않음",
+      "staleHelp": "숫자를 정하면 그 시간보다 오래된 관측값에 ‘오래된 관측’ 표시를 붙입니다.",
+      "primary": "카드 대표값 우선순위",
+      "primaryHelp": "같은 창을 여러 출처가 주면, 이 순서에서 값이 있는 첫 출처를 카드 대표값으로 씁니다. 비워 두면 가장 최근의 공식 출처 값을 씁니다.",
+      "primaryUse": "{title} 순서에 포함",
+      "primaryUp": "위로 이동: {title}",
+      "primaryDown": "아래로 이동: {title}",
+      "noHome": "이 화면은 ~/.claude를 수정하지 않습니다.",
+      "docs": "문서"
+    },
+    "keybindings": {
+      "table": "단축키 목록",
+      "command": "동작",
+      "current": "현재 키",
+      "defaultKey": "기본값",
+      "change": "바꾸기",
+      "reset": "기본값으로",
+      "disable": "끄기",
+      "capturing": "새 키 조합을 누르세요(Esc 취소)",
+      "capture": "{title}: 새 키 조합 입력",
+      "plain": "단일 문자 키는 입력창 안에서 동작하지 않습니다",
+      "plainMark": "입력창 밖 전용",
+      "empty": "등록된 단축키가 없습니다",
+      "issues": {
+        "invalid": "읽을 수 없는 키 조합입니다",
+        "conflict": "다른 동작과 같은 키입니다",
+        "reserved": "브라우저가 먼저 쓰는 키와 겹칩니다",
+        "modifier_required": "이 동작은 Ctrl/Alt/⌘ 같은 수식키가 필요합니다"
+      }
+    },
+    "install": {
+      "runningStandalone": "이 창은 앱으로 실행 중입니다",
+      "runningBrowser": "브라우저에서 실행 중입니다",
+      "button": "앱으로 설치",
+      "manual": "주소창 오른쪽의 설치 아이콘 또는 브라우저 메뉴의 ‘앱 설치’를 누르세요.",
+      "version": "현재 버전 {v}",
+      "updateWaiting": "새 버전이 대기 중입니다",
+      "updateNow": "지금 새로고침",
+      "installed": "설치했습니다"
+    },
+    "server": {
+      "loadFailed": "서버 정보를 가져오지 못했습니다",
+      "rows": {
+        "apiBaseUrl": "서버 주소",
+        "serverVersion": "서버 버전",
+        "contractsVersion": "계약 버전",
+        "workspace": "workspace 경로",
+        "bind": "바인딩 주소",
+        "remote": "원격 허용",
+        "allowedOrigins": "허용 출처",
+        "backends": "사용 가능한 백엔드",
+        "plugins": "로드된 플러그인",
+        "recoveredRuns": "재시작 때 복구한 실행"
+      },
+      "remoteOn": "허용",
+      "remoteOff": "허용 안 함(루프백만)",
+      "emptyOrigins": "없음(같은 출처만)",
+      "pluginsSummary": "로드된 플러그인 {n}개",
+      "pluginGroup": "확장 지점 {group}",
+      "pluginError": "로딩 오류",
+      "pluginsErrors": "확장 로딩 오류",
+      "pluginReason": "이유",
+      "serverWarnings": "서버 경고",
+      "tokenHidden": "토큰은 어떤 경우에도 표시하지 않습니다."
+    },
+    "unset": "(지정 안 함)",
+    "backendUnset": "첫 실행 때 묻기",
+    "backendUnsetNote": "비워 두면 첫 실행 때 백엔드를 고르는 카드가 나타납니다.",
+    "backendNone": "사용할 수 있는 백엔드가 없습니다.",
+    "attach": {
+      "moveUp": "위로 이동",
+      "moveDown": "아래로 이동",
+      "remove": "삭제",
+      "mode": "방식",
+      "empty": "붙은 리소스가 없습니다",
+      "readOnly": "읽기 전용",
+      "pick": "붙일 리소스",
+      "pickEmpty": "붙일 수 있는 리소스가 없습니다",
+      "pickPlaceholder": "리소스 선택…"
+    },
+    "sourceStatus": "상태"
+  }
+}

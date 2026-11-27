@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "example.invalid_config": "The config is invalid.",
+    "example.noop": "These settings don't change the input."
+  }
+}

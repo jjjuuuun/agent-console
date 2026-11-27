@@ -1,7 +1,8 @@
 import { Link } from "react-router";
+import { useT } from "@agent-console/i18n";
 import { StatusChip } from "@agent-console/ui";
-import { messages as appMessages } from "../../app/messages";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useAppMessages } from "../../app/appMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { relativeTime, type ActivityRow } from "./projectHomeLib";
 
 export interface RecentActivityCardProps {
@@ -20,6 +21,9 @@ export interface RecentActivityCardProps {
 
 /** "최근 활동" 카드(표현 전용, §4.4 ③): 채팅·실행을 시간순으로 합친 한 목록. 기능 이름은 모른다(주소는 호출한 쪽이 준다). */
 export function RecentActivityCard(p: RecentActivityCardProps) {
+  const appMessages = useAppMessages();
+  const m = useFolderHomeMessages();
+  const { language } = useT("projectsFolder");
   return (
     <section className="prj-card prj-activity" aria-labelledby="prj-activity-title" data-testid="project-activity-card">
       <header className="prj-card-head">
@@ -41,7 +45,7 @@ export function RecentActivityCard(p: RecentActivityCardProps) {
                 <span className="prj-kind-chip">{r.origin === "chat" ? m.home.activityChat : m.home.activityRun}</span>
                 <span className="prj-activity-title ac-ellipsis" title={title}>{title}</span>
                 {r.status === undefined ? null : <StatusChip status={r.status} kind="run" label={appMessages.runStatus[r.status] ?? r.status} compact />}
-                <span className="prj-activity-time app-muted">{relativeTime(p.nowMs, r.at)}</span>
+                <span className="prj-activity-time app-muted">{relativeTime(p.nowMs, r.at, m, language)}</span>
               </>
             );
             return <li key={r.key}>{href === undefined ? <span className="prj-activity-row">{body}</span> : <Link className="prj-activity-row" to={href}>{body}</Link>}</li>;

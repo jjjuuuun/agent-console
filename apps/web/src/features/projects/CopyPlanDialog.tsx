@@ -27,12 +27,13 @@ import {
 } from "@agent-console/projects";
 import { KNOWN_COPY_ACTIONS } from "@agent-console/contracts/constants";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
-import { projectMessages } from "./messages";
+import { useDescribeError, useErrorView, raised } from "../../app/errors";
+import { useProjectMessages } from "./messages";
 import { FixButtons } from "../../app/fix";
 import { useDelayed } from "../../app/useDelayed";
 import type { SpaceItem } from "./useSpaceItems";
 import "./copyPlan.css";
+import { useLanguageCode } from "../../i18n";
 
 /** 복사 방향: 제목·제출 문구 키가 달라진다(`copy.<direction>.title`, `copy.submit.<direction>`). */
 export type CopyDirection = "import" | "save" | "move";
@@ -83,7 +84,7 @@ export interface CopyPlanDialogProps {
 }
 
 type Step = "pick" | "plan" | "result";
-type PlanState = { status: "idle" } | { status: "loading" } | { status: "error"; message: string } | { status: "ready"; plan: CopyPlan };
+type PlanState = { status: "idle" } | { status: "loading" } | { status: "error"; error: unknown } | { status: "ready"; plan: CopyPlan };
 
 /**
  * 복사 계획 대화상자(screen-projects §5.1): 고르기 → 계획 → 결과. 데이터와 호출은 모두 props로 받는다(API·전역 상태를 모른다).
@@ -102,6 +103,9 @@ function withoutReservedWrites(selections: Map<string, CopySelection>, reserved:
 }
 
 export function CopyPlanDialog(props: CopyPlanDialogProps) {
+  const language = useLanguageCode();
+  const describeError = useDescribeError();
+  const projectMessages = useProjectMessages();
   const { text, direction } = props;
   const uid = useId();
   const [step, setStep] = useState<Step>(props.initialStep);
@@ -115,7 +119,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
   const [results, setResults] = useState<ReadonlyMap<string, CopyApplyItemResult>>(new Map());
   const [planned, setPlanned] = useState<ReadonlyMap<string, CopyPlanItem>>(new Map());
   const [busy, setBusy] = useState(false);
-  const [applyError, setApplyError] = useState<ReturnType<typeof describeError> | null>(null);
+  const [applyError, setApplyError] = useErrorView(text({ key: "copy.plan.failed" }));
   const token = useRef(0);
   const latest = useRef(props);
   useEffect(() => {
@@ -145,17 +149,17 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
       },
       (e: unknown) => {
         if (mine !== token.current) return;
-        setPlanState({ status: "error", message: describeError(e, text({ key: "copy.plan.failed" })).message });
+        setPlanState({ status: "error", error: e });
       },
     );
-  }, [text]);
+  }, []);
 
   /** 사용자 동작(다음·다시 시도·포함 토글·다시 계획)으로 계획을 새로 받는다. */
   const runPlan = useCallback((items: readonly DefinitionKey[], include: boolean) => {
     setPlanState({ status: "loading" });
     setApplyError(null);
     fetchPlan(items, include);
-  }, [fetchPlan]);
+  }, [fetchPlan, setApplyError]);
 
   // 계획 단계로 바로 열린 진입(행 동작·fix 버튼)은 열자마자 계획한다(처음 상태가 이미 loading).
   useEffect(() => {
@@ -209,7 +213,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
       if (summary.allOk) props.onClose();
       else setStep("result");
     } catch (e) {
-      setApplyError(describeError(e, text({ key: "copy.plan.failed" })));
+      setApplyError(raised(e));
     } finally {
       setBusy(false);
     }
@@ -236,8 +240,8 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
     () =>
       props.candidates
         .filter((c) => (kindFilter === "" || c.kind === kindFilter) && (q === "" || c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || (c.description ?? "").toLowerCase().includes(q)))
-        .sort((a, b) => a.kindTitle.localeCompare(b.kindTitle, "ko") || a.name.localeCompare(b.name, "ko", { numeric: true })),
-    [props.candidates, kindFilter, q],
+        .sort((a, b) => a.kindTitle.localeCompare(b.kindTitle, language) || a.name.localeCompare(b.name, language, { numeric: true })),
+    [props.candidates, kindFilter, q, language],
   );
   const togglePick = (c: SpaceItem) =>
     setPicked((cur) => {
@@ -381,7 +385,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
             ) : <span className="ac-sr-only" role="status">{text({ key: "copy.plan.loading" })}</span>
           ) : planState.status === "error" ? (
             <p className="cpd-error" role="alert">
-              {text({ key: "copy.plan.failed" })}: {planState.message}{" "}
+              {text({ key: "copy.plan.failed" })}: {describeError(planState.error, text({ key: "copy.plan.failed" })).message}{" "}
               <Button size="sm" variant="ghost" onClick={() => runPlan([...picked.values()], includeRefs)}>{text({ key: "copy.plan.retry" })}</Button>
             </p>
           ) : (

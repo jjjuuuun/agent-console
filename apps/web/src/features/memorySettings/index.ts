@@ -4,4 +4,3 @@ import "./memorySettings.css";
 export { MemorySettingsEditor, type MemorySettingsEditorProps } from "./MemorySettingsEditor";
 export { ScopeKindWidget } from "./ScopeKindWidget";
 export { WIDGETS as MEMORY_SETTINGS_WIDGETS } from "./memorySettingsConfig";
-export { memorySettingsMessages } from "./messages";

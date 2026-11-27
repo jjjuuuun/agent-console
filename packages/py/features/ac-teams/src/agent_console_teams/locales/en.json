@@ -1,0 +1,32 @@
+{
+  "text": {
+    "공통": "Common",
+    "이 팀의 노드": "Node in this team"
+  },
+  "codes": {
+    "delegation.invalid_config_schema": "Couldn't check the settings because the delegation strategy's settings schema is invalid.",
+    "flow.loop_invoked_only": "This node is only called by delegation, so it doesn't run inside the loop. Move it out of the loop or add an incoming edge to it.",
+    "interaction.kinds_not_allowed": "Interaction kinds the edge type doesn't allow are ignored.",
+    "interaction.no_path": "Permission mode {permission_mode} asks for tool approval during runs, but there is no path to answer (a tool approval interaction edge), so those requests are handled automatically as {unmatched_permission}.",
+    "interaction.unsupported_by_backend": "This node's backend can't take some interaction kinds.",
+    "interaction.unsupported_in_delegate": "As a delegate, this node can't open some interactions with this delegation strategy.",
+    "review.dead_end": "A review decision doesn't lead anywhere. Choosing it ends the team's run.",
+    "settings.invalid_value": "A setting wasn't applied because its format is wrong.",
+    "settings.widened": "A lower layer widened the scope set by an upper layer.",
+    "team.agent_not_found": "Couldn't find the node's agent definition {agent}.",
+    "team.backend_capability_missing": "The delegator's backend doesn't support a capability this delegation strategy needs.",
+    "team.connects_mismatch": "This edge type can't connect these nodes.",
+    "team.delegation_cycle": "The delegation edges form a cycle.",
+    "team.entry_not_executable": "The entry edge goes to a node that doesn't run.",
+    "team.flow_from_delegate": "A delegate can't have outgoing edges with this delegation strategy (its result only goes back into the delegator).",
+    "team.lookup_unavailable": "Can't run the nested team node: no way to look up teams is available.",
+    "team.member_field_ignored": "This delegate setting doesn't apply with this delegation strategy (the delegator's value is used).",
+    "team.mixed_invocation": "This node receives edges or the entry and is also called by delegation. Split the agent into two nodes.",
+    "team.no_entry": "There is no entry. Draw an entry edge to the node that should receive user messages.",
+    "team.no_reply": "There is no reply edge. The team runs, but no reply appears in chat.",
+    "team.resource_not_found": "Couldn't find the node's resource {resource}.",
+    "team.unknown_strategy": "Unregistered delegation strategy: {strategy}",
+    "team.unreachable": "This node doesn't run because it has no incoming, entry or delegation edges.",
+    "team.validator_failed": "Couldn't compute the preview notes of backend {backend}."
+  }
+}

@@ -1,72 +1,72 @@
 # @agent-console/web
 
-Agent Console 웹 앱(Vite + React 19, PWA). **패키지를 조립만 하는 얇은 층**이다: 표현 컴포넌트·스키마 폼은 `packages/ts/lib/*`의 것을 쓰고,
-이 앱은 (1) 부팅(서버 주소·토큰), (2) 데이터 연결 훅(TanStack Query), (3) 라우팅·셸, (4) 한글 문구만 가진다.
-노드 타입·연결 종류·리소스 종류·상호작용 종류·사용량 창·모델·로그 출처·로그 범주·위젯 종류·차원·지표 이름과 서버 모듈 id는 코드에 없다(서버 디스크립터/설정 데이터, `src/app/moduleIdsNoHardcoding.test.ts`가 모듈 id를 점검한다).
-로그 화면(`src/features/logs`)의 필터·열 이름은 데이터 파일 `logsData.json`, 기간·시간 상수·저장소 키는 `logsConfig.ts` 한 곳에 있다.
-`src/app/noHardcoding.test.ts`가 소스를 훑어 점검한다. 서버(API+WS)와 웹은 **별도 프로세스**다. 서버는 웹을 모른다.
+The Agent Console web app (Vite + React 19, PWA). It is **a thin layer that only assembles packages**: presentational components and schema forms come from `packages/ts/lib/*`,
+and the app itself owns only (1) boot (server address, token), (2) data hooks (TanStack Query), (3) routing and the shell, and (4) its own UI text bundles (`src/locales`).
+Node types, edge types, resource types, interaction types, usage windows, models, log sources, log categories, widget types, dimensions, metric names and server module ids are not in the code (they are server descriptor or settings data; `src/app/moduleIdsNoHardcoding.test.ts` checks module ids).
+The filter and column names of the log screens (`src/features/logs`) live in the data file `logsData.json`; periods, time constants and storage keys live in one place, `logsConfig.ts`.
+`src/app/noHardcoding.test.ts` scans the sources to check this. The server (API + WS) and the web app are **separate processes**. The server does not know about the web app.
 
-## 실행
+## Run
 ```bash
-pnpm app                                              # 루트: 서버 + 웹 미리보기를 함께
-uv run agent-console serve                            # 서버만 (기본 127.0.0.1:8765)
-pnpm --filter @agent-console/web dev                  # 웹 개발 서버(Vite, HMR)
-pnpm --filter @agent-console/web build                # tsc + vite build -> apps/web/dist (PWA 포함)
-pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 (서비스 워커·설치 확인은 이쪽에서)
+pnpm app                                              # root: server + web preview together
+uv run agent-console serve                            # server only (default 127.0.0.1:8765)
+pnpm --filter @agent-console/web dev                  # web dev server (Vite, HMR)
+pnpm --filter @agent-console/web build                # tsc + vite build -> apps/web/dist (includes the PWA)
+pnpm --filter @agent-console/web preview              # serve the build locally (check the service worker and install here)
 ```
-`dev`/`preview` 스크립트 이름과 `build`는 루트 `pnpm app`이 쓰므로 바꾸지 않는다.
+The root `pnpm app` uses the `dev`/`preview` script names and `build`, so do not rename them.
 
-### 서버 주소 (코드에 포트 없음)
-부팅 때 `GET /config.json`(웹 정적 파일, 배포 후 고칠 수 있음)의 `apiBaseUrl` → 빌드 변수 `VITE_AGENT_CONSOLE_API_URL` → 없으면 **같은 출처** 순으로 정한다.
-파일이 없거나 `apiBaseUrl`이 비어도 오류가 아니다.
-- 같은 출처: `dev`/`preview`가 `/api`, `/ws`를 서버로 프록시한다. 대상은 `AGENT_CONSOLE_SERVER_URL`(우선) 또는 `AGENT_CONSOLE_HOST`/`AGENT_CONSOLE_PORT`(기본 127.0.0.1 / 8765).
-- 직접 호출: `config.json`에 `{ "apiBaseUrl": "http://127.0.0.1:8765" }`. 서버는 웹 출처를 허용해야 한다(`serve --allow-origin …` 또는 `security.allowed_origins`). 연결 실패가 CORS로 추정되면 화면이 그 안내를 보여 준다.
+### Server address (no port in the code)
+At boot the app takes `apiBaseUrl` from `GET /config.json` (a static web file you can edit after deployment), then the build variable `VITE_AGENT_CONSOLE_API_URL`, and otherwise uses the **same origin**.
+A missing file or an empty `apiBaseUrl` is not an error.
+- Same origin: `dev`/`preview` proxy `/api` and `/ws` to the server. The target is `AGENT_CONSOLE_SERVER_URL` (preferred) or `AGENT_CONSOLE_HOST`/`AGENT_CONSOLE_PORT` (default 127.0.0.1 / 8765).
+- Direct calls: put `{ "apiBaseUrl": "http://127.0.0.1:8765" }` in `config.json`. The server must allow the web origin (`serve --allow-origin …` or `security.allowed_origins`). When a connection failure looks like CORS, the screen shows that hint.
 
 ### PWA
-`vite-plugin-pwa`가 manifest + 서비스 워커를 만든다(빌드·미리보기에서만 등록). **서비스 워커는 정적 파일만 캐시한다**: `/api`, `/ws`, `config.json`은 캐시·오프라인 대체에서 제외.
-새 버전은 자동 새로고침하지 않고 토스트 "새 버전이 있습니다 [지금 새로고침]"로 알린다(저장 안 된 변경이 있으면 확인). 설치 안내는 사이드바 버튼(브라우저가 이벤트를 줄 때)과 설정 → 앱 설치.
+`vite-plugin-pwa` generates the manifest and the service worker (registered only in build and preview). **The service worker caches static files only**: `/api`, `/ws` and `config.json` are excluded from caching and offline fallback.
+A new version does not reload on its own; a toast announces it with a reload button (and asks first when there are unsaved changes). The install prompt is a sidebar button (when the browser fires the event) and Settings › Install app.
 
-## 구조 (`src/`)
-| 폴더 | 역할 |
+## Layout (`src/`)
+| Folder | Role |
 | --- | --- |
-| `app/` | 부팅(`config`, `boot`, `AppRoot`), API·질의 컨텍스트(`ApiContext`, `queries`), 한글 문구(`messages`), 안내 배너(`hints`), 저장소(`storage`) |
-| `i18n/` | 화면 언어 조립(도메인 로직은 `@agent-console/i18n`): 앱 묶음(`import.meta.glob('../locales/*/*.json')`, 언어·네임스페이스 이름은 파일 이름에서 읽음, `boot`만 첫 청크에 동기로), 라이브러리 패키지 묶음 지연 로더(`libLocales.ts`), 첫 화면 언어(`agent-console.language` → 브라우저 언어 → `en`), 언어 바꾸기 순서(`languageController`: 250ms 연타 합치기·묶음 준비 뒤 한 번에 교체·`ui.language` 한 칸 저장), 설정 › 화면의 언어 고르기(`LanguageSelect`·`LanguageSetting`), `AppSchemaForm`·`AppShortcutProvider`(현재 언어 문구를 라이브러리에 건넴) |
-| `locales/<언어>/<네임스페이스>.json` | 앱 문구 묶음. 언어 추가 = 폴더 추가(서버 `GET /i18n`의 언어와 합쳐져 선택지가 된다). 지금 옮긴 것: `boot`(부팅·연결 실패 화면)·`settings`(설정 화면 틀과 화면 섹션). 나머지 `app/messages.ts` 문구는 I.12가 옮긴다 |
-| `definition/` | 정의 편집 공통: `useDefinitionEditor`(초안·If-Match 저장·412 충돌), `ConflictBanner`, `SaveStatus`, `UnsavedGuard`(이탈 보호) — 팀 구성·에이전트·리소스 화면도 쓴다 |
-| `shell/` | 앱 셸: 라우트 설정 데이터(`routeConfig`), 페이지 표(`routes.tsx`), 사이드바, 빠른 이동, 도움말, 단축키, 응답 대기 구독, Esc 스택 |
-| `pwa/` | 설치 안내 상태(`installPrompt`), 업데이트 알림 어댑터(`registerSw`는 `main.tsx`만 import) |
-| `features/settings/` | 설정 화면과 섹션, `UserSettingsForm`(팀 구성 화면도 재사용), `LayerForm`(출처 표시 폼 래퍼) |
-| `lib/` | 순수 함수(JSON Pointer, 스키마 도구, 단축키 검증, 층 편집, 포맷) |
-| `testing/` | 테스트 전용 가짜 클라이언트(앱 코드에서 import 금지) |
+| `app/` | Boot (`config`, `boot`, `AppRoot`), API and query contexts (`ApiContext`, `queries`), message hooks (`appMessages`, `shellMessages`, `moduleMessages`, `settingsUiMessages`), hint banners (`hints`), storage (`storage`) |
+| `i18n/` | Screen language assembly (the domain logic is in `@agent-console/i18n`): app bundles (`import.meta.glob('../locales/*/*.json')`; language and namespace names come from the file names, and only `boot` loads synchronously in the first chunk), lazy loaders for library package bundles (`libLocales.ts`), the first-screen language (`agent-console.language` → browser language → `en`), the language switch sequence (`languageController`: merges rapid switches within 250 ms, swaps everything at once after the bundles are ready, saves the single `ui.language` field), the language picker in Settings › Appearance (`LanguageSelect`, `LanguageSetting`), and `AppSchemaForm`/`AppShortcutProvider` (pass current-language text to the libraries) |
+| `locales/<language>/<namespace>.json` | App text bundles. Adding a language = adding a folder (merged with the languages from the server's `GET /i18n` to form the choices). |
+| `definition/` | Shared definition editing: `useDefinitionEditor` (draft, If-Match save, 412 conflict), `ConflictBanner`, `SaveStatus`, `UnsavedGuard` (leave protection) — also used by the team, agent and resource screens |
+| `shell/` | App shell: route settings data (`routeConfig`), page table (`routes.tsx`), sidebar, quick navigation, help, keyboard shortcuts, waiting-for-you subscription, Esc stack |
+| `pwa/` | Install prompt state (`installPrompt`), update notice adapter (`registerSw` is imported only by `main.tsx`) |
+| `features/settings/` | Settings screen and sections, `UserSettingsForm` (the team screen reuses it), `LayerForm` (form wrapper that shows where each value comes from) |
+| `lib/` | Pure functions (JSON Pointer, schema tools, shortcut validation, layer editing, formatting) |
+| `testing/` | Test-only fakes and helpers (do not import from app code) |
 
-새 화면 추가: ① `shell/routeConfig.ts`의 `DEFAULT_ROUTES`에 항목 한 줄(사이드바·`g` 단축키·빠른 이동·문서 제목이 자동. 다른 화면이 링크할 때 찾는 `serves` 역할도 적는다 — 기능 코드는 라우트 id가 아니라 `routePath(ROUTE_ROLES.*)`로 찾는다), ② `shell/routes.tsx`의 `DEFAULT_PAGES`에 `routeId → 하위 라우트`.
-단축키 기본 표는 셸이 가지며 설정 `ui.keybindings`가 덮어쓴다(개발 모드에서만 중복 키 경고).
+Adding a screen: (1) add one entry to `DEFAULT_ROUTES` in `shell/routeConfig.ts` (the sidebar, the `g` shortcut, quick navigation and the document title follow automatically; also set the `serves` roles that other screens look up when they link here — feature code finds a route with `routePath(ROUTE_ROLES.*)`, not by route id), (2) add `routeId → child routes` to `DEFAULT_PAGES` in `shell/routes.tsx`.
+The shell owns the default shortcut table, and the `ui.keybindings` setting overrides it (duplicate-key warnings appear only in development mode).
 
-## 의존성 (무엇을 / 왜 / 대안)
-| 의존 | 왜 | 대안 |
+## Dependencies (what / why / alternative)
+| Dependency | Why | Alternative |
 | --- | --- | --- |
-| `@agent-console/i18n`(앱은 이것만 import, i18next·react-i18next는 그 패키지 안) | 화면 문구 다국어(언어 해석·묶음 덮기·훅·서식) | i18next 직접 사용 |
-| `react` 19 · `react-dom` | 화면 | — |
-| `react-router` ^7 | 라우팅·이탈 보호(`useBlocker`)·메모리 라우터 테스트 | TanStack Router |
-| `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신 | 직접 만든 `useAsync`(이전 방식) |
-| `pretendard` ^1.3.9 | 기본 글꼴 자체 호스팅(`src/styles/fonts.css`가 woff2를 가리킨다). CDN 없이 오프라인에서도 같은 글꼴 | 시스템 글꼴만 사용 |
-| `vite-plugin-pwa` ^2 + `workbox-window` (dev) | manifest·서비스 워커(워크박스) 생성, 설치 가능한 앱 | 수작업 manifest + 서비스 워커 |
-| `yaml` ^2 | 설정 › 구조도 프로필 YAML 읽기·쓰기(줄 번호 오류 포함) | `js-yaml`(오류 위치·주석 보존이 약함) |
-| `@agent-console/contracts` | 서버 계약 타입·JSON Schema(Pydantic에서 생성) | — |
-| `@agent-console/api-client` | REST·WebSocket 클라이언트 | — |
-| `@agent-console/ui` | 토큰·기본 컴포넌트(대화상자·탭·팝오버 등) | — |
-| `@agent-console/schema-form` | JSON Schema 설정 폼(`x-ui` 힌트) | — |
-| `@agent-console/graph-editor` | 팀 그래프 편집·표시 | — |
-| `@agent-console/chat` | 대화 메시지 목록·입력창·상호작용 카드 | — |
-| `@agent-console/log-view` | 로그 분석 표·필터·세션 목록·대시보드 | — |
-| `@agent-console/trace-view` | 실행 추적 타임라인 | — |
-| `@agent-console/text-editor` | 텍스트·마크다운·JSON 편집기와 diff | — |
-| `@agent-console/list-arrange` | 목록 정렬·그룹·접기 | — |
-| `@agent-console/projects` | 프로젝트 상태·공간·복사 계획 도우미 | — |
+| `@agent-console/i18n` (the app imports only this; i18next and react-i18next stay inside that package) | Screen text in several languages (language resolution, bundle overlay, hooks, formatters) | Use i18next directly |
+| `react` 19 · `react-dom` | Rendering | — |
+| `react-router` ^7 | Routing, leave protection (`useBlocker`), memory-router tests | TanStack Router |
+| `@tanstack/react-query` ^5 | Server state cache shared across screens, invalidation, refresh on window focus | The hand-written `useAsync` (the previous approach) |
+| `pretendard` ^1.3.9 | Self-hosted default font (`src/styles/fonts.css` points at the woff2 files). Same font offline, no CDN | System fonts only |
+| `vite-plugin-pwa` ^2 + `workbox-window` (dev) | Generates the manifest and the service worker (Workbox), installable app | Hand-written manifest and service worker |
+| `yaml` ^2 | Reads and writes architecture map profile YAML in Settings (with line-numbered errors) | `js-yaml` (weaker error positions and comment preservation) |
+| `@agent-console/contracts` | Server contract types and JSON Schema (generated from Pydantic) | — |
+| `@agent-console/api-client` | REST and WebSocket client | — |
+| `@agent-console/ui` | Tokens and base components (dialog, tabs, popover, …) | — |
+| `@agent-console/schema-form` | JSON Schema settings forms (`x-ui` hints) | — |
+| `@agent-console/graph-editor` | Team graph editing and display | — |
+| `@agent-console/chat` | Conversation message list, composer, interaction cards | — |
+| `@agent-console/log-view` | Log analysis tables, filters, session list, dashboards | — |
+| `@agent-console/trace-view` | Run trace timeline | — |
+| `@agent-console/text-editor` | Text, Markdown and JSON editors and diff | — |
+| `@agent-console/list-arrange` | List sorting, grouping, collapsing | — |
+| `@agent-console/projects` | Project status, space and copy plan helpers | — |
 
-패키지 의존은 `^x.y.z` 범위 + pnpm `linkWorkspacePackages`로 연결한다(`workspace:` 프로토콜 없음).
+Package dependencies use `^x.y.z` ranges plus pnpm `linkWorkspacePackages` (no `workspace:` protocol).
 
-## 테스트
-- 단위·화면 테스트(Vitest, happy-dom): 저장소 루트에서 `npx vitest run --project web [경로] --maxWorkers=2`. 전체 TS 검사는 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser). 부하가 큰 환경에서는 `pnpm check -- --testTimeout=60000`. 화면 언어는 테스트에서 `ko`로 고정이다(`src/testing/setup.ts`가 브라우저 언어를 ko로, Playwright는 `locale: "ko-KR"`).
-- 정적 검사: `src/app/noHardcoding.test.ts`·`moduleIdsNoHardcoding.test.ts`(하드코딩 점검), `src/app/tokenConsumers.test.ts`(토큰 정의·사용 일치, 허용 목록은 `tokenAllowlist.json`).
-- E2E(Playwright, fake 백엔드): 루트에서 `pnpm e2e [파일 이름 일부 | -g 제목]`. 웹을 빌드해 서버와 함께 띄운다. 시나리오는 `apps/web/e2e/*.spec.ts`다.
+## Tests
+- Unit and screen tests (Vitest, happy-dom): from the repository root, `npx vitest run --project web [path] --maxWorkers=2`. The full TS check is `pnpm check` (ESLint, tsc, Vitest, dependency-cruiser). Under heavy load use `pnpm check -- --testTimeout=60000`. Tests pin the screen language to `ko` (`src/testing/setup.ts` sets the browser language to ko, and Playwright uses `locale: "ko-KR"`).
+- Static checks: `src/app/noHardcoding.test.ts` and `moduleIdsNoHardcoding.test.ts` (hard-coding checks), `src/app/tokenConsumers.test.ts` (token definitions match their uses; the allowlist is `tokenAllowlist.json`). The scan for Korean string literals in the sources uses `src/testing/i18nScan.ts`; its allowlist (permanent exemptions such as example data, plus files still waiting for conversion) is `src/testing/i18nPending.json`.
+- E2E (Playwright, fake backend): from the root, `pnpm e2e [part of a file name | -g title]`. It builds the web app and starts it with the server. Scenarios are in `apps/web/e2e/*.spec.ts`.

@@ -7,20 +7,28 @@ import { queryKeys } from "../../app/queries";
 
 const statusKey = () => queryKeys.list("backend-status");
 
+const NO_STATUS: Record<string, BackendReadiness> = {};
+
+/** 캐시에 담는 값: 백엔드별 점검 결과 + 준비 상태 경로가 있는지(404면 없음). */
+interface StatusSnapshot {
+  byId: Record<string, BackendReadiness>;
+  available: boolean;
+}
+
 /**
  * 모든 백엔드의 정적 점검 상태. 화면이 열릴 때 한 번 읽고 [다시 확인]으로만 갱신한다(폴링·창 포커스 갱신 없음).
- * 실행 백엔드 모듈이 꺼져 404면 빈 표(카드·칩이 사라진다).
+ * 실행 백엔드 모듈이 꺼져 404면 빈 표이고 `available`이 false다.
  */
 export function useBackendReadiness() {
   const { rest } = useApi();
-  const query = useQuery<Record<string, BackendReadiness>, Error>({
+  const query = useQuery<StatusSnapshot, Error>({
     queryKey: statusKey(),
     queryFn: async () => {
       try {
         const list = await rest.listBackendStatuses();
-        return Object.fromEntries(list.map((r) => [r.backend_id, r]));
+        return { byId: Object.fromEntries(list.map((r) => [r.backend_id, r])), available: true };
       } catch (e) {
-        if (e instanceof ApiError && e.status === 404) return {};
+        if (e instanceof ApiError && e.status === 404) return { byId: {}, available: false };
         throw e;
       }
     },
@@ -36,14 +44,15 @@ export function useBackendReadiness() {
       setRechecking(id);
       try {
         const next = await rest.getBackendStatus(id);
-        queryClient.setQueryData<Record<string, BackendReadiness>>(statusKey(), (old) => ({ ...(old ?? {}), [id]: next }));
+        queryClient.setQueryData<StatusSnapshot>(statusKey(), (old) => ({ byId: { ...(old?.byId ?? {}), [id]: next }, available: true }));
       } finally {
         setRechecking(null);
       }
     },
     [rest, queryClient],
   );
-  return { ...query, readiness: query.data ?? {}, recheck, rechecking };
+  // available: 준비 상태 경로가 있는가(404면 false, 아직 모르면 true)
+  return { ...query, readiness: query.data?.byId ?? NO_STATUS, available: query.data?.available ?? true, recheck, rechecking };
 }
 
 /** 연결 테스트 한 번의 화면 상태(서버는 결과를 기억하지 않으므로 화면 메모리에만 둔다). */

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-teams"
 version = "0.2.0"
-description = "Agent Console — 팀 구성 그래프의 의미(순수): 입구·답변·위임 대상·리소스 첨부·허용 상호작용 계산, 팀 검증, 노드 유효 설정"
+description = "Agent Console — meaning of team graphs (pure): entry, answers, delegation targets, resource attachments, allowed interactions, team validation, effective node settings"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -16,6 +16,9 @@ dependencies = [
     "agent-console-settings>=0.1,<0.2",
     "pydantic>=2.9",
 ]
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-teams = "agent_console_teams"
 
 [dependency-groups]
 dev = [

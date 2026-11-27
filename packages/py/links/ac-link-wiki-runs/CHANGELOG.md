@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-wiki-runs`, so the web can show the link module description and settings and the `wiki.access_invalid` issue in English (data only, no API change). Log lines are now English.
 - FU.12: 위키 도구 묶음에 검색어 해셔를 넘긴다 — 서비스의 선택 속성 `query_hash`(`QueryHashSource`,
   `service_query_hash`)가 먼저, 없으면 `WikiRunScope(query_hash=)`(기본: 범위 하나에 무작위 솔트 해셔 하나).
   `WikiToolProvider(query_hash=)`.

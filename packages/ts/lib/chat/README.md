@@ -44,6 +44,7 @@ Optional fields of `ProgressStep` (all of them are data the app builds from even
 - "N progress steps" and the rule for more than 8 (the latest 3 plus "…and N more steps") are based on the full list with descendants expanded (`flattenSteps`).
 - The actual indentation of a descendant chip is `max(its own indent, parent indent + 1)`.
 - `onOpenChildRun(runId)` on `TurnView` and `MessageList` receives the child run icon link.
+- `locale` on `TurnView` and `MessageList` (BCP 47, normally the display language) sets the turn time tooltip and the token count format (default `"en-US"`); `formatTime` still sets the visible time text.
 
 ## Dependencies (what / why / alternatives)
 - `react-markdown` + `remark-gfm`: Markdown display. It does not render raw HTML (text is escaped), allows only http(s) links, and shows images only as alt text. Writing our own parser would add a heavy security and maintenance burden, so we adopted this. Alternatives: `markdown-to-jsx`, `marked` + DOMPurify.

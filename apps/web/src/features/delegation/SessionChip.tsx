@@ -3,6 +3,7 @@ import { Icon, useIconRegistry } from "@agent-console/ui";
 import type { ChipView } from "@agent-console/graph-editor";
 import { KNOWN_DELEGATION_SESSIONS as SESSIONS } from "@agent-console/contracts/constants";
 import { sessionText, sessionTip } from "./delegationAttributes";
+import { useDelegationMessages, type DelegationMessages } from "./messages";
 
 /** 세션 값 → 아이콘 이름(앱 데이터). 표에 없는 값은 `FALLBACK_ICON`. */
 export const SESSION_ICONS: Readonly<Record<string, string>> = { [SESSIONS.SEPARATE]: "git-fork", [SESSIONS.SAME]: "corner-down-right" };
@@ -28,9 +29,10 @@ export interface SessionChipProps {
  */
 export function SessionChip({ value, delegatorLabel, variant = "full", onClick, className, children }: SessionChipProps) {
   const registry = useIconRegistry();
+  const dm = useDelegationMessages();
   if (value === null || value === undefined || value === "") return null;
-  const text = sessionText(value);
-  const tip = sessionTip(value, delegatorLabel);
+  const text = sessionText(value, dm);
+  const tip = sessionTip(value, dm, delegatorLabel);
   const iconName = SESSION_ICONS[value] ?? FALLBACK_ICON;
   const common = {
     className: ["ses-chip", className].filter(Boolean).join(" "),
@@ -62,10 +64,10 @@ export function SessionChip({ value, delegatorLabel, variant = "full", onClick, 
 }
 
 /** 편집기 칩 데이터(`edgeLeadChips`·`nodeAnnotations.foot`)를 만든다. 세션 값이 없으면 undefined. */
-export function sessionChipView(value: string | null | undefined, opts: { key?: string; delegatorLabel?: string; iconOnly?: boolean } = {}): ChipView | undefined {
+export function sessionChipView(value: string | null | undefined, opts: { messages: DelegationMessages; key?: string; delegatorLabel?: string; iconOnly?: boolean }): ChipView | undefined {
   if (value === null || value === undefined || value === "") return undefined;
-  const text = sessionText(value);
-  const tip = sessionTip(value, opts.delegatorLabel);
+  const text = sessionText(value, opts.messages);
+  const tip = sessionTip(value, opts.messages, opts.delegatorLabel);
   return {
     key: opts.key ?? "session",
     title: text,

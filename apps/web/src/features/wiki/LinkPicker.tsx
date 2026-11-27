@@ -4,7 +4,7 @@ import { Dialog } from "@agent-console/ui";
 import { VirtualList } from "@agent-console/wiki-view";
 import type { WikiPageSummary } from "@agent-console/contracts/wiki";
 import { isImeKeyEvent } from "../../lib/ime";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 export interface LinkPickerProps {
   open: boolean;
@@ -16,6 +16,7 @@ export interface LinkPickerProps {
 }
 
 export function LinkPicker({ open, pages, currentPath = null, onPick, onClose }: LinkPickerProps) {
+  const t = useT("wiki");
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -25,14 +26,14 @@ export function LinkPicker({ open, pages, currentPath = null, onPick, onClose }:
   }, [pages, q, currentPath]);
   const clamp = Math.min(active, Math.max(0, shown.length - 1));
   return (
-    <Dialog open={open} title={m.editor.pickPage} size="sm" onClose={onClose} initialFocus={input}>
+    <Dialog open={open} title={t("editor.pickPage")} size="sm" onClose={onClose} initialFocus={input}>
       <div className="wiki-form">
         <input
           ref={input}
           type="search"
           className="wiki-input"
-          aria-label={m.editor.pickFilter}
-          placeholder={m.editor.pickFilter}
+          aria-label={t("editor.pickFilter")}
+          placeholder={t("editor.pickFilter")}
           value={q}
           role="combobox"
           aria-expanded="true"
@@ -63,7 +64,7 @@ export function LinkPicker({ open, pages, currentPath = null, onPick, onClose }:
             rowHeight={40}
             height={Math.min(280, Math.max(40, shown.length * 40))}
             role="listbox"
-            ariaLabel={m.editor.pickPage}
+            ariaLabel={t("editor.pickPage")}
             activeIndex={clamp}
             getKey={(p) => p.path}
             renderRow={(p, ctx) => (

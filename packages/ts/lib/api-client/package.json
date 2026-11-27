@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/api-client",
   "version": "0.2.0",
-  "description": "서버 REST·WebSocket 계약을 감싼 순수 TypeScript 클라이언트",
+  "description": "Plain TypeScript client that wraps the server REST and WebSocket contracts",
   "private": true,
   "license": "MIT",
   "type": "module",

@@ -3,7 +3,7 @@ import type { ExporterDescriptor } from "@agent-console/contracts";
 import { Tag } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { kindLabel } from "./exportSources";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 
 export interface ExporterStepProps {
   loading: boolean;
@@ -18,6 +18,7 @@ export interface ExporterStepProps {
 
 /** ① 형식 고르기: `GET /exporters` 카드 목록(라디오). 카드가 1개여도 단계를 건너뛰지 않는다. */
 export function ExporterStep({ loading, error, exporters, selectedId, onSelect, onRetry, infoLink }: ExporterStepProps) {
+  const t = useExportMessages();
   const refs = useRef(new Map<string, HTMLDivElement>());
   if (loading) {
     return (
@@ -76,7 +77,7 @@ export function ExporterStep({ loading, error, exporters, selectedId, onSelect, 
             {e.description ? <span className="exp-card-desc app-muted">{e.description}</span> : null}
             <span className="exp-card-kinds" aria-label={t.exporter.kindsLabel}>
               {(e.kinds ?? []).map((k) => (
-                <Tag key={k}>{kindLabel(k)}</Tag>
+                <Tag key={k}>{kindLabel(k, t)}</Tag>
               ))}
             </span>
           </div>

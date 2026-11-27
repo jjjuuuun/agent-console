@@ -295,7 +295,7 @@ async def test_secret_never_in_responses_or_logs(caplog: pytest.LogCaptureFixtur
         for piece in pieces:
             assert piece not in text, piece
     # 서버 로그는 백엔드 id·ok·reason·소요 시간만
-    probe_logs = [r for r in caplog.records if "연결 테스트" in r.getMessage()]
+    probe_logs = [r for r in caplog.records if "connection test" in r.getMessage()]
     assert len(probe_logs) == 1
     assert "인증 실패" not in probe_logs[0].getMessage()
 

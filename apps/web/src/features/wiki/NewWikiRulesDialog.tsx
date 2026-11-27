@@ -2,12 +2,10 @@
 import { useId, useRef, useState } from "react";
 import { DefinitionIdField, useDefinitionId, useKindReservedIds } from "../library";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { useImeGuard } from "../../lib/ime";
 import { WIKI_RULES_SCREEN } from "./wikiConfig";
-import { wikiRulesMessages } from "./rulesScreenMessages";
-
-const t = wikiRulesMessages.newDialog;
+import { useT } from "@agent-console/i18n";
 
 /** 서버가 규칙 문서로 받는 최소 본문(종류 이름은 서버가 채운다). */
 export interface NewWikiRulesBody {
@@ -29,16 +27,17 @@ export interface NewWikiRulesDialogProps {
 }
 
 export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallbackId, kind }: NewWikiRulesDialogProps) {
+  const t = useT("wiki");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("rules.newDialog.failed"));
   const ref = useRef<HTMLInputElement>(null);
   const ime = useImeGuard();
   const uid = useId();
   const missing = name.trim() === "";
-  const defId = useDefinitionId(name, existingIds, fallbackId ?? t.fallbackId, useKindReservedIds(kind));
+  const defId = useDefinitionId(name, existingIds, fallbackId ?? t("rules.newDialog.fallbackId"), useKindReservedIds(kind));
 
   // id가 규칙에 안 맞거나 겹치면 제출이 막힌다: disabled 대신 aria-disabled + 칸 아래 오류 문장 연결
   const idBlocked = defId.problem !== undefined;
@@ -51,7 +50,7 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
     try {
       await onSubmit({ name: name.trim(), id: defId.id.trim(), ...(description.trim() === "" ? {} : { description: description.trim() }) });
     } catch (e) {
-      setError(describeError(e, t.failed).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -62,26 +61,26 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
   return (
     <Dialog
       open={open}
-      title={t.title}
+      title={t("rules.newDialog.title")}
       onClose={close}
       initialFocus={ref}
       actions={
         <>
-          <Button onClick={close} disabled={busy}>{t.cancel}</Button>
-          <Button variant="primary" loading={busy} aria-disabled={idBlocked || undefined} aria-describedby={idBlocked ? `${uid}-idnote` : undefined} onClick={() => void submit()}>{busy ? t.creating : t.create}</Button>
+          <Button onClick={close} disabled={busy}>{t("rules.newDialog.cancel")}</Button>
+          <Button variant="primary" loading={busy} aria-disabled={idBlocked || undefined} aria-describedby={idBlocked ? `${uid}-idnote` : undefined} onClick={() => void submit()}>{busy ? t("rules.newDialog.creating") : t("rules.newDialog.create")}</Button>
         </>
       }
     >
       <div className="wiki-form" onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !ime.isIme(e)) void submit(); }}>
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
         <label className="wiki-field" htmlFor={`${uid}-name`}>
-          <span className="wiki-label">{t.name} *</span>
+          <span className="wiki-label">{t("rules.newDialog.name")} *</span>
           <input
             id={`${uid}-name`}
             ref={ref}
             className="wiki-input"
             maxLength={WIKI_RULES_SCREEN.nameMax}
-            placeholder={t.namePlaceholder}
+            placeholder={t("rules.newDialog.namePlaceholder")}
             value={name}
             aria-required="true"
             aria-invalid={touched && missing ? true : undefined}
@@ -89,12 +88,12 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
             onKeyDown={(e) => { if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !ime.isIme(e)) void submit(); }}
             {...ime.handlers}
           />
-          {touched && missing ? <span className="app-field-error" role="alert">{t.needName}</span> : null}
+          {touched && missing ? <span className="app-field-error" role="alert">{t("rules.newDialog.needName")}</span> : null}
         </label>
         <DefinitionIdField id={defId.id} problem={defId.problem} onChange={defId.setId} inputId={`${uid}-id`} noteId={`${uid}-idnote`} />
-        <Disclosure summary={t.advanced}>
+        <Disclosure summary={t("rules.newDialog.advanced")}>
           <label className="wiki-field" htmlFor={`${uid}-desc`}>
-            <span className="wiki-label">{t.description}</span>
+            <span className="wiki-label">{t("rules.newDialog.description")}</span>
             <input id={`${uid}-desc`} className="wiki-input" value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
         </Disclosure>

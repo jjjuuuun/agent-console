@@ -1,8 +1,14 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { ConfigTab } from "./ConfigTab";
-import { buildConfigUi } from "./configUi";
+import { koMessages } from "../../testing/messageTables";
+import { buildConfigUi as buildConfigUiWith } from "./configUi";
+import { createResourceMessages } from "./messages";
+
+const rm = koMessages("resources", createResourceMessages);
+const buildConfigUi = (schema: Parameters<typeof buildConfigUiWith>[0], serverUi: Parameters<typeof buildConfigUiWith>[1], widgets: ReadonlySet<string> = new Set()) => buildConfigUiWith(schema, serverUi, widgets, rm);
 
 afterEach(cleanup);
 

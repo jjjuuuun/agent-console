@@ -307,10 +307,43 @@ describe("그래프 → 흐름 모델 변환", () => {
 
 describe("팔레트 그룹", () => {
   it("category 문자열 그대로, 한국어 정렬, 빈 category는 기타, 최신 버전만", () => {
-    const groups = groupNodeTypes([...descriptors, { id: "zeta-source", version: 0, title: "구버전", category: "흐름-가" }], "", "기타");
+    const groups = groupNodeTypes([...descriptors, { id: "zeta-source", version: 0, title: "구버전", category: "흐름-가" }], "", "기타", "ko");
     expect(groups.map((g) => g.category)).toEqual(["기타", "분기", "흐름-가"]);
     expect(groups[2]!.items).toHaveLength(1);
     expect(groupNodeTypes(descriptors, "SINK", "기타")).toHaveLength(1);
+  });
+  it("정렬·검색은 넘긴 로캘을 따른다(기본 en)", () => {
+    const types = [
+      { id: "a", version: 1, title: "z", category: "z" },
+      { id: "b", version: 1, title: "ä", category: "ä" },
+      { id: "c", version: 1, title: "b", category: "b" },
+    ];
+    expect(groupNodeTypes(types, "", "x").map((g) => g.category)).toEqual(["ä", "b", "z"]);
+    expect(groupNodeTypes(types, "", "x", "sv").map((g) => g.category)).toEqual(["b", "z", "ä"]);
+    // 터키어: "I"는 "ı"로 소문자가 되므로 영어 검색어 "i"와 로캘별로 다르게 걸린다
+    const dotted = [{ id: "d", version: 1, title: "ISIK", category: "k" }];
+    expect(groupNodeTypes(dotted, "ısık", "x", "tr")).toHaveLength(1);
+    expect(groupNodeTypes(dotted, "ısık", "x", "en")).toHaveLength(0);
+  });
+
+  it("categoryLabel은 보이는 이름만 바꾸고 그룹 키·색 키는 원래 category다", () => {
+    const types = [
+      { id: "a", version: 1, title: "a", category: "flow" },
+      { id: "b", version: 1, title: "b", category: "tools" },
+      { id: "c", version: 1, title: "c" },
+    ];
+    const ko = groupNodeTypes(types, "", "기타", "ko", (c) => ({ flow: "흐름", tools: "도구" })[c] ?? c);
+    const en = groupNodeTypes(types, "", "Other", "en", (c) => ({ flow: "Flow", tools: "Tools" })[c] ?? c);
+    // 언어가 달라도 키(category)와 색 키는 같다
+    expect(ko.map((g) => g.colorKey).sort()).toEqual(en.map((g) => g.colorKey).sort());
+    expect(ko.find((g) => g.label === "흐름")?.colorKey).toBe("flow");
+    expect(en.find((g) => g.label === "Flow")?.colorKey).toBe("flow");
+    // 분류 없음 그룹은 중립색 키(빈 문자열)
+    expect(en.find((g) => g.label === "Other")?.colorKey).toBe("");
+    // 번역 이름으로도 검색된다
+    expect(groupNodeTypes(types, "도구", "기타", "ko", (c) => (c === "tools" ? "도구" : c)).map((g) => g.category)).toEqual(["tools"]);
+    // 라벨 함수가 없으면 이전과 같다
+    expect(groupNodeTypes(types, "", "기타", "ko").every((g) => g.label === g.category)).toBe(true);
   });
 });
 

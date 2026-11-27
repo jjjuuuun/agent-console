@@ -16,12 +16,12 @@ import { NewTemplateDialog } from "./NewTemplateDialog";
 import { FailureBlock, GuardedButton, ListSkeleton, SearchBox } from "./parts";
 import { TEMPLATE_PARAMS } from "./templateConfig";
 import { TemplateEditor } from "./TemplateEditor";
-import { templateMessages as t } from "./templateMessages";
 import { useTemplateKind, useTemplateSpace } from "./useTemplateApi";
 import { sddKeys, useInvalidateSdd } from "./useSddApi";
-import { sddMessages as m } from "./messages";
 import "./sdd.css";
 import "./templates.css";
+import { useT } from "@agent-console/i18n";
+import { useCollator } from "../../i18n";
 
 const P = TEMPLATE_PARAMS;
 const nameOf = (x: SpecTemplateSummary) => (x.name !== undefined && x.name !== "" ? x.name : x.id);
@@ -36,7 +36,9 @@ export function TemplatesScreen() {
 }
 
 function TemplatesBody() {
-  usePageTitle(m.templates.title);
+  const collator = useCollator();
+  const t = useT("sdd");
+  usePageTitle(t("templates.title"));
   const space = useTemplateSpace();
   const toast = useToast();
   const qc = useQueryClient();
@@ -48,7 +50,7 @@ function TemplatesBody() {
   const [creating, setCreating] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pending, setPending] = useState<string | null | undefined>(undefined);
-  const items = useMemo(() => [...(list.data ?? [])].sort((a, b) => nameOf(a).localeCompare(nameOf(b), "ko")), [list.data]);
+  const items = useMemo(() => [...(list.data ?? [])].sort((a, b) => collator.compare(nameOf(a), nameOf(b))), [list.data, collator]);
   const kind = useTemplateKind(space.client, space.key, items[0]?.id, items.length > 0);
   const transfer = useConfigTransfer(items, { kind, idOf, nameOf });
   const shown = q.trim() === "" ? items : items.filter((x) => `${nameOf(x)} ${x.id}`.toLowerCase().includes(q.trim().toLowerCase()));
@@ -82,25 +84,25 @@ function TemplatesBody() {
     const made = await space.client.createSpecTemplate(body);
     setCreating(false);
     await invalidate();
-    toast({ tone: "success", text: t.toast.created(made.value.name || made.value.id) });
+    toast({ tone: "success", text: t("template.toast.created", { name: made.value.name || made.value.id }) });
     apply(made.value.id);
   };
 
   let body;
   if (space.infoQuery.isPending || (templatesOn && list.isPending)) body = <ListSkeleton />;
-  else if (space.infoQuery.isError) body = <FailureBlock error={space.infoQuery.error} title={m.templates.loadFailed} onRetry={() => void space.infoQuery.refetch()} />;
-  else if (!templatesOn) body = <div className="sdd-state" data-testid="sdd-templates-off"><EmptyState title={m.templates.off.title} description={m.templates.off.body} /></div>;
-  else if (list.isError) body = <FailureBlock error={list.error} title={m.templates.loadFailed} onRetry={() => void list.refetch()} />;
+  else if (space.infoQuery.isError) body = <FailureBlock error={space.infoQuery.error} title={t("templates.loadFailed")} onRetry={() => void space.infoQuery.refetch()} />;
+  else if (!templatesOn) body = <div className="sdd-state" data-testid="sdd-templates-off"><EmptyState title={t("templates.off.title")} description={t("templates.off.body")} /></div>;
+  else if (list.isError) body = <FailureBlock error={list.error} title={t("templates.loadFailed")} onRetry={() => void list.refetch()} />;
   else if (items.length === 0) {
     body = (
       // 목록 패널은 그대로 두고(항목 0개) 오른쪽 상세 자리에 빈 상태를 보인다: 문서 틀이 생기면 같은 틀로 이어진다
       <div className="sdd-templates">
         <div className="sdd-templates-list">
-          <p className="app-muted sdd-templates-count" role="status">{t.list.count(0)}</p>
+          <p className="app-muted sdd-templates-count" role="status">{t("template.list.count", { count: 0 })}</p>
         </div>
         <div className="sdd-templates-detail">
           <div className="sdd-state" data-testid="sdd-templates-empty">
-            <EmptyState icon={<Icon name="spec" size={40} />} title={t.empty.title} description={`${t.empty.body} ${t.empty.hint}`} />
+            <EmptyState icon={<Icon name="spec" size={40} />} title={t("template.empty.title")} description={`${t("template.empty.body")} ${t("template.empty.hint")}`} />
           </div>
         </div>
       </div>
@@ -109,15 +111,15 @@ function TemplatesBody() {
     body = (
       <div className="sdd-templates">
         <div className="sdd-templates-list">
-          <SearchBox value={q} onCommit={setQ} label={m.templates.searchLabel} />
-          <ul aria-label={m.templates.title}>
+          <SearchBox value={q} onCommit={setQ} label={t("templates.searchLabel")} />
+          <ul aria-label={t("templates.title")}>
             {shown.map((x) => {
               const action = transfer.menuItem(x);
               return (
                 <li key={x.id} className="sdd-template-item">
                   <button type="button" className="sdd-template-row" aria-current={x.id === picked ? "true" : undefined} onClick={() => select(x.id)}>
                     <span className="ac-ellipsis"><strong>{nameOf(x)}</strong></span>
-                    <span className="app-muted">{m.templates.meta((x.documents ?? []).length, (x.run_profiles ?? []).length)}</span>
+                    <span className="app-muted">{t("templates.meta", { docs: (x.documents ?? []).length, profiles: (x.run_profiles ?? []).length })}</span>
                   </button>
                   {action === null ? null : (
                     <Button size="sm" aria-disabled={action.disabled === true || undefined} title={action.title} aria-label={`${action.label}: ${nameOf(x)}`} onClick={() => { if (action.disabled !== true) action.onSelect(); }}>
@@ -130,7 +132,7 @@ function TemplatesBody() {
           </ul>
         </div>
         <div className="sdd-templates-detail">
-          {selected === undefined ? <p className="app-muted">{t.picked}</p> : (
+          {selected === undefined ? <p className="app-muted">{t("template.picked")}</p> : (
             <TemplateEditor
               key={`${space.key}:${selected.id}`}
               space={space}
@@ -141,7 +143,7 @@ function TemplatesBody() {
               onDeleted={(name) => {
                 qc.removeQueries({ queryKey: ["sdd", space.key, "template", selected.id] });
                 void invalidate();
-                toast({ tone: "success", text: t.toast.deleted(name) });
+                toast({ tone: "success", text: t("template.toast.deleted", { name }) });
                 setDirty(false);
                 apply(null);
               }}
@@ -155,20 +157,20 @@ function TemplatesBody() {
   return (
     <div className="app-screen-frame sdd-screen">
       <PageHeader
-        title={m.templates.title}
+        title={t("templates.title")}
         status={<SpaceChip />}
-        actions={templatesOn ? <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => setCreating(true)}>{t.newTemplate}</GuardedButton> : undefined}
+        actions={templatesOn ? <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => setCreating(true)}>{t("template.newTemplate")}</GuardedButton> : undefined}
       />
       <SpaceNote />
       <div className="sdd-screen-body">{body}</div>
       {creating ? <NewTemplateDialog open reservedIds={space.info?.reserved_template_ids} onClose={() => setCreating(false)} onSubmit={create} /> : null}
       {transfer.dialog}
-      <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
+      <ConfirmDialog open={blocker.state === "blocked"} title={t("leave.title")} confirmLabel={t("leave.leave")} cancelLabel={t("leave.stay")} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{t("leave.body")}</ConfirmDialog>
       <ConfirmDialog
         open={pending !== undefined}
-        title={m.leave.title}
-        confirmLabel={m.leave.leave}
-        cancelLabel={m.leave.stay}
+        title={t("leave.title")}
+        confirmLabel={t("leave.leave")}
+        cancelLabel={t("leave.stay")}
         danger
         onConfirm={() => {
           const id = pending;
@@ -178,7 +180,7 @@ function TemplatesBody() {
         }}
         onCancel={() => setPending(undefined)}
       >
-        {m.leave.body}
+        {t("leave.body")}
       </ConfirmDialog>
     </div>
   );

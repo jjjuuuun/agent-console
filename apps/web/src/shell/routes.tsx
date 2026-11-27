@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation, type RouteObject } from "react-router";
-import { lookupMessage } from "../app/messages";
+import { useLookupMessage } from "../app/shellMessages";
 import { useGraphList } from "../features/library";
 import { ARCH_POPOUT } from "../features/architecture";
 import { ROUTE_ROLES } from "../features/library/paths";
-import { PROJECTS_SECTION_ID, ProjectGate, ProjectHomeScreen, ProjectsSection, SpaceScope, folderHomeMessages } from "../features/projects";
+import { PROJECTS_SECTION_ID, ProjectGate, ProjectHomeScreen, ProjectsSection, SpaceScope, useFolderHomeMessages } from "../features/projects";
 import { PROJECT_REQUIRES } from "../app/requirements";
 import { RouteGate, useModules, useRequiresPartition } from "../modules";
 import { lazyScreen } from "./lazyScreen";
@@ -132,6 +132,7 @@ function modulesHref(routes: readonly RouteDef[]): string | undefined {
  * 주소는 그대로 둔다(리다이렉트하지 않음).
  */
 function RouteLayout({ route, routes }: { route: RouteDef; routes: readonly RouteDef[] }) {
+  const lookupMessage = useLookupMessage();
   const { met } = useRequiresPartition(routes);
   const home = homeRoute(met.filter((r) => r.id !== route.id));
   return (
@@ -175,6 +176,8 @@ function HomeRedirect({ routes }: { routes: readonly RouteDef[] }) {
  * 사이드바 항목이 아니라 프로젝트 영역·폴더 추가 직후·`ProjectChip`이 여는 화면이라 라우트 설정 데이터(사이드바 목록)에 두지 않는다.
  */
 function ProjectHomeRoute({ routes }: { routes: readonly RouteDef[] }) {
+  const lookupMessage = useLookupMessage();
+  const folderHomeMessages = useFolderHomeMessages();
   const { met } = useRequiresPartition(routes);
   const home = homeRoute(met);
   return (

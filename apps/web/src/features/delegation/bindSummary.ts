@@ -1,7 +1,7 @@
 import type { GraphSummary, NodeSpec, NodeTypeDescriptor } from "@agent-console/contracts";
 import type { BindSummary, ChipView, DefinitionItem } from "@agent-console/graph-editor";
 import { DEFAULT_TEAM_CONVENTIONS, stringAt, type TeamConventions } from "./conventions";
-import { delegationMessages as t } from "./messages";
+import type { DelegationMessages } from "./messages";
 
 /** 중첩 후보 정의 한 건(정의 요약 목록에서). 입구 수·노드 수를 모르면 생략한다(카드 부제는 이름만). */
 export interface NestedInfo {
@@ -17,11 +17,11 @@ export function nestedInfoOf(summaries: readonly Pick<GraphSummary, "id" | "name
   return summaries.map((s) => ({ id: s.id, name: s.name, nodeCount: s.node_count, ...(s.entry_labels != null ? { entries: s.entry_labels } : {}) }));
 }
 
-/** 팔레트 "정의에서 만드는 노드"의 중첩 정의 목록: 이름 오름차순(한글 로케일), 자기 자신은 비활성 사유. */
-export function nestedDefinitionList(infos: readonly NestedInfo[], currentId: string, counts: ReadonlyMap<string, number> | ((id: string) => number) = new Map()): DefinitionItem[] {
+/** 팔레트 "정의에서 만드는 노드"의 중첩 정의 목록: 이름 오름차순(화면 언어 순서), 자기 자신은 비활성 사유. */
+export function nestedDefinitionList(infos: readonly NestedInfo[], currentId: string, t: DelegationMessages, language: string, counts: ReadonlyMap<string, number> | ((id: string) => number) = new Map()): DefinitionItem[] {
   const countOf = typeof counts === "function" ? counts : (id: string) => counts.get(id) ?? 0;
   return [...infos]
-    .sort((a, b) => a.name.localeCompare(b.name, "ko"))
+    .sort((a, b) => a.name.localeCompare(b.name, language))
     .map((info) => {
       const meta = info.nodeCount === undefined ? undefined : t.nested.infoMeta(info.nodeCount, info.entries && info.entries.length > 0 ? `${info.entries.length}` : "");
       return {
@@ -35,6 +35,8 @@ export function nestedDefinitionList(infos: readonly NestedInfo[], currentId: st
 }
 
 export interface BindSummaryContext {
+  /** 위임 문구 표(화면 언어) */
+  messages: DelegationMessages;
   /** 지금 편집 중인 정의 종류(`binds.kind`와 비교만 한다) */
   currentKind: string | undefined;
   /** 지금 편집 중인 정의 id(자기 참조 판정) */
@@ -53,6 +55,7 @@ export interface BindSummaryContext {
  * 정의 id는 `binds.field` 위치의 config 값이고, 버전 고정은 `TeamConventions.nodePinVersion` 위치다.
  */
 export function buildBindSummary(node: NodeSpec, nodeType: Pick<NodeTypeDescriptor, "binds"> | undefined, ctx: BindSummaryContext): BindSummary | undefined {
+  const t = ctx.messages;
   const binds = nodeType?.binds;
   if (binds == null || ctx.currentKind === undefined || binds.kind !== ctx.currentKind) return undefined;
   const conventions = ctx.conventions ?? DEFAULT_TEAM_CONVENTIONS;

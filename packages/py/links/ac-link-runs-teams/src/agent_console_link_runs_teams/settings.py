@@ -64,6 +64,6 @@ def issue_fixes_of(path: Path | None, base: Path | None = None) -> IssueFixes:
     try:
         text = path.read_text(encoding="utf-8")
     except (FileNotFoundError, NotADirectoryError):
-        _log.warning("해결 버튼 표 파일이 없어 빈 표를 씁니다: %s", path)
+        _log.warning("Fix button table file not found; using an empty table: %s", path)
         return IssueFixes()
     return load_issue_fixes(text)

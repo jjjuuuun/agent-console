@@ -6,13 +6,13 @@ import { useCallback, useMemo } from "react";
 import { useToast } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { saveBlob } from "../../lib/download";
 import { MEMORY_LIMITS } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
 import { useInvalidateMemory } from "./useMemoryApi";
-import { sizeMessages } from "./format";
+import { useViewMessages } from "./format";
 import { useMemoryRest } from "./useMemoryApi";
+import { useT } from "@agent-console/i18n";
 
 type Target = Pick<MemoryEntry | MemoryEntrySummary, "id" | "version">;
 
@@ -25,15 +25,18 @@ export interface MemoryActions {
 }
 
 export function useMemoryActions(): MemoryActions {
+  const describeError = useDescribeError();
+  const t = useT("memory");
+  const viewMessages = useViewMessages();
   const rest = useMemoryRest();
   const toast = useToast();
   const invalidate = useInvalidateMemory();
 
   const fail = useCallback(
     (e: unknown) => {
-      toast({ tone: "danger", text: `${t.toast.failed}: ${describeError(e, t.toast.failed).message}` });
+      toast({ tone: "danger", text: `${t("toast.failed")}: ${describeError(e, t("toast.failed")).message}` });
     },
-    [toast],
+    [toast, t, describeError],
   );
 
   return useMemo<MemoryActions>(() => {
@@ -53,10 +56,10 @@ export function useMemoryActions(): MemoryActions {
         await invalidate();
         toast({
           tone: "success",
-          text: archived ? t.toast.archived : t.toast.unarchived,
+          text: archived ? t("toast.archived") : t("toast.unarchived"),
           durationMs: MEMORY_LIMITS.undoMs,
           action: {
-            label: t.toast.undo,
+            label: t("toast.undo"),
             onClick: () => {
               void (async () => {
                 try {
@@ -80,7 +83,7 @@ export function useMemoryActions(): MemoryActions {
       try {
         const out = await rest.deleteMemoryEntry(entry.id, entry.version);
         await invalidate();
-        toast({ tone: "success", text: t.toast.deleted, durationMs: MEMORY_LIMITS.undoMs, action: { label: t.toast.undo, onClick: () => void restore(entry) } });
+        toast({ tone: "success", text: t("toast.deleted"), durationMs: MEMORY_LIMITS.undoMs, action: { label: t("toast.undo"), onClick: () => void restore(entry) } });
         return out;
       } catch (e) {
         fail(e);
@@ -91,7 +94,7 @@ export function useMemoryActions(): MemoryActions {
       try {
         await rest.purgeMemoryEntry(entry.id);
         await invalidate();
-        toast({ tone: "success", text: t.toast.purged });
+        toast({ tone: "success", text: t("toast.purged") });
         return true;
       } catch (e) {
         fail(e);
@@ -101,15 +104,15 @@ export function useMemoryActions(): MemoryActions {
     const exportScope: MemoryActions["exportScope"] = async (scope) => {
       try {
         const file = await rest.exportMemory(scope === null ? {} : { scopes: [scope] });
-        const name = file.filename ?? t.export.fallbackName(new Date().toISOString().slice(0, 10));
+        const name = file.filename ?? t("export.fallbackName", { date: new Date().toISOString().slice(0, 10) });
         saveBlob(file.blob, name);
-        toast({ tone: "success", text: t.toast.exported(name, formatBytes(file.blob.size, sizeMessages)) });
+        toast({ tone: "success", text: t("toast.exported", { name, size: formatBytes(file.blob.size, viewMessages) }) });
         return true;
       } catch (e) {
-        toast({ tone: "danger", text: `${t.toast.exportFailed}: ${describeError(e, t.toast.exportFailed).message}` });
+        toast({ tone: "danger", text: `${t("toast.exportFailed")}: ${describeError(e, t("toast.exportFailed")).message}` });
         return false;
       }
     };
     return { archive, remove, purge, restore, exportScope };
-  }, [rest, toast, invalidate, fail]);
+  }, [rest, toast, invalidate, fail, t, viewMessages, describeError]);
 }

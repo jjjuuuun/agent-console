@@ -1,10 +1,11 @@
 import { Gauge, TrustBadge } from "@agent-console/ui";
-import { formatDateTime, formatRelative } from "../../lib/format";
+
 import { InfoHint, describeValue } from "./cardParts";
 import { formatShortClock } from "./resetDisplay";
-import { usageMessages as t } from "./messages";
+import { useUsageMessages } from "./messages";
 import { Badge } from "@agent-console/ui";
 import { formatRatio, isStaleObservation, resetState, type WindowGroup } from "./usageLib";
+import { useFormat } from "../../i18n";
 
 export interface TrustGroupCardProps {
   /** 묶음의 신뢰 등급 값(출처 디스크립터 원문) */
@@ -23,11 +24,13 @@ export interface TrustGroupCardProps {
 
 /** 공식이 아닌 한 등급의 창들을 행으로 모은 카드. 행 값: `N% 사용` → 상태 라벨 → `토큰 n` → `–`. */
 export function TrustGroupCard({ trust, rows, nameOf, sourceInfo, hasOfficialCard, nowMs, staleAfterSeconds }: TrustGroupCardProps) {
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const nowSec = nowMs / 1000;
   const title = t.group.title[trust] ?? t.group.titleFallback(t.trust[trust] ?? (trust === "" ? t.common.unknown : trust));
   const basis = hasOfficialCard ? t.group.basisReference : t.group.basisPrimary;
   const first = rows[0]?.primary;
-  const sameFooter = first !== undefined && rows.every((r) => r.primary.source === first.source && formatRelative(r.primary.observed_at, nowMs) === formatRelative(first.observed_at, nowMs));
+  const sameFooter = first !== undefined && rows.every((r) => r.primary.source === first.source && fmt.relative(r.primary.observed_at, nowMs) === fmt.relative(first.observed_at, nowMs));
   return (
     <section className="usage-card usage-group" role="group" aria-label={`${title}, ${basis}`}>
       <header className="usage-card-head">
@@ -39,10 +42,10 @@ export function TrustGroupCard({ trust, rows, nameOf, sourceInfo, hasOfficialCar
         {rows.map((g) => {
           const s = g.primary;
           const name = nameOf(g);
-          const v = describeValue(s, name, g.fellBack);
+          const v = describeValue(s, name, { t, language: fmt.language }, g.fellBack);
           const src = sourceInfo(s.source);
           const reset = resetState(s.resets_at, nowSec);
-          const rowTip = sameFooter ? undefined : `${src.title} · ${t.cards.observedAt(formatRelative(s.observed_at, nowMs))}`;
+          const rowTip = sameFooter ? undefined : `${src.title} · ${t.cards.observedAt(fmt.relative(s.observed_at, nowMs))}`;
           const valueText = v.kind === "tokens" ? v.tokensLine ?? v.headline : v.kind === "none" ? t.group.noValueRow : v.headline;
           return (
             <li key={g.window} className="usage-group-row" aria-label={`${name}, ${v.aria}`} title={rowTip}>
@@ -53,8 +56,8 @@ export function TrustGroupCard({ trust, rows, nameOf, sourceInfo, hasOfficialCar
                 {isStaleObservation(s.observed_at, nowSec, staleAfterSeconds) ? <Badge tone="warning">▲ {t.cards.staleChip}</Badge> : null}
                 {v.kind === "ratio" && v.tokensLine ? <span className="app-muted ac-num usage-row-tokens">{v.tokensLine}</span> : null}
               </span>
-              <span className="usage-group-reset app-muted ac-num" title={reset === "unknown" ? undefined : formatDateTime(s.resets_at as number)}>
-                {reset === "future" ? formatShortClock(s.resets_at as number, nowSec) : reset === "passed" ? <span className="usage-warn">▲ {t.cards.resetsPassedShort}</span> : null}
+              <span className="usage-group-reset app-muted ac-num" title={reset === "unknown" ? undefined : fmt.dateTimeFull(s.resets_at as number)}>
+                {reset === "future" ? formatShortClock(s.resets_at as number, nowSec, fmt.language) : reset === "passed" ? <span className="usage-warn">▲ {t.cards.resetsPassedShort}</span> : null}
               </span>
               <InfoHint lines={v.hidden} />
             </li>
@@ -62,8 +65,8 @@ export function TrustGroupCard({ trust, rows, nameOf, sourceInfo, hasOfficialCar
         })}
       </ul>
       {sameFooter && first !== undefined ? (
-        <p className="usage-source app-muted usage-oneline" title={formatDateTime(first.observed_at)}>
-          {t.cards.sourceLine(sourceInfo(first.source).title)} · {t.cards.observedAt(formatRelative(first.observed_at, nowMs))}
+        <p className="usage-source app-muted usage-oneline" title={fmt.dateTimeFull(first.observed_at)}>
+          {t.cards.sourceLine(sourceInfo(first.source).title)} · {t.cards.observedAt(fmt.relative(first.observed_at, nowMs))}
         </p>
       ) : null}
     </section>

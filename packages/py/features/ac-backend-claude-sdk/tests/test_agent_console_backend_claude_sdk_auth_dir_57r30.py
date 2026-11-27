@@ -281,7 +281,8 @@ async def test_status_login_required_when_folder_empty(workspace: Path, home: Pa
     r = await b.status(_ctx())
     assert r.state == ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED
     assert r.short_summary == "로그인 필요"
-    assert ".state/claude" in r.detail
+    # 경로는 점검 항목 "자격 위치"에만 있다(설명은 화면이 번역하는 고정 문구, I.7d).
+    assert ".state/claude" not in r.detail
     assert [(a.kind, a.primary) for a in r.actions] == [("login", True)]
     assert next(c for c in r.checks if c.id == "auth_dir").note == ".state/claude"
     # 빈 HOME의 ~/.claude 로그인 파일은 보지도 않는다.

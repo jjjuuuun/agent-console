@@ -1,9 +1,9 @@
 import type { ExportPlan } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { FilesView, PlanSummaryLine } from "./PlanParts";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 
 export interface PreviewStepProps {
   plan: ExportPlan | undefined;
@@ -16,6 +16,8 @@ export interface PreviewStepProps {
 
 /** ③ 미리보기: 파일 목록(경로·크기·동작)과 요약. 경고는 다이얼로그 아래쪽 영역에 모아 보인다. 파일 내용은 오지 않는다. */
 export function PreviewStep({ plan, loading, fetching, error, onRetry, onBack }: PreviewStepProps) {
+  const describeError = useDescribeError();
+  const t = useExportMessages();
   if (loading || (plan === undefined && error === null)) {
     return (
       <div className="app-skeleton" role="status" aria-busy="true" aria-label={t.preview.loading}>

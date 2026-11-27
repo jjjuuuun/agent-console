@@ -9,9 +9,10 @@ import { RuleListEditor, type RuleSummary } from "@agent-console/wiki-view";
 import type { WikiCreateRequest, WikiRuleRef, WikiRulesListItem } from "@agent-console/contracts/wiki";
 import { suggestId } from "../library";
 import { isImeKeyEvent } from "../../lib/ime";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { WIKI_LIMITS } from "./wikiConfig";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useWikiViewMessages } from "./useViewMessages";
 
 export interface NewWikiDialogProps {
   open: boolean;
@@ -43,13 +44,15 @@ export interface NewWikiDialogProps {
 }
 
 export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFailed = false, onImportRules, importDisabledReason, onImportZip, onOpenRule, blockedReason, onSubmit, kindName, existingIds }: NewWikiDialogProps) {
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<string[]>([]);
   const [id, setId] = useState("");
   const [description, setDescription] = useState("");
   const [home, setHome] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("newWiki.failed"));
   const [busy, setBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const nameId = useId();
@@ -64,7 +67,7 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
     if (busy) return;
     if (blocked) return;
     if (name.trim() === "") {
-      setNameError(m.newWiki.nameRequired);
+      setNameError(t("newWiki.nameRequired"));
       nameRef.current?.focus();
       return;
     }
@@ -80,18 +83,18 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
         rules: chosen,
       });
     } catch (e) {
-      setError(describeError(e, m.newWiki.failed).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }
   };
   const idPreview = kindName === undefined || kindName === null || kindName === "" || name.trim() === "" ? undefined : suggestId(name, existingIds ?? new Set<string>(), kindName);
-  const idShown = id.trim() !== "" ? id.trim() : idPreview ?? m.newWiki.idAuto;
-  const location = pagesRoot === undefined || pagesRoot === "" ? null : m.newWiki.location(`${pagesRoot}/${idShown}/…`);
+  const idShown = id.trim() !== "" ? id.trim() : idPreview ?? t("newWiki.idAuto");
+  const location = pagesRoot === undefined || pagesRoot === "" ? null : t("newWiki.location", { path: `${pagesRoot}/${idShown}/…` });
   return (
     <Dialog
       open={open}
-      title={m.newWiki.title}
+      title={t("newWiki.title")}
       size="lg"
       onClose={() => {
         if (!busy) onClose();
@@ -100,9 +103,9 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
       actions={
         <>
           {location === null ? null : <span className="app-muted wiki-dialog-foot ac-mono-wrap">{location}</span>}
-          <Button onClick={onClose} disabled={busy}>{m.cancel}</Button>
+          <Button onClick={onClose} disabled={busy}>{t("cancel")}</Button>
           <Button variant="primary" aria-disabled={blocked || busy || undefined} title={blocked ? blockedReason : undefined} onClick={() => void submit()}>
-            {busy ? m.newWiki.submitting : m.newWiki.submit}
+            {busy ? t("newWiki.submitting") : t("newWiki.submit")}
           </Button>
         </>
       }
@@ -116,35 +119,35 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
         {error === null ? null : <p className="app-field-error" role="alert" data-testid="wiki-new-error">{error}</p>}
         {folder === undefined ? null : (
           <div className="wiki-field">
-            <span className="wiki-label">{m.newWiki.folder}</span>
+            <span className="wiki-label">{t("newWiki.folder")}</span>
             <span className="wiki-readonly-line ac-mono-wrap">{folder.name}{folder.path === undefined || folder.path === "" ? "" : ` · ${folder.path}`}</span>
           </div>
         )}
         <label className="wiki-field" htmlFor={nameId}>
-          <span className="wiki-label">{m.newWiki.name} *</span>
+          <span className="wiki-label">{t("newWiki.name")} *</span>
           <input
             id={nameId}
             ref={nameRef}
             className="wiki-input"
             value={name}
             maxLength={WIKI_LIMITS.nameMax}
-            placeholder={m.newWiki.namePlaceholder}
+            placeholder={t("newWiki.namePlaceholder")}
             aria-invalid={nameError !== null || undefined}
             onChange={(e) => setName(e.target.value)}
           />
           {nameError === null ? null : <span className="app-field-error" role="alert">{nameError}</span>}
         </label>
         <div className="wiki-field">
-          <span className="wiki-label">{m.newWiki.rules}</span>
-          <span className="app-muted wiki-hint">{m.newWiki.rulesHint}</span>
+          <span className="wiki-label">{t("newWiki.rules")}</span>
+          <span className="app-muted wiki-hint">{t("newWiki.rulesHint")}</span>
           {rulesFailed ? (
-            <p className="app-field-error" role="alert">{m.newWiki.rulesFailed}</p>
+            <p className="app-field-error" role="alert">{t("newWiki.rulesFailed")}</p>
           ) : rules !== undefined && rules.length === 0 && chosen.length === 0 ? (
-            <p className="app-muted" data-testid="wiki-new-rules-none">{m.newWiki.rulesNone}</p>
+            <p className="app-muted" data-testid="wiki-new-rules-none">{t("newWiki.rulesNone")}</p>
           ) : rules !== undefined && rules.length > 0 && chosen.length === 0 ? (
-            <p className="app-muted wiki-hint" data-testid="wiki-new-rules-not-chosen">{m.newWiki.rulesNotChosen(rules.length)}</p>
+            <p className="app-muted wiki-hint" data-testid="wiki-new-rules-not-chosen">{t("newWiki.rulesNotChosen", { count: rules.length })}</p>
           ) : null}
-          <RuleListEditor
+          <RuleListEditor messages={wikiViewMessages}
             value={value}
             summaries={summaries}
             available={available}
@@ -156,27 +159,27 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
           />
           {onImportRules !== undefined && importDisabledReason !== undefined ? <span className="app-muted wiki-hint">{importDisabledReason}</span> : null}
         </div>
-        <Disclosure summary={m.newWiki.advanced}>
+        <Disclosure summary={t("newWiki.advanced")}>
           <div className="wiki-form">
             <label className="wiki-field">
-              <span className="wiki-label">{m.newWiki.id}</span>
-              <input className="wiki-input ac-mono" value={id} placeholder={idPreview ?? m.newWiki.idAuto} onChange={(e) => setId(e.target.value)} data-testid="wiki-new-id" />
+              <span className="wiki-label">{t("newWiki.id")}</span>
+              <input className="wiki-input ac-mono" value={id} placeholder={idPreview ?? t("newWiki.idAuto")} onChange={(e) => setId(e.target.value)} data-testid="wiki-new-id" />
             </label>
             <label className="wiki-field">
-              <span className="wiki-label">{m.newWiki.description}</span>
+              <span className="wiki-label">{t("newWiki.description")}</span>
               <input className="wiki-input" value={description} onChange={(e) => setDescription(e.target.value)} />
             </label>
             <label className="wiki-field">
-              <span className="wiki-label">{m.newWiki.home}</span>
+              <span className="wiki-label">{t("newWiki.home")}</span>
               <input className="wiki-input ac-mono" value={home} onChange={(e) => setHome(e.target.value)} />
-              <span className="app-muted wiki-hint">{m.newWiki.homeHint}</span>
+              <span className="app-muted wiki-hint">{t("newWiki.homeHint")}</span>
             </label>
           </div>
         </Disclosure>
         {onImportZip === undefined ? null : (
           <p className="app-muted">
-            {m.newWiki.importAsk}{" "}
-            <button type="button" className="app-link-btn" onClick={onImportZip}>{m.newWiki.importLink}</button>
+            {t("newWiki.importAsk")}{" "}
+            <button type="button" className="app-link-btn" onClick={onImportZip}>{t("newWiki.importLink")}</button>
           </p>
         )}
       </div>

@@ -87,11 +87,12 @@ def build_exporters(
         try:
             exporter = as_exporter(entry.item(raw if isinstance(raw, Mapping) else {}))
         except Exception as exc:
-            _log.warning("내보내기 형식 %s를 만들지 못했습니다: %s", entry.key, type(exc).__name__)
+            _log.warning("Could not create export format %s: %s", entry.key, type(exc).__name__)
             continue
         if exporter.descriptor.id != entry.key:
             _log.warning(
-                "내보내기 형식 %s의 디스크립터 id(%s)가 등록 이름과 달라 건너뜁니다",
+                "Skipping export format %s: its descriptor id (%s) "
+                "differs from the registered name",
                 entry.key,
                 exporter.descriptor.id,
             )

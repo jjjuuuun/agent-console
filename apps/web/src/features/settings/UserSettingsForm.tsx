@@ -3,7 +3,7 @@ import { getContractSchema } from "@agent-console/contracts";
 import type { FormError, ProvenanceLayer } from "@agent-console/schema-form";
 import { pickProperties, type SchemaNode } from "../../lib/schemaTools";
 import { LayerForm } from "./LayerForm";
-import { buildUserSettingsUi, type UserSettingsOptions } from "./userSettingsUi";
+import { buildUserSettingsUi, useUserSettingsText, type UserSettingsOptions } from "./userSettingsUi";
 
 export interface UserSettingsFormProps {
   /** 보여 줄 최상위 키(예: `["chat"]`, `["settings_merge"]`). 설정 화면은 섹션마다 나눠 부른다 */
@@ -33,7 +33,8 @@ export interface UserSettingsFormProps {
  */
 export function UserSettingsForm({ sections, value, onChange, layers, editLayerId, baseValue, provenance, options, errors, disabled, idPrefix, rootSchema, flat }: UserSettingsFormProps) {
   const schema = useMemo(() => pickProperties(rootSchema ?? (getContractSchema("WorkspaceSettings") as SchemaNode), sections), [rootSchema, sections]);
-  const uiSchema = useMemo(() => buildUserSettingsUi(schema, options), [schema, options]);
+  const text = useUserSettingsText();
+  const uiSchema = useMemo(() => buildUserSettingsUi(schema, options, text), [schema, options, text]);
   const picked = useMemo(() => Object.fromEntries(sections.filter((k) => value[k] !== undefined).map((k) => [k, value[k]])), [sections, value]);
   const form = (
     <LayerForm

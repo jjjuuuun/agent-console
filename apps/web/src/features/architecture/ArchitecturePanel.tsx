@@ -8,9 +8,9 @@ import { ARCH_FIT, ARCH_LIMITS, ARCH_STORAGE } from "./archConfig";
 import { allNotCollected, observedValue, sourceKinds } from "./archLib";
 import { ArchitectureBreadcrumb } from "./ArchitectureBreadcrumb";
 import { ArchitectureEmpty } from "./ArchitectureEmpty";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
 import type { ArchitectureController } from "./useArchitectureController";
-import { messages as appMessages } from "../../app/messages";
+import { useFormat, useArchViewMessages, useLanguageCode } from "../../i18n";
 
 export interface ArchitecturePanelProps {
   controller: ArchitectureController;
@@ -58,6 +58,10 @@ const readFit = (v: string | null, fallback: ArchFitMode): ArchFitMode => (v ===
  * 부모가 높이를 정해 주면 그림이 남는 높이를 채운다.
  */
 export function ArchitecturePanel(p: ArchitecturePanelProps) {
+  const archLib = useArchViewMessages();
+  const language = useLanguageCode();
+  const fmt = useFormat();
+  const t = useArchMessages();
   const c = p.controller;
   const storage = useStorage();
   const fitKey = p.storageKeys?.fit ?? ARCH_STORAGE.fit;
@@ -140,7 +144,7 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
             </button>
           </span>
         ) : null}
-        {p.live === true && c.updatedAt !== null ? <span className="arch-live">{t.status.liveUpdated(new Date(c.updatedAt).toLocaleTimeString(appMessages.locale))}</span> : null}
+        {p.live === true && c.updatedAt !== null ? <span className="arch-live">{t.status.liveUpdated(fmt.time(c.updatedAt / 1000))}</span> : null}
         {c.refreshing ? <span className="app-muted">{t.status.refreshing}</span> : null}
       </div>
       {unavailableOpen && unavailable.length > 0 ? (
@@ -174,6 +178,8 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
       <div className="arch-diagram" {...(p.diagramHeight === undefined ? {} : { style: { height: p.diagramHeight, flex: "none" } })}>
         {c.refreshing ? <div className="arch-progress" aria-hidden="true" /> : null}
         <ArchitectureDiagram
+          messages={archLib}
+          locale={language}
           view={view}
           selection={c.selection}
           highlight={c.highlight}

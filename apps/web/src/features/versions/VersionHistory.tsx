@@ -5,7 +5,7 @@ import type { ContentChange, DefinitionVersion, DiffChange, VersionConflictDetai
 import { Banner, Button, Dialog, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { useNow } from "../../app/useNow";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { shortId } from "../../lib/format";
@@ -13,10 +13,14 @@ import { ContentChanges, type SideText } from "./ContentChanges";
 import { DiffTable } from "./DiffTable";
 import { RestoreDialog, type RestoreIssue } from "./RestoreDialog";
 import { VersionList } from "./VersionList";
-import { versionMessages as t } from "./messages";
 import { type VersionSource, useVersionDiff, useVersionDoc, useVersionFiles, useVersionList, versionKeys } from "./useVersionData";
 import { compareTarget, diffTotals, isSameDiff, readIssues, readablePath, sizeOfFile, type CompareMode, type ReadablePathOptions } from "./versionsLogic";
 import "./versions.css";
+import { useT } from "@agent-console/i18n";
+import { createToastText } from "../../app/ToastText";
+
+const useVersionsT = () => useT("versions");
+const VersionsToast = createToastText(useVersionsT);
 
 export interface VersionHistoryProps {
   /** 정의 경로(`definitionBase("/agents", id)`처럼 만든 문자열). 정의 종류 이름을 몰라도 된다 */
@@ -44,6 +48,7 @@ function hash8Of(hash: string | undefined): string {
  * 서버 호출은 `base` 경로로만 한다. 비밀 값은 서버가 가린 그대로 보이고, 412는 충돌 배너, 422는 서버 이슈를 다이얼로그에 보인다.
  */
 export function VersionHistory({ base, currentHash, dirty = false, pathOptions, onRestored, compare = true, space }: VersionHistoryProps) {
+  const t = useT("versions");
   const api = useApi();
   const rest = useMemo(() => (space === undefined || space === null ? api.rest : api.space(space)), [api, space]);
   const src = useMemo(() => ({ client: rest, scope: space ?? "" }), [rest, space]);
@@ -59,7 +64,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
   const [restoreFor, setRestoreFor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [issues, setIssues] = useState<RestoreIssue[] | null>(null);
-  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useErrorState(t("restore.failed"));
   const [conflict, setConflict] = useState<{ details: VersionConflictDetails; hash: string; message: string } | null>(null);
 
   const serverCurrent = currentHash ?? versions[0]?.version_hash;
@@ -128,18 +133,19 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
       await finish(result);
       toast({
         tone: "success",
-        text: t.restore.done(hash8Of(hash), hash8Of(created)),
+        text: <VersionsToast render={(tt) => tt("restore.done", { from: hash8Of(hash), to: hash8Of(created) })} />,
         durationMs: 10_000,
         action: {
-          label: t.restore.undo,
+          label: <VersionsToast render={(tt) => tt("restore.undo")} />,
           onClick: () => {
             if (ifMatch === undefined) return;
             rest.restoreDefinitionVersion(base, ifMatch, {}, created).then(
               (undone) => {
                 void finish(undone);
-                toast({ tone: "success", text: t.restore.undone(hash8Of(undone.version_hash ?? undone.value.version_hash)) });
+                const undoneHash = hash8Of(undone.version_hash ?? undone.value.version_hash);
+                toast({ tone: "success", text: <VersionsToast render={(tt) => tt("restore.undone", { to: undoneHash })} /> });
               },
-              (e: unknown) => toast({ tone: "danger", text: `${t.restore.undoFailed}: ${describeError(e, "").message}` }),
+              (e: unknown) => toast({ tone: "danger", text: <VersionsToast render={(tt, d) => `${tt("restore.undoFailed")}: ${d(e, "").message}`} /> }),
             );
           },
         },
@@ -152,7 +158,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
         setIssues(readIssues(e.details["issues"]));
         if (readIssues(e.details["issues"]).length === 0) setRestoreError(e.message);
       } else {
-        setRestoreError(describeError(e, t.restore.failed).message);
+        setRestoreError(raised(e));
       }
     } finally {
       setBusy(false);
@@ -178,7 +184,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
 
   if (list.isLoading) {
     return (
-      <div className="app-skeleton" role="status" aria-busy="true" aria-label={t.list.label}>
+      <div className="app-skeleton" role="status" aria-busy="true" aria-label={t("list.label")}>
         {Array.from({ length: 6 }, (_, i) => (
           <span key={i} className="app-skeleton-row" aria-hidden="true" />
         ))}
@@ -186,18 +192,18 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
     );
   }
   if (list.isError) {
-    return <ErrorBlock title={t.list.failed} message={list.error.message} retryLabel={t.retry} onRetry={() => void list.refetch()} />;
+    return <ErrorBlock title={t("list.failed")} message={list.error.message} retryLabel={t("retry")} onRetry={() => void list.refetch()} />;
   }
-  if (versions.length === 0) return <p className="app-muted">{t.list.empty}</p>;
+  if (versions.length === 0) return <p className="app-muted">{t("list.empty")}</p>;
 
   const onlyCurrent = versions.length === 1;
   const fromLabel = hash8Of(diff.data?.from_hash ?? target?.from);
-  const toLabel = target?.to === undefined ? t.compare.currentOf(hash8Of(diff.data?.to_hash ?? serverCurrent)) : hash8Of(target.to);
+  const toLabel = target?.to === undefined ? t("compare.currentOf", { hash: hash8Of(diff.data?.to_hash ?? serverCurrent) }) : hash8Of(target.to);
   const rawVersion = rawFor === null ? undefined : versions.find((v) => v.version_hash === rawFor);
 
   return (
     <div className="ver-root">
-      {dirty ? <Banner tone="info">{t.unsavedInfo}</Banner> : null}
+      {dirty ? <Banner tone="info">{t("unsavedInfo")}</Banner> : null}
       {conflict === null ? null : (
         <ConflictBanner
           details={conflict.details}
@@ -210,7 +216,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
         />
       )}
       {onlyCurrent ? (
-        <p className="app-muted">{t.list.onlyCurrent}</p>
+        <p className="app-muted">{t("list.onlyCurrent")}</p>
       ) : (
         <div className="ver-layout" data-compare={compare ? undefined : "off"}>
           <VersionList
@@ -230,46 +236,46 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
             compare={compare}
             onViewRaw={setRawFor}
             onCopyHash={(hash) => {
-              void navigator.clipboard?.writeText(hash).then(() => toast({ tone: "success", text: t.menu.copied }));
+              void navigator.clipboard?.writeText(hash).then(() => toast({ tone: "success", text: <VersionsToast render={(tt) => tt("menu.copied")} /> }));
             }}
           />
           {compare ? (
-          <section className="ver-compare" aria-label={t.compare.region}>
+          <section className="ver-compare" aria-label={t("compare.region")}>
             {target === undefined ? (
-              <p className="app-muted">{mode === "pair" ? t.mode.pairHint : t.compare.pickTwo}</p>
+              <p className="app-muted">{mode === "pair" ? t("mode.pairHint") : t("compare.pickTwo")}</p>
             ) : (
               <>
                 <div className="ver-compare-head">
                   <h3 className="app-block-title" aria-live="polite">
-                    {t.compare.heading(fromLabel, toLabel)}
+                    {t("compare.heading", { from: fromLabel, to: toLabel })}
                   </h3>
-                  {diff.data === undefined ? null : <span className="app-muted ac-num">{t.compare.summary(diffTotals(diff.data).fields, diffTotals(diff.data).content)}</span>}
+                  {diff.data === undefined ? null : <span className="app-muted ac-num">{t("compare.summary", { fields: diffTotals(diff.data).fields, content: diffTotals(diff.data).content })}</span>}
                   <span className="app-spacer" />
                   <Button
                     disabled={!isCurrentTarget}
-                    title={isCurrentTarget ? undefined : t.compare.restoreOnlyCurrent}
+                    title={isCurrentTarget ? undefined : t("compare.restoreOnlyCurrent")}
                     onClick={() => {
                       setIssues(null);
                       setRestoreError(null);
                       setRestoreFor(target.from);
                     }}
                   >
-                    {t.compare.restore}
+                    {t("compare.restore")}
                   </Button>
                 </div>
                 {diff.isLoading ? (
-                  <div className="app-skeleton" role="status" aria-busy="true" aria-label={t.compare.loading}>
+                  <div className="app-skeleton" role="status" aria-busy="true" aria-label={t("compare.loading")}>
                     {Array.from({ length: 5 }, (_, i) => (
                       <span key={i} className="app-skeleton-row" aria-hidden="true" />
                     ))}
                   </div>
                 ) : null}
-                {diff.isError ? <ErrorBlock title={t.compare.failed} message={diff.error.message} retryLabel={t.retry} onRetry={() => void diff.refetch()} /> : null}
-                {diff.data !== undefined && isSameDiff(diff.data) ? <p className="app-muted">{t.compare.same}</p> : null}
+                {diff.isError ? <ErrorBlock title={t("compare.failed")} message={diff.error.message} retryLabel={t("retry")} onRetry={() => void diff.refetch()} /> : null}
+                {diff.data !== undefined && isSameDiff(diff.data) ? <p className="app-muted">{t("compare.same")}</p> : null}
                 {diff.data !== undefined && !isSameDiff(diff.data) ? (
                   <>
-                    <section aria-label={t.fields.title}>
-                      <h3 className="app-block-title">{t.fields.title}</h3>
+                    <section aria-label={t("fields.title")}>
+                      <h3 className="app-block-title">{t("fields.title")}</h3>
                       <DiffTable changes={diff.data.changes ?? []} readable={readable} />
                     </section>
                     <ContentChanges changes={diff.data.content_changes ?? []} sizeOf={sizeOf} load={loadSides} />
@@ -300,11 +306,12 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
 }
 
 function RawVersionDialog({ base, version, src, onClose }: { base: string; version: DefinitionVersion; src: VersionSource; onClose: () => void }) {
+  const t = useT("versions");
   const doc = useVersionDoc(base, version.version_hash, src);
   return (
-    <Dialog open wide title={t.raw.title(shortId(version.version_hash))} onClose={onClose} actions={<Button onClick={onClose}>{t.raw.close}</Button>}>
-      {doc.isLoading ? <p className="app-muted">{t.raw.loading}</p> : null}
-      {doc.isError ? <p role="alert">{t.raw.failed}</p> : null}
+    <Dialog open wide title={t("raw.title", { hash: shortId(version.version_hash) })} onClose={onClose} actions={<Button onClick={onClose}>{t("raw.close")}</Button>}>
+      {doc.isLoading ? <p className="app-muted">{t("raw.loading")}</p> : null}
+      {doc.isError ? <p role="alert">{t("raw.failed")}</p> : null}
       {doc.data === undefined ? null : <pre className="ac-pre app-json ver-raw">{JSON.stringify(doc.data.content ?? {}, null, 2)}</pre>}
     </Dialog>
   );

@@ -1,7 +1,8 @@
 import { useId, useState, type ReactNode } from "react";
 import type { BackendDescriptor, BackendReadiness } from "@agent-console/contracts";
 import { Badge, Banner, Button } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useAppMessages } from "../../app/appMessages";
+import { useServerTranslate } from "../../i18n";
 import { FixButtons } from "../../app/fix";
 import { visibleBackends } from "../../app/backendVisibility";
 import { BackendStatusChip, resolveTone } from "../backendReadiness";
@@ -37,6 +38,8 @@ export interface BackendChooserCardProps {
  * 서버·화면을 모르는 표현 컴포넌트다(데이터와 콜백만 받는다).
  */
 export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode = "resolve", initialId, onConfirm, busy = false, error, className, explain, busyLabel, readiness, renderSelectedExtra }: BackendChooserCardProps) {
+  const m = useAppMessages();
+  const tr = useServerTranslate();
   const t = m.backendChooser;
   const options = visibleBackends(allOptions);
   const name = useId();
@@ -53,7 +56,8 @@ export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode 
           <fieldset className="app-backend-options" disabled={busy}>
             <legend className="ac-sr-only">{t.group}</legend>
             {options.map((b) => {
-              const badge = b.ui_hints?.badge;
+              const badge = b.ui_hints?.badge ? tr(b.ui_hints.badge) : undefined;
+              const backendTitle = tr(b.title);
               const ready = readiness?.[b.id];
               const selected = picked === b.id;
               return (
@@ -61,16 +65,16 @@ export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode 
                 <label className="app-backend-option" data-checked={picked === b.id ? "true" : undefined}>
                   <input type="radio" name={name} value={b.id} checked={picked === b.id} onChange={() => setPicked(b.id)} />
                   <span className="app-backend-option-body">
-                    <strong>{b.title}</strong>
+                    <strong>{backendTitle}</strong>
                     {badge ? <Badge>{badge}</Badge> : null}
-                    {ready ? <BackendStatusChip readiness={ready} title={b.title} /> : null}
-                    {b.cost_note ? <span className="app-muted app-backend-cost">{b.cost_note}</span> : null}
-                    {b.description ? <span className="app-muted">{b.description}</span> : null}
+                    {ready ? <BackendStatusChip readiness={ready} title={backendTitle} /> : null}
+                    {b.cost_note ? <span className="app-muted app-backend-cost">{tr(b.cost_note)}</span> : null}
+                    {b.description ? <span className="app-muted">{tr(b.description)}</span> : null}
                   </span>
                 </label>
                 {selected && ready && resolveTone(ready.tone) === "error" ? (
                   <div className="app-backend-warn" data-testid="backend-chooser-warn">
-                    <Banner tone="warning">{m.backendReadiness.chooserWarn} {ready.summary}</Banner>
+                    <Banner tone="warning">{m.backendReadiness.chooserWarn} {ready.summary ? tr(ready.summary) : ""}</Banner>
                     <FixButtons fix={{ actions: ready.fixes ?? [] }} />
                   </div>
                 ) : null}

@@ -1,6 +1,6 @@
 import type { RestClient } from "@agent-console/api-client";
 import { kindOfModel } from "../library";
-import { exportMessages as t } from "./messages";
+import type { ExportMessages } from "./messages";
 
 /** 항목 고르기에 쓰는 정의 목록 원천(데이터). 새 정의 종류는 항목 하나를 더하면 고를 수 있다. */
 export interface ItemSource {
@@ -22,7 +22,7 @@ export function sourceKind(source: ItemSource): string | undefined {
 }
 
 /** 정의 종류의 표시 이름. 모르는 종류는 서버가 준 문자열 그대로. */
-export function kindLabel(kind: string): string {
+export function kindLabel(kind: string, t: ExportMessages): string {
   const source = ITEM_SOURCES.find((s) => sourceKind(s) === kind);
   const label = source === undefined ? undefined : t.items.kindLabels[source.model];
   return label ?? kind;

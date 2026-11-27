@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-definitions"
 version = "0.1.0"
-description = "Agent Console — 정의 기능 모듈: 에이전트·팀 구성·공통 설정 저장소와 CRUD, 워크스페이스 설정·비밀 규칙 포트, 평문 점검"
+description = "Agent Console — definitions feature module: agent, team, and common settings stores with CRUD, workspace settings and secret rule ports, plain-text checks"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

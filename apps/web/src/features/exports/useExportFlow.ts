@@ -3,7 +3,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import type { ExporterDescriptor, ExportPlan, ExportResult, ExportRootInfo, ExportSelection } from "@agent-console/contracts";
 import { ApiError } from "@agent-console/api-client";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import {
@@ -20,7 +20,7 @@ import {
   type PlanErrorMap,
   type SubdirProblem,
 } from "./exportLogic";
-import { exportMessages as t } from "./messages";
+import { useExportMessages } from "./messages";
 
 export type Step = 1 | 2 | 3 | 4 | 5;
 export type Destination = "archive" | "folder";
@@ -81,6 +81,8 @@ export interface ExportFlow {
  * 마지막으로 고른 형식·충돌 처리는 주입된 저장소(localStorage 래퍼)에 기억한다.
  */
 export function useExportFlow(initialItems: readonly ExportSelection[], onDownload: (blob: Blob, filename: string) => void): ExportFlow {
+  const describeError = useDescribeError();
+  const t = useExportMessages();
   const { rest } = useApi();
   const storage = useStorage();
   const exportersQuery = useApiQuery(["list", "exporters"], (r) => r.listExporters(), { retry: false });

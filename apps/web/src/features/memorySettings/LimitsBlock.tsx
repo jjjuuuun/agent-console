@@ -1,6 +1,6 @@
 import { Disclosure } from "@agent-console/ui";
 import { LIMIT_ORDER } from "./memorySettingsConfig";
-import { memorySettingsMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 type Obj = Record<string, unknown>;
 
@@ -11,17 +11,17 @@ export interface LimitsBlockProps {
   titles?: Readonly<Record<string, string>>;
 }
 
-const show = (v: unknown): string => (v === null || v === undefined || v === "" ? t.limits.unknown : typeof v === "object" ? JSON.stringify(v) : String(v));
-
 /** 설치자 한도(읽기 전용 접힘 블록). 값은 서버가 준 그대로이고 화면에 기본값을 두지 않는다. */
 export function LimitsBlock({ values, titles = {} }: LimitsBlockProps) {
+  const t = useT("memorySettings");
+  const show = (v: unknown): string => (v === null || v === undefined || v === "" ? t("limits.unknown") : typeof v === "object" ? JSON.stringify(v) : String(v));
   const keys = Object.keys(values ?? {});
   const ordered = [...LIMIT_ORDER.filter((k) => keys.includes(k)), ...keys.filter((k) => !LIMIT_ORDER.includes(k))];
   return (
-    <Disclosure className="memset-limits" summary={t.limits.title}>
-      <p className="memset-note app-muted">{t.limits.note}</p>
+    <Disclosure className="memset-limits" summary={t("limits.title")}>
+      <p className="memset-note app-muted">{t("limits.note")}</p>
       {ordered.length === 0 ? (
-        <p className="memset-note app-muted">{t.limits.empty}</p>
+        <p className="memset-note app-muted">{t("limits.empty")}</p>
       ) : (
         <dl className="memset-kv">
           {ordered.map((k) => (

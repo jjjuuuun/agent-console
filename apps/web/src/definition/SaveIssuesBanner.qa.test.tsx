@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
+import { render } from "../testing/renderI18n";
 import { afterEach, describe, expect, it } from "vitest";
 import { SaveIssuesBanner } from "./SaveIssuesBanner";
 
@@ -21,7 +22,8 @@ describe("SaveIssuesBanner", () => {
 describe("readablePath", () => {
   it("숫자 칸은 n번째로, 키는 그대로 이어 보인다", async () => {
     const { readablePath } = await import("./SaveIssuesBanner");
-    expect(readablePath("/config/wikis/1/wiki")).toBe("config › wikis › 2번째 › wiki");
-    expect(readablePath("")).toBe("");
+    const t = { pathIndex: (n: number) => `${n}번째`, pathSeparator: " › " as const };
+    expect(readablePath("/config/wikis/1/wiki", t)).toBe("config › wikis › 2번째 › wiki");
+    expect(readablePath("", t)).toBe("");
   });
 });

@@ -1,7 +1,7 @@
+import { useProjectsText } from "./projectsText";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createProjectsText } from "@agent-console/projects";
 import type { ProjectView } from "@agent-console/contracts/projects";
 import { Button, Icon, MiddleEllipsis, Popover } from "@agent-console/ui";
 import { ApiProvider, useApi } from "../../app/ApiContext";
@@ -10,7 +10,6 @@ import { createAppQueryClient } from "../../app/queries";
 import { CURRENT_PROJECT_PARAM } from "../../app/projectScope";
 import { useProjects } from "./ProjectsContext";
 
-const text = createProjectsText();
 
 /** 구성 화면이 보고 있는 공간. null = 공용(라이브러리), 값 = 그 프로젝트의 사본 저장소. */
 const SpaceContext = createContext<ProjectView | null>(null);
@@ -61,6 +60,7 @@ export function SpaceScope({ children }: { children: ReactNode }) {
  * 프로젝트 기능이 꺼져 있거나 프로젝트가 없으면 아무것도 그리지 않는다.
  */
 export function SpaceChip() {
+  const text = useProjectsText();
   const p = useProjects();
   const space = useSpace();
   const [open, setOpen] = useState(false);
@@ -114,6 +114,7 @@ export function SpaceChip() {
 
 /** 프로젝트 사본 화면의 맨 위 한 줄 안내(닫을 수 있음)와 뒤로 가기. 공용 화면이면 아무것도 그리지 않는다. */
 export function SpaceNote() {
+  const text = useProjectsText();
   const space = useSpace();
   const p = useProjects();
   if (space === null) return null;

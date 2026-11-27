@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-runs-trace"
 version = "0.1.0"
-description = "Agent Console — 실행·추적 연동 모듈: 위임 흐름(/runs/{id}/trace)·넘김 집계(/runs/handoffs)"
+description = "Agent Console — runs and trace link module: delegation flow (/runs/{id}/trace) and handoff totals (/runs/handoffs)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -16,6 +16,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 link-runs-trace = "agent_console_link_runs_trace.module:module"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-runs-trace = "agent_console_link_runs_trace"
 
 [dependency-groups]
 dev = [

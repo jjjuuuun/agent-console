@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-wiki"
 version = "0.2.0"
-description = "Agent Console — 위키 기능 모듈: REST /wiki/*·WS wiki.changed, 정의 종류 기여(위키·위키 규칙), 설정 섹션 wiki, 포트 wiki.service, 계보 wiki"
+description = "Agent Console — wiki feature module: REST /wiki/*, WS wiki.changed, definition kind contributions (wiki, wiki rules), settings section wiki, port wiki.service, lineage wiki"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ mod-wiki = "agent_console_mod_wiki.module:module"
 
 [project.entry-points."agent_console.host_plugin_loaders"]
 wiki = "agent_console_mod_wiki.plugins:load_plugins"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-wiki = "agent_console_mod_wiki"
 
 [dependency-groups]
 dev = [

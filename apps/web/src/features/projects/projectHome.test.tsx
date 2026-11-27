@@ -5,7 +5,13 @@ import { ApiError } from "@agent-console/api-client";
 import { mountApp } from "../../testing/screenHarness";
 import { createFakeClients } from "../../testing/fakes";
 import { DEFINITION_KINDS } from "../library";
-import { MAX_VISIBLE_BANNERS, problemBanners, manifestPath, mergeActivity, relativeTime } from "./projectHomeLib";
+import { koMessages } from "../../testing/messageTables";
+import { createFolderHomeMessages } from "./folderHomeMessages";
+import { MAX_VISIBLE_BANNERS, problemBanners as problemBannersWith, manifestPath, mergeActivity, relativeTime as relativeTimeWith } from "./projectHomeLib";
+
+const homeText = koMessages("projectsFolder", createFolderHomeMessages);
+const problemBanners = (view: ProjectView) => problemBannersWith(view, homeText);
+const relativeTime = (nowMs: number, epochSeconds: number | null | undefined) => relativeTimeWith(nowMs, epochSeconds, homeText, "ko-KR");
 
 afterEach(cleanup);
 

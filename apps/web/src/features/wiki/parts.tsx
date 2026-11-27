@@ -8,18 +8,19 @@ import { ROUTE_ROLES, routePath } from "../library";
 import { SETTINGS_PROJECTS_HASH } from "../projects";
 import { WIKI_LIMITS } from "./wikiConfig";
 import { classifyWikiError, failureDetail } from "./wikiErrors";
-import { wikiMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 /** 프로젝트 연동이 꺼져 본문 전체를 대신하는 안내(`wiki.spaces_unavailable`). 기능 모듈 화면으로 가는 링크는 설정이 있을 때만. */
 export function UnavailableState() {
+  const t = useT("wiki");
   const settings = routePath(ROUTE_ROLES.settings);
   return (
     <div className="wiki-state" data-testid="wiki-unavailable">
       <EmptyState
         icon={<Icon name="folder-off" size={40} />}
-        title={m.unavailable.title}
-        description={m.unavailable.body}
-        action={settings === "/" ? undefined : <a className="app-link-btn" href={`${settings}#modules`}>{m.unavailable.openModules}</a>}
+        title={t("unavailable.title")}
+        description={t("unavailable.body")}
+        action={settings === "/" ? undefined : <a className="app-link-btn" href={`${settings}#modules`}>{t("unavailable.openModules")}</a>}
       />
     </div>
   );
@@ -27,28 +28,30 @@ export function UnavailableState() {
 
 /** 요청 실패를 종류별로 보인다: 연동 꺼짐은 안내, 위키 없음·폴더 문제·그 밖은 오류 블록(+ 다시 시도). */
 export function FailureBlock({ error, title, onRetry, backTo }: { error: unknown; title: string; onRetry?: () => void; backTo?: ReactNode }) {
-  const failure = classifyWikiError(error, title);
+  const t = useT("wiki");
+  const failure = classifyWikiError(error, title, t);
   if (failure.kind === "unavailable") return <UnavailableState />;
-  if (failure.kind === "notFound") return <ErrorBlock title={m.notFound}>{backTo}</ErrorBlock>;
+  if (failure.kind === "notFound") return <ErrorBlock title={t("notFound")}>{backTo}</ErrorBlock>;
   if (failure.kind === "problem") {
     // 폴더·설정 문제는 다시 시도로 풀리지 않는다: 원인 설명과 프로젝트 설정 링크를 둔다
     const settings = routePath(ROUTE_ROLES.settings);
     return (
       <ErrorBlock title={title} message={failure.message}>
-        <p className="app-muted">{m.problem.hint}</p>
-        {settings === "/" ? null : <a className="app-link-btn" href={`${settings}${SETTINGS_PROJECTS_HASH}`}>{m.problem.openSettings}</a>}
+        <p className="app-muted">{t("problem.hint")}</p>
+        {settings === "/" ? null : <a className="app-link-btn" href={`${settings}${SETTINGS_PROJECTS_HASH}`}>{t("problem.openSettings")}</a>}
       </ErrorBlock>
     );
   }
-  return <ErrorBlock title={title} message={failureDetail(failure)} {...(onRetry === undefined ? {} : { onRetry, retryLabel: m.retry })} />;
+  return <ErrorBlock title={title} message={failureDetail(failure)} {...(onRetry === undefined ? {} : { onRetry, retryLabel: t("retry") })} />;
 }
 
 /** 150ms 넘게 걸릴 때만 보이는 스켈레톤 행. */
 export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+  const t = useT("wiki");
   const show = useDelayed(true, WIKI_LIMITS.skeletonDelayMs);
   if (!show) return null;
   return (
-    <div className="app-skeleton" role="status" aria-busy="true" aria-label={m.loading}>
+    <div className="app-skeleton" role="status" aria-busy="true" aria-label={t("loading")}>
       {Array.from({ length: rows }, (_, i) => <div key={i} className="app-skeleton-row" />)}
     </div>
   );

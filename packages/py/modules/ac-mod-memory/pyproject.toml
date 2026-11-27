@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-mod-memory"
 version = "0.1.0"
-description = "Agent Console — 공유 메모리 기능 모듈: 기록 REST·WS memory.changed, 설정 섹션 memory, 계보 memory, 정리 스케줄, 포트 memory.service"
+description = "Agent Console — shared memory feature module: record REST, WS memory.changed, settings section memory, lineage memory, cleanup schedule, port memory.service"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ mod-memory = "agent_console_mod_memory.module:module"
 
 [project.entry-points."agent_console.host_plugin_loaders"]
 memory = "agent_console_mod_memory.plugins:load_plugins"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-memory = "agent_console_mod_memory"
 
 [dependency-groups]
 dev = [

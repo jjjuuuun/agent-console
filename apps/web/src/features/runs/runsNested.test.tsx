@@ -13,6 +13,8 @@ beforeAll(preloadScreens, 120_000);
 
 // 캔버스는 레이아웃이 필요해 happy-dom에서 돌지 않는다. 실행 상세가 편집기에 내려보내는 props만 확인한다.
 vi.mock("@agent-console/graph-editor", () => ({
+  BUILTIN_EDGE_SHAPES: [],
+  localizeEdgeShapes: (shapes: unknown) => shapes,
   createElkEngine: () => ({ id: "fake", title: "fake", options: [], run: async () => ({ positions: {} }) }),
   GraphEditor: (props: Record<string, unknown>) => {
     const sel = props["onSelectionChange"] as (s: { nodeIds: string[]; edgeIds: string[] }) => void;

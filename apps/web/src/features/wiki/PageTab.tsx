@@ -16,7 +16,6 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
 import { useNow } from "../../app/useNow";
 import { getAt } from "../../lib/jsonPointer";
-import { formatDateTime, formatRelative } from "../../lib/format";
 import { useMediaQuery } from "../../lib/useMediaQuery";
 import { useRoutesOn } from "../library";
 import { Bands, type BandItem } from "./Bands";
@@ -34,7 +33,12 @@ import { classifyWikiError, failureDetail } from "./wikiErrors";
 import { wikiPagePath, runPath, schemeTargetHref } from "./wikiPaths";
 import { useWikiShortcuts } from "./wikiShortcuts";
 import type { WikiTabProps } from "./wikiTabs";
-import { editorMessages, wikiMessages as m } from "./messages";
+import { useWikiEditorMessages } from "./useEditorMessages";
+import { localizeIssue } from "./wikiIssueText";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useFormat } from "../../i18n";
 
 const P = WIKI_PARAMS;
 const EMPTY: readonly never[] = [];
@@ -72,6 +76,12 @@ const linesText = (lines: readonly number[]): string => lines.join(", ");
 const issueLines = (issues: readonly Issue[]): number[] => issues.flatMap((i) => { const line = (i as unknown as { line?: number | null }).line; return typeof line === "number" ? [line] : []; });
 
 export function PageTab(props: WikiTabProps) {
+  const fmt = useFormat();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const server = useServerText();
+  const editorMessages = useWikiEditorMessages();
+  const tm = useMaybeT("wiki");
   const { wikiId, view, ctx, display, params, setParams, ownWrites, refresh, reportDirty, openNewPage, hasTab, goTab } = props;
   const storage = useStorage();
   const toast = useToast();
@@ -124,7 +134,7 @@ export function PageTab(props: WikiTabProps) {
   const syntaxQ = useWikiSyntax(wikiId);
   const history = ctx.capabilities.history;
   const historyQ = usePageHistory(wikiId, path, history);
-  const historyUnavailable = !history || classifyWikiError(historyQ.error, "").kind === "historyUnavailable";
+  const historyUnavailable = !history || classifyWikiError(historyQ.error, "", t).kind === "historyUnavailable";
   const page = pageQ.data?.value;
   const serverHash = pageQ.data?.version_hash ?? page?.content_hash;
   const titles = useMemo(() => new Map(pages.map((p) => [p.path, p.title ?? ""])), [pages]);
@@ -210,8 +220,8 @@ export function PageTab(props: WikiTabProps) {
   };
   const copyMine = () => {
     const clip = typeof navigator === "undefined" ? undefined : navigator.clipboard;
-    if (clip === undefined) toast({ tone: "danger", text: m.editor.copyFailed });
-    else void clip.writeText(value).then(() => toast({ tone: "success", text: m.editor.copyMine }), () => toast({ tone: "danger", text: m.editor.copyFailed }));
+    if (clip === undefined) toast({ tone: "danger", text: t("editor.copyFailed") });
+    else void clip.writeText(value).then(() => toast({ tone: "success", text: t("editor.copyMine") }), () => toast({ tone: "danger", text: t("editor.copyFailed") }));
   };
 
   // ---- 저장 전 시험·링크 장식 -------------------------------------------------------------------
@@ -287,13 +297,13 @@ export function PageTab(props: WikiTabProps) {
 
   const copyPath = (p: string) => {
     void navigator.clipboard?.writeText(p);
-    toast({ tone: "success", text: m.copied });
+    toast({ tone: "success", text: t("copied") });
   };
 
   const restoreVersion = async (p: string, version: number) => {
     const result = await saver.restore(p, version);
     if (result.saved !== null) {
-      toast({ tone: "success", text: m.history.restored(version), durationMs: 5000 });
+      toast({ tone: "success", text: t("history.restored", { v: version }), durationMs: 5000 });
       openPath(p);
       setViewingVersion(null);
       void refresh();
@@ -306,10 +316,10 @@ export function PageTab(props: WikiTabProps) {
       const items = h.items ?? EMPTY;
       const del = items.findIndex((v) => v.op === "delete");
       const target = items.slice(del < 0 ? 0 : del + 1).find((v) => v.op !== "delete");
-      if (target === undefined) throw new Error(m.history.restoreFailed);
+      if (target === undefined) throw new Error(t("history.restoreFailed"));
       await restoreVersion(p, target.version);
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : m.history.restoreFailed });
+      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("history.restoreFailed") });
     }
   };
   const doDelete = async (p: string) => {
@@ -325,7 +335,7 @@ export function PageTab(props: WikiTabProps) {
     try {
       await space.client.deleteWikiPage(wikiId, p, p === path ? serverHash : undefined);
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : m.delete.failed });
+      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("delete.failed") });
       return;
     }
     setDraft(p, undefined);
@@ -336,7 +346,7 @@ export function PageTab(props: WikiTabProps) {
     await refresh();
     if (p === path) update({ [P.path]: next?.path ?? null, [P.mode]: null, [P.line]: null, [P.anchor]: null, [P.version]: null });
     const undo = lastVersion !== null && history && !ctx.recordsUnwritable ? lastVersion : null;
-    toast({ tone: "success", text: m.delete.done, durationMs: WIKI_LIMITS.restoreToastMs, ...(undo === null ? {} : { action: { label: m.delete.undo, onClick: () => void restoreVersion(p, undo) } }) });
+    toast({ tone: "success", text: t("delete.done"), durationMs: WIKI_LIMITS.restoreToastMs, ...(undo === null ? {} : { action: { label: t("delete.undo"), onClick: () => void restoreVersion(p, undo) } }) });
   };
 
   // ---- 링크 동작 -----------------------------------------------------------------------------------
@@ -366,7 +376,7 @@ export function PageTab(props: WikiTabProps) {
       const r = await space.client.getWikiLinkText(wikiId, { from_page: path, target });
       editorRef.current?.insertAtCursor(r.text);
     } catch {
-      toast({ tone: "danger", text: m.editor.insertLinkFailed });
+      toast({ tone: "danger", text: t("editor.insertLinkFailed") });
     }
   };
 
@@ -391,7 +401,7 @@ export function PageTab(props: WikiTabProps) {
   // ---- 띠 -------------------------------------------------------------------------------------------------
   const secretKey = path === null ? "" : WIKI_STORAGE.secretDismissed(wikiId, path);
   const [secretHidden, setSecretHidden] = useState(false);
-  const allIssues: readonly Issue[] = useMemo(() => [...(page?.issues ?? EMPTY), ...saver.warnings], [page, saver.warnings]);
+  const allIssues: readonly Issue[] = useMemo(() => [...(page?.issues ?? EMPTY), ...saver.warnings].map((i) => localizeIssue(i, server)), [page, saver.warnings, server]);
   const secretIssues = allIssues.filter((i) => i.code === KNOWN_ISSUE_CODES.WIKI_SECRET_SUSPECT);
   const ruleWarnings = saver.warnings.filter((i) => i.code !== KNOWN_ISSUE_CODES.WIKI_SECRET_SUSPECT);
   const parseIssues = (page?.issues ?? EMPTY).filter((i) => i.code === KNOWN_ISSUE_CODES.WIKI_FRONT_MATTER_INVALID || i.code === KNOWN_ISSUE_CODES.WIKI_PARSE_TIMEOUT);
@@ -406,15 +416,15 @@ export function PageTab(props: WikiTabProps) {
       bands.push({
         id: "rule-rejected",
         tone: "danger",
-        content: <>{m.band.ruleRejected(f.ruleId, f.message)}{f.lines.length > 0 ? ` ${m.band.lines(linesText(f.lines))}` : ""}</>,
-        actions: f.lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(f.lines[0] as number)}>{m.band.gotoLine}</Button> : undefined,
+        content: <>{f.message === "" ? t("band.ruleRejected", { rule: f.ruleId }) : t("band.ruleRejectedWith", { rule: f.ruleId, message: f.message })}{f.lines.length > 0 ? ` ${t("band.lines", { lines: linesText(f.lines) })}` : ""}</>,
+        actions: f.lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(f.lines[0] as number)}>{t("band.gotoLine")}</Button> : undefined,
       });
     } else if (f.kind === "secretRejected") {
-      bands.push({ id: "secret-rejected", tone: "danger", content: m.band.secretRejected(linesText(f.lines)), actions: f.lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(f.lines[0] as number)}>{m.band.gotoLine}</Button> : undefined });
+      bands.push({ id: "secret-rejected", tone: "danger", content: linesText(f.lines) === "" ? t("band.secretRejected") : t("band.secretRejectedAt", { lines: linesText(f.lines) }), actions: f.lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(f.lines[0] as number)}>{t("band.gotoLine")}</Button> : undefined });
     } else if (f.kind === "tooLarge") {
-      bands.push({ id: "too-large", tone: "danger", content: f.message !== "" ? f.message : m.band.tooLarge(f.limit === null ? "" : (f.limit / 1024).toFixed(0)) });
+      bands.push({ id: "too-large", tone: "danger", content: f.message !== "" ? f.message : f.limit === null ? t("band.tooLarge") : t("band.tooLargeLimit", { limitKb: (f.limit / 1024).toFixed(0) }) });
     } else if (f.kind === "versionNotFound") {
-      bands.push({ id: "version-missing", tone: "info", content: f.message !== "" ? f.message : m.band.versionNotFound });
+      bands.push({ id: "version-missing", tone: "info", content: f.message !== "" ? f.message : t("band.versionNotFound") });
     } else {
       const detail = failureDetail(f);
       if (detail !== undefined) bands.push({ id: "save-failed", tone: "danger", content: detail });
@@ -424,9 +434,9 @@ export function PageTab(props: WikiTabProps) {
     bands.push({
       id: "rule-warn",
       tone: "warning",
-      content: m.band.ruleWarn(ruleWarnings.length),
+      content: t("band.ruleWarn", { count: ruleWarnings.length }),
       rows: ruleWarnings.map((i, n) => ({ key: `${i.code}:${n}`, id: (i as { rule_id?: string | null }).rule_id ?? null, message: i.message })),
-      actions: <Button size="sm" onClick={saver.clearWarnings}>{m.band.dismiss}</Button>,
+      actions: <Button size="sm" onClick={saver.clearWarnings}>{t("band.dismiss")}</Button>,
     });
   }
   if (secretIssues.length > 0 && !secretHidden && !secretDismissed(secretKey)) {
@@ -434,11 +444,11 @@ export function PageTab(props: WikiTabProps) {
     bands.push({
       id: "secret-suspect",
       tone: "info",
-      content: m.band.secretSuspect(secretIssues.length, linesText(lines)),
+      content: linesText(lines) === "" ? t("band.secretSuspect", { count: secretIssues.length }) : t("band.secretSuspectAt", { count: secretIssues.length, lines: linesText(lines) }),
       actions: (
         <>
-          {lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(lines[0] as number)}>{m.band.gotoLine}</Button> : null}
-          <Button size="sm" onClick={() => { dismissSecret(secretKey); setSecretHidden(true); }}>{m.band.dismiss}</Button>
+          {lines.length > 0 ? <Button size="sm" onClick={() => gotoLine(lines[0] as number)}>{t("band.gotoLine")}</Button> : null}
+          <Button size="sm" onClick={() => { dismissSecret(secretKey); setSecretHidden(true); }}>{t("band.dismiss")}</Button>
         </>
       ),
     });
@@ -448,15 +458,15 @@ export function PageTab(props: WikiTabProps) {
     bands.push({
       id: `parse-${i.code}`,
       tone: "warning",
-      content: i.code === KNOWN_ISSUE_CODES.WIKI_PARSE_TIMEOUT ? m.band.parseTimeout : m.band.frontMatter(typeof line === "number" ? String(line) : ""),
-      actions: typeof line === "number" ? <Button size="sm" onClick={() => gotoLine(line)}>{m.band.gotoLine}</Button> : undefined,
+      content: i.code === KNOWN_ISSUE_CODES.WIKI_PARSE_TIMEOUT ? t("band.parseTimeout") : typeof line === "number" ? t("band.frontMatterAt", { line: String(line) }) : t("band.frontMatter"),
+      actions: typeof line === "number" ? <Button size="sm" onClick={() => gotoLine(line)}>{t("band.gotoLine")}</Button> : undefined,
     });
   }
-  if (wantedMode !== "view" && readOnly) bands.push({ id: "readonly-edit", tone: "warning", content: m.band.readOnlyEdit });
-  if (ctx.recordsUnwritable || !history) bands.push({ id: "records", tone: "info", content: m.records.notWritten });
+  if (wantedMode !== "view" && readOnly) bands.push({ id: "readonly-edit", tone: "warning", content: t("band.readOnlyEdit") });
+  if (ctx.recordsUnwritable || !history) bands.push({ id: "records", tone: "info", content: t("records.notWritten") });
 
   // ---- 본문 영역 -------------------------------------------------------------------------------------------
-  const pageError = pageQ.isError ? classifyWikiError(pageQ.error, m.page.readFailed) : null;
+  const pageError = pageQ.isError ? classifyWikiError(pageQ.error, t("page.readFailed"), t) : null;
   const tree = (
     <TreePane
       pages={pages}
@@ -471,7 +481,7 @@ export function PageTab(props: WikiTabProps) {
       onTitleModeChange={setTitleMode}
       display={display}
       onSelect={openPath}
-      onRename={(p) => (dirtyPaths.has(p) ? toast({ tone: "warning", text: m.move.dirty }) : setMoveFor(p))}
+      onRename={(p) => (dirtyPaths.has(p) ? toast({ tone: "warning", text: t("move.dirty") }) : setMoveFor(p))}
       onDelete={setDeleteFor}
       onNewHere={(folder) => openNewPage({ path: `${folder}/` })}
       onCopyPath={copyPath}
@@ -499,14 +509,14 @@ export function PageTab(props: WikiTabProps) {
   } else if (path === null) {
     center = pages.length === 0 && !pagesQ.isPending ? (
       <div className="wiki-state" data-testid="wiki-page-empty">
-        <h2 className="wiki-state-title">{m.page.emptyTitle}</h2>
-        <p className="app-muted">{m.page.emptyBody}</p>
-        {home === "" ? <p className="app-muted wiki-hint">{m.page.firstSteps}</p> : null}
+        <h2 className="wiki-state-title">{t("page.emptyTitle")}</h2>
+        <p className="app-muted">{t("page.emptyBody")}</p>
+        {home === "" ? <p className="app-muted wiki-hint">{t("page.firstSteps")}</p> : null}
       </div>
     ) : (
       <div className="wiki-state" data-testid="wiki-page-none">
-        <h2 className="wiki-state-title">{m.page.noneTitle}</h2>
-        <p className="app-muted">{m.page.noneBody}</p>
+        <h2 className="wiki-state-title">{t("page.noneTitle")}</h2>
+        <p className="app-muted">{t("page.noneBody")}</p>
         <RecentPages pages={pages} now={now} display={display} onOpen={openPath} />
       </div>
     );
@@ -515,20 +525,20 @@ export function PageTab(props: WikiTabProps) {
   } else if (pageError !== null && pageError.kind === "pageNotFound") {
     center = (
       <div className="wiki-state" data-testid="wiki-page-missing">
-        <ErrorBlock title={m.page.missingTitle(path)}>
-          {!readOnly ? <Button size="sm" variant="primary" onClick={() => openNewPage({ path })}>{m.page.createThis}</Button> : null}
-          {pageError.hasHistory ? <Button size="sm" onClick={() => update({ [P.side]: "history" })}>{m.page.missingHistory}</Button> : null}
-          <Button size="sm" onClick={() => treeFilterRef.current?.focus()}>{m.page.missingTree}</Button>
+        <ErrorBlock title={t("page.missingTitle", { path })}>
+          {!readOnly ? <Button size="sm" variant="primary" onClick={() => openNewPage({ path })}>{t("page.createThis")}</Button> : null}
+          {pageError.hasHistory ? <Button size="sm" onClick={() => update({ [P.side]: "history" })}>{t("page.missingHistory")}</Button> : null}
+          <Button size="sm" onClick={() => treeFilterRef.current?.focus()}>{t("page.missingTree")}</Button>
         </ErrorBlock>
       </div>
     );
   } else if (pageError !== null || page === undefined) {
-    center = <ErrorBlock title={m.page.readFailed} message={pageError === null ? undefined : failureDetail(pageError)} onRetry={() => void pageQ.refetch()} retryLabel={m.retry} />;
+    center = <ErrorBlock title={t("page.readFailed")} message={pageError === null ? undefined : failureDetail(pageError)} onRetry={() => void pageQ.refetch()} retryLabel={t("retry")} />;
   } else if (compareVersion !== null) {
     center = (
       <div className="wiki-compare">
-        {versionQ.isPending ? <ListSkeleton rows={6} /> : versionQ.isError ? <Bands items={[{ id: "version-missing", tone: "info", content: classifyWikiError(versionQ.error, m.band.versionNotFound).kind === "versionNotFound" ? (versionQ.error as Error).message : m.history.versionBody }]} /> : (
-          <HistoryDiff
+        {versionQ.isPending ? <ListSkeleton rows={6} /> : versionQ.isError ? <Bands items={[{ id: "version-missing", tone: "info", content: classifyWikiError(versionQ.error, t("band.versionNotFound"), t).kind === "versionNotFound" ? (versionQ.error as Error).message : t("history.versionBody") }]} /> : (
+          <HistoryDiff messages={wikiViewMessages}
             version={compareVersion}
             content={versionQ.data?.value ?? ""}
             previousContent={previousVersion === null ? null : previousQ.data?.value ?? null}
@@ -543,8 +553,8 @@ export function PageTab(props: WikiTabProps) {
     const viewed: WikiPageView = { page: page.page, content: versionQ.data?.value ?? "", content_hash: versionQ.data?.version_hash ?? "", links: [], backlinks: [], issues: [] };
     center = (
       <div className="wiki-version-view">
-        <Bands items={[{ id: "viewing", tone: "info", content: m.band.viewingVersion(viewingVersion), actions: <Button size="sm" onClick={() => setViewingVersion(null)}>{m.band.backToCurrent}</Button> }]} />
-        {versionQ.isPending ? <ListSkeleton rows={6} /> : versionQ.isError ? <p className="app-field-error" role="alert">{m.history.versionBody}</p> : <PageView page={viewed} display={display} readOnly readOnlyReason={m.band.viewingVersion(viewingVersion)} />}
+        <Bands items={[{ id: "viewing", tone: "info", content: t("band.viewingVersion", { n: viewingVersion }), actions: <Button size="sm" onClick={() => setViewingVersion(null)}>{t("band.backToCurrent")}</Button> }]} />
+        {versionQ.isPending ? <ListSkeleton rows={6} /> : versionQ.isError ? <p className="app-field-error" role="alert">{t("history.versionBody")}</p> : <PageView messages={wikiViewMessages} page={viewed} display={display} readOnly readOnlyReason={t("band.viewingVersion", { n: viewingVersion })} />}
       </div>
     );
   } else if (editing) {
@@ -571,7 +581,7 @@ export function PageTab(props: WikiTabProps) {
           onReload={() => setConfirm("reload")}
           onOverwrite={() => setConfirm("overwrite")}
           onCopyMine={copyMine}
-          {...(page === undefined || !dirty ? {} : { compare: { before: page.content, beforeLabel: conflict ? m.editor.server : m.editor.saved2 } })}
+          {...(page === undefined || !dirty ? {} : { compare: { before: page.content, beforeLabel: conflict ? t("editor.server") : t("editor.saved2") } })}
           {...(initialLine === undefined ? {} : { initialLine })}
           mode={editorMode}
           onModeChange={changeEditorMode}
@@ -594,11 +604,11 @@ export function PageTab(props: WikiTabProps) {
           toolbarExtra={
             <>
               <span className="wiki-save-state" role="status" data-testid="wiki-save-state">
-                {saver.saving ? m.editor.saving : dirty ? m.editor.dirty : reloadedNote ? m.band.reloaded : m.editor.saved}
+                {saver.saving ? t("editor.saving") : dirty ? t("editor.dirty") : reloadedNote ? t("band.reloaded") : t("editor.saved")}
               </span>
               {preview.available && preview.result !== null ? <RuleChip preview={preview.result.preview} onGoto={gotoLine} /> : null}
-              <Button size="sm" aria-disabled={!insertAvailable || undefined} title={insertAvailable ? undefined : m.editor.insertLinkOff} onClick={() => { if (insertAvailable) setPicker(true); }}>{m.editor.insertLink}</Button>
-              <Button size="sm" onClick={closeEdit}>{m.editor.close}</Button>
+              <Button size="sm" aria-disabled={!insertAvailable || undefined} title={insertAvailable ? undefined : t("editor.insertLinkOff")} onClick={() => { if (insertAvailable) setPicker(true); }}>{t("editor.insertLink")}</Button>
+              <Button size="sm" onClick={closeEdit}>{t("editor.close")}</Button>
             </>
           }
           previewHooks={{
@@ -617,7 +627,7 @@ export function PageTab(props: WikiTabProps) {
         <ViewToolbar
           blockedReason={writeBlock}
           onEdit={() => startEdit()}
-          onRename={() => (dirty ? toast({ tone: "warning", text: m.move.dirty }) : setMoveFor(page.page.path))}
+          onRename={() => (dirty ? toast({ tone: "warning", text: t("move.dirty") }) : setMoveFor(page.page.path))}
           onDelete={() => setDeleteFor(page.page.path)}
           onCopyPath={() => copyPath(page.page.path)}
           onOpenHistory={() => update({ [P.side]: "history" })}
@@ -628,9 +638,9 @@ export function PageTab(props: WikiTabProps) {
           panelControls="wiki-side-panel"
         />
         <Bands items={bands} />
-        {dirty ? <Bands items={[{ id: "draft", tone: "info", content: m.editor.dirty, actions: <Button size="sm" onClick={() => startEdit()}>{m.page.edit}</Button> }]} /> : null}
+        {dirty ? <Bands items={[{ id: "draft", tone: "info", content: t("editor.dirty"), actions: <Button size="sm" onClick={() => startEdit()}>{t("page.edit")}</Button> }]} /> : null}
         <div className="wiki-prose-wrap">
-          <PageView
+          <PageView messages={wikiViewMessages}
             page={page}
             display={display}
             titleOf={titleOf}
@@ -646,11 +656,11 @@ export function PageTab(props: WikiTabProps) {
             {...(writeBlock === undefined ? {} : { readOnlyReason: writeBlock })}
             highlightStart={hoverStart}
             anchor={anchorParam}
-            onAnchorMissing={(a) => toast({ tone: "info", text: m.page.anchorMissing(a), durationMs: 3000 })}
+            onAnchorMissing={(a) => toast({ tone: "info", text: t("page.anchorMissing", { anchor: a }), durationMs: 3000 })}
             handleRef={viewRef}
           />
         </div>
-        <span className="ac-sr-only" role="status">{m.page.pageLabel(page.page.title ?? lastSegment(page.page.path))}</span>
+        <span className="ac-sr-only" role="status">{t("page.pageLabel", { title: page.page.title ?? lastSegment(page.page.path) })}</span>
       </div>
     );
   }
@@ -681,7 +691,7 @@ export function PageTab(props: WikiTabProps) {
       currentVersion={versions.find((v) => page !== undefined && v.sha256 === page.content_hash)?.version ?? null}
       selectedVersion={viewingVersion ?? compareVersion}
       onSelectVersion={(v) => {
-        if (dirty && editing) toast({ tone: "warning", text: m.move.dirty });
+        if (dirty && editing) toast({ tone: "warning", text: t("move.dirty") });
         else {
           setViewingVersion(v.version);
           update({ [P.mode]: null, [P.version]: null }, { replace: true });
@@ -693,7 +703,7 @@ export function PageTab(props: WikiTabProps) {
       }}
       onRestoreVersion={setRestoreFor}
       onOpenRun={openRun}
-      restoreDisabledReason={readOnly ? writeBlock : dirty ? m.move.dirty : ctx.recordsUnwritable ? m.records.notWritten : undefined}
+      restoreDisabledReason={readOnly ? writeBlock : dirty ? t("move.dirty") : ctx.recordsUnwritable ? t("records.notWritten") : undefined}
       now={now}
     />
   );
@@ -702,8 +712,8 @@ export function PageTab(props: WikiTabProps) {
 
   return (
     <div className="wiki-page-tab" data-panel={panelOpen ? "open" : "closed"} data-drawer={narrow || undefined} data-editing={editing || undefined} data-testid="wiki-page-tab">
-      <aside className="wiki-tree-col" aria-label={m.tree.toggle}>{tree}</aside>
-      <section className="wiki-center-col" aria-label={m.tabs["page"]}>{center}</section>
+      <aside className="wiki-tree-col" aria-label={t("tree.toggle")}>{tree}</aside>
+      <section className="wiki-center-col" aria-label={tm("tabs.page")}>{center}</section>
       {panelOpen ? <aside className="wiki-side-col" id="wiki-side-region">{side}</aside> : null}
       {moveFor === null ? null : (
         <MovePageDialog
@@ -711,7 +721,7 @@ export function PageTab(props: WikiTabProps) {
           from={moveFor}
           open
           onClose={() => setMoveFor(null)}
-          blockedReason={dirtyPaths.has(moveFor) ? m.move.dirty : undefined}
+          blockedReason={dirtyPaths.has(moveFor) ? t("move.dirty") : undefined}
           readOnly={readOnly}
           readOnlyReason={writeBlock}
           onWritten={markWritten}
@@ -720,7 +730,7 @@ export function PageTab(props: WikiTabProps) {
             qc.removeQueries({ queryKey: wikiKeys.page(space.key, wikiId, moveFor) });
             void refresh();
             if (path === moveFor || path === null) openPath(to);
-            toast({ tone: "success", text: m.move.done(n) });
+            toast({ tone: "success", text: t("move.done", { count: n }) });
           }}
         />
       )}
@@ -737,7 +747,7 @@ export function PageTab(props: WikiTabProps) {
         path={path ?? ""}
         version={restoreFor}
         authorText={restoreAuthor}
-        timeText={restoreFor === null ? "" : formatDateTime(restoreFor.at)}
+        timeText={restoreFor === null ? "" : fmt.dateTimeFull(restoreFor.at)}
         onConfirm={() => {
           const v = restoreFor;
           setRestoreFor(null);
@@ -748,9 +758,9 @@ export function PageTab(props: WikiTabProps) {
       <LinkPicker open={picker} pages={pages} currentPath={path} onPick={(p) => void insertLink(p)} onClose={() => setPicker(false)} />
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm === "overwrite" ? m.editor.overwriteTitle : confirm === "close" ? m.editor.discardTitle : m.editor.reloadTitle}
-        confirmLabel={confirm === "overwrite" ? m.editor.overwriteOk : confirm === "close" ? m.editor.discardOk : m.editor.reloadOk}
-        cancelLabel={confirm === "close" ? m.editor.keepEditing : m.cancel}
+        title={confirm === "overwrite" ? t("editor.overwriteTitle") : confirm === "close" ? t("editor.discardTitle") : t("editor.reloadTitle")}
+        confirmLabel={confirm === "overwrite" ? t("editor.overwriteOk") : confirm === "close" ? t("editor.discardOk") : t("editor.reloadOk")}
+        cancelLabel={confirm === "close" ? t("editor.keepEditing") : t("cancel")}
         danger
         onConfirm={() => {
           const which = confirm;
@@ -761,24 +771,27 @@ export function PageTab(props: WikiTabProps) {
         }}
         onCancel={() => setConfirm(null)}
       >
-        {confirm === "overwrite" ? m.editor.overwriteBody : confirm === "close" ? m.editor.discardBody : m.editor.reloadBody}
+        {confirm === "overwrite" ? t("editor.overwriteBody") : confirm === "close" ? t("editor.discardBody") : t("editor.reloadBody")}
       </ConfirmDialog>
     </div>
   );
 }
 
 function RecentPages({ pages, now, display, onOpen }: { pages: readonly { path: string; title?: string; updated_at?: number | null; updated_by?: WikiAuthor | null }[]; now: number; display: WikiDisplay | undefined; onOpen: (path: string) => void }) {
+  const fmt = useFormat();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
   const recent = [...pages].filter((p) => typeof p.updated_at === "number").sort((a, b) => (b.updated_at ?? 0) - (a.updated_at ?? 0)).slice(0, WIKI_LIMITS.recentPages);
   if (recent.length === 0) return null;
   return (
     <div className="wiki-recent-pages">
-      <strong>{m.page.noneRecent}</strong>
+      <strong>{t("page.noneRecent")}</strong>
       <ul>
         {recent.map((p) => (
           <li key={p.path} className="wiki-recent-pages-row">
             <button type="button" className="app-link-btn ac-ellipsis" onClick={() => onOpen(p.path)}>{p.title !== undefined && p.title !== "" ? p.title : lastSegment(p.path)}</button>
-            <span className="app-muted wiki-recent-pages-time">{formatRelative(p.updated_at, now)}</span>
-            {p.updated_by ? <AuthorChip author={p.updated_by} {...(display ? { display } : {})} size="dense" /> : null}
+            <span className="app-muted wiki-recent-pages-time">{fmt.relative(p.updated_at, now)}</span>
+            {p.updated_by ? <AuthorChip messages={wikiViewMessages} author={p.updated_by} {...(display ? { display } : {})} size="dense" /> : null}
           </li>
         ))}
       </ul>

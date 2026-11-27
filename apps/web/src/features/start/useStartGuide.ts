@@ -3,8 +3,9 @@ import type { StepGuideStep } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery, queryKeys } from "../../app/queries";
 import { useQuery } from "@tanstack/react-query";
-import { buildProjectStartSteps, projectHomePath, useProjects, useStartBlockReason } from "../projects";
+import { buildProjectStartSteps, projectHomePath, useFolderHomeMessages, useProjects, useStartBlockReason } from "../projects";
 import { ROUTE_ROLES, routePath, useGraphList, useRoutesOn } from "../library";
+import { useStartMessages } from "./messages";
 import { buildStartSteps } from "./startSteps";
 
 export interface StartGuide {
@@ -18,6 +19,8 @@ export interface StartGuide {
 /** 첫 단계 안내의 데이터(세 곳 공용). 표현은 ui의 `StepGuide`가 맡는다. */
 export function useStartGuide(): StartGuide {
   const isOn = useRoutesOn();
+  const stepText = useStartMessages().steps;
+  const projectStepText = useFolderHomeMessages().steps;
   const runsOn = isOn(ROUTE_ROLES.runs);
   const graphs = useGraphList();
   const conversations = useApiQuery(queryKeys.list("conversations"), (r) => r.listConversations());
@@ -48,6 +51,7 @@ export function useStartGuide(): StartGuide {
     const active = p.views.filter((v) => v.project.archived !== true).length;
     const graphRole = ROUTE_ROLES.graph;
     return buildProjectStartSteps({
+      text: projectStepText,
       counts: {
         projects: p.loaded ? active : undefined,
         libraryTeams: graphs.data?.length,
@@ -62,7 +66,7 @@ export function useStartGuide(): StartGuide {
         ...(isOn(ROUTE_ROLES.conversations) ? { chat: { to: routePath(ROUTE_ROLES.conversations) } } : {}),
       },
     });
-  }, [p, graphs.data, projectTeams.data, projectChats.data, current, isOn, blockCopyIn, blockChat]);
+  }, [p, graphs.data, projectTeams.data, projectChats.data, current, isOn, blockCopyIn, blockChat, projectStepText]);
 
   const steps = useMemo(
     () =>
@@ -75,8 +79,9 @@ export function useStartGuide(): StartGuide {
         },
         pathOf: routePath,
         isOn,
+        text: stepText,
       }),
-    [projectSteps, graphs.data, conversations.data, runs.data, isOn],
+    [projectSteps, graphs.data, conversations.data, runs.data, isOn, stepText],
   );
 
   return {

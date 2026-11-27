@@ -1,11 +1,11 @@
 import { useId, useState } from "react";
 import { Button, Icon, Popover, middleEllipsis } from "@agent-console/ui";
 import type { ProjectView } from "@agent-console/contracts/projects";
-import { createProjectsText, statusInfo } from "@agent-console/projects";
-import { scopeMessages as m } from "./scopeMessages";
+import { statusInfo, type ProjectsText } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
+import { useScopeMessages } from "./scopeMessages";
 import { useProjects } from "./ProjectsContext";
 
-const text = createProjectsText();
 
 export interface ProjectChipViewProps {
   name: string;
@@ -21,6 +21,7 @@ export interface ProjectChipViewProps {
 
 /** 프로젝트 칩 표현(screen-projects §7.1): 이름 + 경로, 클릭하면 전체 경로·홈·바꾸기 팝오버. 데이터와 콜백은 props. */
 export function ProjectChipView({ name, folder, problem, archived, onOpenHome, onSwitch, onCopy }: ProjectChipViewProps) {
+  const m = useScopeMessages();
   const [open, setOpen] = useState(false);
   const fullId = useId();
   return (
@@ -61,7 +62,7 @@ export function ProjectChipView({ name, folder, problem, archived, onOpenHome, o
   );
 }
 
-function problemOf(view: ProjectView | undefined): string | undefined {
+function problemOf(view: ProjectView | undefined, text: ProjectsText): string | undefined {
   if (view === undefined) return undefined;
   const info = statusInfo(view);
   return info.plain ? undefined : text(info.label);
@@ -72,6 +73,7 @@ function problemOf(view: ProjectView | undefined): string | undefined {
  * 기능 화면의 `PageHeader` actions 맨 앞에 둔다.
  */
 export function ProjectChip() {
+  const text = useProjectsText();
   const p = useProjects();
   const view = p.currentView;
   if (!p.enabled || view === undefined) return null;
@@ -80,7 +82,7 @@ export function ProjectChip() {
     <ProjectChipView
       name={view.project.name}
       folder={view.project.folder ?? ""}
-      problem={problemOf(view)}
+      problem={problemOf(view, text)}
       archived={view.project.archived}
       onOpenHome={() => p.openHome(view.project.id)}
       onSwitch={() => p.setSwitcherOpen(true)}

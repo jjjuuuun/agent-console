@@ -7,8 +7,8 @@ import { EmptyState } from "@agent-console/ui";
 import { KNOWN_DOCUMENT_ROLES } from "@agent-console/contracts/constants";
 import type { SpecView } from "@agent-console/contracts/sdd";
 import { FailureBlock, ListSkeleton } from "./parts";
-import { sddMessages as m } from "./messages";
 import { useSpecSyntax } from "./useSddApi";
+import { useT } from "@agent-console/i18n";
 
 export type TaskPrereq = { state: "ok" } | { state: "pending" } | { state: "error"; error: unknown; retry: () => void } | { state: "syntaxMissing" } | { state: "noTaskDoc" };
 
@@ -24,6 +24,7 @@ export function useTaskPrereq(specId: string, view: SpecView): TaskPrereq {
 
 /** `ok`가 아닌 선행 조건의 본문. `ok`면 null. */
 export function PrereqState({ prereq, onOpenRules, loadFailed }: { prereq: TaskPrereq; onOpenRules: () => void; loadFailed: string }): ReactNode {
+  const t = useT("sdd");
   switch (prereq.state) {
     case "ok":
       return null;
@@ -34,13 +35,13 @@ export function PrereqState({ prereq, onOpenRules, loadFailed }: { prereq: TaskP
     case "syntaxMissing":
       return (
         <div className="sdd-state" data-testid="sdd-syntax-missing">
-          <EmptyState title={m.tasks.syntaxMissing.title} description={m.tasks.syntaxMissing.body} action={<button type="button" className="app-link-btn" onClick={onOpenRules}>{m.tasks.syntaxMissing.open}</button>} />
+          <EmptyState title={t("tasks.syntaxMissing.title")} description={t("tasks.syntaxMissing.body")} action={<button type="button" className="app-link-btn" onClick={onOpenRules}>{t("tasks.syntaxMissing.open")}</button>} />
         </div>
       );
     case "noTaskDoc":
       return (
         <div className="sdd-state" data-testid="sdd-no-task-doc">
-          <EmptyState title={m.tasks.noTaskDoc.title} description={m.tasks.noTaskDoc.body} action={<button type="button" className="app-link-btn" onClick={onOpenRules}>{m.tasks.noTaskDoc.open}</button>} />
+          <EmptyState title={t("tasks.noTaskDoc.title")} description={t("tasks.noTaskDoc.body")} action={<button type="button" className="app-link-btn" onClick={onOpenRules}>{t("tasks.noTaskDoc.open")}</button>} />
         </div>
       );
   }

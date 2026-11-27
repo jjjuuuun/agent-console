@@ -4,7 +4,7 @@ import { Button, trapTabKey, useModalBackdrop } from "@agent-console/ui";
 import { ARCH_FIT } from "./archConfig";
 import { LazyArchitecturePanel as ArchitecturePanel } from "./lazy";
 import type { ArchitecturePanelProps } from "./ArchitecturePanel";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
 import type { ArchitectureController } from "./useArchitectureController";
 
 export interface ArchitectureDialogProps {
@@ -35,6 +35,7 @@ const dialogVars = {
  * 닫으면 열기 전에 포커스가 있던 요소(보통 [크게 보기] 단추)로 돌아간다.
  */
 export function ArchitectureDialog({ open, title, onClose, controller, panelProps, table }: ArchitectureDialogProps) {
+  const t = useArchMessages();
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);

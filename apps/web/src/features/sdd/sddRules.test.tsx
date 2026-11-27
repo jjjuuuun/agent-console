@@ -1,4 +1,5 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { renderWithI18n as render } from "../../testing/TestI18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getContractSchema } from "@agent-console/contracts";
 import { RuleSectionsForm } from "./RuleSectionsForm";

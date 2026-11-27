@@ -2,18 +2,20 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
-import { createProjectsText, projectAbilities, statusInfo } from "@agent-console/projects";
+import { projectAbilities, statusInfo } from "@agent-console/projects";
+import { useServerText } from "@agent-console/i18n";
+import { useProjectsText } from "./projectsText";
 import { ApiError } from "@agent-console/api-client";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
+import { useDescribeError } from "../../app/errors";
 import { useDelayed } from "../../app/useDelayed";
 import { useNow } from "../../app/useNow";
-import { lookupMessage } from "../../app/messages";
+import { useLookupMessage } from "../../app/shellMessages";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { useBackendReadiness } from "../backendReadiness";
 import { DeleteDialog, ROUTE_ROLES, routePath, useRoutesOn } from "../library";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { ManifestResetDialog } from "./ManifestResetDialog";
 import { MenuPopover } from "./MenuPopover";
 import { ProjectConfigCard } from "./ProjectConfigCard";
@@ -27,7 +29,6 @@ import { NEW_PARAM } from "./newParam";
 import { useCopyDialog } from "./useCopyDialog";
 import { useProjectActivity, useProjectConfig, type ConfigRow } from "./useProjectHomeData";
 
-const text = createProjectsText();
 const STATUS_ICON: Readonly<Record<string, string>> = {
   folder_missing: "folder-off",
   not_a_directory: "folder-off",
@@ -49,6 +50,7 @@ async function copyText(value: string): Promise<boolean> {
 
 /** 앱 로그인 상태 한 줄(앱 단위, 읽기 전용): 로그인을 제공하는 백엔드의 정적 점검 결과를 톤·요약으로 그린다. 로그인 개념이 없으면 줄이 없다. */
 function LoginLine() {
+  const m = useFolderHomeMessages();
   const { rest } = useApi();
   const backends = useQuery({ queryKey: ["descriptors", "backends"], queryFn: () => rest.listBackends(), staleTime: 60_000, retry: false, meta: { silentBackgroundError: true } });
   const { readiness, isPending } = useBackendReadiness();
@@ -71,6 +73,11 @@ function LoginLine() {
  * 가져오기(복사 계획 대화상자)는 33o의 몫이라 슬롯만 둔다.
  */
 export function ProjectHomeScreen() {
+  const describeError = useDescribeError();
+  const lookupMessage = useLookupMessage();
+  const text = useProjectsText();
+  const m = useFolderHomeMessages();
+  const serverText = useServerText();
   const { id = "" } = useParams();
   const p = useProjects();
   const { rest } = useApi();
@@ -106,7 +113,8 @@ export function ProjectHomeScreen() {
   }).data;
   const refs = refsQuery.isSuccess ? refsQuery.data : undefined;
   const refNames = (refs?.items ?? []).map((i) => {
-    const title = kindTitles?.find((k) => k.kind === i.kind)?.title;
+    const rawTitle = kindTitles?.find((k) => k.kind === i.kind)?.title;
+    const title = rawTitle === undefined || rawTitle === null ? undefined : serverText.text(rawTitle);
     const name = i.name || i.id;
     return title ? `${name} (${title})` : name;
   });
@@ -127,7 +135,7 @@ export function ProjectHomeScreen() {
   const config = useProjectConfig(view, view !== undefined && !unreadable && view.project.archived !== true);
   const recordsUnreadable = view?.records_state === "unavailable";
   const activity = useProjectActivity(id, view !== undefined && !recordsUnreadable && view.status !== "folder_unset");
-  const banners = useMemo(() => (view === undefined ? [] : problemBanners(view)), [view]);
+  const banners = useMemo(() => (view === undefined ? [] : problemBanners(view, m)), [view, m]);
   const blockedId = useId();
   const runsBlocked = useProjectRunsBlocked();
 
@@ -215,7 +223,7 @@ export function ProjectHomeScreen() {
       } else if (was.config_writable === false && next.config_writable !== false) {
         setNote(null);
         toast({ tone: "success", text: m.problem.writableAgain });
-      } else setNote(m.problem.stillOpen(hhmm(new Date())));
+      } else setNote(hhmm(new Date()));
     } finally {
       setBusy(null);
     }
@@ -370,7 +378,7 @@ export function ProjectHomeScreen() {
   return (
     <div className="app-screen prj-home" data-screen="project-home" data-project={id}>
       {header}
-      <ProjectProblemBanner banners={banners} onAction={onBannerAction} busy={busy} note={note} />
+      <ProjectProblemBanner banners={banners} onAction={onBannerAction} busy={busy} note={note === null ? null : m.problem.stillOpen(note)} />
       {archived ? null : (
         <div className="prj-cards">
           <ProjectConfigCard

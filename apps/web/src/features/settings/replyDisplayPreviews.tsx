@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { messages as m } from "../../app/messages";
+import type { AppMessages } from "../../app/appMessages";
 import { WirePreview } from "./widgets/RadioCardsWidget";
 
 /**
  * 값별 미리보기 그림(정적 와이어). 키는 설정 JSON Pointer → 값 → 그림.
- * 여기에 없는 값(서버가 새로 추가한 enum)은 그림 없이 라디오로만 보인다.
+ * `enumPreviews`에 없는 값(서버가 새로 추가한 enum)은 그림 없이 라디오로만 보인다.
  */
-export const ENUM_PREVIEWS: Readonly<Record<string, Readonly<Record<string, ReactNode>>>> = {
+export const enumPreviews = (m: Pick<AppMessages, "settings">): Readonly<Record<string, Readonly<Record<string, ReactNode>>>> => ({
   "/chat/reply_display": {
     separate: (
       <>
@@ -27,4 +27,4 @@ export const ENUM_PREVIEWS: Readonly<Record<string, Readonly<Record<string, Reac
       </>
     ),
   },
-};
+});

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNod
 import { Link } from "react-router";
 import type { ModuleInfo, PluginOptionsView } from "@agent-console/contracts";
 import { Banner, Button, EmptyState, Icon } from "@agent-console/ui";
-import { lookupMessage, messages as m } from "../../../app/messages";
+import { useAppMessages, type AppMessages } from "../../../app/appMessages";
+import { useLookupMessage } from "../../../app/shellMessages";
 import { ModuleStatusChip, moduleAffects, MODULE_STATUS, moduleStatusLabel, useLinkPartDefs, useModules, type ModulesState } from "../../../modules";
 import { DEFAULT_ROUTES } from "../../../shell/routeConfig";
 import { CopyButton } from "../CopyButton";
@@ -11,7 +12,6 @@ import { ModuleOptionsPanel, PluginOptionsGroup } from "./ModuleOptionsPanel";
 import { useServerInfo } from "../settingsData";
 import { Skeleton } from "../Skeleton";
 
-const t = m.modules;
 const FLASH_MS = 1500;
 
 export interface ScreenRef {
@@ -38,23 +38,25 @@ export interface ModulesSectionViewProps {
   pluginOptions?: readonly PluginOptionsView[] | undefined;
 }
 
-const kindLabel = (kind: string) => (m.moduleKind as Record<string, string>)[kind] ?? kind;
+const kindLabel = (kinds: Readonly<Record<string, string>>, kind: string) => kinds[kind] ?? kind;
 
-function summaryRoles(roles: readonly string[]): string {
+function summaryRoles(roles: readonly string[], t: Pick<AppMessages["modules"], "rolesMore">): string {
   if (roles.length === 0) return "";
-  return roles.length <= 2 ? roles.join(", ") : `${roles.slice(0, 2).join(", ")} 외 ${roles.length - 2}`;
+  return roles.length <= 2 ? roles.join(", ") : t.rolesMore(roles.slice(0, 2).join(", "), roles.length - 2);
 }
 
 /** 한 줄 설명: 계약에 설명 필드가 없어 제공 연결, 없으면 화면 역할로 만든다(둘 다 서버가 준 값). */
-function describeModule(mod: ModuleInfo): string {
+function describeModule(mod: ModuleInfo, t: AppMessages["modules"]): string {
   const provides = mod.provides ?? [];
   const roles = mod.web_roles ?? [];
-  if (provides.length > 0) return t.summaryProvides(summaryRoles(provides));
-  if (roles.length > 0) return t.summaryRoles(summaryRoles(roles));
+  if (provides.length > 0) return t.summaryProvides(summaryRoles(provides, t));
+  if (roles.length > 0) return t.summaryRoles(summaryRoles(roles, t));
   return "";
 }
 
 function Detail({ mod, screens, parts, renderOptions }: { mod: ModuleInfo; screens: readonly ScreenRef[]; parts: readonly PartRef[]; renderOptions?: ((mod: ModuleInfo) => ReactNode) | undefined }) {
+  const m = useAppMessages();
+  const t = m.modules;
   const affectedScreens = screens.filter((s) => s.requires.length > 0 && moduleAffects(mod, s.requires));
   const affectedParts = parts.filter((p) => p.requires.length > 0 && moduleAffects(mod, p.requires));
   const contracts = Object.entries(mod.contracts ?? {});
@@ -113,13 +115,13 @@ function Detail({ mod, screens, parts, renderOptions }: { mod: ModuleInfo; scree
       {affectedParts.length > 0 ? (
         <>
           <dt>{t.detail.parts}</dt>
-          <dd className="app-wrap">{affectedParts.map((p) => (m.linkPart.names as Record<string, string>)[p.id] ?? p.id).join(", ")}</dd>
+          <dd className="app-wrap">{affectedParts.map((p) => m.linkPart.names(p.id)).join(", ")}</dd>
         </>
       ) : null}
       <dt>{active ? t.cmd.disableTitle : t.cmd.enableTitle}</dt>
       <dd>
-        <pre className="app-mod-cmd">{moduleCommandSnippet(mod)}</pre>
-        <CopyButton text={moduleCommandSnippet(mod)} label={t.cmd.copy} copiedLabel={t.cmd.copied} />
+        <pre className="app-mod-cmd">{moduleCommandSnippet(mod, m)}</pre>
+        <CopyButton text={moduleCommandSnippet(mod, m)} label={t.cmd.copy} copiedLabel={t.cmd.copied} />
       </dd>
       {renderOptions === undefined ? null : (
         <>
@@ -136,6 +138,8 @@ function Detail({ mod, screens, parts, renderOptions }: { mod: ModuleInfo; scree
  * 켜고 끄는 스위치는 없다(설치자가 설정 파일로 한다). 데이터와 콜백은 props로 받는 표현 컴포넌트다.
  */
 export function ModulesSectionView({ state, refetching, onRefresh, screens, parts, renderOptions, pluginOptions }: ModulesSectionViewProps) {
+  const m = useAppMessages();
+  const t = m.modules;
   const modules = useMemo(() => (state.phase === "ready" ? state.modules : []), [state]);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [text, setText] = useState("");
@@ -269,7 +273,7 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
 
   const filters: { value: StatusFilter; label: string; count: number }[] = [
     { value: "all", label: t.filterAll, count: counts.total },
-    ...FILTER_STATUSES.map((s) => ({ value: s, label: moduleStatusLabel(s), count: counts.byStatus[s] ?? 0 })),
+    ...FILTER_STATUSES.map((s) => ({ value: s, label: moduleStatusLabel(s, m.moduleStatus), count: counts.byStatus[s] ?? 0 })),
   ];
 
   return (
@@ -366,7 +370,7 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
                   onFocus={() => setFocusKey(gKey)}
                 >
                   <Icon name={groupOpen ? "chevronDown" : "chevronRight"} size={16} />
-                  <span>{t.group(kindLabel(g.kind), g.modules.length)}</span>
+                  <span>{t.group(kindLabel(m.moduleKind, g.kind), g.modules.length)}</span>
                 </div>
                 {groupOpen ? (
                   <ul role="group" className="app-mod-rows">
@@ -392,11 +396,11 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
                             <Icon name={open ? "chevronDown" : "chevronRight"} size={16} />
                             <span className="app-mod-main">
                               <code className="app-mod-id" title={mod.id}>{mod.id}</code>
-                              {showsReasonCollapsed(mod) ? <span className="app-mod-reason app-muted">{mod.reason}</span> : describeModule(mod) === "" ? null : <span className="app-mod-reason app-muted">{describeModule(mod)}</span>}
+                              {showsReasonCollapsed(mod) ? <span className="app-mod-reason app-muted">{mod.reason}</span> : describeModule(mod, t) === "" ? null : <span className="app-mod-reason app-muted">{describeModule(mod, t)}</span>}
                             </span>
                             <ModuleStatusChip status={mod.status} />
                             <span className="app-muted app-mod-version">{mod.version}</span>
-                            <span className="app-muted app-mod-roles" title={roles.join(", ")}>{summaryRoles(roles)}</span>
+                            <span className="app-muted app-mod-roles" title={roles.join(", ")}>{summaryRoles(roles, t)}</span>
                           </div>
                           {open ? (
                             // axe 는 트리 안의 group 안쪽을 따라 들어가 treeitem 이 아닌 자식(dt·dd 등)을 허용하지 않는다.
@@ -422,9 +426,10 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
 
 /** 컨테이너: 모듈 목록 상태와 화면·연동 부분 데이터를 연결한다. */
 export function ModulesSection() {
+  const lookupMessage = useLookupMessage();
   const { state, refetch, refetching } = useModules();
   const partDefs = useLinkPartDefs();
-  const screens = useMemo<ScreenRef[]>(() => DEFAULT_ROUTES.map((r) => ({ title: lookupMessage(r.titleKey), path: r.path, requires: r.requires ?? [] })), []);
+  const screens = useMemo<ScreenRef[]>(() => DEFAULT_ROUTES.map((r) => ({ title: lookupMessage(r.titleKey), path: r.path, requires: r.requires ?? [] })), [lookupMessage]);
   const info = useServerInfo();
   const parts = useMemo<PartRef[]>(() => partDefs.map((p) => ({ id: p.id, requires: p.requires })), [partDefs]);
   return <ModulesSectionView state={state} refetching={refetching} onRefresh={() => void refetch()} screens={screens} parts={parts} renderOptions={(mod) => <ModuleOptionsPanel id={mod.id} />} pluginOptions={info.data?.plugin_options} />;

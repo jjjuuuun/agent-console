@@ -3,7 +3,7 @@ import type { BackendLoginSession, BackendLogoutResult, LoginMethodInfo } from "
 import { Banner, Button, Dialog, Spinner, StatusChip } from "@agent-console/ui";
 import { FixButtons } from "../../app/fix";
 import "./backendLogin.css";
-import { loginMessages as t } from "./messages";
+import { useLoginMessages } from "./messages";
 import { formatRemaining, isOpenableUrl, isTerminalPhase } from "./types";
 
 /* 표현 컴포넌트: 데이터와 콜백만 받는다. 서버·쿼리를 모른다. */
@@ -21,6 +21,7 @@ export interface LoginConfirmDialogProps {
 
 /** ① 시작 확인: notice와 쓰기 범위가 늘 보인다(숨기기 없음). 기본 포커스는 [로그인 시작]. */
 export function LoginConfirmDialog({ open, title, method, starting, error, onCancel, onStart }: LoginConfirmDialogProps) {
+  const t = useLoginMessages();
   const startRef = useRef<HTMLButtonElement>(null);
   const writes = method?.writes ?? [];
   return (
@@ -71,6 +72,7 @@ export interface LoginBusyDialogProps {
 
 /** 다른 창에서 이미 로그인 중(409). */
 export function LoginBusyDialog({ open, title, busy, onResume, onCancelOther, onClose }: LoginBusyDialogProps) {
+  const t = useLoginMessages();
   const resumeRef = useRef<HTMLButtonElement>(null);
   return (
     <Dialog
@@ -95,6 +97,7 @@ export function LoginBusyDialog({ open, title, busy, onResume, onCancelOther, on
 
 /** 글자를 보내는 작은 폼. 값은 보낸 뒤 바로 비우고 어디에도 남기지 않는다. */
 function SecretSendForm({ label, submitLabel, sending, onSend, inputRef }: { label: string; submitLabel: string; sending: boolean; onSend: (text: string) => void; inputRef?: React.RefObject<HTMLInputElement | null> }) {
+  const t = useLoginMessages();
   const [value, setValue] = useState("");
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -147,6 +150,7 @@ function stepStates(session: BackendLoginSession): ("done" | "active" | "todo")[
 
 /** ② 진행·결과 대화상자. 단계 3개, 열기/복사, 코드 칸, 접힌 CLI 화면, 취소, 성공·실패·시간 초과. */
 export function LoginSessionDialog({ open, title, session, nowMs, sending, sendError, method, successExtra, onSendText, onSendKey, onCancel, onClose, onRetry }: LoginSessionDialogProps) {
+  const t = useLoginMessages();
   const terminal = isTerminalPhase(session.phase);
   const states = stepStates(session);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -264,6 +268,7 @@ export interface LogoutDialogProps {
 
 /** 로그아웃 확인 → 결과. 터미널의 Claude Code도 로그아웃된다는 사실을 알린다. */
 export function LogoutDialog({ open, title, running, result, error, onCancel, onConfirm, onClose }: LogoutDialogProps) {
+  const t = useLoginMessages();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const done = result !== null;
   return (

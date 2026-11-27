@@ -23,7 +23,7 @@ export function folderGroupDef<T extends ArrangeableDefinition>(): GroupByDef<T>
 }
 
 /** 이미 있는 폴더 경로들(중간 단계 포함, 중복 없음, 이름순; 이동 후보). */
-export function folderPathsOf(items: readonly { attributes?: Record<string, unknown> | undefined }[]): string[] {
+export function folderPathsOf(items: readonly { attributes?: Record<string, unknown> | undefined }[], language: string): string[] {
   const set = new Set<string>();
   for (const it of items) {
     const f = folderOf(it.attributes);
@@ -31,7 +31,7 @@ export function folderPathsOf(items: readonly { attributes?: Record<string, unkn
     const parts = f.split("/");
     for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join("/"));
   }
-  return [...set].sort((x, y) => x.localeCompare(y, "ko"));
+  return [...set].sort((x, y) => x.localeCompare(y, language));
 }
 
 /** 프로젝트별. 프로젝트에 속한 항목이 하나도 없으면 쓸 수 없음. */
@@ -45,14 +45,14 @@ export function projectGroupDef<T extends ArrangeableDefinition>(noneReason: str
 }
 
 /** 이름순 정렬(`desc`면 거꾸로). */
-export function nameSortDef<T extends ArrangeableDefinition>(desc = false): SortDef<T> {
-  const cmp = byText<T>((x) => x.name);
+export function nameSortDef<T extends ArrangeableDefinition>(desc: boolean, language: string): SortDef<T> {
+  const cmp = byText<T>((x) => x.name, language);
   return { id: "name", titleKey: "sort.name", compare: desc ? (a, b) => cmp(b, a) : cmp };
 }
 
 /** 최근 수정순 정렬(수정 시각이 있는 항목이 하나라도 있을 때만 보인다). 같으면 이름순. */
-export function modifiedSortDef<T extends ArrangeableDefinition>(desc = true): SortDef<T> {
+export function modifiedSortDef<T extends ArrangeableDefinition>(desc: boolean, language: string): SortDef<T> {
   const byTime = byNumber<T>((x) => x.saved_at ?? undefined, desc);
-  const byName = byText<T>((x) => x.name);
+  const byName = byText<T>((x) => x.name, language);
   return { id: "modified", titleKey: "sort.modified", compare: (a, b) => byTime(a, b) || byName(a, b), available: (items) => items.some((x) => x.saved_at != null) };
 }

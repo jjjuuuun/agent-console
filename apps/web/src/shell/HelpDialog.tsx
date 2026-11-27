@@ -1,18 +1,23 @@
 import { Button, Dialog, formatKeyCombo, splitKeySequence, useEffectiveShortcuts, isPlainCharCombo, type EffectiveShortcut, type KeyPlatform } from "@agent-console/ui";
-import { lookupMessage, messages as m } from "../app/messages";
+import { useLookupMessage, useShellMessages } from "../app/shellMessages";
 import { routeIdOfGoto } from "./routeConfig";
 
 /** 표시용 단축키 이름. `g` 이동 명령은 "○○(으)로 이동", 나머지는 `titleKey` 그대로. */
-export function shortcutLabel(entry: Pick<EffectiveShortcut, "id" | "titleKey">): string {
-  return routeIdOfGoto(entry.id) === undefined ? lookupMessage(entry.titleKey) : m.shortcuts.gotoPrefix(lookupMessage(entry.titleKey));
+export function useShortcutLabel(): (entry: Pick<EffectiveShortcut, "id" | "titleKey">) => string {
+  const m = useShellMessages();
+  const lookupMessage = useLookupMessage();
+  return (entry) => (routeIdOfGoto(entry.id) === undefined ? lookupMessage(entry.titleKey) : m.shortcuts.gotoPrefix(lookupMessage(entry.titleKey)));
 }
 
 /** 키 문자열 표시(`g c` → `G C`가 아니라 `g c`, 조합은 플랫폼 표기). */
-export function shortcutKeysText(keys: string, platform: KeyPlatform): string {
-  if (keys === "") return m.shortcuts.disabled;
-  return splitKeySequence(keys)
-    .map((k) => formatKeyCombo(k, platform))
-    .join(" ");
+export function useShortcutKeysText(): (keys: string, platform: KeyPlatform) => string {
+  const m = useShellMessages();
+  return (keys, platform) => {
+    if (keys === "") return m.shortcuts.disabled;
+    return splitKeySequence(keys)
+      .map((k) => formatKeyCombo(k, platform))
+      .join(" ");
+  };
 }
 
 export interface HelpDialogProps {
@@ -33,6 +38,9 @@ export interface HelpDialogProps {
 }
 
 function Table({ title, rows, platform }: { title: string; rows: readonly EffectiveShortcut[]; platform: KeyPlatform }) {
+  const m = useShellMessages();
+  const shortcutLabel = useShortcutLabel();
+  const shortcutKeysText = useShortcutKeysText();
   return (
     <section aria-label={title}>
       <h3 className="app-block-subtitle">{title}</h3>
@@ -57,6 +65,7 @@ function Table({ title, rows, platform }: { title: string; rows: readonly Effect
 
 /** 단축키 도움말(`?`). 표는 실제 적용 중인 키(설정이 덮어쓴 값)에서 생성한다. */
 export function HelpDialog({ open, onClose, scope, extraScopes = [], platform, onReplayHints, onShowStart, hiddenIds, connectionNote }: HelpDialogProps) {
+  const m = useShellMessages();
   const all = useEffectiveShortcuts().filter((e) => !hiddenIds?.has(e.id));
   const screen = all.filter((e) => e.scope !== "global" && (e.scope === scope || extraScopes.includes(e.scope)));
   const global = all.filter((e) => e.scope === "global");

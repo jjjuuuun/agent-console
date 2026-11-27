@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/tsconfig",
   "version": "0.1.0",
-  "description": "Agent Console TS 패키지 공용 tsconfig(base.json, library.json)",
+  "description": "Shared tsconfig for Agent Console TS packages (base.json, library.json)",
   "private": true,
   "license": "MIT",
   "type": "module",

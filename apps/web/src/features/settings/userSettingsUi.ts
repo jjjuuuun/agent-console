@@ -1,17 +1,28 @@
 import type { UiSchema } from "@agent-console/schema-form";
 import type { BackendDescriptor, MergeStrategyInfo, ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { visibleBackends } from "../../app/backendVisibility";
-import { messages as m, lookupMessage } from "../../app/messages";
+import { useMemo } from "react";
+import { useServerTranslate } from "../../i18n";
+import { useAppMessages, type AppMessages } from "../../app/appMessages";
+import { useLookupMessage } from "../../app/shellMessages";
 import { CHAT_SORT_MODES } from "../../lib/chatSort";
 import { formatPointer, parsePointer, setAt } from "../../lib/jsonPointer";
 import { enumValues, isNullableNumber, keywordAt, parseEnumDescriptions, resolveRef, schemaAt, schemaPointers, unwrapNullable, type SchemaNode } from "../../lib/schemaTools";
-import { ENUM_PREVIEWS } from "./replyDisplayPreviews";
+import { enumPreviews } from "./replyDisplayPreviews";
 import type { Choice } from "./widgets/ChoiceSelectWidget";
 import { CHOICE_SELECT_WIDGET } from "./widgets/ChoiceSelectWidget";
 import { ATTACHMENTS_FIELD } from "./widgets/AttachmentsField";
 import { KEY_VALUE_MAP_FIELD, type KeyValueMapOptions } from "./widgets/KeyValueMapField";
 import { NULLABLE_NUMBER_WIDGET } from "./widgets/NullableNumberWidget";
 import { RADIO_CARDS_WIDGET } from "./widgets/RadioCardsWidget";
+
+/** uiSchema 문구: 설정 문구 표와 `titleKey` 해석기(화면 언어로 만든 것을 `useUserSettingsText()`가 준다). */
+export interface UserSettingsText {
+  messages: Pick<AppMessages, "settings">;
+  lookup: (key: string) => string;
+  /** 서버 원문(스키마 설명·enum 라벨)을 화면 언어로. 없으면 원문 그대로 */
+  translate?: (text: string) => string;
+}
 
 /** 사용자 설정 폼이 필요로 하는 서버 데이터(디스크립터·목록). 모두 선택이며 없으면 해당 필드는 일반 입력으로 그려진다. */
 export interface UserSettingsOptions {
@@ -41,8 +52,8 @@ function put(ui: Obj, pointer: string, spec: Obj): Obj {
 }
 
 /** 규칙 경로(JSON Pointer) 검사: 비었거나 `/`로 시작해야 한다. */
-export function validateMergePointer(key: string): string | undefined {
-  return key === "" || key.startsWith("/") ? undefined : m.settings.merge.pointerInvalid;
+export function validateMergePointer(key: string, text: UserSettingsText): string | undefined {
+  return key === "" || key.startsWith("/") ? undefined : text.messages.settings.merge.pointerInvalid;
 }
 
 /**
@@ -51,8 +62,11 @@ export function validateMergePointer(key: string): string | undefined {
  *  - 널 허용 숫자 → "정하지 않음" 체크가 있는 숫자 입력
  * 아래 `BINDINGS`는 의미를 가진 몇 필드의 위젯 이름만 고른다(설정 키 → 위젯 이름 데이터).
  */
-export function buildUserSettingsUi(root: SchemaNode, options: UserSettingsOptions = {}): UiSchema {
+export function buildUserSettingsUi(root: SchemaNode, options: UserSettingsOptions | undefined, text: UserSettingsText): UiSchema {
+  options ??= {};
   let ui: Obj = {};
+  const previews = enumPreviews(text.messages);
+  const tr = text.translate ?? ((s: string) => s);
   const walk = (node: SchemaNode, pointer: string, depth: number) => {
     const { schema } = unwrapNullable(node, root);
     const props = schema["properties"];
@@ -62,9 +76,10 @@ export function buildUserSettingsUi(root: SchemaNode, options: UserSettingsOptio
       const values = enumValues(raw, root);
       const resolved = resolveRef(raw, root);
       if (values.length > 0) {
-        const descriptions = parseEnumDescriptions(typeof resolved["description"] === "string" ? resolved["description"] : undefined, values);
-        const labels = xUiEnumLabels(raw) ?? xUiEnumLabels(resolved);
-        ui = put(ui, child, { "ui:widget": RADIO_CARDS_WIDGET, "ui:options": { descriptions, previews: ENUM_PREVIEWS[child] ?? {}, ...(labels ? { labels } : {}) } });
+        const descriptions = parseEnumDescriptions(typeof resolved["description"] === "string" ? tr(resolved["description"]) : undefined, values);
+        const rawLabels = xUiEnumLabels(raw) ?? xUiEnumLabels(resolved);
+        const labels = rawLabels === undefined ? undefined : Object.fromEntries(Object.entries(rawLabels).map(([k, v]) => [k, tr(v)]));
+        ui = put(ui, child, { "ui:widget": RADIO_CARDS_WIDGET, "ui:options": { descriptions, previews: previews[child] ?? {}, ...(labels ? { labels } : {}) } });
       } else if (isNullableNumber(raw, root)) {
         ui = put(ui, child, { "ui:widget": NULLABLE_NUMBER_WIDGET });
       } else {
@@ -74,7 +89,7 @@ export function buildUserSettingsUi(root: SchemaNode, options: UserSettingsOptio
   };
   walk(root, "", 0);
 
-  for (const binding of BINDINGS) {
+  for (const binding of bindings(text)) {
     const spec = binding.spec(options);
     if (spec !== undefined && schemaAt(root, binding.pointer) !== undefined) {
       ui = put(ui, binding.pointer, spec);
@@ -89,7 +104,9 @@ interface Binding {
 }
 
 /** 설정 키 → 위젯/필드 이름. 필드의 의미를 아는 유일한 곳이며, 값 어휘는 모두 서버 데이터로 채운다. */
-const BINDINGS: readonly Binding[] = [
+const bindings = ({ messages: m, lookup: lookupMessage, translate }: UserSettingsText): readonly Binding[] => {
+  const tr = translate ?? ((s: string) => s);
+  return [
   {
     pointer: "/editor/default_edge_kind",
     spec: (o) => ({ "ui:widget": CHOICE_SELECT_WIDGET, "ui:options": { choices: o.edgeKinds ?? [], emptyLabel: m.settings.edgeKind.first } }),
@@ -109,8 +126,8 @@ const BINDINGS: readonly Binding[] = [
         valueLabel: m.settings.merge.strategy,
         addLabel: m.settings.merge.add,
         keySuggestions: o.mergeSchema === undefined ? [] : schemaPointers(o.mergeSchema),
-        valueChoices: (o.mergeStrategies ?? []).map((s) => ({ value: s.id, label: s.id, ...(s.description ? { hint: s.description } : {}) })),
-        validateKey: validateMergePointer,
+        valueChoices: (o.mergeStrategies ?? []).map((s) => ({ value: s.id, label: s.id, ...(s.description ? { hint: tr(s.description) } : {}) })),
+        validateKey: (key: string) => validateMergePointer(key, { messages: m, lookup: lookupMessage }),
         rowNote: (key) => {
           const base = o.mergeSchema === undefined ? undefined : keywordAt(o.mergeSchema, key, "x-merge");
           return `${typeof base === "string" ? m.settings.merge.schemaDefault(base) : m.settings.merge.noSchemaDefault} · ${m.settings.merge.widenWarning}`;
@@ -131,7 +148,8 @@ const BINDINGS: readonly Binding[] = [
       } satisfies KeyValueMapOptions,
     }),
   },
-];
+  ];
+};
 
 /** 에이전트 공통 설정 폼에 필요한 서버 데이터. */
 export interface AgentDefaultsOptions {
@@ -167,8 +185,9 @@ export function agentSchemaForBackend(schema: SchemaNode, backends: readonly Bac
   };
 }
 
-export function buildAgentDefaultsUi(root: SchemaNode, options: AgentDefaultsOptions): UiSchema {
-  let ui = buildUserSettingsUi(root) as Obj;
+export function buildAgentDefaultsUi(root: SchemaNode, options: AgentDefaultsOptions, text: UserSettingsText): UiSchema {
+  const m = text.messages;
+  let ui = buildUserSettingsUi(root, undefined, text) as Obj;
   const props = (root["properties"] ?? {}) as Obj;
   if ("backend" in props) {
     ui = put(ui, "/backend", {
@@ -190,4 +209,12 @@ export function buildAgentDefaultsUi(root: SchemaNode, options: AgentDefaultsOpt
     });
   }
   return ui as UiSchema;
+}
+
+/** 현재 화면 언어의 uiSchema 문구(설정 문구 표 + `titleKey` 해석기). 컴포넌트 안에서 부른다. */
+export function useUserSettingsText(): UserSettingsText {
+  const messages = useAppMessages();
+  const lookup = useLookupMessage();
+  const translate = useServerTranslate();
+  return useMemo(() => ({ messages, lookup, translate }), [messages, lookup, translate]);
 }

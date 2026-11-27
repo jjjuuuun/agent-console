@@ -1,5 +1,5 @@
 import { Suspense, lazy, type ComponentProps } from "react";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
 
 const Loaded = lazy(() => import("./ArchitecturePanel").then((m) => ({ default: m.ArchitecturePanel })));
 
@@ -8,6 +8,7 @@ const Loaded = lazy(() => import("./ArchitecturePanel").then((m) => ({ default: 
  * 같은 props를 받는다.
  */
 export function LazyArchitecturePanel(props: ComponentProps<typeof Loaded>) {
+  const t = useArchMessages();
   return (
     <Suspense fallback={<div className="app-loading" role="status" aria-busy="true">{t.status.loading}</div>}>
       <Loaded {...props} />

@@ -12,6 +12,6 @@ export function teamGroupDefs(noProjects: string): GroupByDef<GraphSummary>[] {
 }
 
 /** 정렬 데이터: 이름, 최근 수정(`saved_at`이 있을 때만). 방향은 열 머리 단추가 정한다. */
-export function teamSortDefs(dirs: Readonly<Record<string, SortDirection>>): SortDef<GraphSummary>[] {
-  return [nameSortDef<GraphSummary>(dirs["name"] === "desc"), modifiedSortDef<GraphSummary>(dirs["modified"] !== "asc")];
+export function teamSortDefs(dirs: Readonly<Record<string, SortDirection>>, language: string): SortDef<GraphSummary>[] {
+  return [nameSortDef<GraphSummary>(dirs["name"] === "desc", language), modifiedSortDef<GraphSummary>(dirs["modified"] !== "asc", language)];
 }

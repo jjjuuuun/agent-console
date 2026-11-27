@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { VersionConflictDetails } from "@agent-console/contracts";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { messages as m } from "../app/messages";
-import { formatDateTime } from "../lib/format";
+import { useAppMessages } from "../app/appMessages";
+import { useFormat } from "../i18n";
 
 export interface ConflictBannerProps {
   details: VersionConflictDetails;
@@ -21,9 +21,11 @@ type Confirm = "load" | "overwrite" | null;
 
 /** 버전 충돌 배너(닫기 불가, 정의 편집 화면 공용). 파괴적 동작은 확인 다이얼로그를 거친다. */
 export function ConflictBanner({ details, busy, onLoadServer, onSaveCopy, onOverwrite, summary }: ConflictBannerProps) {
+  const fmt = useFormat();
+  const m = useAppMessages();
   const [confirm, setConfirm] = useState<Confirm>(null);
   const t = m.definition.conflict;
-  const info = [details.saved_at != null ? t.savedAt(formatDateTime(details.saved_at)) : undefined, summary].filter((x): x is string => x !== undefined);
+  const info = [details.saved_at != null ? t.savedAt(fmt.dateTimeFull(details.saved_at)) : undefined, summary].filter((x): x is string => x !== undefined);
   return (
     <>
       <Banner

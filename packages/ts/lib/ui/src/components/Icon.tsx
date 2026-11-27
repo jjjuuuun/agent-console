@@ -127,6 +127,14 @@ export const defaultIcons: Readonly<Record<string, IconComponent>> = {
   memory: svgIcon(<path d="M5.5 2.75h7.75v7.75H5.5zM2.75 5.5v7.75H10.5" />),
   archive: svgIcon(<path d="M2.5 3.5h11v3h-11zM3.5 6.5v6.5h9V6.5M6.5 9h3" />),
   architecture: svgIcon(<path d="M2.75 2.75h2.5v2.5h-2.5zM6.75 2.75h2.5v2.5h-2.5zM10.75 2.75h2.5v2.5h-2.5zM2.75 6.75h2.5v2.5h-2.5zM6.75 6.75h2.5v2.5h-2.5zM10.75 6.75h2.5v2.5h-2.5zM2.75 10.75h2.5v2.5h-2.5zM6.75 10.75h2.5v2.5h-2.5zM10.75 10.75h2.5v2.5h-2.5z" />),
+  /** 플러그(연결). 오른쪽 아래 모서리는 상태 배지 자리라 비워 둔다. */
+  plug: svgIcon(
+    <>
+      <path d="M6 1.5V5M10 1.5V5" />
+      <path d="M4.5 5h7v3a3.5 3.5 0 0 1-7 0z" />
+      <path d="M8 11.5v3" />
+    </>,
+  ),
   "eye-off": svgIcon(<path d="M2 2l12 12M6.4 4a6.6 6.6 0 0 1 1.6-.5c4 0 6.5 4.5 6.5 4.5a11 11 0 0 1-2 2.5M9.6 12a6.6 6.6 0 0 1-1.6.5C4 12.5 1.5 8 1.5 8a11 11 0 0 1 2.6-3" />),
 };
 

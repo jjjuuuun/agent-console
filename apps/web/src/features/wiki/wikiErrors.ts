@@ -1,8 +1,8 @@
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import type { WikiPageNotFoundDetails, WikiRuleRejectedDetails } from "@agent-console/contracts/wiki";
-import { wikiMessages as m } from "./messages";
-import { wikiIssueText } from "../../app/wikiIssueMessages";
+import { wikiIssueText } from "./wikiIssueText";
+import type { ServerText, Translate } from "@agent-console/i18n";
 
 /** 위키 요청 실패를 화면이 다루는 종류로 나눈 것. 서버 코드는 화면에 노출하지 않는다. */
 export type WikiFailure =
@@ -48,7 +48,7 @@ function issueLines(details: Readonly<Record<string, unknown>>): number[] {
 }
 
 /** 오류를 화면 종류로 분류한다. `fallback`은 서버 문장도 없을 때 쓴다. */
-export function classifyWikiError(error: unknown, fallback: string): WikiFailure {
+export function classifyWikiError(error: unknown, fallback: string, t: Translate, server?: ServerText): WikiFailure {
   if (!(error instanceof ApiError)) return { kind: "generic", message: error instanceof Error && error.message !== "" ? error.message : fallback };
   const message = error.message !== "" ? error.message : fallback;
   const d = error.details;
@@ -80,16 +80,16 @@ export function classifyWikiError(error: unknown, fallback: string): WikiFailure
     case ERROR_CODES.FOLDERS_INVALID_PATH:
       return { kind: "invalidPath", message };
     case ERROR_CODES.PROJECT_FOLDER_MISSING:
-      return { kind: "problem", message: m.problem.folderMissing };
+      return { kind: "problem", message: t("problem.folderMissing") };
     case ERROR_CODES.PROJECT_MANIFEST_INVALID:
-      return { kind: "problem", message: m.problem.manifestInvalid };
+      return { kind: "problem", message: t("problem.manifestInvalid") };
     case ERROR_CODES.PROJECT_CONFIG_READONLY:
     case ERROR_CODES.WIKI_CONFIG_READONLY:
-      return { kind: "problem", message: m.problem.configReadonly };
+      return { kind: "problem", message: t("problem.configReadonly") };
     case ERROR_CODES.PROJECT_NOT_FOUND:
-      return { kind: "problem", message: m.problem.notFound };
+      return { kind: "problem", message: t("problem.notFound") };
     default:
-      return { kind: "generic", message: wikiIssueText(error.code, message), code: error.code };
+      return { kind: "generic", message: server === undefined ? message : wikiIssueText(error.code, message, server), code: error.code };
   }
 }
 
@@ -99,23 +99,23 @@ export function hasCode(error: unknown, code: string): error is ApiError {
 }
 
 /** 서버 문장을 우선 쓰는 짧은 문구(칸 아래·토스트용). */
-export function failureText(error: unknown, fallback: string): string {
-  const f = classifyWikiError(error, fallback);
+export function failureText(error: unknown, fallback: string, t: Translate): string {
+  const f = classifyWikiError(error, fallback, t);
   switch (f.kind) {
     case "ruleRejected":
-      return m.band.ruleRejected(f.ruleId, f.message);
+      return f.message === "" ? t("band.ruleRejected", { rule: f.ruleId }) : t("band.ruleRejectedWith", { rule: f.ruleId, message: f.message });
     case "secretRejected":
-      return f.message !== "" ? f.message : m.band.secretRejected(f.lines.join(", "));
+      return f.message !== "" ? f.message : f.lines.join(", ") === "" ? t("band.secretRejected") : t("band.secretRejectedAt", { lines: f.lines.join(", ") });
     case "unavailable":
-      return m.unavailable.title;
+      return t("unavailable.title");
     case "conflict":
-      return m.band.conflict;
+      return t("band.conflict");
     case "linkInsertUnavailable":
-      return m.editor.insertLinkOff;
+      return t("editor.insertLinkOff");
     case "pageNotFound":
       return fallback;
     case "notFound":
-      return m.notFound;
+      return t("notFound");
     case "historyUnavailable":
       return fallback;
     default:

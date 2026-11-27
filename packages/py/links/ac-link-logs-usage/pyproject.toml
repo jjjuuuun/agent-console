@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-link-logs-usage"
 version = "0.1.0"
-description = "로그·사용량 연동 모듈: 로컬 로그 토큰 추정 창(local-logs 사용량 출처)"
+description = "Logs and usage link module: token estimate windows from local logs (local-logs usage source)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -19,6 +19,9 @@ link-logs-usage = "agent_console_link_logs_usage.module:module"
 
 [project.entry-points."agent_console.config_schemas"]
 usage-source-local-logs = "agent_console_link_logs_usage.estimate:CONFIG_SCHEMA"
+
+[project.entry-points."agent_console.message_catalogs"]
+ac-link-logs-usage = "agent_console_link_logs_usage"
 
 [dependency-groups]
 dev = [

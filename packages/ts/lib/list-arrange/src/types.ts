@@ -44,7 +44,7 @@ export interface GroupNode<T> {
 }
 
 export interface GroupOptions<T> {
-  /** 묶음 이름 정렬 로케일. 기본 `ko`. */
+  /** 묶음 이름 정렬 로케일. 기본 `DEFAULT_LOCALE`("en"). */
   locale?: string;
   /** 묶음 안 항목 정렬. 없으면 입력 순서. */
   compare?: (a: T, b: T) => number;

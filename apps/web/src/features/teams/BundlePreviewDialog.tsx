@@ -4,9 +4,9 @@ import { Button, Dialog, ProvenanceBadge } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { stringifyValue } from "../../lib/format";
 import { Skeleton } from "../settings";
-import { libraryMessages as lm, modeLabel } from "../library";
+import { useLibraryMessages, modeLabel } from "../library";
 import { DraftNotice } from "./DraftNotice";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 import { useDraftPreview } from "./useDraftPreview";
 
 const PREVIEW_CHARS = 600;
@@ -17,6 +17,7 @@ export function slotParts(value: unknown): string[] {
 }
 
 function Part({ text }: { text: string }) {
+  const t = useTeamMessages();
   const [open, setOpen] = useState(false);
   const long = text.length > PREVIEW_CHARS;
   return (
@@ -46,6 +47,7 @@ export function warningsOfSlot(warnings: readonly Issue[], slot: string): Issue[
 
 /** 묶음 경고 영역: 서버 메시지·path·code를 그대로 보인다(줄이거나 숨기지 않는다). 경고가 없으면 영역이 없다. */
 export function BundleWarnings({ warnings }: { warnings: readonly Issue[] }) {
+  const t = useTeamMessages();
   if (warnings.length === 0) return null;
   return (
     <section className="team-bundle-warnings" aria-label={t.bundle.warningsRegion}>
@@ -68,6 +70,8 @@ export function BundleWarnings({ warnings }: { warnings: readonly Issue[] }) {
 }
 
 export function BundleView({ bundle, warnings = [] }: { bundle: ResourceBundle; warnings?: readonly Issue[] }) {
+  const t = useTeamMessages();
+  const lm = useLibraryMessages();
   const slots = Object.entries(bundle.slots ?? {});
   if (slots.length === 0 && warnings.length === 0) return <p className="app-muted">{t.bundle.empty}</p>;
   return (
@@ -94,7 +98,7 @@ export function BundleView({ bundle, warnings = [] }: { bundle: ResourceBundle; 
                   <li key={`${s.ref}:${i}`}>
                     <span className="lib-mono">{s.ref}</span>{" "}
                     {s.layer ? <ProvenanceBadge layer={{ id: s.layer, label: s.layer, index: index + 1 }} variant="set" /> : null}{" "}
-                    {s.mode ? <span className="ac-tag">{modeLabel(s.mode)}</span> : null}{" "}
+                    {s.mode ? <span className="ac-tag">{modeLabel(s.mode, lm.attach.modes)}</span> : null}{" "}
                     {s.resource_type ? <span className="app-muted">{s.resource_type}</span> : null}
                   </li>
                 ))}
@@ -120,6 +124,8 @@ export interface BundlePreviewDialogProps {
 
 /** 이 노드가 실행 때 받을 실행 묶음 미리보기와 묶음 경고(`BundlePreview`). 저장본 `GET`, 초안 `POST /graphs/bundle-preview`. */
 export function BundlePreviewDialog({ graphId, nodeId, nodeLabel, draft, savedNode, onClose }: BundlePreviewDialogProps) {
+  const lm = useLibraryMessages();
+  const t = useTeamMessages();
   const q = useDraftPreview<BundlePreview, Graph>({
     keyBase: ["bundle-preview", graphId, nodeId],
     draftInput: draft,

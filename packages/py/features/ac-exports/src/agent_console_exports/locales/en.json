@@ -1,0 +1,30 @@
+{
+  "text": {
+    "Claude Code 프로젝트(.claude)": "Claude Code project (.claude)",
+    "에이전트·지침·규칙·skill·hook·권한·MCP 서버를 Claude Code 프로젝트 형식(.claude/, CLAUDE.md, .mcp.json)으로 내보냅니다.": "Exports agents, instructions, rules, skills, hooks, permissions and MCP servers in the Claude Code project format (.claude/, CLAUDE.md, .mcp.json).",
+    "주 노드": "Main node",
+    "팀 구성을 내보낼 때 CLAUDE.md 본문이 될 노드 id. 비우면 없음(자동으로 고르지 않는다).": "Id of the node whose content becomes CLAUDE.md when exporting a team. Leave empty for none (it isn't picked automatically).",
+    "에이전트 파일 이름": "Agent file name",
+    "{id}·{name} 자리를 바꾼다.": "Replaces {id} and {name}.",
+    "지침 쓰는 방식": "Instruction output",
+    "inline: CLAUDE.md에 이어 붙임, separate_files: 지침마다 파일 + CLAUDE.md에서 @경로로 불러옴.": "inline: appended to CLAUDE.md; separate_files: one file per instruction, loaded from CLAUDE.md with @path.",
+    "공유 리소스 포함": "Include shared resources",
+    "팀 구성 층·공통 층에 붙은 리소스도 내보낸다.": "Also exports resources attached to the team layer and the common layer.",
+    "비밀 참조": "Secret references",
+    "env_var: secret://이름 → ${이름}, omit: 비밀 칸을 쓰지 않음.": "env_var: secret://name → ${name}; omit: secret fields aren't written."
+  },
+  "codes": {
+    "export.fields_dropped": "Some settings were left out because the format can't express them.",
+    "export.invalid_options": "The options don't match the format's schema.",
+    "export.kind_unsupported": "This format doesn't support the definition kind {kind}.",
+    "export.main_node_not_found": "The main node in the options isn't in the team or isn't an agent node.",
+    "export.name_conflict": "Skipped because an output with the same name already exists.",
+    "export.not_found": "Skipped {kind}/{id}: a definition it uses wasn't found.",
+    "export.scope_widened": "Something attached to one member was written where it applies to the whole project.",
+    "export.secret_omitted": "Secret values weren't written.",
+    "export.secret_redacted": "Masked values that look like plain-text secrets. Keep secrets as references (secret://).",
+    "export.semantics_approximate": "The output isn't guaranteed to run exactly like the original definition.",
+    "export.type_unsupported": "Skipped a resource type the format doesn't handle.",
+    "export.unsafe_path": "The path is unsafe (escapes the folder, is a link, uses a forbidden name or a protected location)."
+  }
+}

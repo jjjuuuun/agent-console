@@ -133,7 +133,7 @@ def node_actor(impl: object, config: Mapping[str, Any]) -> str | None:
     try:
         value = hook(config)
     except Exception:
-        _log.exception("노드 타입 actor 훅 실패")
+        _log.exception("Node type actor hook failed")
         return None
     return value if isinstance(value, str) and value else None
 
@@ -163,7 +163,7 @@ def node_display_name(spec: Any, impl: object | None, services: Any = None) -> s
         try:
             value = hook(getattr(spec, "config", {}), services)
         except Exception:
-            _log.exception("노드 타입 이름 훅 실패")
+            _log.exception("Node type name hook failed")
             value = None
         if isinstance(value, str) and value:
             return value

@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import type { MenuItemDef } from "@agent-console/ui";
-import { createProjectsText, statusInfo, type StatusTone } from "@agent-console/projects";
+import { statusInfo, type StatusTone } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import { useDelayed } from "../../app/useDelayed";
 import { useStorage } from "../../app/StorageContext";
 import { useToast } from "@agent-console/ui";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { useProjects } from "./ProjectsContext";
 import { ProjectRegion } from "./ProjectRegion";
 import { parseCollapsed, regionViews } from "./projectRegionLib";
+import { useLanguageCode } from "../../i18n";
 import type { RegionProject } from "./ProjectRegion";
 
-const text = createProjectsText();
 
 /** 프로젝트 홈(`/projects/:id`) 주소에서 id를 읽는다. 아니면 null. */
 function homeProjectId(pathname: string): string | null {
@@ -49,6 +50,9 @@ export interface SidebarProjectRegionProps {
  * 표현 컴포넌트에 잇는다. 프로젝트 기능이 꺼져 있으면 아무것도 그리지 않는다(구분선·여백 포함).
  */
 export function SidebarProjectRegion({ rail }: SidebarProjectRegionProps) {
+  const language = useLanguageCode();
+  const text = useProjectsText();
+  const m = useFolderHomeMessages();
   const p = useProjects();
   const storage = useStorage();
   const [collapsed, setCollapsed] = useState(() => parseCollapsed(storage.get(PROJECT_REGION_COLLAPSED_KEY)));
@@ -56,7 +60,7 @@ export function SidebarProjectRegion({ rail }: SidebarProjectRegionProps) {
   const location = useLocation();
   const rows = useMemo<RegionProject[]>(
     () =>
-      regionViews(p.views).map((v) => {
+      regionViews(p.views, language).map((v) => {
         const info = statusInfo(v);
         const ready = v.status === "ready" && v.project.archived !== true;
         const newer = ready && v.records_state === "newer";
@@ -74,7 +78,7 @@ export function SidebarProjectRegion({ rail }: SidebarProjectRegionProps) {
           status,
         };
       }),
-    [p.views],
+    [p.views, m, text, language],
   );
   const copy = (value: string, done: string) => {
     const fail = () => toast({ tone: "warning", text: m.menu.copyFailed });

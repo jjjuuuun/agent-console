@@ -3,9 +3,12 @@ import type { ProvenanceLayer } from "@agent-console/schema-form";
 import type { ProvenanceLayer as UiLayer } from "@agent-console/ui";
 import { withoutLayer } from "../../lib/sparse";
 
-/** 서버 유효 설정의 층 목록(낮은 우선순위가 앞)을 폼 층 목록으로. 층 이름은 서버가 정한다. */
-export function toFormLayers(eff: EffectiveSettings | undefined): ProvenanceLayer[] {
-  return (eff?.layers ?? []).map((l) => ({ id: l.id, label: l.label && l.label !== "" ? l.label : l.id }));
+/**
+ * 서버 유효 설정의 층 목록(낮은 우선순위가 앞)을 폼 층 목록으로. 층 이름은 서버가 정한다.
+ * @param translate 서버 원문(층 이름)을 화면 언어로 옮기는 함수. 없으면 원문 그대로.
+ */
+export function toFormLayers(eff: EffectiveSettings | undefined, translate: (text: string) => string = (x) => x): ProvenanceLayer[] {
+  return (eff?.layers ?? []).map((l) => ({ id: l.id, label: l.label && l.label !== "" ? translate(l.label) : l.id }));
 }
 
 /** 가장 높은 우선순위 층(편집 중인 층) id. */
@@ -24,6 +27,6 @@ export function inheritedValue(eff: EffectiveSettings | undefined, editLayerId: 
 }
 
 /** 표시용 층 목록(색 순서용 `index` 포함). 첨부 목록 같은 ui 컴포넌트에 넘긴다. */
-export function toUiLayers(eff: EffectiveSettings | undefined): UiLayer[] {
-  return toFormLayers(eff).map((l, index) => ({ ...l, index }));
+export function toUiLayers(eff: EffectiveSettings | undefined, translate?: (text: string) => string): UiLayer[] {
+  return toFormLayers(eff, translate).map((l, index) => ({ ...l, index }));
 }

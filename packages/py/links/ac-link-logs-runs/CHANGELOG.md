@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-logs-runs`, so the web can show the link module description and settings and the `logs.invalid_query` issue in English (data only, no API change). The default description of event map value fields is now one fixed text (it no longer repeats the field name, which is the title). Log lines are now English.
 - 7R.15: 기본 대응표 데이터에 `wiki.*`(범주 `wiki`, 문서 표지 `{kind: wiki, path: <위키>/<경로>}`, 옮기기 문서 둘, 상태·동작 대응은 map 데이터, 근거 `tool_use_id`·`wiki`). 코드 변경 없음.
 - 6R.12(M-15): `run_tree_ids`가 읽기의 선택 메서드 `descendants`(루트 Run일 때 색인 질의 한 번)를 쓴다. 없거나 중간 Run·빈 결과면 예전처럼 직접 자식을 따라간다. 자손 1,000개 측정 테스트.
 

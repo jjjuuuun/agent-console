@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-link-memory-runs`, so the web can show the link module description and settings and the `memory.access_invalid` issue in English (data only, no API change). Log lines are now English.
 - FU.5: `merge_access`가 `agent_console_nodes_core.merge_access_layers`로 합친 뒤 검증만 한다(위키 연동과 같은 규칙, 동작 그대로).
 
 ## 0.1.0

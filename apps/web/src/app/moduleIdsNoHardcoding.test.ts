@@ -15,6 +15,9 @@ function walk(dir: string): string[] {
 const SRC = resolve(__dirname, "..");
 const files = walk(SRC).filter((f) => /\.(tsx?|json)$/.test(f) && !/\.test\.tsx?$/.test(f) && !/[\\/]testing[\\/]/.test(f));
 
+/** 소스 전체를 훑는 테스트의 시간 한도(부하가 있으면 기본 5초를 넘는다). */
+const SCAN_TIMEOUT = 60_000;
+
 describe("웹 앱 코드에 모듈 id 문자열이 없다", () => {
   it("검사 대상이 있다", () => expect(files.length).toBeGreaterThan(50));
   it("따옴표 문자열 안에 mod-·link-·ac-mod- 모듈 id가 없다", () => {
@@ -26,5 +29,5 @@ describe("웹 앱 코드에 모듈 id 문자열이 없다", () => {
       }
     }
     expect(hits).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
 });

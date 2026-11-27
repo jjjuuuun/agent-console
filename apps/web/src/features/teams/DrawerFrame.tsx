@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { Banner, Button, ConfirmDialog, Drawer } from "@agent-console/ui";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 export interface DrawerFrameProps {
   title: string;
@@ -22,6 +22,7 @@ export interface DrawerFrameProps {
 
 /** 만들기 서랍의 공통 틀: 안내 한 줄, 실패 배너, 하단 고정 [만들고 추가]·[취소], Ctrl+Enter 제출, 닫기 전 확인. 정의 종류를 모른다. */
 export function DrawerFrame({ title, note, dirty, canSubmit, busy, error, submitLabel, onSubmit, onClose, footerExtra, children, testId }: DrawerFrameProps) {
+  const t = useTeamMessages();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const close = () => {
     if (busy) return;

@@ -16,13 +16,14 @@ import { ListSkeleton } from "./parts";
 import { AUTOMATION_FIELDS, AUTOMATION_OPS, SDD_LIMITS, SDD_PARAMS, SYNTAX_FIELDS } from "./sddConfig";
 import { RuleSectionsForm } from "./RuleSectionsForm";
 import { useSddWidgetData } from "./widgets/SddWidgetEnv";
-import { sddMessages as m, viewMessages } from "./messages";
+import { useSddEditorMessages } from "./useViewMessages";
 import { ruleSections } from "./ruleSections";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import type { SddTabProps } from "./sddTabs";
 import { useAutomationControl } from "./useAutomation";
 import { useSddInfo, useSddSpace, useSpecSyntax } from "./useSddApi";
 import { specTemplatesPath } from "./sddPaths";
+import { useT } from "@agent-console/i18n";
 
 const P = SDD_PARAMS;
 type Obj = Record<string, unknown>;
@@ -31,6 +32,8 @@ const numText = (v: unknown): string | undefined => (typeof v === "number" ? Str
 const autoOf = (def: Obj | undefined): Obj | undefined => ((def?.["rules"] as Obj | undefined)?.[AUTOMATION_FIELDS.key] as Obj | undefined);
 
 export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ownHashes, refresh, reportDirty }: SddTabProps) {
+  const t = useT("sdd");
+  const badgeMessages = useSddEditorMessages();
   const space = useSddSpace();
   const reservedTemplateIds = useSddInfo().data?.reserved_template_ids;
   const toast = useToast();
@@ -98,12 +101,12 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         const result = await space.client.checkSpec(specId, { rules: (def.rules ?? {}) as Obj, documents: def.documents ?? [] });
         if (seq === checkSeq.current) setChecked(result.issues ?? []);
       } catch (e) {
-        if (!silent && seq === checkSeq.current) setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.rules.saveFailed);
+        if (!silent && seq === checkSeq.current) setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("rules.saveFailed"));
       } finally {
         if (!silent && seq === checkSeq.current) setChecking(false);
       }
     },
-    [space.client, specId],
+    [space.client, specId, t],
   );
   // 편집이 멈추고 600ms 뒤 자동 검사: 연속 입력은 한 번만 검사한다.
   useEffect(() => {
@@ -124,7 +127,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
       await refresh();
     } catch (e) {
       if (e instanceof ApiError && e.code === ERROR_CODES.VERSION_CONFLICT) setConflict(true);
-      else setFailure(e instanceof ApiError && e.message !== "" ? e.message : m.rules.saveFailed);
+      else setFailure(e instanceof ApiError && e.message !== "" ? e.message : t("rules.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -145,19 +148,19 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
 
   return (
     <div className="sdd-rules">
-      <div className="sdd-toolbar" role="group" aria-label={m.rules.toolbar}>
-        <Button size="sm" loading={checking} onClick={() => void check(false)}>{checking ? m.rules.checking : m.rules.check}</Button>
-        {issues.length === 0 && checked !== null ? <span className="app-muted" role="status">{m.rules.checkOk}</span> : issues.length > 0 ? <span role="status" data-testid="sdd-check-summary">{m.rules.checkResult(errors, warnings)}</span> : null}
-        {templatesOn ? <Button size="sm" onClick={() => setSaveTemplate(true)}>{m.rules.saveAsTemplate}</Button> : null}
+      <div className="sdd-toolbar" role="group" aria-label={t("rules.toolbar")}>
+        <Button size="sm" loading={checking} onClick={() => void check(false)}>{checking ? t("rules.checking") : t("rules.check")}</Button>
+        {issues.length === 0 && checked !== null ? <span className="app-muted" role="status">{t("rules.checkOk")}</span> : issues.length > 0 ? <span role="status" data-testid="sdd-check-summary">{t("rules.checkResult", { errors, warnings })}</span> : null}
+        {templatesOn ? <Button size="sm" onClick={() => setSaveTemplate(true)}>{t("rules.saveAsTemplate")}</Button> : null}
         <span className="sdd-spacer" />
-        <span className="app-muted" role="status">{saving ? m.rules.saving : dirty ? m.rules.unsaved : m.rules.saved}</span>
-        <Button size="sm" variant="primary" loading={saving} aria-disabled={!dirty || readonly || showConflict || undefined} title={readonly ? ctx.readOnlyReason : undefined} onClick={() => { if (dirty && !readonly && !showConflict) void save(draft?.baseHash ?? versionHash); }}>{m.rules.save}</Button>
+        <span className="app-muted" role="status">{saving ? t("rules.saving") : dirty ? t("rules.unsaved") : t("rules.saved")}</span>
+        <Button size="sm" variant="primary" loading={saving} aria-disabled={!dirty || readonly || showConflict || undefined} title={readonly ? ctx.readOnlyReason : undefined} onClick={() => { if (dirty && !readonly && !showConflict) void save(draft?.baseHash ?? versionHash); }}>{t("rules.save")}</Button>
       </div>
-      {readonly ? <Banner tone="warning" data-testid="sdd-rules-readonly">{m.rules.readonlyTop}</Banner> : null}
+      {readonly ? <Banner tone="warning" data-testid="sdd-rules-readonly">{t("rules.readonlyTop")}</Banner> : null}
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
       {showConflict ? (
-        <Banner tone="warning" title={m.rules.conflictTitle} actions={<><Button size="sm" onClick={() => { setDraft(null); setConflict(false); void refresh(); }}>{m.rules.reload}</Button><Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{m.rules.overwrite}</Button></>}>
-          {m.rules.conflictBody}
+        <Banner tone="warning" title={t("rules.conflictTitle")} actions={<><Button size="sm" onClick={() => { setDraft(null); setConflict(false); void refresh(); }}>{t("rules.reload")}</Button><Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t("rules.overwrite")}</Button></>}>
+          {t("rules.conflictBody")}
         </Banner>
       ) : null}
       {view.automation_state?.enabled === true && ctx.capabilities.automation ? (
@@ -171,7 +174,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
       ) : null}
       {automation.error === null ? null : <Banner tone="danger">{automation.error}</Banner>}
       {issues.length > 0 ? (
-        <Disclosure summary={m.rules.checkResult(errors, warnings)}>
+        <Disclosure summary={t("rules.checkResult", { errors, warnings })}>
           <ul className="sdd-issues-list">
             {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{i.message}</li>)}
           </ul>
@@ -185,20 +188,20 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         readonly={readonly}
         sectionId={wanted}
         onSectionChange={select}
-        navLabel={m.rules.sections}
+        navLabel={t("rules.sections")}
         idPrefix="sdd-rules"
         widgetEnv={widgetEnv}
         formEpoch={formEpoch}
         readonlyFor={automationOff}
         sectionNote={(s) =>
           automationOff(s) ? (
-            <p className="app-muted sdd-note" data-testid="sdd-automation-off">{m.automation.runsOff}</p>
+            <p className="app-muted sdd-note" data-testid="sdd-automation-off">{t("automation.runsOff")}</p>
           ) : s.path.includes(SYNTAX_FIELDS.key) && syntaxSources.length > 0 ? (
             // 값 출처(기본·설정·이 스펙)는 작업 문법 섹션 안에 둔다(screen-sdd §10.2)
-            <Disclosure summary={m.rules.syntaxSource}>
+            <Disclosure summary={t("rules.syntaxSource")}>
               <ul className="sdd-sources">
                 {syntaxSources.map(([key, source]) => (
-                  <li key={key}><span className="sdd-mono">{key}</span> <RulesSourceBadge source={source} messages={viewMessages} /></li>
+                  <li key={key}><span className="sdd-mono">{key}</span> <RulesSourceBadge source={source} messages={badgeMessages} /></li>
                 ))}
               </ul>
             </Disclosure>
@@ -207,13 +210,13 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
       />
       <ConfirmDialog
         open={pendingAuto !== null}
-        title={m.automation.confirmTitle}
-        confirmLabel={m.automation.confirmOk}
-        cancelLabel={m.cancel}
+        title={t("automation.confirmTitle")}
+        confirmLabel={t("automation.confirmOk")}
+        cancelLabel={t("cancel")}
         onConfirm={() => { const next = pendingAuto; setPendingAuto(null); if (next !== null) setDraft({ value: next, baseHash: draft?.baseHash ?? versionHash }); }}
         onCancel={() => { setPendingAuto(null); setFormEpoch((n) => n + 1); }}
       >
-        {m.automation.confirmBody(numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]), numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]))}
+        {t("automation.confirmBody", { parallelText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) === undefined ? t("automation.parallelUnset") : t("automation.parallelSet", { n: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) }), failuresText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) === undefined ? t("automation.failuresUnset") : t("automation.failuresSet", { n: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) }) })}
       </ConfirmDialog>
       {saveTemplate ? (
         <SaveTemplateDialog
@@ -225,7 +228,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
             await space.client.saveSpecAsTemplate(specId, body);
             setSaveTemplate(false);
             const href = specTemplatesPath();
-            toast({ tone: "success", text: m.saveTemplate.done(body.name), ...(href === undefined ? {} : { action: { label: m.templatesTitle, onClick: () => void navigate(href) } }) });
+            toast({ tone: "success", text: t("saveTemplate.done", { name: body.name }), ...(href === undefined ? {} : { action: { label: t("templatesTitle"), onClick: () => void navigate(href) } }) });
           }}
         />
       ) : null}

@@ -4,11 +4,18 @@ import type { LogSourceInfo } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
 import { CUSTOM_RANGE_SEP, FILTER_FIELDS, LOGS_LIMITS, LOGS_STORAGE, RANGE_OPTIONS, SEARCH_FIELD } from "./logsConfig";
 import { customRangeValue, parseRange } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages, type LogsMessages } from "./messages";
+import { useLogViewMessages } from "./useLogViewMessages";
 
 /** 필터 필드 정의(데이터 `logsData.json`) → 필터 막대용 `FilterFieldSpec`. 선택지는 막대의 `renderSelectOptions`가 채운다. */
-export function buildFilterFields(): FilterFieldSpec[] {
+export function buildFilterFields(t: LogsMessages): FilterFieldSpec[] {
   return FILTER_FIELDS.map((f) => ({ name: f.name, label: t.filters.labels[f.name] ?? f.name, input: f.input }));
+}
+
+/** 현재 언어의 필터 칸 목록. */
+export function useFilterFields(): FilterFieldSpec[] {
+  const t = useLogsMessages();
+  return useMemo(() => buildFilterFields(t), [t]);
 }
 
 /** 즐겨찾는 필터 저장소(`ac.logs.savedFilters`, localStorage = 개인 화면 선택이며 서버 저장이 아니다). */
@@ -54,7 +61,8 @@ export interface LogFiltersProps {
  * 필터 이름은 `logsData.json`의 목록에서만 온다. 서버가 모르는 이름을 URL로 받으면 막대가 "알 수 없는 필터" 칩으로 보인다.
  */
 export function LogFilters({ value, onChange, options, suggestions, fieldErrors, inputRef, compact, savedExtra, onApplySavedExtra, trailing, search = true }: LogFiltersProps) {
-  const fields = useMemo(() => buildFilterFields(), []);
+  const lv = useLogViewMessages();
+  const fields = useFilterFields();
   const store = useSavedFilterStore();
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const saved = store.list();
@@ -65,7 +73,7 @@ export function LogFilters({ value, onChange, options, suggestions, fieldErrors,
     return undefined;
   };
   return (
-    <LogFilterBar
+    <LogFilterBar messages={lv}
       fields={fields}
       value={value}
       onChange={onChange}
@@ -106,7 +114,9 @@ export interface RangeControlProps {
 }
 
 /** 기간 선택(선택지 + 사용자 지정). 값은 URL `range`이고 서버에는 `since`/`until`로 바뀌어 간다. */
-export function RangeControl({ value, fallbackId, onChange, settingsOption, label = t.filters.range }: RangeControlProps) {
+export function RangeControl({ value, fallbackId, onChange, settingsOption, label: labelProp }: RangeControlProps) {
+  const t = useLogsMessages();
+  const label = labelProp ?? t.filters.range;
   const parsed = parseRange(value === undefined && settingsOption !== undefined ? undefined : value, fallbackId);
   const custom = parsed.kind === "custom";
   const current = value === undefined && settingsOption !== undefined ? "" : custom ? "custom" : parsed.id;

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-numbered-id"
 version = "0.1.0"
-description = "Agent Console — 겹치면 -2·-3… 붙이기(빈 id·이름 찾기) 기반 패키지"
+description = "Agent Console — base package that appends -2, -3, … on collisions (finding a free id or name)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

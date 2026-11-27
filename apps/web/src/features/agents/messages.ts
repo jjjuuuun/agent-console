@@ -1,101 +1,142 @@
-import { arrangeMessages } from "../library";
+import { useMemo } from "react";
+import type { Translate } from "@agent-console/i18n";
+import { useMessageTable } from "../../i18n";
+import { mergeArrange, useArrangeMessages } from "../library";
 /** 에이전트 화면 문구. 에이전트·백엔드·모델 이름은 서버 데이터이므로 여기에 없다. */
-export const agentMessages = {
-  title: "에이전트",
-  list: {
-    label: "에이전트 목록",
-    search: "에이전트 검색",
-    searchPlaceholder: "이름·역할·설명·id",
-    new: "새 에이전트",
-    filterAll: "전체",
-    filterUsed: "사용 중",
-    filterUnused: "미사용",
-    filterLabel: "사용 여부",
-    empty: "에이전트가 아직 없습니다",
-    emptyBody: "에이전트는 팀 구성에서 노드로 쓰이는 역할 정의입니다.",
-    noMatch: "일치하는 에이전트가 없습니다",
-    loadFailed: "에이전트 목록을 불러오지 못했습니다",
-    usedBy: (n: number) => `팀 구성 ${n}개에서 사용`,
-    /** 행 보조 줄의 사용처 글자. 1곳이면 적지 않는다(5.2R.60). */
-    usageText: (n: number): string => (n === 0 ? "팀에 없음" : n >= 2 ? `팀 ${n}곳` : ""),
-  },
-  /** 목록 묶기·정렬·폴더 이동(5.2R.62). 묶는 기준·정렬 이름은 `titleKey`로 찾는다. */
-  arrange: {
-    ...arrangeMessages,
-    groupNames: { ...arrangeMessages.groupNames, "group.role": "역할", "group.backend": "백엔드", "group.model": "모델" } as Record<string, string>,
-    noneLabels: { ...arrangeMessages.noneLabels, "group.role": "(역할 없음)", "group.backend": "(공통 설정 사용)", "group.model": "(공통 설정 사용)" } as Record<string, string>,
-    sortNames: { ...arrangeMessages.sortNames, "sort.usage": "사용 많은 순" } as Record<string, string>,
-    sortSummaries: { ...arrangeMessages.sortSummaries, "sort.usage": "사용 많은 순" } as Record<string, string>,
-    roleDistinct: "값이 모두 달라 묶을 수 없습니다",
-  },
-  pick: { title: "에이전트를 선택하거나 새로 만드세요", body: "왼쪽 목록에서 에이전트를 고르면 설정과 사용처를 볼 수 있습니다." },
-  create: { fallbackId: "agent", title: "새 에이전트", submit: "만들기", role: "역할", roleHint: "예: 설계, 검토, 백엔드", failed: "에이전트를 만들지 못했습니다", resourcesTitle: "리소스 연결" },
-  detail: {
-    notFound: "에이전트를 찾을 수 없습니다",
-    toList: "목록으로",
-    loadFailed: "에이전트를 불러오지 못했습니다",
-    id: "id",
-    save: "저장",
-    saved: "저장했습니다",
-    revert: "되돌리기",
-    menu: "에이전트 메뉴",
-    duplicate: "복제",
-    delete: "삭제",
-    viewJson: "JSON 보기",
-    jsonTitle: "에이전트 정의(읽기 전용)",
-    tabsLabel: "에이전트 상세",
-  },
-  tabs: { settings: "설정", resources: "리소스", usages: "사용처", activity: "최근 활동" },
-  identity: {
-    title: "정체성",
-    name: "이름",
-    role: "역할",
-    description: "설명",
-    descriptionHint: "다른 에이전트에게 위임받을 때 ‘언제 맡길지’의 기본값으로 쓰입니다.",
-    nameRequired: "이름을 입력하세요",
-  },
-  display: {
-    title: "표시 (고급)",
-    icon: "아이콘",
-    iconHint: "채팅 답변 머리·팀 그래프 노드·실행 화면에 보이는 1~2자(이모지 가능)입니다. 비우면 이름 첫 글자입니다.",
-    iconInvalid: "1~2자까지 쓸 수 있습니다. 이 값은 무시되고 이름 첫 글자가 보입니다.",
-    color: "색",
-    colorHint: "고르거나 #rrggbb 같은 CSS 색을 직접 적습니다. 비우면 이름에서 정해진 색입니다.",
-    colorInvalid: "알 수 없는 색입니다. 이 값은 무시되고 기본 색이 보입니다.",
-    colorOption: (n: string) => `팔레트 ${n}번`,
-    preview: "미리보기",
-  },
-  settings: {
-    title: "설정",
-    hint: "회색 값은 공통 설정에서 상속된 값입니다. 값을 바꾸면 이 에이전트만 다르게 지정됩니다.",
-    effectiveFailed: "상속 값을 불러오지 못했습니다. 지정한 값은 그대로 편집할 수 있습니다.",
-    loading: "설정을 불러오는 중…",
-  },
-  resources: {
-    footer: "팀 구성에서는 이 위에 팀 공용·이 노드에서 붙인 리소스가 더해집니다.",
-    layerFallback: "에이전트",
-    commonFailed: "공통 설정의 리소스를 불러오지 못했습니다",
-  },
-  usages: {
-    empty: "아직 어느 팀 구성에서도 쓰이지 않습니다.",
-    toTeams: "팀 구성 만들기",
-    team: "팀 구성",
-    nodes: "노드",
-    failed: "사용처를 불러오지 못했습니다",
-    nodeIds: (ids: readonly string[]) => (ids.length === 0 ? "–" : ids.join(", ")),
-  },
-  activity: {
-    empty: "아직 실행 기록이 없습니다",
-    failed: "최근 활동을 불러오지 못했습니다",
-    started: "시작",
-    run: "실행",
-    events: "이벤트",
-    last: "마지막 이벤트",
-    more: "더 보기",
-    open: "실행 상세 열기",
-  },
-  delete: {
-    usedNote: "삭제하면 이 팀 구성들의 해당 노드가 ‘알 수 없는 에이전트’로 남습니다.",
-    failed: "삭제하지 못했습니다",
-  },
-} as const;
+/** 이 화면의 문구를 만든다(번역 함수 `t`는 `agents` 묶음). 목록 보기 공용 문구는 `arrange` 묶음이고 `useAgentMessages`가 합친다. */
+export function createAgentMessages(t: Translate) {
+  return {
+    title: t("title"),
+    list: {
+      label: t("list.label"),
+      search: t("list.search"),
+      searchPlaceholder: t("list.searchPlaceholder"),
+      new: t("list.new"),
+      filterAll: t("list.filterAll"),
+      filterUsed: t("list.filterUsed"),
+      filterUnused: t("list.filterUnused"),
+      filterLabel: t("list.filterLabel"),
+      empty: t("list.empty"),
+      emptyBody: t("list.emptyBody"),
+      noMatch: t("list.noMatch"),
+      loadFailed: t("list.loadFailed"),
+      usedBy: (n: number) => t("list.usedBy", { n, count: n }),
+      usageText: (n: number): string => (n === 0 ? t("list.usageNone") : n >= 2 ? t("list.usageMany", { n }) : ""),
+    },
+    arrange: {
+      groupNames: {
+        "group.role": t("arrange.groupNames.groupRole"),
+        "group.backend": t("arrange.groupNames.groupBackend"),
+        "group.model": t("arrange.groupNames.groupModel"),
+      } as Record<string, string>,
+      noneLabels: {
+        "group.role": t("arrange.noneLabels.groupRole"),
+        "group.backend": t("arrange.noneLabels.groupBackend"),
+        "group.model": t("arrange.noneLabels.groupModel"),
+      } as Record<string, string>,
+      sortNames: {
+        "sort.usage": t("arrange.sortNames.sortUsage"),
+      } as Record<string, string>,
+      sortSummaries: {
+        "sort.usage": t("arrange.sortSummaries.sortUsage"),
+      } as Record<string, string>,
+      roleDistinct: t("arrange.roleDistinct"),
+    },
+    pick: {
+      title: t("pick.title"),
+      body: t("pick.body"),
+    },
+    create: {
+      fallbackId: t("create.fallbackId"),
+      title: t("create.title"),
+      submit: t("create.submit"),
+      role: t("create.role"),
+      roleHint: t("create.roleHint"),
+      failed: t("create.failed"),
+      resourcesTitle: t("create.resourcesTitle"),
+    },
+    detail: {
+      notFound: t("detail.notFound"),
+      toList: t("detail.toList"),
+      loadFailed: t("detail.loadFailed"),
+      id: t("detail.id"),
+      save: t("detail.save"),
+      saved: t("detail.saved"),
+      revert: t("detail.revert"),
+      menu: t("detail.menu"),
+      duplicate: t("detail.duplicate"),
+      delete: t("detail.delete"),
+      viewJson: t("detail.viewJson"),
+      jsonTitle: t("detail.jsonTitle"),
+      tabsLabel: t("detail.tabsLabel"),
+    },
+    tabs: {
+      settings: t("tabs.settings"),
+      resources: t("tabs.resources"),
+      usages: t("tabs.usages"),
+      activity: t("tabs.activity"),
+    },
+    identity: {
+      title: t("identity.title"),
+      name: t("identity.name"),
+      role: t("identity.role"),
+      description: t("identity.description"),
+      descriptionHint: t("identity.descriptionHint"),
+      nameRequired: t("identity.nameRequired"),
+    },
+    display: {
+      title: t("display.title"),
+      icon: t("display.icon"),
+      iconHint: t("display.iconHint"),
+      iconInvalid: t("display.iconInvalid"),
+      color: t("display.color"),
+      colorHint: t("display.colorHint"),
+      colorInvalid: t("display.colorInvalid"),
+      colorOption: (n: string) => t("display.colorOption", { n }),
+      preview: t("display.preview"),
+    },
+    settings: {
+      title: t("settings.title"),
+      hint: t("settings.hint"),
+      effectiveFailed: t("settings.effectiveFailed"),
+      loading: t("settings.loading"),
+    },
+    resources: {
+      footer: t("resources.footer"),
+      layerFallback: t("resources.layerFallback"),
+      commonFailed: t("resources.commonFailed"),
+    },
+    usages: {
+      empty: t("usages.empty"),
+      toTeams: t("usages.toTeams"),
+      team: t("usages.team"),
+      nodes: t("usages.nodes"),
+      failed: t("usages.failed"),
+      nodeIds: (ids: readonly string[]) => (ids.length === 0 ? t("usages.nodeIdsNone") : ids.join(", ")),
+    },
+    activity: {
+      empty: t("activity.empty"),
+      failed: t("activity.failed"),
+      started: t("activity.started"),
+      run: t("activity.run"),
+      events: t("activity.events"),
+      last: t("activity.last"),
+      more: t("activity.more"),
+      open: t("activity.open"),
+    },
+    delete: {
+      usedNote: t("delete.usedNote"),
+      failed: t("delete.failed"),
+    },
+  };
+}
+
+/** 현재 언어의 문구(렌더 때 만든다). 목록 보기(`arrange`)는 공용 묶음에 이 화면 몫을 덧붙인 것이다. */
+export function useAgentMessages() {
+  const own = useMessageTable("agents", createAgentMessages);
+  const arrange = useArrangeMessages();
+  return useMemo(() => ({ ...own, arrange: mergeArrange(arrange, own.arrange) }), [own, arrange]);
+}
+export type AgentMessages = ReturnType<typeof useAgentMessages>;
+/** 목록 보기(`arrange`)를 합치기 전의 이 화면 문구. 화면 밖 순수 함수가 받는다. */
+export type AgentTexts = ReturnType<typeof createAgentMessages>;

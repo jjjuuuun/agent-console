@@ -52,6 +52,7 @@ def test_scan_finds_texts_templates_and_codes(repo: Repo) -> None:
     scan = scan_packages(discover_packages(repo.root, config.targets), config)
     # 독스트링은 cleandoc한 꼴도(Pydantic 설명), 데이터 파일 문자열도 원문이다.
     assert "alpha" in scan.owners("알파 설정\n\n여러 줄 설명.")
+    assert "alpha" in scan.owners("알파 설정")  # 첫 줄(요약)만 내는 곳
     assert "beta" in scan.owners("베타 이름")
     assert "beta" in scan.owners("기본 범주")
     # testing 모듈은 제외 glob으로 빠진다.
@@ -251,3 +252,16 @@ def test_register_catalog_places_table_and_is_idempotent(tmp_path: Path) -> None
         "ac-x": "x",
         "ac-y": "y",
     }
+
+
+def test_register_catalog_keeps_comment_with_its_table(tmp_path: Path) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[project]\nname = "x"\n\n# 이 줄은 아래 표의 설명이다.\n# 두 줄째.\n'
+        "[tool.x]\npoints = []\n",
+        encoding="utf-8",
+    )
+    assert register_catalog(path, "ac-x", "x") is True
+    text = path.read_text(encoding="utf-8")
+    assert text.index("agent_console.message_catalogs") < text.index("# 이 줄은")
+    assert "# 두 줄째.\n[tool.x]" in text

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { EdgeTypeDescriptor, GraphSummary, Issue, NodeTypeDescriptor } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { DEFINITION_KINDS, useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
 import { projectBody, useProjectId } from "../../app/projectScope";
 import { useNewScope } from "../projects";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 import { entrySourceNodeTypes, starterGraph } from "./teamsLogic";
 
 type Start = "node" | "empty" | "clone";
@@ -22,6 +22,7 @@ export interface NewTeamDialogProps {
 
 /** 새 팀 구성: 이름·id·설명 + 시작 방식(사용자 노드 하나 / 빈 / 복제). 사용자 노드 타입은 속성으로 찾는다. */
 export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated }: NewTeamDialogProps) {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const userTypes = entrySourceNodeTypes(nodeTypes, edgeTypes);
@@ -33,7 +34,7 @@ export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated
   const userTypeId = pickedUserType ?? userTypes[0]?.id ?? "";
   const cloneId = pickedClone ?? graphs[0]?.id ?? "";
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.create.failed);
   const scope = useNewScope();
 
   const submit = async (v: NewDefinitionValues) => {
@@ -50,7 +51,7 @@ export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated
       await invalidate();
       onCreated(v.id, issues);
     } catch (e) {
-      setError(describeError(e, t.create.failed).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -112,10 +113,11 @@ export interface RenameTeamDialogProps {
 
 /** 이름·설명 바꾸기(목록에서). 서버의 최신 문서를 읽어 이름·설명만 바꿔 저장한다(`If-Match`). */
 export function RenameTeamDialog({ graph, onClose, onDone }: RenameTeamDialogProps) {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.rename.failed);
   const submit = async (v: NewDefinitionValues) => {
     setBusy(true);
     setError(null);
@@ -128,7 +130,7 @@ export function RenameTeamDialog({ graph, onClose, onDone }: RenameTeamDialogPro
       await invalidate();
       onDone();
     } catch (e) {
-      setError(describeError(e, t.rename.failed).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -161,10 +163,11 @@ export interface DuplicateTeamDialogProps {
 
 /** 복제: 새 이름·id를 받아 `POST /graphs/{id}/duplicate`. */
 export function DuplicateTeamDialog({ sourceId, sourceName, existingIds, onClose, onCreated }: DuplicateTeamDialogProps) {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.duplicate.failed);
   const submit = async (v: NewDefinitionValues) => {
     setBusy(true);
     setError(null);
@@ -173,7 +176,7 @@ export function DuplicateTeamDialog({ sourceId, sourceName, existingIds, onClose
       await invalidate();
       onCreated(v.id, saved.issues);
     } catch (e) {
-      setError(describeError(e, t.duplicate.failed).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -197,10 +200,11 @@ export function DuplicateTeamDialog({ sourceId, sourceName, existingIds, onClose
 
 /** 새 대화 시작: 팀 구성으로 대화를 만들고 그 대화 화면으로 간다(대화 화면 경로는 라우트 설정에서). */
 export function useStartChat(onOpenChat: (conversationId: string) => void): { start: (graphId: string) => Promise<string | null>; busy: boolean; error: string | null } {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const projectId = useProjectId();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.chat.createFailed);
   const start = async (graphId: string) => {
     setBusy(true);
     setError(null);
@@ -209,7 +213,7 @@ export function useStartChat(onOpenChat: (conversationId: string) => void): { st
       onOpenChat(conv.id);
       return conv.id;
     } catch (e) {
-      setError(describeError(e, t.chat.createFailed).message);
+      setError(raised(e));
       return null;
     } finally {
       setBusy(false);

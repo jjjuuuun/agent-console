@@ -53,6 +53,8 @@ export interface Formatters {
   tokens(n: number): string;
   /** 숫자 천 단위. */
   number(n: number): string;
+  /** 툴팁용 전체 시각: epoch 초 -> 지역 시각 + 시간대 + ISO 원문(기본 `fullTimeTitle`, 로캘 "en-US"). */
+  fullTime(epochSeconds: number): string;
 }
 
 /** 재생 시계(주입). 테스트에서 가짜 시간으로 돌린다. */

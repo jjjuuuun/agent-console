@@ -24,6 +24,8 @@ export interface MountOptions {
   linkParts?: readonly LinkPartDef[];
   /** 화면 상태 저장소(생략하면 저장하지 않는 메모리 저장소) */
   storage?: SafeStorage;
+  /** 첫 언어 맞추기 보류 시간(ms). 생략하면 0(기다리지 않고 바로 그림) */
+  languageHoldMs?: number;
 }
 
 export function mountApp(clients: ApiClients, path: string, options: MountOptions = {}) {
@@ -33,6 +35,7 @@ export function mountApp(clients: ApiClients, path: string, options: MountOption
       createClients={async () => clients}
       router={router}
       storage={options.storage ?? createSafeStorage(null)}
+      languageHoldMs={options.languageHoldMs ?? 0}
       queryClient={createAppQueryClient({ retry: false })}
       {...(options.linkParts ? { linkParts: options.linkParts } : {})}
     />,

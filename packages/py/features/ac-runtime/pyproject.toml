@@ -13,6 +13,9 @@ dependencies = [
     "pydantic>=2.9",
 ]
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-runtime = "agent_console_runtime"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

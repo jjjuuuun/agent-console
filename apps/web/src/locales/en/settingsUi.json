@@ -1,0 +1,170 @@
+{
+  "settings": {
+    "loading": "Loading settings…",
+    "saved": "Settings saved",
+    "layerCommon": "Common",
+    "layerDefault": "Default",
+    "editingLayer": "Layer being edited",
+    "versionsUi": {
+      "inherit": "Empty: uses the default list ({defaults})",
+      "remove": "Delete key {key}"
+    },
+    "commonResourcesWarning": "Applies to every agent",
+    "overridable": "Can be overridden in a team",
+    "schemaLoadFailed": "Couldn't read the settings schema",
+    "optionsFailed": "Couldn't load the choices. The current value is kept.",
+    "edgeKind": {
+      "first": "(first matching kind)",
+      "label": "Default kind for new links"
+    },
+    "chatSort": {
+      "empty": "(default: waiting for reply first)",
+      "pending_first": {
+        "title": "Waiting for reply first",
+        "description": "Puts conversations waiting for a reply at the top and sorts the rest by most recent update."
+      },
+      "updated": {
+        "title": "Most recently updated",
+        "description": "Shows the most recently updated conversations first, whether or not they are waiting for a reply."
+      }
+    },
+    "replyDisplayPreview": {
+      "separate": "Several bubbles",
+      "merged": "Merged into one",
+      "final_only": "Final only"
+    },
+    "nullable": {
+      "unset": "Not set",
+      "unsetHint": "Leave empty to follow the default behavior"
+    },
+    "keyValue": {
+      "add": "Add rule",
+      "remove": "Delete",
+      "key": "Key",
+      "value": "Value",
+      "empty": "No entries",
+      "duplicate": "That key already exists"
+    },
+    "merge": {
+      "path": "Path (JSON Pointer)",
+      "strategy": "Strategy",
+      "add": "Add rule",
+      "schemaDefault": "Schema default: {name}",
+      "noSchemaDefault": "No schema default (replace)",
+      "widenWarning": "A strategy that differs from the default can widen the range of values",
+      "pointerInvalid": "Must start with a slash (/)",
+      "table": "Rules in effect"
+    },
+    "delegationTable": {
+      "title": "Delegation modes",
+      "name": "Mode",
+      "maxDepth": "Max depth",
+      "downstream": "Downstream links",
+      "fields": "Fields that apply to the delegated node",
+      "interactions": "Interactions the delegated node opens",
+      "allowed": "Allowed",
+      "denied": "Not allowed",
+      "unlimited": "Unlimited",
+      "anyField": "All",
+      "empty": "No delegation modes are registered"
+    },
+    "usage": {
+      "windowLabels": "Window display names",
+      "windowLabelsHelp": "Window id → screen name. If empty, the usage screen shows the raw window id.",
+      "windowKey": "Window id",
+      "windowValue": "Display name",
+      "windowAdd": "Add window name",
+      "sources": "Sources",
+      "sourcesHelp": "When on, they show on the usage screen.",
+      "sourcesEmpty": "No usage sources are registered",
+      "enable": "Use {title}",
+      "config": "Source settings",
+      "lastObserved": "Last observed {when}",
+      "sourceError": "Source error",
+      "unofficialTitle": "This method has no official documentation",
+      "unofficialBody": "There are terms-of-service and breakage risks. Turn it on anyway?",
+      "unofficialConfirm": "Turn on",
+      "stale": "Stale observation threshold (seconds)",
+      "staleNone": "Don't judge",
+      "staleHelp": "If set, observations older than that get a 'stale observation' mark.",
+      "primary": "Card headline priority",
+      "primaryHelp": "When several sources give the same window, the first source in this order that has a value is used as the card headline. If empty, the latest official source's value is used.",
+      "primaryUse": "Include {title} in the order",
+      "primaryUp": "Move up: {title}",
+      "primaryDown": "Move down: {title}",
+      "noHome": "This screen doesn't modify ~/.claude.",
+      "docs": "Docs"
+    },
+    "keybindings": {
+      "table": "Shortcut list",
+      "command": "Action",
+      "current": "Current key",
+      "defaultKey": "Default",
+      "change": "Change",
+      "reset": "Reset to default",
+      "disable": "Turn off",
+      "capturing": "Press the new key combination (Esc to cancel)",
+      "capture": "{title}: enter a new key combination",
+      "plain": "Single-character keys don't work inside input fields",
+      "plainMark": "Outside inputs only",
+      "empty": "No shortcuts are registered",
+      "issues": {
+        "invalid": "Not a readable key combination",
+        "conflict": "Same key as another action",
+        "reserved": "Overlaps a key the browser uses first",
+        "modifier_required": "This action needs a modifier key such as Ctrl/Alt/⌘"
+      }
+    },
+    "install": {
+      "runningStandalone": "This window is running as an app",
+      "runningBrowser": "Running in the browser",
+      "button": "Install as app",
+      "manual": "Click the install icon at the right of the address bar, or 'Install app' in the browser menu.",
+      "version": "Current version {v}",
+      "updateWaiting": "A new version is waiting",
+      "updateNow": "Reload now",
+      "installed": "Installed"
+    },
+    "server": {
+      "loadFailed": "Couldn't get server info",
+      "rows": {
+        "apiBaseUrl": "Server address",
+        "serverVersion": "Server version",
+        "contractsVersion": "Contracts version",
+        "workspace": "Workspace path",
+        "bind": "Bind address",
+        "remote": "Remote access",
+        "allowedOrigins": "Allowed origins",
+        "backends": "Available backends",
+        "plugins": "Loaded plugins",
+        "recoveredRuns": "Runs recovered at restart"
+      },
+      "remoteOn": "Allowed",
+      "remoteOff": "Not allowed (loopback only)",
+      "emptyOrigins": "None (same origin only)",
+      "pluginsSummary": "{n} plugins loaded",
+      "pluginGroup": "Extension point {group}",
+      "pluginError": "Load error",
+      "pluginsErrors": "Extension load errors",
+      "pluginReason": "Reason",
+      "serverWarnings": "Server warnings",
+      "tokenHidden": "The token is never shown."
+    },
+    "unset": "(not set)",
+    "backendUnset": "Ask on first run",
+    "backendUnsetNote": "If left empty, a card to choose a backend appears on the first run.",
+    "backendNone": "No backend is available.",
+    "attach": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Delete",
+      "mode": "Mode",
+      "empty": "No attached resources",
+      "readOnly": "Read-only",
+      "pick": "Resource to attach",
+      "pickEmpty": "No resources can be attached",
+      "pickPlaceholder": "Choose a resource…"
+    },
+    "sourceStatus": "Status"
+  }
+}

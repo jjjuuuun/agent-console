@@ -1,8 +1,14 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/i18nRender";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NoProjectState } from "./NoProjectState";
-import { PROJECT_START_STEPS, buildProjectStartSteps } from "./projectStartSteps";
+import { koMessages } from "../../testing/messageTables";
+import { createFolderHomeMessages } from "./folderHomeMessages";
+import { PROJECT_START_STEPS, buildProjectStartSteps as buildProjectStartStepsWith } from "./projectStartSteps";
+
+const stepText = koMessages("projectsFolder", createFolderHomeMessages).steps;
+const buildProjectStartSteps = (a: Omit<Parameters<typeof buildProjectStartStepsWith>[0], "text">) => buildProjectStartStepsWith({ ...a, text: stepText });
 
 afterEach(cleanup);
 

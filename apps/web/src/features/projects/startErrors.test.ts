@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@agent-console/api-client";
-import { startErrorView } from "./startErrors";
+import { koMessages } from "../../testing/messageTables";
+import { startErrorView as startErrorViewWith } from "./startErrors";
+import { createTargetPickerMessages } from "./targetPickerMessages";
+
+const pm = koMessages("projectsTarget", createTargetPickerMessages);
+const startErrorView = (error: unknown, nameOf?: (kind: string | undefined, id: string | undefined) => string) => startErrorViewWith(error, pm, nameOf);
 
 const err = (code: string, details: Record<string, unknown> = {}, status = 409) => new ApiError(status, { code, message: "서버 메시지", details });
 

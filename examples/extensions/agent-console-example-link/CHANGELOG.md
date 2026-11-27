@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `agent-console-example-link`, so the web can show the `example_notes.access_invalid` issue in English (data only, no API change). Internal log messages are now in English.
 - REL.20: 개발 의존 범위를 `agent-console-server>=1.0,<2`로 올렸다(서버 표시 버전 1.0.0). 코드 변경 없음.
 
 ## 0.1.0

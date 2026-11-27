@@ -105,7 +105,7 @@ def space_service(base: MemoryServiceLike, project_id: str) -> MemoryServiceLike
     except Exception as exc:
         code = getattr(exc, "code", None)
         reason = code if isinstance(code, str) and code else type(exc).__name__
-        _log.info("프로젝트 메모리 공간을 열지 못함: %s (%s)", project_id, reason)
+        _log.info("Couldn't open project memory space: %s (%s)", project_id, reason)
         return UnavailableMemoryService(base, unavailable_issue(project_id, reason))
     if found is None:
         return UnavailableMemoryService(base, unavailable_issue(project_id, "not_found"))

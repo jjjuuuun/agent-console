@@ -14,6 +14,8 @@ afterEach(cleanup);
 const LONG = { timeout: 20_000 };
 
 vi.mock("@agent-console/graph-editor", () => ({
+  BUILTIN_EDGE_SHAPES: [],
+  localizeEdgeShapes: (shapes: unknown) => shapes,
   createElkEngine: () => ({ id: "fake", title: "fake", options: [], run: async () => ({ positions: {} }) }),
   GraphEditor: () => <div data-testid="graph" />,
 }));

@@ -25,7 +25,8 @@ export { SESSION_ICONS, SessionChip, sessionChipView, type SessionChipProps } fr
 export { DelegationSettings, delegatorStrategies, type DelegationSettingsProps } from "./DelegationSettings";
 export { shortRunId } from "./ids";
 export { retryFocus, type RetryFocusOptions } from "./focusRetry";
-export { delegationMessages } from "./messages";
+export { createDelegationMessages, useDelegationMessages } from "./messages";
+export type { DelegationMessages } from "./messages";
 export { displayNumber, formatRunOrdinal, type OrdinalKind } from "./ordinal";
 export { useRenderIcon } from "./useRenderIcon";
 export { useConditionOperators, type ConditionOperatorsResult } from "./useConditionOperators";

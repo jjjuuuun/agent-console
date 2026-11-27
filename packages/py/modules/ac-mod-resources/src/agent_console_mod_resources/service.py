@@ -114,7 +114,9 @@ class ResourceService:
             try:
                 extra = list(check.issues(self.kind, document))
             except Exception:
-                _log.exception("저장 전 정의 검사 실패(리소스): %s", type(check).__name__)
+                _log.exception(
+                    "Pre-save definition check failed (resources): %s", type(check).__name__
+                )
                 continue
             for issue in extra:
                 key = (issue.code, issue.path)
@@ -136,7 +138,7 @@ class ResourceService:
         try:
             extra = list(source(stored.kind, stored.id, stored.document))
         except Exception:
-            _log.exception("저장 응답 경고 계산 실패(리소스): %s", stored.id)
+            _log.exception("Computing save response warnings failed (resources): %s", stored.id)
             return out
         seen = {(i.code, i.path) for i in out}
         out.extend(i for i in extra if (i.code, i.path) not in seen)

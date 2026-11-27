@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import type { GroupByDef, SortDef } from "@agent-console/list-arrange";
 import { byNumber, byText } from "@agent-console/list-arrange";
 import { Badge, Button, GroupHeader, Tooltip } from "@agent-console/ui";
-import { useListView } from "../library";
-import { ORIGIN, archSettingsMessages as t } from "./messages";
+import { mergeArrange, useArrangeMessages, useListView } from "../library";
+import { ORIGIN, useArchSettingsMessages, type ArchSettingsMessages } from "./messages";
 import type { ProfileRow } from "./profileLogic";
+import { useLanguageCode } from "../../i18n";
 
 export type RowAction = "view" | "edit" | "clone" | "disable" | "enable" | "remove" | "revert";
 
@@ -18,7 +19,7 @@ export interface ProfileTableProps {
 }
 
 /** 출처 값을 사람이 읽는 이름으로. 모르는 값은 원문. */
-export function originLabel(row: Pick<ProfileRow, "origin" | "overrides">): string {
+export function originLabel(row: Pick<ProfileRow, "origin" | "overrides">, t: ArchSettingsMessages): string {
   if (row.origin === ORIGIN.user) return row.overrides === undefined ? t.origin.user : t.origin.userOverride;
   if (row.origin === ORIGIN.default) return t.origin.default;
   if (row.origin.startsWith(ORIGIN.pluginPrefix)) return t.origin.plugin(row.origin.slice(ORIGIN.pluginPrefix.length));
@@ -32,13 +33,14 @@ export function actionsOf(row: ProfileRow): RowAction[] {
   return row.overrides === undefined ? ["edit", "clone", "remove"] : ["edit", "revert"];
 }
 
-const groupDefs: GroupByDef<ProfileRow>[] = [{ id: "origin", titleKey: "group.origin", read: (r) => [originLabel(r)] }];
-const sortDefs: SortDef<ProfileRow>[] = [
-  { id: "title", titleKey: "sort.title", compare: byText<ProfileRow>((r) => r.title) },
-  { id: "issues", titleKey: "sort.issues", compare: (a, b) => byNumber<ProfileRow>((r) => r.issues ?? 0, true)(a, b) || byText<ProfileRow>((r) => r.title)(a, b), available: (items) => items.some((r) => (r.issues ?? 0) > 0) },
+const groupDefsFor = (t: ArchSettingsMessages): GroupByDef<ProfileRow>[] => [{ id: "origin", titleKey: "group.origin", read: (r) => [originLabel(r, t)] }];
+const sortDefsFor = (language: string): SortDef<ProfileRow>[] => [
+  { id: "title", titleKey: "sort.title", compare: byText<ProfileRow>((r) => r.title, language) },
+  { id: "issues", titleKey: "sort.issues", compare: (a, b) => byNumber<ProfileRow>((r) => r.issues ?? 0, true)(a, b) || byText<ProfileRow>((r) => r.title, language)(a, b), available: (items) => items.some((r) => (r.issues ?? 0) > 0) },
 ];
 
 function Row({ row, open, onAction, disabled }: { row: ProfileRow; open: boolean; onAction: ProfileTableProps["onAction"]; disabled: boolean | undefined }) {
+  const t = useArchSettingsMessages();
   const acts = actionsOf(row);
   return (
     <li className="arch-settings-row" data-row-id={row.id} data-open={open ? "true" : undefined}>
@@ -46,7 +48,7 @@ function Row({ row, open, onAction, disabled }: { row: ProfileRow; open: boolean
         {row.dirty ? <span className="arch-settings-dot" role="img" aria-label={t.list.unsaved} title={t.list.unsaved} /> : null}
         <span className="arch-settings-row-title ac-ellipsis" title={row.title}>{row.title}</span>
         <span className="arch-settings-row-id ac-ellipsis" title={row.id}>{row.id}</span>
-        <Badge className="arch-settings-origin">{originLabel(row)}</Badge>
+        <Badge className="arch-settings-origin">{originLabel(row, t)}</Badge>
       </span>
       <span className="arch-settings-row-meta">
         {row.issues === null ? (
@@ -76,15 +78,21 @@ function Row({ row, open, onAction, disabled }: { row: ProfileRow; open: boolean
  * 끈 프로필은 목록 아래 접힌 줄에 모인다.
  */
 export function ProfileTable({ rows, disabledRows, openId, onAction, disabled }: ProfileTableProps) {
+  const t = useArchSettingsMessages();
   const [showDisabled, setShowDisabled] = useState(false);
   const items = useMemo(() => [...rows], [rows]);
+  const groupDefs = useMemo(() => groupDefsFor(t), [t]);
+  const language = useLanguageCode();
+  const sortDefs = useMemo(() => sortDefsFor(language), [language]);
+  const arrangeBase = useArrangeMessages();
+  const arrangeMessages = useMemo(() => mergeArrange(arrangeBase, t.arrange), [arrangeBase, t.arrange]);
   const view = useListView<ProfileRow>({
     listId: "architecture-profiles",
     items,
     groupDefs,
     sortDefs,
     defaultView: { groupBy: "none", sort: "title" },
-    messages: t.arrange,
+    messages: arrangeMessages,
     searching: false,
     idOf: (r) => r.id,
     showMenu: rows.length > 1,

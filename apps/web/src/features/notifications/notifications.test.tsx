@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { render } from "../../testing/renderI18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { buildBody, resolveTarget, shouldNotify, toNotifyEvents, type NotifySettings } from "./core";
 import { createNotifier } from "./notifier";

@@ -52,6 +52,8 @@ export interface MessageListProps {
   now?: number;
   /** 내 메시지 시각 문구(epoch 초 -> 문자열). */
   formatTime?: (epochSeconds: number) => string;
+  /** 턴 시각 툴팁·토큰 수 표기 로캘(BCP 47, 보통 화면 언어). 생략하면 "en-US". */
+  locale?: string;
   /** 턴이 없을 때 보일 내용. */
   empty?: ReactNode;
   /** 맨 아래로 간주하는 여유 픽셀. */
@@ -181,6 +183,7 @@ export function MessageList(props: MessageListProps) {
               {...(props.errorActions?.[turn.run_id] ? { errorAction: props.errorActions[turn.run_id]! } : {})}
               {...(props.footerNotes?.[turn.run_id] ? { footerNote: props.footerNotes[turn.run_id]! } : {})}
               {...(props.formatTime ? { formatTime: props.formatTime } : {})}
+              {...(props.locale ? { locale: props.locale } : {})}
               now={props.now}
               messages={props.messages}
             />

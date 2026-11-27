@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useUiLibMessages } from "../../i18n";
 import type { Graph, NodeSpec } from "@agent-console/contracts";
 import { Banner, Button, ChipRow, Tabs } from "@agent-console/ui";
 import { Skeleton, UserSettingsForm, useEdgeTypes, useMergeStrategies } from "../settings";
@@ -9,19 +10,16 @@ import type { SchemaNode } from "../../lib/schemaTools";
 import { DelegationOverview } from "./DelegationOverview";
 import { DraftNotice } from "./DraftNotice";
 import { useCanvasToast } from "./canvasToast";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
+import { TeamToast } from "./TeamToast";
 import type { TeamPanelContext } from "./panelContext";
 import { nodeLabel, overviewOf, pickKeys, replaceKeys, sharedAttachments, teamSettingKeys, withSettings, withSharedAttachments } from "./teamsLogic";
 
-const tp = t.plan;
 const TEAM_KEYS = teamSettingKeys();
 export const TEAM_NAME_INPUT_ID = "team-name-input";
-const TEAM_LAYERS = [
-  { id: "common", label: t.team.layerCommon },
-  { id: "team", label: t.team.layerTeam },
-];
 
 function NodeList({ nodes, onSelect }: { nodes: readonly { node: NodeSpec; chip?: string }[]; onSelect: (id: string) => void }) {
+  const t = useTeamMessages();
   if (nodes.length === 0) return <span className="app-sev" data-severity="warning">▲ {t.team.none}</span>;
   return (
     <ChipRow
@@ -33,6 +31,8 @@ function NodeList({ nodes, onSelect }: { nodes: readonly { node: NodeSpec; chip?
 }
 
 function Overview({ ctx, onSelectNode, onSelectEdge }: { ctx: TeamPanelContext; onSelectNode: (id: string) => void; onSelectEdge?: ((edgeId: string, sourceNodeId: string) => void) | undefined }) {
+  const t = useTeamMessages();
+  const tp = t.plan;
   const toast = useCanvasToast();
   const g = ctx.graph;
   const overview = useMemo(() => overviewOf(g, ctx.nodeTypes, ctx.edgeTypes), [g, ctx.nodeTypes, ctx.edgeTypes]);
@@ -60,7 +60,7 @@ function Overview({ ctx, onSelectNode, onSelectEdge }: { ctx: TeamPanelContext; 
         <span>{t.team.id}</span>
         <span className="lib-row-main">
           <span className="lib-mono">{g.id}</span>
-          <button type="button" className="app-link-btn" onClick={() => void navigator.clipboard?.writeText(g.id).then(() => toast({ tone: "success", text: t.team.copied }))}>
+          <button type="button" className="app-link-btn" onClick={() => void navigator.clipboard?.writeText(g.id).then(() => toast({ tone: "success", text: <TeamToast render={(m) => m.team.copied} /> }))}>
             {t.team.copy}
           </button>
         </span>
@@ -120,6 +120,11 @@ function Overview({ ctx, onSelectNode, onSelectEdge }: { ctx: TeamPanelContext; 
 }
 
 function SettingsTab({ ctx }: { ctx: TeamPanelContext }) {
+  const t = useTeamMessages();
+  const TEAM_LAYERS = [
+    { id: "common", label: t.team.layerCommon },
+    { id: "team", label: t.team.layerTeam },
+  ];
   const keys = TEAM_KEYS;
   const edgeTypes = useEdgeTypes();
   const strategies = useMergeStrategies();
@@ -189,6 +194,7 @@ function SettingsTab({ ctx }: { ctx: TeamPanelContext }) {
 }
 
 function SharedTab({ ctx }: { ctx: TeamPanelContext }) {
+  const t = useTeamMessages();
   const modes = ATTACHMENT_MODES;
   const common = (ctx.workspace?.agent_defaults?.resources ?? []) as never[];
   const layers = [
@@ -223,6 +229,8 @@ export interface TeamPanelProps {
 
 /** 팀 패널(선택 없음): [개요][설정][공용 리소스]. 개요는 그래프에서 계산하고 설정은 팀 층 출처 표시 폼이다. */
 export function TeamPanel({ ctx, tab, onTab, onSelectNode, onSelectEdge, workspaceLoading, workspaceFailed }: TeamPanelProps) {
+  const t = useTeamMessages();
+  const ui = useUiLibMessages();
   const items = [
     { id: "overview", label: t.team.tabs.overview, content: <Overview ctx={ctx} onSelectNode={onSelectNode} onSelectEdge={onSelectEdge} /> },
     { id: "settings", label: t.team.tabs.settings, content: workspaceLoading ? <Skeleton rows={6} /> : <SettingsTab ctx={ctx} /> },
@@ -231,7 +239,7 @@ export function TeamPanel({ ctx, tab, onTab, onSelectNode, onSelectEdge, workspa
   return (
     <div className="team-panel-body">
       {workspaceFailed ? <Banner tone="warning">{t.team.commonFailed}</Banner> : null}
-      <Tabs lazy tabs={items} activeId={["overview", "settings", "shared"].includes(tab) ? tab : "overview"} onChange={onTab} ariaLabel={t.team.tabsLabel} />
+      <Tabs messages={ui} lazy tabs={items} activeId={["overview", "settings", "shared"].includes(tab) ? tab : "overview"} onChange={onTab} ariaLabel={t.team.tabsLabel} />
     </div>
   );
 }

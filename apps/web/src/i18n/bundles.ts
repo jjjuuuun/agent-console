@@ -2,6 +2,7 @@ import type { BundledCatalogs, LoadBundled, MessageTree, NamespaceBundle } from 
 import { LIB_LOCALES } from "./libLocales";
 
 /** 앱 묶음 파일 경로의 규칙: `locales/<언어>/<네임스페이스>.json`. 언어·네임스페이스 이름은 파일 이름에서 읽는다(코드에 목록 없음). */
+// 테스트 캐시 주의: 아래 glob의 파일 목록은 이 파일 내용이 바뀔 때만 다시 계산된다. 묶음 파일을 새로 더한 뒤 문구 키가 그대로 보이면 이 줄의 숫자를 올린다. (캐시 갱신 #3)
 const FILE = /locales\/([^/]+)\/([^/]+)\.json$/;
 
 /** 부팅 네임스페이스: 첫 청크에 동기로 싣는다(부팅·연결 실패 화면). */

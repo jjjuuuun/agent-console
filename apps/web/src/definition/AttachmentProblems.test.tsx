@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
+import { render } from "../testing/renderI18n";
 import { afterEach, describe, expect, it } from "vitest";
 import { AttachmentProblems } from "./AttachmentProblems";
 

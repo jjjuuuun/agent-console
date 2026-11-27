@@ -150,6 +150,25 @@ describe("언어 컨트롤러", () => {
     expect(controller.getState().serverTextFailed).toBe(true);
   });
 
+  it("settled: 첫 맞춤(설정·서버 묶음까지)이 끝나기 전에는 false, 끝나면 true(실패·시간 초과도 끝)", async () => {
+    let release: (c: MessageCatalog | null) => void = () => undefined;
+    const slow = () => new Promise<MessageCatalog | null>((resolve) => (release = resolve));
+    const { controller } = setup({ fetchCatalog: slow }, "ko");
+    expect(controller.getState().settled).toBe(false);
+    controller.sync({ preference: "en", info: null });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(controller.getState().settled).toBe(false); // 서버 묶음이 아직 안 왔다
+    release(null);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(controller.getState().settled).toBe(true);
+    expect(controller.getState().language).toBe("en");
+
+    const hang = setup({ fetchCatalog: () => new Promise<MessageCatalog | null>(() => undefined) }, "ko");
+    hang.controller.sync({ preference: null, info: null });
+    await vi.advanceTimersByTimeAsync(5100);
+    expect(hang.controller.getState().settled).toBe(true); // 시간 초과도 끝난 것
+  });
+
   it("첫 맞춤(sync): 설정값이 있으면 그 언어로 조용히 바꾼다(알림·저장 없음)", async () => {
     const save = vi.fn(async () => undefined);
     const { controller, i18n, store } = setup({ save }, "ko");

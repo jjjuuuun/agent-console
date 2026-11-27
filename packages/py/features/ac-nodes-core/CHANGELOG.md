@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-nodes-core`, so the web can show the node, edge, interaction and delegation descriptors and the node error codes in English (data only, no API change). The `input_key` description of the user message edge is a fixed string. Internal log messages are now in English.
 - FU.5: `merge_access_layers(items, *, entries_key, entry_key, default_ops)`와 키 상수 `ACCESS_CONFIG_FIELD`·`ACCESS_TOOLS_FIELD`·
   `ACCESS_OPS_FIELD` — 도구 공급자(메모리·위키 연동)가 칸의 접근 설정 첨부를 같은 규칙으로 합친다(두 연동의 사본을 옮김).
 

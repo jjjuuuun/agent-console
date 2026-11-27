@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@agent-console/api-client";
 import type { ImportCandidate, Resource, ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
-import { PartialSaveError, buildImportItems, countByType, editorLanguageOf, filterResources, hasDocument, loadResource, mediaTypeOf, resourceTabIds, saveResource } from "./resourceLogic";
+import { PartialSaveError, buildImportItems, countByType, editorLanguageOf, filterResources, hasDocument, loadResource, mediaTypeOf, resourceTabIds, saveResource as saveResourceWith, type ResourceDoc } from "./resourceLogic";
+import { koMessages } from "../../testing/messageTables";
+import type { RestClient } from "@agent-console/api-client";
+import { createResourceMessages } from "./messages";
+
+const rm = koMessages("resources", createResourceMessages);
+type SaveArgs = [RestClient, ResourceDoc, string | undefined, readonly ResourceTypeDescriptor[]];
+const saveResource = (...a: SaveArgs) => saveResourceWith(...a, rm);
+
 
 const doc = { id: "t-doc", title: "문서종류", content: { editor: "x-lang", media_types: ["m/a", "m/b"] } } as unknown as ResourceTypeDescriptor;
 const cfg = { id: "t-cfg", title: "설정종류" } as unknown as ResourceTypeDescriptor;

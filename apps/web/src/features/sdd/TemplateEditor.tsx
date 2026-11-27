@@ -18,10 +18,9 @@ import { RuleSectionsForm } from "./RuleSectionsForm";
 import { classifySddError } from "./sddErrors";
 import { TEMPLATE_PARAMS, TEMPLATE_TABS, TEMPLATES_COLLECTION, type TemplateTabId } from "./templateConfig";
 import { TemplateFilesPanel } from "./TemplateFilesPanel";
-import { templateMessages as t } from "./templateMessages";
 import { useSpecTemplate, useTemplateFiles, type TemplateSpace } from "./useTemplateApi";
 import { useInvalidateSdd } from "./useSddApi";
-import { sddMessages as m } from "./messages";
+import { useT } from "@agent-console/i18n";
 
 type Obj = Record<string, unknown>;
 const P = TEMPLATE_PARAMS;
@@ -40,6 +39,7 @@ export interface TemplateEditorProps {
 const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.code === ERROR_CODES.VERSION_CONFLICT || e.status === 412);
 
 export function TemplateEditor({ space, id, params, setParams, onDirtyChange, onDeleted }: TemplateEditorProps) {
+  const t = useT("sdd");
   const tpl = useSpecTemplate(space, id);
   const filesQ = useTemplateFiles(space, id);
   const invalidate = useInvalidateSdd();
@@ -105,7 +105,7 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
       const result = await space.client.checkTemplate({ rules: (def.rules ?? {}) as Obj, documents: def.documents ?? [] });
       setChecked(result.issues ?? []);
     } catch (e) {
-      setFailure(e instanceof Error && e.message !== "" ? e.message : t.editor.checkFailed);
+      setFailure(e instanceof Error && e.message !== "" ? e.message : t("template.editor.checkFailed"));
     } finally {
       setChecking(false);
     }
@@ -136,7 +136,7 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
             warns.push(...(saved.issues ?? []));
           } catch (e) {
             if (isConflict(e) || (e instanceof ApiError && e.status === 428)) throw e;
-            errors[f.path] = e instanceof Error && e.message !== "" ? e.message : t.editor.saveFailed;
+            errors[f.path] = e instanceof Error && e.message !== "" ? e.message : t("template.editor.saveFailed");
           }
         }
         if (Object.keys(errors).length === 0) {
@@ -147,7 +147,7 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
             } catch (e) {
               if (e instanceof ApiError && e.status === 404) continue;
               if (isConflict(e) || (e instanceof ApiError && e.status === 428)) throw e;
-              errors[path] = e instanceof Error && e.message !== "" ? e.message : t.editor.saveFailed;
+              errors[path] = e instanceof Error && e.message !== "" ? e.message : t("template.editor.saveFailed");
               break;
             }
           }
@@ -166,8 +166,8 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
     } catch (e) {
       if (isConflict(e)) setConflict(true);
       else {
-        const failureKind = classifySddError(e, t.editor.saveFailed);
-        setFailure(failureKind.kind === "unavailable" || failureKind.kind === "notFound" ? t.editor.saveFailed : failureKind.message);
+        const failureKind = classifySddError(e, t("template.editor.saveFailed"), t);
+        setFailure(failureKind.kind === "unavailable" || failureKind.kind === "notFound" ? t("template.editor.saveFailed") : failureKind.message);
       }
       setBaseHash(hash);
     } finally {
@@ -189,12 +189,12 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
       onDeleted(name);
     } catch (e) {
       setConfirmDelete(false);
-      setFailure(e instanceof Error && e.message !== "" ? e.message : t.delete.failed);
+      setFailure(e instanceof Error && e.message !== "" ? e.message : t("template.delete.failed"));
     }
   };
 
   if (tpl.isPending) return <ListSkeleton rows={6} />;
-  if (tpl.isError || server === undefined) return <FailureBlock error={tpl.error} title={t.editor.loadFailed} onRetry={() => void tpl.refetch()} />;
+  if (tpl.isError || server === undefined) return <FailureBlock error={tpl.error} title={t("template.editor.loadFailed")} onRetry={() => void tpl.refetch()} />;
 
   const name = typeof value["name"] === "string" && value["name"] !== "" ? (value["name"] as string) : id;
   const wanted = params.get(P.tab);
@@ -205,7 +205,7 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
     setParams(next, { replace: true });
   };
   const documents = (value as unknown as SpecTemplate).documents ?? [];
-  const tabLabel = (tab: TemplateTabId): string => t.tabs[tab];
+  const tabLabel = (tab: TemplateTabId): string => t(`template.tabs.${tab}`);
 
   const panels: Record<TemplateTabId, ReactNode> = {
     rules: (
@@ -217,14 +217,14 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
         readonly={readonly || saving}
         sectionId={params.get(P.section)}
         onSectionChange={(sid) => setParam(P.section, sid)}
-        navLabel={t.editor.sections}
+        navLabel={t("template.editor.sections")}
         idPrefix="sdd-template-rules"
       />
     ),
     files: filesQ.isPending ? (
       <ListSkeleton rows={4} />
     ) : filesQ.isError ? (
-      <ErrorBlock title={t.files.loadFailed} message={filesQ.error.message} retryLabel={m.retry} onRetry={() => void filesQ.refetch()} />
+      <ErrorBlock title={t("template.files.loadFailed")} message={filesQ.error.message} retryLabel={t("retry")} onRetry={() => void filesQ.refetch()} />
     ) : (
       <TemplateFilesPanel
         documents={documents}
@@ -239,7 +239,7 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
     ),
     versions: (
       <div className="sdd-template-versions">
-        {compareSupported ? null : <p className="app-muted" data-testid="sdd-template-compare-off">{t.versions.note}</p>}
+        {compareSupported ? null : <p className="app-muted" data-testid="sdd-template-compare-off">{t("template.versions.note")}</p>}
         <VersionHistory
           base={versionBase}
           currentHash={serverHash}
@@ -258,16 +258,16 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
 
   return (
     <div className="sdd-template-editor" data-testid="sdd-template-editor">
-      <div className="sdd-toolbar" role="group" aria-label={t.editor.toolbar}>
+      <div className="sdd-toolbar" role="group" aria-label={t("template.editor.toolbar")}>
         <h2 className="sdd-section-title ac-ellipsis">{name}</h2>
-        <Button size="sm" loading={checking} onClick={() => void check()}>{checking ? t.editor.checking : t.editor.check}</Button>
+        <Button size="sm" loading={checking} onClick={() => void check()}>{checking ? t("template.editor.checking") : t("template.editor.check")}</Button>
         {checked === null ? null : issues.length === 0 ? (
-          <span className="app-muted" role="status">{t.editor.checkOk}</span>
+          <span className="app-muted" role="status">{t("template.editor.checkOk")}</span>
         ) : (
-          <span className="sdd-check-chip" role="status" data-testid="sdd-template-check" data-tone={errorCount > 0 ? "danger" : "warning"}>{t.editor.checkChip(issues.length)}</span>
+          <span className="sdd-check-chip" role="status" data-testid="sdd-template-check" data-tone={errorCount > 0 ? "danger" : "warning"}>{t("template.editor.checkChip", { count: issues.length })}</span>
         )}
         <span className="sdd-spacer" />
-        <span className="app-muted" role="status">{saving ? t.editor.saving : dirty ? t.editor.unsaved : t.editor.saved}</span>
+        <span className="app-muted" role="status">{saving ? t("template.editor.saving") : dirty ? t("template.editor.unsaved") : t("template.editor.saved")}</span>
         <Button
           size="sm"
           variant="primary"
@@ -278,48 +278,48 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
             if (dirty && !readonly && !showConflict) void save(baseHash ?? serverHash);
           }}
         >
-          {t.editor.save}
+          {t("template.editor.save")}
         </Button>
         <MenuButton
           label="⋯"
-          panelLabel={t.editor.more}
+          panelLabel={t("template.editor.more")}
           blockedReason={readonly ? space.readOnlyReason : undefined}
-          items={[{ id: "delete", label: t.editor.delete, danger: true, onSelect: () => setConfirmDelete(true) }]}
+          items={[{ id: "delete", label: t("template.editor.delete"), danger: true, onSelect: () => setConfirmDelete(true) }]}
         />
       </div>
-      {readonly ? <Banner tone="warning" data-testid="sdd-template-readonly">{space.readOnlyReason ?? t.editor.readonly}</Banner> : null}
+      {readonly ? <Banner tone="warning" data-testid="sdd-template-readonly">{space.readOnlyReason ?? t("template.editor.readonly")}</Banner> : null}
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
       {warnings.length === 0 ? null : (
-        <Banner tone="warning" actions={<Button size="sm" onClick={() => setWarnings([])}>{t.editor.dismiss}</Button>}>
-          {t.editor.savedWithIssues}
+        <Banner tone="warning" actions={<Button size="sm" onClick={() => setWarnings([])}>{t("template.editor.dismiss")}</Button>}>
+          {t("template.editor.savedWithIssues")}
           <ul className="sdd-issues-list">{warnings.map((w, i) => <li key={`${w.code}:${i}`}>{w.message}</li>)}</ul>
         </Banner>
       )}
       {showConflict ? (
         <Banner
           tone="warning"
-          title={t.editor.conflictTitle}
+          title={t("template.editor.conflictTitle")}
           data-testid="sdd-template-conflict"
           actions={
             <>
-              <Button size="sm" onClick={() => { discard(); void invalidate(); }}>{t.editor.reload}</Button>
-              <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t.editor.overwrite}</Button>
+              <Button size="sm" onClick={() => { discard(); void invalidate(); }}>{t("template.editor.reload")}</Button>
+              <Button size="sm" disabled={readonly} onClick={() => void overwrite()}>{t("template.editor.overwrite")}</Button>
             </>
           }
         >
-          {t.editor.conflictBody}
+          {t("template.editor.conflictBody")}
         </Banner>
       ) : null}
       {issues.length === 0 ? null : (
-        <Disclosure summary={t.editor.checkChip(issues.length)}>
+        <Disclosure summary={t("template.editor.checkChip", { count: issues.length })}>
           <ul className="sdd-issues-list">
             {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{i.message}</li>)}
           </ul>
         </Disclosure>
       )}
-      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t.tabs.label} lazy />
-      <ConfirmDialog open={confirmDelete} title={t.delete.title(name)} confirmLabel={t.delete.confirm} cancelLabel={m.cancel} danger onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)}>
-        {t.delete.body}
+      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t("template.tabs.label")} lazy />
+      <ConfirmDialog open={confirmDelete} title={t("template.delete.title", { name })} confirmLabel={t("template.delete.confirm")} cancelLabel={t("cancel")} danger onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)}>
+        {t("template.delete.body")}
       </ConfirmDialog>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { LogEvent, LogEventDetail as LogEventDetailData } from "@agent-console/contracts/logs";
-import { fullTimeTitle, mergeFormatters, shortPath } from "./format";
+import { mergeFormatters, shortPath } from "./format";
 import { fmt, mergeMessages, type DeepPartial, type LogViewMessages } from "./messages";
 import { CategoryChip, ErrorBlock, ErrorIcon, NeutralChip, Skeleton } from "./parts";
 import { colorFor } from "./taxonomy";
@@ -177,7 +177,7 @@ export function LogEventDetail({ ref, ...props }: LogEventDetailProps) {
         ) : null,
         usage != null,
       ],
-      ["observed_at", <span key="o" title={fullTimeTitle(event.observed_at)}>{formatters.absoluteTime(event.observed_at)}</span>, event.observed_at != null],
+      ["observed_at", <span key="o" title={formatters.fullTime(event.observed_at)}>{formatters.absoluteTime(event.observed_at)}</span>, event.observed_at != null],
       [
         "documents",
         <ul key="d" className="ac-lv-plain">

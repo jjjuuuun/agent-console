@@ -91,18 +91,6 @@ export function resetState(resetsAt: number | null | undefined, nowSec: number):
   return resetsAt > nowSec ? "future" : "passed";
 }
 
-/** 남은 초 → "2시간 14분" / "3일 4시간" / "5분" / "1분 미만". */
-export function formatRemaining(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const days = Math.floor(s / 86400);
-  const hours = Math.floor((s % 86400) / 3600);
-  const minutes = Math.floor((s % 3600) / 60);
-  if (days > 0) return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`;
-  if (hours > 0) return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
-  if (minutes > 0) return `${minutes}분`;
-  return "1분 미만";
-}
-
 /** 사용률(0~1, 넘을 수 있음) → "63%". 서버 값만 쓴다. */
 export function formatRatio(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;
@@ -367,7 +355,7 @@ export function plainText(md: string): string {
 // ---------------------------------------------------------------- 카드 묶음·토큰 표기 (5.7R.43)
 
 /** 토큰 수 표기: 10,000 미만은 쉼표 전체("9,840"), 이상은 한국어 compact("1.2만"). 집계 표는 쓰지 않는다(항상 쉼표 전체). */
-export function formatTokens(n: number, locale: string = "ko"): string {
+export function formatTokens(n: number, locale: string): string {
   if (!Number.isFinite(n)) return "–";
   if (Math.abs(n) < 10_000) return n.toLocaleString(locale);
   return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(n);
@@ -411,4 +399,25 @@ export function groupWindowsByTrust(
   }
   for (const [trust, rows] of byTrust) if (!trustOrder.includes(trust)) bundles.push({ trust, rows });
   return { windowCards, bundles };
+}
+
+/**
+ * 출처 목록의 보이는 서버 원문(이름·설명·안내·창 이름·연결 조각 제목)을 `tr`로 바꾼 복사본. id·신뢰 등급·조각 본문은 데이터라 그대로 둔다.
+ * 모르는 문구는 원문 그대로 남는다.
+ */
+export function translateUsageSources(sources: readonly UsageSourceInfo[], tr: (text: string) => string): UsageSourceInfo[] {
+  return sources.map((s) => {
+    const d = s.descriptor;
+    return {
+      ...s,
+      descriptor: {
+        ...d,
+        title: tr(d.title),
+        description: d.description ? tr(d.description) : d.description,
+        ...(d.setup_help ? { setup_help: tr(d.setup_help) } : {}),
+        ...(d.windows ? { windows: d.windows.map((w) => ({ ...w, title: tr(w.title), ...(w.short_title ? { short_title: tr(w.short_title) } : {}) })) } : {}),
+        ...(d.setup_snippets ? { setup_snippets: d.setup_snippets.map((n) => ({ ...n, title: tr(n.title), text: tr(n.text) })) } : {}),
+      },
+    };
+  });
 }

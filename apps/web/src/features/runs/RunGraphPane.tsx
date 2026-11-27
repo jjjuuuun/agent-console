@@ -2,7 +2,11 @@ import { useMemo, type ReactNode } from "react";
 import { GraphEditor, type BindSummary, type NodeAvatar, type NodeAnnotation, type ChipView, type EdgeBadge, type NodeRunBadge, type Selection } from "@agent-console/graph-editor";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
 import { Banner } from "@agent-console/ui";
-import { runsMessages as t } from "./messages";
+import { useFormat } from "../../i18n";
+import { useGraphEditorProps } from "../teams";
+import { useRunsMessages } from "./messages";
+
+const NO_OPTION_DEFAULTS: Readonly<Record<string, number>> = {};
 import type { RunOverlay } from "./runsLib";
 
 export interface RunGraphPaneProps {
@@ -43,19 +47,25 @@ export interface RunGraphPaneProps {
 
 /** 실행 상태를 얹은 읽기 전용 팀 구성 그래프. 상태·강조는 모두 props(`overlay`)로 받는다. */
 export function RunGraphPane(p: RunGraphPaneProps) {
+  const t = useRunsMessages();
+  const fmt = useFormat();
+  const graphEditor = useGraphEditorProps(NO_OPTION_DEFAULTS);
   const { overlay } = p;
   const badges = useMemo(() => {
     const out: Record<string, string[]> = {};
     for (const [id, n] of Object.entries(overlay.subagentCalls)) if (n > 1) out[id] = [t.common.callCount(n)];
     for (const [id, list] of Object.entries(p.extraNodeBadges ?? {})) out[id] = [...(out[id] ?? []), ...list];
     return out;
-  }, [overlay.subagentCalls, p.extraNodeBadges]);
+  }, [overlay.subagentCalls, p.extraNodeBadges, t]);
   return (
     <div className="runs-graph" role="region" aria-label={t.detail.graphLabel}>
       {p.versionMissing ? <Banner tone="info">{t.detail.versionMissing}</Banner> : null}
       <div className="runs-graph-canvas">
         <GraphEditor
           mode="readonly-run"
+          messages={graphEditor.messages}
+          edgeShapes={graphEditor.edgeShapes}
+          locale={fmt.language}
           graph={p.graph}
           nodeTypes={p.nodeTypes}
           edgeTypes={p.edgeTypes}

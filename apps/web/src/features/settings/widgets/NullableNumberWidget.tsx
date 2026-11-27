@@ -1,6 +1,6 @@
 import { useId } from "react";
 import type { SchemaFormWidgetProps } from "@agent-console/schema-form";
-import { messages as m } from "../../../app/messages";
+import { useAppMessages } from "../../../app/appMessages";
 
 export const NULLABLE_NUMBER_WIDGET = "nullable-number";
 
@@ -9,6 +9,7 @@ export const NULLABLE_NUMBER_WIDGET = "nullable-number";
  * 정수 여부·최솟값은 스키마(`type`, `minimum`, `exclusiveMinimum`)에서 읽는다.
  */
 export function NullableNumberWidget({ id, value, onChange, onBlur, label, disabled, readonly, schema, errors }: SchemaFormWidgetProps) {
+  const m = useAppMessages();
   const checkId = useId();
   const isNull = value === null || value === undefined;
   const type = schema["type"];

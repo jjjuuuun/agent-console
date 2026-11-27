@@ -7,6 +7,7 @@ import { LOOKUP_REQUIRES } from "../../app/requirements";
 import { useRequires } from "../../modules";
 import { useApi } from "../../app/ApiContext";
 import { useProjects } from "../projects";
+import { localizeEdgeType, localizeNodeType, useServerTranslate } from "../../i18n";
 
 const loadAgents = (rest: RestClient) => rest.listAgents();
 const loadGraphs = (rest: RestClient) => rest.listGraphs();
@@ -63,6 +64,10 @@ export function useRunLookups(): RunLookups {
   const nodeTypes = useApiQuery(queryKeys.descriptors("node-types"), loadNodeTypes);
   const edgeTypes = useApiQuery(queryKeys.descriptors("edge-types"), loadEdgeTypes);
   const kinds = useApiQuery(queryKeys.descriptors("interaction-kinds"), loadKinds);
+  const tr = useServerTranslate();
+  // 노드·연결 타입의 이름·설명·포트 라벨은 서버 원문이라 화면 언어로 옮긴다
+  const localNodeTypes = useMemo(() => (nodeTypes.data ?? EMPTY).map((d) => localizeNodeType(d, tr)), [nodeTypes.data, tr]);
+  const localEdgeTypes = useMemo(() => (edgeTypes.data ?? EMPTY).map((d) => localizeEdgeType(d, tr)), [edgeTypes.data, tr]);
   return useMemo(() => {
     const a = agents.data ?? EMPTY;
     const library = graphs.data ?? EMPTY;
@@ -78,13 +83,13 @@ export function useRunLookups(): RunLookups {
       }
     }
     const c = conversations.data ?? EMPTY;
-    const e = edgeTypes.data ?? EMPTY;
+    const e = localEdgeTypes;
     const k = kinds.data ?? EMPTY;
     return {
       agents: a,
       graphs: g,
       conversations: c,
-      nodeTypes: nodeTypes.data ?? EMPTY,
+      nodeTypes: localNodeTypes,
       edgeTypes: e,
       interactionKinds: k,
       agentName: (id) => (id === null || id === undefined || id === "" ? "" : (a.find((x) => x.id === id)?.name ?? id)),
@@ -97,5 +102,5 @@ export function useRunLookups(): RunLookups {
       edgeIcon: (kind) => (kind === null || kind === undefined ? undefined : (e.find((x) => x.id === kind)?.ui_hints?.icon ?? undefined)),
       kindOf: (id) => k.find((x) => x.id === id),
     };
-  }, [agents.data, graphs.data, spaceIds, spaceGraphData, conversations.data, nodeTypes.data, edgeTypes.data, kinds.data]);
+  }, [agents.data, graphs.data, spaceIds, spaceGraphData, conversations.data, localNodeTypes, localEdgeTypes, kinds.data]);
 }

@@ -8,11 +8,11 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
 import type { ImportFileListing, SpecImportRequest } from "@agent-console/contracts/sdd";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { classifySddError } from "./sddErrors";
 import { SDD_LIMITS } from "./sddConfig";
-import { sddMessages as m } from "./messages";
 import { SpecFolderBrowser } from "./SpecFolderBrowser";
+import { useT } from "@agent-console/i18n";
 
 export interface SpecImportDialogProps {
   open: boolean;
@@ -36,12 +36,13 @@ const joinPath = (folder: string, name: string) => (folder === "" ? name : `${fo
 const kb = (n: number) => (n < 1024 ? `${n}B` : `${Math.max(1, Math.round(n / 1024))}KB`);
 
 export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, blockedReason, onSubmit }: SpecImportDialogProps) {
+  const t = useT("sdd");
   const [folder, setFolder] = useState("");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [name, setName] = useState(initialName);
   const [folderError, setFolderError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("problem.generic"));
   const [browse, setBrowse] = useState({ key: 0, start: "" });
   const [busy, setBusy] = useState(false);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -58,9 +59,9 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
   const onListError = useCallback((e: unknown) => {
     setRows(null);
     const remote = e instanceof ApiError && e.code === ERROR_CODES.FOLDERS_REMOTE_DISABLED;
-    const failure = classifySddError(e, m.problem.generic);
-    setFolderError(remote ? m.import.remote : failure.kind === "generic" || failure.kind === "problem" ? failure.message : m.problem.generic);
-  }, []);
+    const failure = classifySddError(e, t("problem.generic"), t);
+    setFolderError(remote ? t("import.remote") : failure.kind === "generic" || failure.kind === "problem" ? failure.message : t("problem.generic"));
+  }, [t]);
   /** 입력한 경로를 트리에서 연다(트리를 새로 마운트해 그 폴더를 읽는다). */
   const load = () => setBrowse((b) => ({ key: b.key + 1, start: folder.trim() }));
 
@@ -82,7 +83,7 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
     try {
       await onSubmit({ name: name.trim(), files: selected.map((r) => r.path) as [string, ...string[]] });
     } catch (e) {
-      setError(describeError(e, m.problem.generic).message);
+      setError(raised(e));
       setBusy(false);
     }
   };
@@ -93,61 +94,61 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
   return (
     <Dialog
       open={open}
-      title={m.import.title}
+      title={t("import.title")}
       onClose={guardedClose}
       size="lg"
       initialFocus={folderRef}
       actions={
         <>
-          <span className="sdd-dialog-note app-muted">{m.import.summary(selected.length)}</span>
-          <Button onClick={guardedClose} disabled={busy}>{m.cancel}</Button>
+          <span className="sdd-dialog-note app-muted">{t("import.summary", { count: selected.length })}</span>
+          <Button onClick={guardedClose} disabled={busy}>{t("cancel")}</Button>
           <Button variant="primary" loading={busy} aria-disabled={blocked || selected.length === 0 || name.trim() === "" || undefined} title={blocked ? blockedReason : undefined} onClick={() => void submit()}>
-            {busy ? m.import.submitting : m.import.submit}
+            {busy ? t("import.submitting") : t("import.submit")}
           </Button>
         </>
       }
     >
       <div className="sdd-form">
-        <p className="app-muted">{m.import.intro}</p>
+        <p className="app-muted">{t("import.intro")}</p>
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
         <div className="sdd-field">
-          <span className="sdd-label" id={`${uid}-browse`}>{m.import.browse}</span>
-          <SpecFolderBrowser key={browse.key} id={`${uid}-tree`} load={loadFiles} startPath={browse.start} rootLabel={m.import.root} onListing={onListing} onError={onListError} onNavigate={setFolder} />
-          <span className="app-muted" role="status">{m.import.current(folder)}</span>
+          <span className="sdd-label" id={`${uid}-browse`}>{t("import.browse")}</span>
+          <SpecFolderBrowser key={browse.key} id={`${uid}-tree`} load={loadFiles} startPath={browse.start} rootLabel={t("import.root")} onListing={onListing} onError={onListError} onNavigate={setFolder} />
+          <span className="app-muted" role="status">{folder === "" ? t("import.currentRoot") : t("import.current", { path: folder })}</span>
         </div>
         <div className="sdd-field">
-          <label className="sdd-label" htmlFor={`${uid}-folder`}>{m.import.manual}</label>
+          <label className="sdd-label" htmlFor={`${uid}-folder`}>{t("import.manual")}</label>
           <div className="sdd-inline">
-            <input id={`${uid}-folder`} ref={folderRef} className="sdd-input sdd-mono" value={folder} placeholder={m.import.folderHint} onChange={(e) => setFolder(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) load(); }} />
-            <Button size="sm" onClick={load}>{m.import.load}</Button>
+            <input id={`${uid}-folder`} ref={folderRef} className="sdd-input sdd-mono" value={folder} placeholder={t("import.folderHint")} onChange={(e) => setFolder(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) load(); }} />
+            <Button size="sm" onClick={load}>{t("import.load")}</Button>
           </div>
           {folderError === null ? null : <span className="app-field-error" role="alert">{folderError}</span>}
         </div>
         {rows === null ? null : rows.length === 0 ? (
-          <p className="app-muted" role="status">{m.import.noFiles}</p>
+          <p className="app-muted" role="status">{t("import.noFiles")}</p>
         ) : (
           <div className="sdd-field">
             <div className="sdd-inline">
-              <Choice checked={selected.length === rows.length} onChange={(e) => setRows(rows.map((r) => ({ ...r, checked: e.target.checked })))}>{m.import.selectAll}</Choice>
-              <span className="app-muted">{m.import.selected(rows.length, selected.length)}</span>
+              <Choice checked={selected.length === rows.length} onChange={(e) => setRows(rows.map((r) => ({ ...r, checked: e.target.checked })))}>{t("import.selectAll")}</Choice>
+              <span className="app-muted">{t("import.selected", { n: rows.length, k: selected.length })}</span>
             </div>
-            <ul className="sdd-files" aria-label={m.import.docs}>
+            <ul className="sdd-files" aria-label={t("import.docs")}>
               {rows.map((r, i) => (
                 <li key={r.path} className="sdd-file">
                   <Choice checked={r.checked} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, checked: e.target.checked } : x)))}>
                     <span className="sdd-mono ac-ellipsis">{r.name}</span>
                   </Choice>
                   <span className="app-muted">{kb(r.size)}</span>
-                  <Button size="sm" aria-label={`${r.name} ${m.import.moveUp}`} disabled={i === 0} onClick={() => move(i, -1)}>↑</Button>
-                  <Button size="sm" aria-label={`${r.name} ${m.import.moveDown}`} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>↓</Button>
+                  <Button size="sm" aria-label={`${r.name} ${t("import.moveUp")}`} disabled={i === 0} onClick={() => move(i, -1)}>↑</Button>
+                  <Button size="sm" aria-label={`${r.name} ${t("import.moveDown")}`} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>↓</Button>
                 </li>
               ))}
             </ul>
-            {truncated ? <p className="app-muted">{m.import.truncated}</p> : null}
+            {truncated ? <p className="app-muted">{t("import.truncated")}</p> : null}
           </div>
         )}
         <label className="sdd-field" htmlFor={`${uid}-name`}>
-          <span className="sdd-label">{m.import.name} *</span>
+          <span className="sdd-label">{t("import.name")} *</span>
           <input id={`${uid}-name`} className="sdd-input" maxLength={SDD_LIMITS.nameMax} value={name} aria-required="true" onChange={(e) => setName(e.target.value)} />
         </label>
       </div>

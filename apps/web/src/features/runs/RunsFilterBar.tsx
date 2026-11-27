@@ -1,5 +1,5 @@
 import { Button } from "@agent-console/ui";
-import { runStatusLabels, runsMessages as t } from "./messages";
+import { useRunsMessages } from "./messages";
 import { PERIOD_OPTIONS } from "./runsConfig";
 
 export interface FilterOption {
@@ -36,6 +36,7 @@ export interface RunsFilterBarProps {
 }
 
 function Select({ label, value, onChange, options, selectRef }: { label: string; value: string; onChange(v: string): void; options: readonly FilterOption[]; selectRef?: React.Ref<HTMLSelectElement> }) {
+  const t = useRunsMessages();
   return (
     <label className="runs-filter runs-filter-inline">
       <span className="app-muted">{label}</span>
@@ -54,6 +55,7 @@ function Select({ label, value, onChange, options, selectRef }: { label: string;
  * 1줄: 검색 + 범위 선택(팀 구성·에이전트·대화·시작). 2줄: 상태 칩(여러 개 선택) + 단축/포함 토글. 컨트롤 높이는 모두 한 가지다.
  */
 export function RunsFilterBar({ value, onChange, statuses, waitingStatus, searchRef, firstRef, graphs, agents, conversations }: RunsFilterBarProps) {
+  const t = useRunsMessages();
   const set = (patch: Partial<RunsFilters>) => onChange({ ...value, ...patch });
   const toggleStatus = (s: string) => set({ statuses: value.statuses.includes(s) ? value.statuses.filter((x) => x !== s) : [...value.statuses, s] });
   const waitingOnly = value.statuses.length === 1 && value.statuses[0] === waitingStatus;
@@ -81,7 +83,7 @@ export function RunsFilterBar({ value, onChange, statuses, waitingStatus, search
           <span className="app-muted" aria-hidden="true">{t.list.filters.status}</span>
           {statuses.map((s) => (
             <button key={s} type="button" className="runs-chip" aria-pressed={value.statuses.includes(s)} onClick={() => toggleStatus(s)}>
-              {runStatusLabels[s] ?? s}
+              {t.runStatus[s] ?? s}
             </button>
           ))}
         </div>

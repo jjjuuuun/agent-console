@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { UsageSetupSnippet } from "@agent-console/contracts";
 import { Markdown } from "@agent-console/chat";
 import { Button, Disclosure, Icon, Tabs } from "@agent-console/ui";
-import { formatRelative } from "../../lib/format";
-import { usageMessages as t } from "./messages";
+
+import { useUsageMessages } from "./messages";
 import { groupSetupSnippets } from "./usageLib";
+import { useFormat, useChatLocale } from "../../i18n";
 
 /** 연결 상태: 받은 값이 있다 / 다른 출처 값은 있으나 이 출처는 없다 / 값이 전혀 없다 */
 export type SetupGuideState = "connected" | "missing" | "empty";
@@ -34,6 +35,7 @@ const defaultCopy = (text: string): Promise<void> =>
   navigator.clipboard?.writeText ? navigator.clipboard.writeText(text) : Promise.reject(new Error("clipboard unavailable"));
 
 function SnippetBody({ items, copyText, copiedMs }: { items: readonly UsageSetupSnippet[]; copyText: (text: string) => Promise<void>; copiedMs: number }) {
+  const t = useUsageMessages();
   const [shell, setShell] = useState(items[0]?.shell ?? "");
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -76,9 +78,12 @@ function SnippetBody({ items, copyText, copiedMs }: { items: readonly UsageSetup
  * 열림은 호출자가 정한다(값이 없으면 펼치고 값이 생기면 접는 규칙은 컨테이너 몫).
  */
 export function UsageSetupGuide({ snippets, help, note, state, lastReceivedAt, nowMs, open, onOpenChange, onRecheck, rechecking = false, copyText = defaultCopy, copiedMs = 2000 }: UsageSetupGuideProps) {
+  const chat = useChatLocale();
+  const fmt = useFormat();
+  const t = useUsageMessages();
   const groups = useMemo(() => groupSetupSnippets(snippets), [snippets]);
-  const received = lastReceivedAt != null ? t.setup.lastReceived(formatRelative(lastReceivedAt, nowMs)) : t.setup.neverReceived;
-  const summaryText = state === "connected" ? t.setup.summaryConnected(lastReceivedAt != null ? formatRelative(lastReceivedAt, nowMs) : "–") : state === "empty" ? t.setup.summaryEmpty : t.setup.summaryMissing;
+  const received = lastReceivedAt != null ? t.setup.lastReceived(fmt.relative(lastReceivedAt, nowMs)) : t.setup.neverReceived;
+  const summaryText = state === "connected" ? t.setup.summaryConnected(lastReceivedAt != null ? fmt.relative(lastReceivedAt, nowMs) : "–") : state === "empty" ? t.setup.summaryEmpty : t.setup.summaryMissing;
   return (
     <section className="usage-guide" aria-label={t.setup.region} data-state={state}>
       <Disclosure
@@ -87,7 +92,7 @@ export function UsageSetupGuide({ snippets, help, note, state, lastReceivedAt, n
         summary={<span className="usage-guide-summary"><span>{summaryText}</span> <span className="app-muted">{t.setup.toggle}</span></span>}
       >
         <div className="usage-guide-body">
-          {help ? <Markdown text={help} /> : null}
+          {help ? <Markdown text={help} messages={chat.markdown} /> : null}
           {note ? <p className="app-muted usage-guide-note">{note}</p> : null}
           {groups.length > 0 ? (
             <Tabs

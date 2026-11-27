@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { Banner, Button, ConfirmDialog, Dialog, useShortcuts, useToast } from "@agent-console/ui";
-import { DashboardGrid, TemplatePicker, builtinWidgets, createWidgetRegistry, updateWidget, type DashboardChangeMeta, type TemplateApplyRequest } from "@agent-console/log-view";
+import { DashboardGrid, TemplatePicker, createWidgetRegistry, updateWidget, type DashboardChangeMeta, type TemplateApplyRequest } from "@agent-console/log-view";
 import type { LogDashboard, LogWidget, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../app/ErrorBlock";
-import { describeError } from "../../app/errors";
-import { messages as appMessages } from "../../app/messages";
+import { useDescribeError } from "../../app/errors";
 import { queryKeys } from "../../app/queries";
 import { DOCUMENT_REQUIRES } from "../../app/requirements";
 import { useStorage } from "../../app/StorageContext";
@@ -18,22 +17,21 @@ import { useRequires } from "../../modules";
 import { JsonView } from "./JsonView";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
 import { LogsPageFrame } from "./LogsPageFrame";
-import { RangeControl } from "./LogFilters";
+import { RangeControl, useFilterFields } from "./LogFilters";
 import { useLogsIngested } from "./LogsLive";
 import { WidgetEditorDrawer } from "./WidgetEditorDrawer";
 import { DASHBOARD_COLUMNS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS } from "./logsConfig";
 import { cloneWidgets, dashboardsOf, enabledCount, isTypingTarget, newDashboardId, parseRange, rangeToWindow, uniqueTitle, unknownKindCount, withDashboards } from "./logsLib";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
+import { LogsToast } from "./LogsToast";
 import { slotFor } from "./slots";
 import { settingsLogsHref } from "./LogsEmpty";
 import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState } from "./useLogFilterState";
 import { useLogSchema, useLogSources, useLogTaxonomyView, useLogTemplates } from "./useLogsApi";
 import { useWidgetResults } from "./useWidgetResults";
-import { buildFilterFields } from "./LogFilters";
+import { useBuiltinWidgets, useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
-const FIELDS = buildFilterFields();
-const REGISTRY = createWidgetRegistry(builtinWidgets);
 const TEMPLATE_FORM_ID = "dashboard-template-form";
 const NO_WIDGETS: readonly LogWidget[] = [];
 
@@ -54,6 +52,13 @@ function blankWidget(kind: string, metric: string): LogWidget {
 
 /** 대시보드(`/logs/dashboards/:id?`): 설정 `logs.dashboards`를 읽어 위젯 격자로 그리고, 편집은 로컬 복사본에 쌓았다가 [저장]에서만 설정 문서에 병합 저장한다. */
 export function DashboardsPage() {
+  const describeError = useDescribeError();
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const builtins = useBuiltinWidgets();
+  const REGISTRY = useMemo(() => createWidgetRegistry(builtins), [builtins]);
+  const FIELDS = useFilterFields();
+  const t = useLogsMessages();
   const { id: idParam } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -99,7 +104,7 @@ export function DashboardsPage() {
     if (current !== undefined) storage.set(LOGS_STORAGE.lastDashboard, current.id);
   }, [current, storage]);
 
-  const ownedKeys = useCallback((kind: string) => Object.keys(((REGISTRY.get(kind)?.optionsSchema["properties"] ?? {}) as Record<string, unknown>)), []);
+  const ownedKeys = useCallback((kind: string) => Object.keys(((REGISTRY.get(kind)?.optionsSchema["properties"] ?? {}) as Record<string, unknown>)), [REGISTRY]);
   const commit = useCallback(
     (next: readonly LogDashboard[]) => editor.setDraft((cur) => withDashboards(cur, next, { prev: editor.base?.logs?.dashboards ?? [], ownedOptionKeys: ownedKeys })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,7 +132,7 @@ export function DashboardsPage() {
   const save = useCallback(async () => {
     const ok = await editor.save();
     if (ok) {
-      toast({ tone: "success", text: t.dashboards.savedToast });
+      toast({ tone: "success", text: <LogsToast render={(l) => l.dashboards.savedToast} /> });
       setEditing(false);
     }
   }, [editor, toast]);
@@ -151,7 +156,7 @@ export function DashboardsPage() {
       const widget = (current.widgets ?? [])[idx];
       if (widget !== undefined) {
         deleted.current = [...deleted.current, { dashboardId: current.id, widget, index: idx }].slice(-LOGS_LIMITS.deleteHistory);
-        toast({ tone: "info", text: t.dashboards.removedToast, durationMs: LOGS_LIMITS.deleteToastMs, action: { label: t.dashboards.undo, onClick: undoDelete } });
+        toast({ tone: "info", text: <LogsToast render={(l) => l.dashboards.removedToast} />, durationMs: LOGS_LIMITS.deleteToastMs, action: { label: <LogsToast render={(l) => l.dashboards.undo} />, onClick: undoDelete } });
       }
     }
     setWidgets(current.id, next);
@@ -238,7 +243,7 @@ export function DashboardsPage() {
     const v = describeError(editor.error, t.dashboards.loadSettingsFailed);
     return (
       <LogsPageFrame tab="dashboards">
-        <ErrorBlock title={t.dashboards.loadSettingsFailed} message={v.message} retryLabel={appMessages.common.retry} onRetry={editor.reload} />
+        <ErrorBlock title={t.dashboards.loadSettingsFailed} message={v.message} retryLabel={t.retry} onRetry={editor.reload} />
       </LogsPageFrame>
     );
   }
@@ -351,7 +356,7 @@ export function DashboardsPage() {
             {t.dashboards.widgetsEmpty} <Button size="sm" onClick={() => setTemplatesOpen(true)}>{t.dashboards.emptyFromTemplate}</Button>
           </p>
         ) : null}
-        <DashboardGrid
+        <DashboardGrid messages={lv} formatters={lvFormatters}
           widgets={widgetsNow}
           registry={REGISTRY}
           results={results.results}
@@ -423,7 +428,7 @@ export function DashboardsPage() {
         size="lg"
         actions={
           <>
-            <Button onClick={() => setTemplatesOpen(false)}>{appMessages.common.cancel}</Button>
+            <Button onClick={() => setTemplatesOpen(false)}>{t.dashboards.cancel}</Button>
             {(templates.data ?? []).length > 0 ? (
               <Button variant="primary" type="submit" form={TEMPLATE_FORM_ID}>
                 {t.dashboards.templateApply}
@@ -432,7 +437,7 @@ export function DashboardsPage() {
           </>
         }
       >
-        <TemplatePicker
+        <TemplatePicker messages={lv}
           formId={TEMPLATE_FORM_ID}
           showActions={false}
           templates={templates.data ?? []}
@@ -442,7 +447,7 @@ export function DashboardsPage() {
           onCreateBlank={() => { setTemplatesOpen(false); createBlank(); }}
         />
       </Dialog>
-      <ConfirmDialog open={confirmTemplate !== null} title={t.dashboards.templateUnsavedTitle} confirmLabel={t.dashboards.templateUnsavedConfirm} cancelLabel={appMessages.common.cancel} onConfirm={() => confirmTemplate && applyTemplate(confirmTemplate)} onCancel={() => setConfirmTemplate(null)}>
+      <ConfirmDialog open={confirmTemplate !== null} title={t.dashboards.templateUnsavedTitle} confirmLabel={t.dashboards.templateUnsavedConfirm} cancelLabel={t.dashboards.cancel} onConfirm={() => confirmTemplate && applyTemplate(confirmTemplate)} onCancel={() => setConfirmTemplate(null)}>
         {t.dashboards.templateUnsavedBody}
       </ConfirmDialog>
       <ConfirmDialog open={confirmCancel} title={t.dashboards.discardTitle} confirmLabel={t.dashboards.discardConfirm} cancelLabel={t.dashboards.keepEditing} danger onConfirm={cancelEdit} onCancel={() => setConfirmCancel(false)}>
@@ -452,7 +457,7 @@ export function DashboardsPage() {
         open={confirmDelete}
         title={t.dashboards.deleteTitle(current?.title ?? "")}
         confirmLabel={t.dashboards.deleteConfirm}
-        cancelLabel={appMessages.common.cancel}
+        cancelLabel={t.dashboards.cancel}
         danger
         onConfirm={() => {
           if (current !== undefined) {
@@ -474,7 +479,7 @@ export function DashboardsPage() {
         onClose={() => setRenaming(null)}
         actions={
           <>
-            <Button onClick={() => setRenaming(null)}>{appMessages.common.cancel}</Button>
+            <Button onClick={() => setRenaming(null)}>{t.dashboards.cancel}</Button>
             <Button variant="primary" onClick={() => { if (current !== undefined && renaming !== null) { commit(dashboards.map((d) => (d.id === current.id ? { ...d, title: renaming.trim() || t.dashboards.untitled } : d))); setEditing(true); } setRenaming(null); }}>{t.dashboards.save}</Button>
           </>
         }
@@ -491,7 +496,7 @@ export function DashboardsPage() {
         wide
         actions={
           <>
-            <Button onClick={() => setJsonEdit(null)}>{appMessages.common.cancel}</Button>
+            <Button onClick={() => setJsonEdit(null)}>{t.dashboards.cancel}</Button>
             <Button
               variant="primary"
               disabled={jsonObject === null}
@@ -515,6 +520,7 @@ export function DashboardsPage() {
 }
 
 function RenameInput({ value, onChange }: { value: string; onChange(v: string): void }) {
+  const t = useLogsMessages();
   const [composing, setComposing] = useState(false);
   return (
     <input

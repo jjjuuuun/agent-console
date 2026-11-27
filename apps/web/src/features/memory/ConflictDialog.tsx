@@ -9,8 +9,8 @@ import type { MemoryEntry } from "@agent-console/contracts/memory";
 import { languageForContentType } from "@agent-console/memory-view";
 import { useStorage } from "../../app/StorageContext";
 import { MEMORY_STORAGE } from "./memoryConfig";
-import { memoryMessages as t } from "./messages";
-import { relativeTime } from "./format";
+import { useRelativeTime } from "./format";
+import { useT } from "@agent-console/i18n";
 
 export interface ConflictDialogProps {
   open: boolean;
@@ -30,6 +30,8 @@ export interface ConflictDialogProps {
 }
 
 export function ConflictDialog({ open, openedVersion, server, serverAuthor, mine, contentType, saving, onKeepEditing, onLoadServer, onSaveMine }: ConflictDialogProps) {
+  const t = useT("memory");
+  const relativeTime = useRelativeTime();
   const storage = useStorage();
   const keepRef = useRef<HTMLButtonElement>(null);
   const [layout, setLayout] = useState<"split" | "unified" | "auto">(() => {
@@ -40,29 +42,29 @@ export function ConflictDialog({ open, openedVersion, server, serverAuthor, mine
     <Dialog
       open={open}
       size="xl"
-      title={t.conflict.title}
+      title={t("conflict.title")}
       onClose={onKeepEditing}
       initialFocus={keepRef}
       actions={
         <>
-          <Button ref={keepRef} onClick={onKeepEditing}>{t.conflict.keepEditing}</Button>
-          <Button variant="danger" onClick={onLoadServer} disabled={saving}>{t.conflict.loadServerLoseMine}</Button>
-          <Button variant="primary" onClick={onSaveMine} loading={saving}>{t.conflict.saveMine(server.version + 1)}</Button>
+          <Button ref={keepRef} onClick={onKeepEditing}>{t("conflict.keepEditing")}</Button>
+          <Button variant="danger" onClick={onLoadServer} disabled={saving}>{t("conflict.loadServerLoseMine")}</Button>
+          <Button variant="primary" onClick={onSaveMine} loading={saving}>{t("conflict.saveMine", { n: server.version + 1 })}</Button>
         </>
       }
     >
       <p className="mem-conflict-line">
-        {t.conflict.opened(openedVersion, server.version)} · {t.conflict.byWho(serverAuthor, relativeTime(server.updated_at))}
+        {t("conflict.opened", { a: openedVersion, b: server.version })} · {t("conflict.byWho", { who: serverAuthor, when: relativeTime(server.updated_at) })}
       </p>
       <div className="mem-conflict-heads" aria-hidden="true">
-        <span>{t.conflict.server(server.version)}</span>
-        <span>{t.conflict.mine}</span>
+        <span>{t("conflict.server", { v: server.version })}</span>
+        <span>{t("conflict.mine")}</span>
       </div>
       <TextDiff
         before={server.content}
         after={mine}
         language={languageForContentType(contentType)}
-        ariaLabel={`${t.conflict.server(server.version)} / ${t.conflict.mine}`}
+        ariaLabel={`${t("conflict.server", { v: server.version })} / ${t("conflict.mine")}`}
         mode={layout}
         unifiedBelow={900}
         maxHeight={320}
@@ -71,7 +73,7 @@ export function ConflictDialog({ open, openedVersion, server, serverAuthor, mine
           storage.set(MEMORY_STORAGE.diffLayout, mode);
         }}
       />
-      <p className="mem-help">{t.conflict.note(server.version)}</p>
+      <p className="mem-help">{t("conflict.note", { b: server.version })}</p>
     </Dialog>
   );
 }

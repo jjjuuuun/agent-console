@@ -4,9 +4,7 @@
  */
 import { Button } from "@agent-console/ui";
 import { MultiFileTab, sortEntries, type FileEntry } from "../resources";
-import { wikiRulesMessages } from "./rulesScreenMessages";
-
-const t = wikiRulesMessages.files;
+import { useT } from "@agent-console/i18n";
 
 /** 규칙이 가리키는 본문 파일 하나(종류별 표시 이름은 호출자가 안다). */
 export interface RuleFileLink {
@@ -31,6 +29,7 @@ export interface WikiRuleFilesPanelProps {
 }
 
 export function WikiRuleFilesPanel({ links, files, originFiles, onChange, errors, onDismissError, onSave, disabled }: WikiRuleFilesPanelProps) {
+  const t = useT("wiki");
   const have = new Set(files.map((f) => f.path));
   const linked = new Set(links.map((l) => l.file));
   const unlinked = files.filter((f) => !linked.has(f.path));
@@ -38,21 +37,21 @@ export function WikiRuleFilesPanel({ links, files, originFiles, onChange, errors
   const hasTemplates = links.some((l) => l.kind === "template");
   return (
     <div className="wiki-rule-files">
-      <section aria-label={t.links}>
-        <h3 className="wiki-label">{t.links}</h3>
+      <section aria-label={t("rules.files.links")}>
+        <h3 className="wiki-label">{t("rules.files.links")}</h3>
         {links.length === 0 ? (
-          <p className="app-muted">{t.noLinks}</p>
+          <p className="app-muted">{t("rules.files.noLinks")}</p>
         ) : (
           <ul className="wiki-rule-links">
             {links.map((l) => (
               <li key={`${l.kind}:${l.file}`} data-missing={have.has(l.file) ? undefined : "true"}>
-                <span className="app-muted">{l.kind === "instructions" ? t.instructions : t.template}</span>{" "}
+                <span className="app-muted">{l.kind === "instructions" ? t("rules.files.instructions") : t("rules.files.template")}</span>{" "}
                 {l.label === undefined ? null : <span className="ac-ellipsis">{l.label}</span>} <span className="wiki-mono app-muted">{l.file}</span>
                 {have.has(l.file) ? null : (
                   <>
                     {" "}
-                    <span data-tone="danger" role="status">{t.missing}</span>{" "}
-                    <Button size="sm" disabled={disabled} aria-label={t.createFile(l.file)} onClick={() => onChange(sortEntries([...files, { path: l.file, text: "", size: 0 }]))}>{t.create}</Button>
+                    <span data-tone="danger" role="status">{t("rules.files.missing")}</span>{" "}
+                    <Button size="sm" disabled={disabled} aria-label={t("rules.files.createFile", { path: l.file })} onClick={() => onChange(sortEntries([...files, { path: l.file, text: "", size: 0 }]))}>{t("rules.files.create")}</Button>
                   </>
                 )}
               </li>
@@ -61,11 +60,11 @@ export function WikiRuleFilesPanel({ links, files, originFiles, onChange, errors
         )}
         {unlinked.length === 0 ? null : (
           <p className="app-muted" data-testid="wiki-rule-unlinked">
-            {t.unlinked}: {unlinked.map((f) => f.path).join(", ")}
+            {t("rules.files.unlinked")}: {unlinked.map((f) => f.path).join(", ")}
           </p>
         )}
-        {hasInstructions ? <p className="app-muted wiki-hint" data-testid="wiki-rule-instructions-note">{t.instructionsNote}</p> : null}
-        {hasTemplates ? <p className="app-muted wiki-hint">{t.templateNote}</p> : null}
+        {hasInstructions ? <p className="app-muted wiki-hint" data-testid="wiki-rule-instructions-note">{t("rules.files.instructionsNote")}</p> : null}
+        {hasTemplates ? <p className="app-muted wiki-hint">{t("rules.files.templateNote")}</p> : null}
       </section>
       <MultiFileTab files={files} originFiles={originFiles} onChange={onChange} errors={errors ?? {}} {...(onDismissError === undefined ? {} : { onDismissError })} onSave={onSave} disabled={disabled} />
     </div>

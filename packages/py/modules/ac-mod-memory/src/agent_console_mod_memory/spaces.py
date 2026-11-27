@@ -162,7 +162,9 @@ class MemorySpaceServices:
         try:
             names = list(listing())
         except Exception:
-            _log.warning("메모리 공간 목록을 읽지 못해 공용 메모리만 다룹니다", exc_info=True)
+            _log.warning(
+                "Couldn't read the memory space list; handling shared memory only", exc_info=True
+            )
             return []
         out: list[str] = []
         for name in names:

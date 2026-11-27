@@ -84,7 +84,7 @@ def _run_callback(callback: Callable[[], object]) -> None:
     try:
         callback()
     except Exception:
-        _log.exception("취소 콜백 실패")
+        _log.exception("Cancel callback failed")
 
 
 def _noop() -> None:

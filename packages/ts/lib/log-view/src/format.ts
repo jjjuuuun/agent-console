@@ -59,6 +59,7 @@ export const defaultFormatters: Formatters = {
   duration: (ms) => formatDurationMs(ms),
   tokens: formatTokensShort,
   number: formatNumber,
+  fullTime: (epochSeconds) => fullTimeTitle(epochSeconds),
 };
 
 export function mergeFormatters(partial?: Partial<Formatters>): Formatters {
@@ -86,9 +87,9 @@ function zoneName(): string {
   }
 }
 
-/** epoch 초 -> 로컬 시각 전체 + 시간대 + ISO 원문(툴팁용). 예: `2026. 10. 28. 오전 11:42:07 Asia/Seoul (2026-10-28T02:42:07.000Z)` */
-export function fullTimeTitle(epochSeconds: number): string {
+/** epoch 초 -> 로컬 시각 전체 + 시간대 + ISO 원문(툴팁용). 예(`ko`): `2026. 10. 28. 오전 11:42:07 Asia/Seoul (2026-10-28T02:42:07.000Z)`. `locale`을 생략하면 "en-US". */
+export function fullTimeTitle(epochSeconds: number, locale: string = "en-US"): string {
   const d = new Date(epochSeconds * 1000);
   const zone = zoneName();
-  return `${d.toLocaleString()}${zone ? ` ${zone}` : ""} (${d.toISOString()})`;
+  return `${d.toLocaleString(locale)}${zone ? ` ${zone}` : ""} (${d.toISOString()})`;
 }

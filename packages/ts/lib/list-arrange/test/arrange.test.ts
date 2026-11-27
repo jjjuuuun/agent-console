@@ -141,3 +141,16 @@ describe("보기 상태 저장", () => {
     expect(saveCollapsed(undefined, "x", "g", new Set())).toBe(false);
   });
 });
+
+describe("locale argument", () => {
+  const words = ["z", "ä", "b"];
+  test("the default locale does not depend on the host", () => {
+    expect([...words].sort(byText<string>((w) => w))).toEqual(["ä", "b", "z"]);
+  });
+  test("byText, groupItems, and buildFolderTree follow the given locale", () => {
+    expect([...words].sort(byText<string>((w) => w, "sv"))).toEqual(["b", "z", "ä"]);
+    const def: GroupByDef<{ k: string }> = { id: "k", titleKey: "g", read: (r) => [r.k] };
+    expect(groupItems(words.map((k) => ({ k })), def, { locale: "sv" }).map((g) => g.key)).toEqual(["b", "z", "ä"]);
+    expect(buildFolderTree(words, "sv").map((n) => n.name)).toEqual(["b", "z", "ä"]);
+  });
+});

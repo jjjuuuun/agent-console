@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from "react";
 import { useToast } from "@agent-console/ui";
 import type { ProjectView } from "@agent-console/contracts/projects";
-import { createProjectsText, statusInfo } from "@agent-console/projects";
+import { statusInfo, type ProjectsText } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import { useApi } from "../../app/ApiContext";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 import { ProjectFolderDialog, type FolderSubmit, type RepathTarget } from "./ProjectFolderDialog";
 import { useFolderApi } from "./useFolderApi";
 
@@ -22,10 +23,9 @@ export interface ProjectFolderHostProps {
   onClose: () => void;
 }
 
-const text = createProjectsText();
 
 /** 보기 값 -> 경로 다시 지정 대상(상태 칩 글자 포함). */
-export function repathTarget(view: ProjectView): RepathTarget {
+export function repathTarget(view: ProjectView, text: ProjectsText): RepathTarget {
   const info = statusInfo(view);
   return {
     id: view.project.id,
@@ -41,11 +41,13 @@ export function repathTarget(view: ProjectView): RepathTarget {
  * 대화상자는 요청이 있을 때만 마운트되어 열 때마다 새로 시작한다.
  */
 export function ProjectFolderHost({ request, projects, refresh, openHome, onClose }: ProjectFolderHostProps) {
+  const m = useFolderHomeMessages();
+  const text = useProjectsText();
   const { rest } = useApi();
   const toast = useToast();
   const nameOf = useCallback((id: string) => projects.find((p) => p.project.id === id)?.project.name, [projects]);
   const api = useFolderApi(nameOf, request.mode === "repath" ? { excludeProjectId: request.view.project.id } : {});
-  const target = useMemo(() => (request.mode === "repath" ? repathTarget(request.view) : undefined), [request]);
+  const target = useMemo(() => (request.mode === "repath" ? repathTarget(request.view, text) : undefined), [request, text]);
 
   const onSubmit = async (v: FolderSubmit) => {
     if (v.kind === "repath" && request.mode === "repath") {

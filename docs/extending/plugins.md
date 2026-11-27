@@ -88,10 +88,10 @@ plugins:
   Use it when you want to pick only what you use.
 - When you set both, `plugins.disabled` is removed from `plugins.enabled` (the deny list wins).
 - Neither list looks at groups. If another group has the same name, it is turned off too.
-- If `plugins.disabled` contains a name that is not installed, the server still starts and adds a `plugins.config`
-  warning to `warnings` of `server-info` (to catch typos). If the name is an installed distribution name
-  (`my-console-ops`), the warning shows the entry point names of that distribution. If it is a server module id
-  (`mod-…`), the warning says to turn it off with `modules.disabled` and also shows the entry point names of the same
+- If `plugins.disabled` contains a name that is not installed, the server still starts and adds a
+  `plugins.unknown_disabled` warning to `warnings` of `server-info` (to catch typos). If the name is an installed distribution name
+  (`my-console-ops`), the warning (`plugins.disabled_distribution`) shows the entry point names of that distribution. If it is a server module id
+  (`mod-…`), the warning (`plugins.disabled_module_id`) says to turn it off with `modules.disabled` and also shows the entry point names of the same
   distribution.
 - The same rules apply to entries registered by `plugins.modules` plugins. The name is the registered key, and an entry
   that is turned off appears with `group` `plugins.modules` and `status` `disabled` (entry point plugins show

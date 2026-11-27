@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { buildBreadcrumb, type OpenedFrom } from "./openedFrom";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 export interface TeamBreadcrumbProps {
   rootLabel: string;
@@ -16,6 +16,7 @@ export interface TeamBreadcrumbProps {
  * 깊어지면 가까운 3단계만 보이고 앞쪽은 `…`(툴팁에 이름)로 접는다. 부모로 돌아가는 링크는 부모 자신의 `openedFrom`을 이어 준다.
  */
 export function TeamBreadcrumb({ rootLabel, rootHref, from, current, hrefOf }: TeamBreadcrumbProps) {
+  const t = useTeamMessages();
   const { crumbs, hidden } = buildBreadcrumb({ root: { label: rootLabel, href: rootHref }, from, current, hrefOf });
   return (
     <nav aria-label={t.editor.breadcrumbLabel} className="team-crumbs">

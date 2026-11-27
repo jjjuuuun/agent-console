@@ -9,7 +9,7 @@ import { ApiError, memoryConflictVersion } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryEntry, MemorySecretRejectedDetails, MemoryUpdateRequest } from "@agent-console/contracts/memory";
 import { secretRejectedField, type EntrySaveState, type MemoryMetaDraft } from "@agent-console/memory-view";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { memoryKeys, useMemoryEntry } from "./useMemoryApi";
 import { useMemoryRest } from "./useMemoryApi";
 
@@ -100,7 +100,7 @@ export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor
 
   const [edit, setEdit] = useState<Edit | null>(null);
   const [saving, setSaving] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useErrorState(fallbackMessage);
   const [secret, setSecret] = useState<SecretNote | null>(null);
   const [redacted, setRedacted] = useState(false);
   const [conflict, setConflict] = useState<MemoryEntry | null>(null);
@@ -131,7 +131,7 @@ export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor
       setSecret(null);
       setRedacted(false);
     },
-    [server, readOnly],
+    [server, readOnly, setFailure],
   );
   const setContent = useCallback((content: string) => patch((d) => ({ ...d, content })), [patch]);
   const setMeta = useCallback((meta: MemoryMetaDraft) => patch((d) => ({ ...d, tags: [...meta.tags], contentType: meta.contentType, pinned: meta.pinned })), [patch]);
@@ -166,20 +166,20 @@ export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor
             qc.setQueryData(memoryKeys.entry(id), latest);
             setConflict(latest);
           } catch (inner) {
-            setFailure(describeError(inner, fallbackMessage).message);
+            setFailure(raised(inner));
           }
         } else if (e instanceof ApiError && e.code === ERROR_CODES.MEMORY_SECRET_REJECTED) {
           const details = e.details as Partial<MemorySecretRejectedDetails>;
           setSecret({ field: secretRejectedField(details.field) });
         } else {
-          setFailure(describeError(e, fallbackMessage).message);
+          setFailure(raised(e));
         }
         return false;
       } finally {
         setSaving(false);
       }
     },
-    [rest, id, adopt, qc, fallbackMessage],
+    [rest, id, adopt, qc, setFailure],
   );
 
   const save = useCallback(async (): Promise<boolean> => {
@@ -198,9 +198,9 @@ export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor
       qc.setQueryData(memoryKeys.entry(id), latest);
       setConflict(latest);
     } catch (e) {
-      setFailure(describeError(e, fallbackMessage).message);
+      setFailure(raised(e));
     }
-  }, [rest, id, qc, fallbackMessage]);
+  }, [rest, id, qc, setFailure]);
 
   const discard = useCallback(() => {
     setEdit(null);
@@ -208,7 +208,7 @@ export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor
     setSecret(null);
     setRedacted(false);
     setConflict(null);
-  }, []);
+  }, [setFailure]);
 
   const loadServer = useCallback(() => {
     discard();

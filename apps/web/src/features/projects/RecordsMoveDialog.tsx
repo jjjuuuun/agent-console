@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
 import type { Issue } from "@agent-console/contracts";
-import { scopeMessages } from "./scopeMessages";
+import { useScopeMessages } from "./scopeMessages";
 
-const t = scopeMessages.settings;
 
 export interface RecordsMoveOutcome {
   moved: number;
@@ -27,6 +26,7 @@ export interface RecordsMoveDialogProps {
 
 /** 앱에 남은 기록을 프로젝트 폴더로 옮기는 대화상자(screen-projects §4.6.3). 표현 전용: 호출 순서(채팅 → 실행)는 호출자가 맡는다. */
 export function RecordsMoveDialog({ projectName, folder, chats, runs, busy, outcome, error, onSubmit, onClose }: RecordsMoveDialogProps) {
+  const t = useScopeMessages().settings;
   const [remove, setRemove] = useState(true);
   const total = chats + runs;
   const failed = outcome?.failed ?? [];

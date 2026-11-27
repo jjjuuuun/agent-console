@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, type RenderOptions, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@agent-console/api-client";
@@ -10,7 +10,15 @@ import { buildAppRoutes, preloadScreens } from "../../shell/routes";
 import { createFakeClients } from "../../testing/fakes";
 import { ActionMenu, type ActionMenuEntry } from "./ActionMenu";
 import { NoticeBar, sortNotices, type LogNotice } from "./NoticeBar";
+import { ko } from "@agent-console/log-view/locales/ko";
+import { koT } from "../../testing/koText";
+import { createLogsMessages } from "./messages";
 import { viewMenuEntries } from "./LogViewMenu";
+import type { ReactElement } from "react";
+import { TestI18n } from "../../testing/TestI18n";
+
+/** 앱 루트 없이 그리는 컴포넌트에 한국어 i18n을 공급한다. */
+const render = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) => rtlRender(ui, { wrapper: TestI18n, ...options });
 
 beforeAll(preloadScreens, 120_000);
 afterEach(cleanup);
@@ -107,7 +115,7 @@ describe("viewMenuEntries([보기 ▾] 항목 구성)", () => {
       time: { mode: "time", onChange: () => undefined },
       columns: { all: ["a", "b"], selected: ["a"], labelOf: (id) => `열-${id}`, onChange: () => undefined },
       onEditTaxonomy: () => undefined,
-    });
+    }, createLogsMessages(koT("logs")), ko.messages);
     const labels = e.map((x) => ("label" in x ? x.label : x.kind));
     expect(labels).toEqual(["응답 묶기", "시각 표시", "날짜·시각", "시각만", "경과 시각(시작 기준)", "열 구성", "열-a", "열-b", "separator", "분류 체계 편집…"]);
     expect(e.find((x) => x.id === "time-time")).toMatchObject({ kind: "radio", checked: true });
@@ -115,7 +123,7 @@ describe("viewMenuEntries([보기 ▾] 항목 구성)", () => {
     expect(e.find((x) => x.id === "col-b")).toMatchObject({ disabled: false });
   });
   it("검색 화면: 정렬 라디오가 맨 앞에 온다", () => {
-    const e = viewMenuEntries({ sort: { order: "desc", onChange: () => undefined } });
+    const e = viewMenuEntries({ sort: { order: "desc", onChange: () => undefined } }, createLogsMessages(koT("logs")), ko.messages);
     expect(e.map((x) => x.id)).toEqual(["sort", "sort-desc", "sort-asc"]);
     expect(e[1]).toMatchObject({ checked: true });
   });

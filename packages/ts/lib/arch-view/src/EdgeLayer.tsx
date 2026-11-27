@@ -72,7 +72,7 @@ export function EdgeLayer({ models, width, height }: { models: readonly EdgeMode
               data-highlighted={highlighted ? "" : undefined}
               data-blocked={blocked ?? undefined}
               aria-pressed={selected}
-              aria-label={edgeAriaLabel(e, ctx.cellLabels, ctx.messages, { highlighted, kinds: ctx.metricKinds })}
+              aria-label={edgeAriaLabel(e, ctx.cellLabels, ctx.messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) })}
               title={m.fit.labelClipped ? (e.label ?? undefined) : undefined}
               style={{ left: m.center[0], top: m.center[1], maxWidth: m.cap, ["--arch-stroke" as string]: `var(${stroke})` }}
               onClick={() => ctx.activate({ kind: "edge", id: e.id })}

@@ -3,7 +3,7 @@
 [project]
 name = "agent-console-example-link"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 실행 중인 에이전트에게 노트 읽기 도구를 주는 연동 모듈(link-example-notes-runs)"
+description = "Agent Console example extension — a link module that gives running agents a tool to read notes (link-example-notes-runs)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,9 @@ link-example-notes-runs = "agent_console_example_link.module:module"
 # 리소스 종류(에이전트에 붙이면 도구를 받는다). 이름 = 레지스트리 key = 디스크립터 id(패키지 데이터).
 [project.entry-points."agent_console.resource_types"]
 example-notes = "agent_console_example_link.resource_type:NotesResourceType"
+
+[project.entry-points."agent_console.message_catalogs"]
+agent-console-example-link = "agent_console_example_link"
 
 # 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
 [tool.agent-console.example]

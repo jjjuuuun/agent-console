@@ -49,6 +49,9 @@ const rules = USER_TEXT_RULES.patterns
   .map((p) => ({ id: p.id, re: new RegExp(p.pattern) }));
 const files = SCAN_DIRS.flatMap(sources);
 
+/** 소스 전체를 훑는 테스트의 시간 한도(부하가 있으면 기본 5초를 넘는다). */
+const SCAN_TIMEOUT = 60_000;
+
 describe("사용자 문구 금지 패턴(USER_TEXT_RULES, scope messages)", () => {
   it("규칙과 검사 대상이 있다", () => {
     expect(rules.length).toBeGreaterThan(0);
@@ -57,7 +60,7 @@ describe("사용자 문구 금지 패턴(USER_TEXT_RULES, scope messages)", () =
   it("웹 앱·TS 라이브러리 문자열에 설계 번호·내부 노드 id가 없다", () => {
     const hits = files.flatMap((f) => literals(f).flatMap((s) => rules.filter((r) => r.re.test(s)).map((r) => `${relative(ROOT, f)} [${r.id}] ${s.slice(0, 80)}`)));
     expect(hits).toEqual([]);
-  });
+  }, SCAN_TIMEOUT);
   it("규칙이 실제 위반 문구를 잡는다", () => {
     expect(rules.some((r) => r.re.test("design §5R.6"))).toBe(true);
     expect(rules.some((r) => r.re.test("노드 'n3'에서"))).toBe(true);

@@ -1,0 +1,18 @@
+{
+  "text": {
+    "실행할 때 프로젝트의 작업 폴더·설정을 쓰고 실행 전에 점검한다": "Uses the project's folder and settings for runs and checks them before a run starts",
+    "프로젝트·실행 연동 설정.": "Projects and runs integration settings.",
+    "실행 설정의 출처 표시에 쓰는 프로젝트 설정 id. 다른 설정 id와 겹치면 안 된다.": "Project settings id shown as the source of run settings. Must not overlap other settings ids.",
+    "프로젝트 설정 id": "Project settings id",
+    "실행 설정 출처에 보이는 프로젝트 설정 이름.": "Project settings name shown as the source of run settings.",
+    "프로젝트 설정 이름": "Project settings name",
+    "프로젝트 ${project}을(를) 찾을 수 없어 프로젝트 설정 없이 실행합니다.": "Couldn't find project ${project}, so the run continues without project settings.",
+    "실행의 프로젝트를 찾지 못했을 때 경고 문구($project 자리 채움). 실행은 계속한다.": "Warning text when the run's project can't be found ($project is filled in). The run continues.",
+    "프로젝트 없음 경고": "Missing project warning",
+    "켜면 프로젝트를 고르지 않은 실행·대화를 시작하지 않는다(실행은 프로젝트 폴더에서만). 끄면 프로젝트 없는 실행은 서버 작업 폴더에서 돈다.": "When on, runs and chats without a project don't start (runs happen only in project folders). When off, runs without a project run in the server's run folder.",
+    "프로젝트 없이 실행 막기": "Block runs without a project",
+    "프로젝트를 고른 뒤 실행하세요. 실행은 프로젝트 폴더에서만 합니다.": "Choose a project, then run. Runs happen only in a project folder.",
+    "프로젝트 고르기": "Choose project",
+    "프로젝트 열기": "Open project"
+  }
+}

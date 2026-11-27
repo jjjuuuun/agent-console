@@ -24,6 +24,8 @@ export interface MemoryScopeTreeProps {
   onExportScope?: (scope: MemoryScopeRef) => void;
   onClearScope?: (scope: MemoryScopeRef) => void;
   messages?: Readonly<Record<string, string>>;
+  /** 범위 이름 정렬 로캘(BCP 47, 보통 화면 언어). 생략하면 "en". */
+  locale?: string;
   className?: string;
 }
 
@@ -39,12 +41,12 @@ type Row =
  */
 export function MemoryScopeTree({
   kinds, scopes, selected, onSelect, resolvers = {}, openKinds, onOpenKindsChange, hiddenCount = 0, onShowHidden,
-  onNewIn, onExportScope, onClearScope, messages: custom, className,
+  onNewIn, onExportScope, onClearScope, messages: custom, locale, className,
 }: MemoryScopeTreeProps) {
   const m = resolveMessages(custom);
   const grouped = useMemo(
-    () => groupScopes(kinds, scopes, { labelOf: (s, k) => scopeLabel(s.scope, k, resolvers, s.kind_known !== false).text }),
-    [kinds, scopes, resolvers],
+    () => groupScopes(kinds, scopes, { labelOf: (s, k) => scopeLabel(s.scope, k, resolvers, s.kind_known !== false).text, ...(locale === undefined ? {} : { locale }) }),
+    [kinds, scopes, resolvers, locale],
   );
   const [innerOpen, setInnerOpen] = useState<string[] | undefined>(undefined);
   const open = openKinds ?? innerOpen;

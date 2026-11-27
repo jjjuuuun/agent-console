@@ -1,41 +1,51 @@
-# 선언형 리소스 종류 예제
+# Declarative resource kind example
 
-코드 없이 **YAML 파일 하나**로 리소스 종류(확장 지점 `resource-type`)를 추가하는 예제.
-설치할 패키지가 없다 — 파일을 workspace 폴더에 넣으면 생기고, 지우면 사라진다.
+An example that adds a resource kind (extension point `resource-type`) with **one YAML file** and no code.
+There is no package to install: put the file in the workspace folder and the kind appears; delete it and the kind goes away.
 
-| 파일 | 종류 id | 하는 일 |
+| File | Kind id | What it does |
 | --- | --- | --- |
-| `prompt-snippet.yaml` | `prompt-snippet` | 마크다운 본문 하나를 지침 칸(`instructions`)에 `## <이름>` 제목과 함께 넣는다. 설정 `tone`(enum) |
+| `prompt-snippet.yaml` | `prompt-snippet` | Puts one Markdown body into the instructions slot (`instructions`) under a `## <name>` heading. Setting `tone` (enum) |
 
-## 최소 데이터
+## Minimal data
 
 ```yaml
 id: prompt-snippet
 title: 프롬프트 조각
 config_schema: {type: object, properties: {tone: {type: string, enum: [formal, casual]}}}
-content: {media_types: [text/markdown], editor: markdown}   # 문서형(본문 편집기)
+content: {media_types: [text/markdown], editor: markdown}   # document kind (body editor)
 contributes:
   - slot: instructions
     template: "## {title}\n{content}"
 ```
 
-- `contributes[].slot`: 실행 묶음 칸 이름(문자열, 고정 목록 아님). 백엔드가 받지 않는 칸이면 묶음 미리보기·검증이 `resource.slot_unsupported`로 알린다.
-- 치환 변수: `id`·`name`·`description`·`title`(기본 = 이름)·`content`(본문) + config 최상위 키.
-- 전체 형식: `agent_console_resources` 패키지의 `_declarative` 모듈 문서(`DeclarativeTypeSpec`, `value`·`raw`·`combine` 등).
+- `contributes[].slot`: the run bundle slot name (a string, not a fixed list). If the backend doesn't accept the slot, the
+  bundle preview and validation report `resource.slot_unsupported`.
+- Template variables: `id`, `name`, `description`, `title` (default = the name), `content` (the body), plus the top-level
+  config keys.
+- Full format: the `_declarative` module docs of the `agent_console_resources` package (`DeclarativeTypeSpec`, `value`,
+  `raw`, `combine`, and so on).
+- The example data is user data, so its title and description are in Korean (the E2E scenario looks for that title).
+  Write your own kinds in any language.
 
-## 등록·제거
+## Register and remove
 
 ```bash
-cp examples/resource-types/prompt-snippet.yaml <workspace>/resource-types/   # 등록
-rm <workspace>/resource-types/prompt-snippet.yaml                            # 제거
+cp examples/resource-types/prompt-snippet.yaml <workspace>/resource-types/   # register
+rm <workspace>/resource-types/prompt-snippet.yaml                            # remove
 ```
 
-선언형 종류는 서버 시작 때 읽으므로 **서버를 재시작**한다.
-- 등록: `GET /api/v1/resource-types`에 `prompt-snippet`(`declarative: true`)이 나오고, 리소스 화면 "새 리소스" 종류 목록에 "프롬프트 조각"이 보인다.
-- 제거: 목록에서 사라진다. 이 종류로 만든 리소스는 지워지지 않고 검증이 `resource.unknown_type` 경고로 알린다.
-- 같은 id가 플러그인 종류와 겹치면 선언형 파일 쪽이 로딩 실패(`LoadReport` `failed`)로 보고되고 등록되지 않는다.
+Declarative kinds are read when the server starts, so **restart the server**.
+- Register: `GET /api/v1/resource-types` lists `prompt-snippet` (`declarative: true`), and the kind list under
+  "New resource" on the resources screen shows the kind's title.
+- Remove: it disappears from the list. Resources made with this kind are not deleted; validation reports them with a
+  `resource.unknown_type` warning.
+- If the same id collides with a plugin kind, the declarative file is reported as a load failure (`LoadReport` `failed`)
+  and is not registered.
 
-## 테스트
+## Testing
 
-`tests/test_resource_type_examples.py`가 이 폴더의 모든 `*.yaml`을 서버와 같은 로더(`load_declarative_types`)로 읽고 기여 결과를 확인한다.
-루트 `uv run poe check`가 수집한다. E2E `08-extension`의 "리소스 종류" 시나리오는 이 파일을 workspace에 복사해 쓴다.
+`tests/test_resource_type_examples.py` reads every `*.yaml` in this folder with the same loader the server uses
+(`load_declarative_types`) and checks what each kind contributes.
+The root `uv run poe check` collects it. The "resource kind" scenario of E2E `08-extension` copies this file into the
+workspace.

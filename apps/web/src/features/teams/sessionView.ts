@@ -5,11 +5,10 @@
 import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph, NodeTypeDescriptor } from "@agent-console/contracts";
 import { KNOWN_DELEGATION_SESSIONS as SESSIONS } from "@agent-console/contracts/constants";
 import type { ChipView } from "@agent-console/graph-editor";
-import { edgeSessionOf, effectiveStrategyId, sessionChipView, type StrategyAttributeSource } from "../delegation";
-import { teamMessages } from "./messages";
+import { edgeSessionOf, effectiveStrategyId, sessionChipView, type DelegationMessages, type StrategyAttributeSource } from "../delegation";
+import type { TeamTexts } from "./messages";
 import { descriptorOf, edgeKindOf, edgesOf, nodeLabel, nodesOf } from "./teamsLogic";
 
-const m = teamMessages.sessions;
 type Strategy = Pick<DelegationStrategyDescriptor, "id"> & StrategyAttributeSource;
 
 /** 연결 id → 세션 값(값이 있는 연결만). */
@@ -26,7 +25,7 @@ export function edgeSessionMap(graph: Pick<Graph, "edges">, edgeTypes: readonly 
  * 편집기 `edgeLeadChips`: 세션 값이 있는 연결마다 세션 칩. 그래프의 모든 값이 같으면 아이콘만(균일 축약),
  * 하나라도 다른 값이 생기면 글자 칩으로 돌아간다.
  */
-export function edgeLeadChips(graph: Graph, edgeTypes: readonly EdgeTypeDescriptor[], strategies: readonly Strategy[]): Record<string, ChipView> {
+export function edgeLeadChips(graph: Graph, edgeTypes: readonly EdgeTypeDescriptor[], strategies: readonly Strategy[], dm: DelegationMessages): Record<string, ChipView> {
   const sessions = edgeSessionMap(graph, edgeTypes, strategies);
   const values = new Set(Object.values(sessions));
   const uniform = values.size <= 1;
@@ -35,7 +34,7 @@ export function edgeLeadChips(graph: Graph, edgeTypes: readonly EdgeTypeDescript
   for (const edge of edgesOf(graph)) {
     const v = sessions[edge.id];
     if (v === undefined) continue;
-    const chip = sessionChipView(v, { delegatorLabel: labels.get(edge.source.node) ?? edge.source.node, iconOnly: uniform });
+    const chip = sessionChipView(v, { messages: dm, delegatorLabel: labels.get(edge.source.node) ?? edge.source.node, iconOnly: uniform });
     if (chip !== undefined) out[edge.id] = chip;
   }
   return out;
@@ -78,7 +77,7 @@ export function nodeSessionMode(items: readonly IncomingSession[]): NodeSessionM
 }
 
 /** 노드 카드 맨 아래 칩 문구. */
-export function sessionFootText(mode: NodeSessionMode): { title: string; full: string } | undefined {
+export function sessionFootText(mode: NodeSessionMode, m: TeamTexts["sessions"]): { title: string; full: string } | undefined {
   if (mode.mode === "none") return undefined;
   if (mode.mode === "mixed") return { title: m.nodeMany(mode.count), full: m.nodeMany(mode.count) };
   const first = mode.delegators[0] ?? "";
@@ -87,10 +86,10 @@ export function sessionFootText(mode: NodeSessionMode): { title: string; full: s
 }
 
 /** 편집기 `nodeAnnotations`: 같은 세션 위임 대상 노드에 `{위임자} 세션 안` 칩(별도 세션 대상에는 달지 않는다). */
-export function nodeFootAnnotations(graph: Graph, edgeTypes: readonly EdgeTypeDescriptor[], strategies: readonly Strategy[]): Record<string, { foot: ChipView }> {
+export function nodeFootAnnotations(graph: Graph, edgeTypes: readonly EdgeTypeDescriptor[], strategies: readonly Strategy[], m: TeamTexts["sessions"]): Record<string, { foot: ChipView }> {
   const out: Record<string, { foot: ChipView }> = {};
   for (const node of nodesOf(graph)) {
-    const text = sessionFootText(nodeSessionMode(incomingSessions(node.id, graph, edgeTypes, strategies)));
+    const text = sessionFootText(nodeSessionMode(incomingSessions(node.id, graph, edgeTypes, strategies)), m);
     if (text !== undefined) out[node.id] = { foot: { key: "session-in", title: text.title, fullTitle: text.full, iconName: "corner-down-right", tone: "neutral" } };
   }
   return out;

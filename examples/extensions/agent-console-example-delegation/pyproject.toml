@@ -2,7 +2,7 @@
 [project]
 name = "agent-console-example-delegation"
 version = "0.1.0"
-description = "Agent Console 예제 확장 — 대상을 차례로 불러 결과를 이어 붙이는 위임 방식(example.round_robin)"
+description = "Agent Console example extension — a delegation method that calls targets in turn and joins their results (example.round_robin)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -17,6 +17,9 @@ dependencies = [
 # entry point 이름 = 레지스트리 key = 디스크립터 id(= 위임 연결 config `strategy` 값).
 [project.entry-points."agent_console.delegation_strategies"]
 "example.round_robin" = "agent_console_example_delegation:RoundRobinDelegation"
+
+[project.entry-points."agent_console.message_catalogs"]
+agent-console-example-delegation = "agent_console_example_delegation"
 
 # 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
 [tool.agent-console.example]

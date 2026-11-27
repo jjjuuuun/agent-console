@@ -28,7 +28,9 @@ def versions_for(database: Any | None) -> VersionRepository:
     """
     engine = getattr(database, "engine", None) if database is not None else None
     if engine is None:
-        _log.warning("DB 핸들이 없어 정의 버전 기록을 메모리에 둡니다(재시작하면 사라짐)")
+        _log.warning(
+            "No database handle; definition version history is kept in memory (lost on restart)"
+        )
         return InMemoryVersionRepository()
     return SqliteStorage(engine).versions
 

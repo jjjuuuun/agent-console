@@ -9,7 +9,7 @@ import { ActionMenu, type ActionMenuEntry } from "./ActionMenu";
 import { LogsLiveProvider } from "./LogsLive";
 import { NoticeBar, type LogNotice } from "./NoticeBar";
 import { DEFAULT_LOG_TAB, LOGS_SCOPES, LOGS_STORAGE, LOG_TABS, NOTICE_PRIORITY, WARNING_CODES, type LogTabId } from "./logsConfig";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 
 /** 로그 라우트의 공통 층: 수집 알림 구독(WS `logs`)을 하나 열고 하위 화면에 나눠 준다. */
 export function LogsLayout() {
@@ -47,6 +47,7 @@ export interface LogsPageFrameProps {
 
 /** 로그 화면 공통 틀: 페이지 헤더 + 탭 줄(세션·검색·대시보드) + 본문. 탭 상태는 URL 경로가 정한다. */
 export function LogsPageFrame({ tab, title, actions, status, onRefresh, menu, notices, children }: LogsPageFrameProps) {
+  const t = useLogsMessages();
   const navigate = useNavigate();
   const storage = useStorage();
   usePageTitle(`${title ?? t.tabs[tab] ?? tab} · ${t.title}`);

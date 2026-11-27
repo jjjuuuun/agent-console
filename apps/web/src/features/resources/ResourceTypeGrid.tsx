@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { DescriptorIcon } from "../library";
-import { resourceMessages as t } from "./messages";
+import { useResourceMessages } from "./messages";
 
 export interface ResourceTypeGridProps {
   types: readonly ResourceTypeDescriptor[];
@@ -10,6 +10,7 @@ export interface ResourceTypeGridProps {
 
 /** 리소스 종류 고르기 카드 격자(종류·설명·아이콘은 전부 디스크립터). 종류가 많으면 검색한다. */
 export function ResourceTypeGrid({ types, onPick }: ResourceTypeGridProps) {
+  const t = useResourceMessages();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const shown = types.filter((x) => q === "" || `${x.title} ${x.description ?? ""}`.toLowerCase().includes(q));

@@ -131,10 +131,12 @@ async def run_retention_periodically(
             except asyncio.CancelledError:
                 raise
             except Exception:
-                _log.exception("메모리 자동 정리 실패")
+                _log.exception("Memory auto-cleanup failed")
     except asyncio.CancelledError:
         if not await work.close_and_wait(stop_wait):
-            _log.warning("메모리 자동 정리 스레드가 %.0f초 안에 끝나지 않았습니다", stop_wait)
+            _log.warning(
+                "The memory auto-cleanup thread didn't finish within %.0f seconds", stop_wait
+            )
         raise
 
 
@@ -235,7 +237,7 @@ class MemoryModule:
             try:
                 out.extend(service.warnings())
             except Exception:  # 설정을 읽지 못해도 서버 정보는 답한다
-                _log.exception("메모리 설정 문제를 읽지 못했습니다")
+                _log.exception("Couldn't read memory settings problems")
             return out
 
         ctx.provide(MEMORY_SERVICE, service)
@@ -250,7 +252,9 @@ class MemoryModule:
         async def stop() -> None:
             # 정리 스레드가 저장소를 쓰는 동안 닫지 않는다
             if not await retention_gate.close_and_wait():
-                _log.warning("메모리 자동 정리 스레드가 끝나지 않은 채 저장소를 닫습니다")
+                _log.warning(
+                    "Closing the store while the memory auto-cleanup thread is still running"
+                )
             publisher.bind(None)
             storage.close()
 

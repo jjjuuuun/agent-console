@@ -11,7 +11,6 @@ import { AuthorChip } from "@agent-console/wiki-view";
 import { ToneChip } from "@agent-console/markdown-doc";
 import type { WikiSummary } from "@agent-console/contracts/wiki";
 import { useNow } from "../../app/useNow";
-import { formatRelative } from "../../lib/format";
 import { usePageTitle } from "../../shell/titles";
 import { ROUTE_ROLES, routePath } from "../library";
 import { ProjectChip } from "../projects";
@@ -22,14 +21,19 @@ import { useWikiList, useWikiLive, type OwnWrites } from "./useWikiApi";
 import { useWikiContext } from "./useWikiContext";
 import { buildWikiDisplay } from "./wikiConfig";
 import { wikiPath, wikiRulesPath } from "./wikiPaths";
-import { wikiMessages as m } from "./messages";
 import "./wiki.css";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useUiLibMessages } from "../../i18n/useViewLibMessages";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useLanguageCode } from "../../i18n";
+import { useFormat } from "../../i18n";
 
-const collator = new Intl.Collator("ko", { numeric: true });
 const wikiName = (w: WikiSummary): string => (w.name !== undefined && w.name !== "" ? w.name : w.id);
 
-/** 목록 거르기(순수): 이름·설명·id 부분 일치, 이름 오름차순(한국어, 숫자 정렬). */
-export function filterWikis(wikis: readonly WikiSummary[], q: string): WikiSummary[] {
+/** 목록 거르기(순수): 이름·설명·id 부분 일치, 이름 오름차순(화면 언어, 숫자 정렬). */
+export function filterWikis(wikis: readonly WikiSummary[], q: string, language: string): WikiSummary[] {
+  const collator = new Intl.Collator(language, { numeric: true });
   const needle = q.trim().toLowerCase();
   return wikis
     .filter((w) => needle === "" || `${wikiName(w)} ${w.description ?? ""} ${w.id}`.toLowerCase().includes(needle))
@@ -41,7 +45,12 @@ function renderLink({ to, className, children, dataAttrs }: { to: string; classN
 }
 
 export function WikiListScreen() {
-  usePageTitle(m.title);
+  const fmt = useFormat();
+  const language = useLanguageCode();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const uiMessages = useUiLibMessages();
+  usePageTitle(t("title"));
   const navigate = useNavigate();
   const toast = useToast();
   const ctx = useWikiContext();
@@ -49,7 +58,8 @@ export function WikiListScreen() {
   const ownWrites = useRef<OwnWrites>(new Map());
   useWikiLive(ownWrites);
   const now = useNow(true, 60_000);
-  const display = useMemo(() => buildWikiDisplay(), []);
+  const tm = useMaybeT("wiki");
+  const display = useMemo(() => buildWikiDisplay(tm), [tm]);
   const rulesScreen = useRulesScreenOn();
   const [q, setQ] = useState("");
   const importer = useImportDialog();
@@ -57,7 +67,7 @@ export function WikiListScreen() {
   const remover = useDeleteWikiDialog();
   const newWiki = useNewWikiDialog((id) => void navigate(wikiPath(id)), ctx.capabilities.import_export ? () => importer.open() : undefined);
   const wikis = useMemo(() => list.data ?? [], [list.data]);
-  const shown = useMemo(() => filterWikis(wikis, q), [wikis, q]);
+  const shown = useMemo(() => filterWikis(wikis, q, language), [wikis, q, language]);
   const failed = list.isError ? list.error : null;
   const writeBlock = ctx.readOnly ? ctx.readOnlyReason : undefined;
   const open = (w: WikiSummary) => void navigate(wikiPath(w.id));
@@ -89,73 +99,73 @@ export function WikiListScreen() {
 
   const menuFor = (w: WikiSummary) => (
     <MenuButton
-      label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{m.list.rowMenu(wikiName(w))}</span></>}
-      panelLabel={m.list.actions}
+      label={<><span aria-hidden="true">⋯</span><span className="ac-sr-only">{t("list.rowMenu", { name: wikiName(w) })}</span></>}
+      panelLabel={t("list.actions")}
       items={[
-        { id: "open", label: m.list.open, onSelect: () => open(w) },
-        ...(rulesScreen ? [{ id: "rules", label: m.list.rules, onSelect: () => void navigate(wikiPath(w.id, { tab: "rules" })) }] : []),
-        { id: "copy", label: m.list.copyPath, disabled: (w.directory ?? "") === "", onSelect: () => { void navigator.clipboard?.writeText(w.directory ?? ""); toast({ tone: "success", text: m.copied }); } },
-        ...(ctx.capabilities.import_export ? [{ id: "export", label: m.list.export, onSelect: () => exporter.open(w) }] : []),
-        { id: "delete", label: m.list.delete, danger: true, disabled: writeBlock !== undefined, onSelect: () => remover.open(w) },
+        { id: "open", label: t("list.open"), onSelect: () => open(w) },
+        ...(rulesScreen ? [{ id: "rules", label: t("list.rules"), onSelect: () => void navigate(wikiPath(w.id, { tab: "rules" })) }] : []),
+        { id: "copy", label: t("list.copyPath"), disabled: (w.directory ?? "") === "", onSelect: () => { void navigator.clipboard?.writeText(w.directory ?? ""); toast({ tone: "success", text: t("copied") }); } },
+        ...(ctx.capabilities.import_export ? [{ id: "export", label: t("list.export"), onSelect: () => exporter.open(w) }] : []),
+        { id: "delete", label: t("list.delete"), danger: true, disabled: writeBlock !== undefined, onSelect: () => remover.open(w) },
       ]}
     />
   );
 
   const steps: StepGuideStep[] = [
-    ...(rulesScreen ? [{ id: "rules", label: m.list.steps.rules, done: false, ...(wikiRulesPath() === undefined ? {} : { to: wikiRulesPath() as string }) }] : []),
-    ...(rulesScreen ? [{ id: "copy", label: m.list.steps.copy, done: false, onAction: newWiki.open }] : []),
-    { id: "create", label: m.list.steps.create, done: false, onAction: newWiki.open },
-    ...(routePath(ROUTE_ROLES.graph) === "/" ? [] : [{ id: "attach", label: m.list.steps.attach, done: false, to: routePath(ROUTE_ROLES.graph) }]),
+    ...(rulesScreen ? [{ id: "rules", label: t("list.steps.rules"), done: false, ...(wikiRulesPath() === undefined ? {} : { to: wikiRulesPath() as string }) }] : []),
+    ...(rulesScreen ? [{ id: "copy", label: t("list.steps.copy"), done: false, onAction: newWiki.open }] : []),
+    { id: "create", label: t("list.steps.create"), done: false, onAction: newWiki.open },
+    ...(routePath(ROUTE_ROLES.graph) === "/" ? [] : [{ id: "attach", label: t("list.steps.attach"), done: false, to: routePath(ROUTE_ROLES.graph) }]),
   ];
 
   return (
     <div className="app-screen-frame wiki-screen">
       <PageHeader
-        title={m.title}
+        title={t("title")}
         actions={
           failed !== null ? undefined : (
             <>
               <ProjectChip />
-              {ctx.capabilities.import_export ? <GuardedButton blockedReason={writeBlock} onClick={() => importer.open()}>{m.list.import}</GuardedButton> : null}
-              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={newWiki.open}>{m.list.new}</GuardedButton>
+              {ctx.capabilities.import_export ? <GuardedButton blockedReason={writeBlock} onClick={() => importer.open()}>{t("list.import")}</GuardedButton> : null}
+              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={newWiki.open}>{t("list.new")}</GuardedButton>
             </>
           )
         }
       />
       {ctx.readOnly && failed === null ? (
         <div className="wiki-banner-row">
-          <div className="wiki-readonly-note" role="status" data-testid="wiki-readonly"><strong>{m.readonly.title}</strong> <span>{m.readonly.body}</span></div>
+          <div className="wiki-readonly-note" role="status" data-testid="wiki-readonly"><strong>{t("readonly.title")}</strong> <span>{t("readonly.body")}</span></div>
         </div>
       ) : null}
       <div className="wiki-screen-body">
         {failed !== null ? (
-          <FailureBlock error={failed} title={m.list.loadFailed} onRetry={() => void list.refetch()} />
+          <FailureBlock error={failed} title={t("list.loadFailed")} onRetry={() => void list.refetch()} />
         ) : list.isPending ? (
           <ListSkeleton rows={3} />
         ) : wikis.length === 0 ? (
           <div className="wiki-state" data-testid="wiki-empty">
             <EmptyState
               icon={<Icon name="wiki" size={40} />}
-              title={m.list.emptyTitle}
-              description={m.list.emptyBody}
-              {...(ctx.capabilities.import_export ? { secondaryAction: <button type="button" className="app-link-btn" onClick={() => importer.open()}>{m.list.emptyImport}</button> } : {})}
+              title={t("list.emptyTitle")}
+              description={t("list.emptyBody")}
+              {...(ctx.capabilities.import_export ? { secondaryAction: <button type="button" className="app-link-btn" onClick={() => importer.open()}>{t("list.emptyImport")}</button> } : {})}
             />
-            <StepGuide steps={steps} messages={{ stepsLabel: m.list.stepsLabel, go: m.list.open, done: m.on }} renderLink={renderLink} layout="column" />
+            <StepGuide steps={steps} messages={{ stepsLabel: t("list.stepsLabel"), go: t("list.open"), done: t("on") }} renderLink={renderLink} layout="column" />
           </div>
         ) : (
           <>
-            <div className="wiki-toolbar" role="group" aria-label={m.list.search}>
-              <DebouncedInput value={q} onCommit={setQ} label={m.list.search} className="wiki-search" />
+            <div className="wiki-toolbar" role="group" aria-label={t("list.search")}>
+              <DebouncedInput value={q} onCommit={setQ} label={t("list.search")} className="wiki-search" />
               <span className="wiki-spacer" />
-              <span className="app-muted" role="status">{m.list.count(shown.length)}</span>
+              <span className="app-muted" role="status">{t("list.count", { count: shown.length })}</span>
             </div>
             {shown.length === 0 ? (
               <div className="wiki-state">
-                <p role="status">{m.list.noResult(q.trim())}</p>
-                <button type="button" className="app-link-btn" onClick={() => setQ("")}>{m.list.clearSearch}</button>
+                <p role="status">{t("list.noResult", { q: q.trim() })}</p>
+                <button type="button" className="app-link-btn" onClick={() => setQ("")}>{t("list.clearSearch")}</button>
               </div>
             ) : (
-              <ul className="wiki-cards" aria-label={m.title} data-testid="wiki-cards">
+              <ul className="wiki-cards" aria-label={t("title")} data-testid="wiki-cards">
                 {shown.map((w, i) => {
                   const rules = w.rules ?? [];
                   const broken = w.broken_links ?? 0;
@@ -174,17 +184,17 @@ export function WikiListScreen() {
                         onKeyDown={(e) => cardKeys(e, w, i)}
                       >
                         <span className="wiki-card-name ac-ellipsis" title={wikiName(w)}>{wikiName(w)}</span>
-                        <span className="wiki-card-desc app-muted">{w.description !== undefined && w.description !== "" ? w.description : m.list.descNone}</span>
+                        <span className="wiki-card-desc app-muted">{w.description !== undefined && w.description !== "" ? w.description : t("list.descNone")}</span>
                         <span className="wiki-card-stats">
-                          <span>{m.list.pages(w.pages ?? 0)}</span>
-                          {broken > 0 ? <ToneChip label={m.list.broken(broken)} tone="warning" /> : null}
+                          <span>{t("list.pages", { n: w.pages ?? 0 })}</span>
+                          {broken > 0 ? <ToneChip label={t("list.broken", { n: broken })} tone="warning" /> : null}
                         </span>
                         <span className="wiki-card-meta">
-                          {rules.length === 0 ? <span className="app-muted">{m.list.rulesNone}</span> : <ChipRow chips={rules.map((r) => ({ id: r.id, label: r.name !== undefined && r.name !== "" ? r.name : r.id }))} ariaLabel={m.header.rules} />}
+                          {rules.length === 0 ? <span className="app-muted">{t("list.rulesNone")}</span> : <ChipRow messages={uiMessages} chips={rules.map((r) => ({ id: r.id, label: r.name !== undefined && r.name !== "" ? r.name : r.id }))} ariaLabel={t("header.rules")} />}
                           {w.updated_at === undefined || w.updated_at === null ? null : (
-                            <span className="app-muted">{m.list.updated(formatRelative(w.updated_at, now))}</span>
+                            <span className="app-muted">{t("list.updated", { time: fmt.relative(w.updated_at, now) })}</span>
                           )}
-                          {w.updated_by === undefined || w.updated_by === null ? null : <AuthorChip author={w.updated_by} display={display} size="dense" />}
+                          {w.updated_by === undefined || w.updated_by === null ? null : <AuthorChip messages={wikiViewMessages} author={w.updated_by} display={display} size="dense" />}
                         </span>
                       </div>
                       <div className="wiki-card-menu">{menuFor(w)}</div>

@@ -32,6 +32,8 @@ export interface MemoryEntryMetaProps {
   /** 한 번에 보이는 태그 수(넘으면 `+N`으로 접힘). 기본 8. */
   maxVisibleTags?: number;
   messages?: Readonly<Record<string, string>>;
+  /** 정확한 바이트 수의 자릿수 표기 로캘(BCP 47, 보통 화면 언어). 생략하면 "en-US". */
+  locale?: string;
   className?: string;
 }
 
@@ -41,7 +43,7 @@ export interface MemoryEntryMetaProps {
  */
 export function MemoryEntryMeta({
   entry, scope, draft, onDraftChange, onArchivedChange, readOnly = false, contentTypeSuggestions = [], authorOptions, onOpenHistory, onCopy, onOpenRun,
-  maxVisibleTags = 8, messages: custom, className,
+  maxVisibleTags = 8, messages: custom, locale, className,
 }: MemoryEntryMetaProps) {
   const m = resolveMessages(custom);
   const uid = useId();
@@ -109,7 +111,7 @@ export function MemoryEntryMeta({
         {cell("version", m["detail.version"] as string, (
           <span>v{entry.version}{onOpenHistory ? <> <button type="button" className="ac-mem-linkbtn" onClick={onOpenHistory}>{m["detail.history"]}</button></> : null}</span>
         ))}
-        {cell("size", m["detail.size"] as string, <span title={formatMessage(m["detail.bytesExact"] as string, { n: entry.bytes.toLocaleString("en-US") })}>{formatBytes(entry.bytes, m)}</span>)}
+        {cell("size", m["detail.size"] as string, <span title={formatMessage(m["detail.bytesExact"] as string, { n: entry.bytes.toLocaleString(locale ?? "en-US") })}>{formatBytes(entry.bytes, m)}</span>)}
         {cell("hash", m["detail.hash"] as string, (
           <span className="ac-mem-meta-hash" title={entry.sha256}>
             <span className="ac-mem-mono">{entry.sha256.slice(0, 12)}</span>

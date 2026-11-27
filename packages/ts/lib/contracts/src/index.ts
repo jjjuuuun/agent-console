@@ -51,7 +51,7 @@ export function contractSchemaNames(): string[] {
  */
 export function getContractSchema(name: string): JsonSchema {
   const def = contractsSchema.$defs[name];
-  if (def === undefined) throw new Error(`알 수 없는 계약 모델: ${name}`);
+  if (def === undefined) throw new Error(`Unknown contract model: ${name}`);
   return {
     $schema: contractsSchema["$schema"],
     ...def,

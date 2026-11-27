@@ -5,9 +5,9 @@
 import { useId, useRef, useState } from "react";
 import { Banner, Button, Choice, Dialog, Disclosure } from "@agent-console/ui";
 import type { ImportFileListing, SpecExportRequest, SpecExportResult } from "@agent-console/contracts/sdd";
-import { describeError } from "../../app/errors";
-import { sddMessages as m } from "./messages";
+import { useErrorState, raised } from "../../app/errors";
 import { SpecFolderBrowser } from "./SpecFolderBrowser";
+import { useT } from "@agent-console/i18n";
 
 export interface SpecExportDialogProps {
   open: boolean;
@@ -19,10 +19,11 @@ export interface SpecExportDialogProps {
 }
 
 export function SpecExportDialog({ open, onClose, blockedReason, loadDirs, onSubmit }: SpecExportDialogProps) {
+  const t = useT("sdd");
   const [dir, setDir] = useState("");
   const [overwrite, setOverwrite] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t("problem.generic"));
   const [result, setResult] = useState<SpecExportResult | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   const uid = useId();
@@ -34,7 +35,7 @@ export function SpecExportDialog({ open, onClose, blockedReason, loadDirs, onSub
     try {
       setResult(await onSubmit({ to_dir: dir.trim(), overwrite }));
     } catch (e) {
-      setError(describeError(e, m.problem.generic).message);
+      setError(raised(e));
     } finally {
       setBusy(false);
     }
@@ -42,21 +43,21 @@ export function SpecExportDialog({ open, onClose, blockedReason, loadDirs, onSub
   return (
     <Dialog
       open={open}
-      title={m.export.title}
+      title={t("export.title")}
       onClose={() => { if (!busy) onClose(); }}
       initialFocus={ref}
       actions={
         result === null ? (
           <>
-            <Button onClick={onClose} disabled={busy}>{m.cancel}</Button>
+            <Button onClick={onClose} disabled={busy}>{t("cancel")}</Button>
             <Button variant="primary" loading={busy} aria-disabled={blocked || dir.trim() === "" || undefined} title={blocked ? blockedReason : undefined} onClick={() => void submit()}>
-              {busy ? m.export.submitting : m.export.submit}
+              {busy ? t("export.submitting") : t("export.submit")}
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={() => void navigator.clipboard?.writeText(result.to_dir)}>{m.copy}</Button>
-            <Button variant="primary" onClick={onClose}>{m.close}</Button>
+            <Button onClick={() => void navigator.clipboard?.writeText(result.to_dir)}>{t("copy")}</Button>
+            <Button variant="primary" onClick={onClose}>{t("close")}</Button>
           </>
         )
       }
@@ -67,24 +68,24 @@ export function SpecExportDialog({ open, onClose, blockedReason, loadDirs, onSub
           <>
             {loadDirs === undefined ? null : (
               <div className="sdd-field">
-                <span className="sdd-label">{m.import.browse}</span>
-                <SpecFolderBrowser id={`${uid}-tree`} load={loadDirs} rootLabel={m.import.root} onNavigate={setDir} onSelect={setDir} />
-                <span className="app-muted" role="status">{m.export.chosen(dir)}</span>
+                <span className="sdd-label">{t("import.browse")}</span>
+                <SpecFolderBrowser id={`${uid}-tree`} load={loadDirs} rootLabel={t("import.root")} onNavigate={setDir} onSelect={setDir} />
+                <span className="app-muted" role="status">{dir === "" ? t("export.chosenNone") : t("export.chosen", { path: dir })}</span>
               </div>
             )}
             <label className="sdd-field" htmlFor={`${uid}-dir`}>
-              <span className="sdd-label">{loadDirs === undefined ? m.export.folder : m.export.manual}</span>
+              <span className="sdd-label">{loadDirs === undefined ? t("export.folder") : t("export.manual")}</span>
               <input id={`${uid}-dir`} ref={ref} className="sdd-input sdd-mono" value={dir} onChange={(e) => setDir(e.target.value)} />
             </label>
-            <Choice checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)}>{m.export.overwrite}</Choice>
-            {overwrite ? <p className="sdd-danger-note" role="note">{m.export.overwriteWarn}</p> : null}
-            <p className="app-muted">{m.export.note}</p>
+            <Choice checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)}>{t("export.overwrite")}</Choice>
+            {overwrite ? <p className="sdd-danger-note" role="note">{t("export.overwriteWarn")}</p> : null}
+            <p className="app-muted">{t("export.note")}</p>
           </>
         ) : (
           <>
-            <p role="status">{m.export.done((result.written ?? []).length, result.to_dir)}</p>
-            {(result.skipped ?? []).length > 0 ? <Banner tone="warning">{m.export.skipped((result.skipped ?? []).join(", "))}</Banner> : null}
-            <Disclosure summary={m.export.files}>
+            <p role="status">{t("export.done", { count: (result.written ?? []).length, path: result.to_dir })}</p>
+            {(result.skipped ?? []).length > 0 ? <Banner tone="warning">{t("export.skipped", { list: (result.skipped ?? []).join(", ") })}</Banner> : null}
+            <Disclosure summary={t("export.files")}>
               <ul className="sdd-files">{(result.written ?? []).map((f) => <li key={f} className="sdd-mono">{f}</li>)}</ul>
             </Disclosure>
           </>

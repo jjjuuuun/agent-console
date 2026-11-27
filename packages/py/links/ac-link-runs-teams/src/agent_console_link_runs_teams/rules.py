@@ -164,7 +164,7 @@ class TeamRules:
         try:
             return loader(graph_id, version)
         except Exception:  # 제공 모듈의 오류 타입을 모른다(없음·읽기 실패·계약 위반 모두 "없음")
-            _log.debug("팀 구성 읽기 실패: %s@%s", graph_id, version, exc_info=True)
+            _log.debug("Reading the team failed: %s@%s", graph_id, version, exc_info=True)
             return None
 
     def team_lookup(self) -> Callable[[str, str | None], Graph | None] | None:
@@ -427,7 +427,9 @@ class ValidationSummaries:
             try:
                 issues = checker.check_project(graph_id, space)
             except Exception:
-                _log.debug("공간 팀 구성 검증 요약 없음: %s/%s", space, graph_id, exc_info=True)
+                _log.debug(
+                    "No team validation summary in the space: %s/%s", space, graph_id, exc_info=True
+                )
                 return None
             return validation_summary(issues)
 
@@ -442,7 +444,7 @@ class ValidationSummaries:
         try:
             return validation_summary(self._checker.check(graph))
         except Exception:
-            _log.exception("팀 구성 검증 요약 실패: %s", graph_id)
+            _log.exception("Team validation summary failed: %s", graph_id)
             return None
 
 

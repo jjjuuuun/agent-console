@@ -3,8 +3,9 @@
  * 가져오기 목록 응답(`dirs`)을 그 목록 모양으로 바꿔 준다. 서버 호출은 `load` props이고, 한 단계만 열며 폴더 밖 이동은 막힌다.
  */
 import "@agent-console/folder-picker/styles.css";
-import { useCallback } from "react";
-import { FolderBrowser, createTranslate, type FolderListFn, type FolderListingData } from "@agent-console/folder-picker";
+import { useCallback, useMemo } from "react";
+import { FolderBrowser, createTranslate, defaultMessages as folderPickerDefaults, type FolderListFn, type FolderListingData, type MessageOverrides } from "@agent-console/folder-picker";
+import { useLibMessages, type MessageTree } from "@agent-console/i18n";
 import type { ImportFileListing } from "@agent-console/contracts/sdd";
 
 export interface SpecFolderBrowserProps {
@@ -25,11 +26,12 @@ export interface SpecFolderBrowserProps {
   onSelect?: (path: string) => void;
 }
 
-const translate = createTranslate();
 const joinPath = (folder: string, name: string) => (folder === "" ? name : `${folder.replace(/\/+$/, "")}/${name}`);
 const parentOf = (path: string) => (path === "" ? null : path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
 export function SpecFolderBrowser({ id, load, startPath = "", rootLabel, onListing, onError, onNavigate, onSelect }: SpecFolderBrowserProps) {
+  const fpMessages = useLibMessages("folder-picker", folderPickerDefaults as unknown as MessageTree) as unknown as MessageOverrides;
+  const translate = useMemo(() => createTranslate(fpMessages), [fpMessages]);
   const list: FolderListFn = useCallback(
     async ({ path }, signal) => {
       try {

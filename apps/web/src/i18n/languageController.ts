@@ -15,6 +15,11 @@ export interface LanguageState {
   saveFailed: boolean;
   /** 서버 문구 묶음을 못 받아 앱 문구만 바뀜(오류·시간 초과) */
   serverTextFailed: boolean;
+  /**
+   * 첫 화면 언어 맞추기가 끝났다(설정·언어 목록을 받아 언어를 정하고 서버 문구 묶음까지 들어옴, 실패·시간 초과도 끝난 것).
+   * 그 전에는 부팅 언어(브라우저 언어)와 서버 원문이 섞여 보일 수 있어 화면이 잠시 기다릴 수 있다.
+   */
+  settled: boolean;
   /** 사용자가 직접 바꾼 뒤 스크린 리더에 알릴 문구의 재료. 알릴 때마다 `id`가 늘어난다 */
   announcement: { id: number; language: string } | null;
 }
@@ -68,6 +73,7 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
     pending: undefined,
     saveFailed: false,
     serverTextFailed: false,
+    settled: false,
     announcement: null,
   };
   let seq = 0; // 가장 최근 선택의 번호(낡은 결과를 버린다)
@@ -127,6 +133,7 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
       preference: next,
       pending: undefined,
       serverTextFailed: result.server === "failed",
+      settled: true,
       announcement: { id: (state.announcement?.id ?? 0) + 1, language: i18n.language },
     });
     void persist(next);
@@ -157,15 +164,19 @@ export function createLanguageController(deps: LanguageControllerDeps): Language
       const language = resolveFor(preference);
       const key = JSON.stringify([preference, language]);
       if (key === syncKey) {
-        if (state.preference !== input.preference) set({ preference: input.preference });
+        if (state.preference !== input.preference || !state.settled) set({ preference: input.preference, settled: true });
         return;
       }
       syncKey = key;
       set({ preference: input.preference });
       const mine = seq;
       void switchTo(language, () => mine === seq && state.pending === undefined).then((result) => {
-        if (result === undefined) return;
-        set({ language: i18n.language, serverTextFailed: result.server === "failed" });
+        // 사용자의 선택에 밀려 건너뛰었어도 첫 맞추기는 끝난 것이다(선택이 이어서 화면을 맞춘다)
+        if (result === undefined) {
+          if (!state.settled) set({ settled: true });
+          return;
+        }
+        set({ language: i18n.language, serverTextFailed: result.server === "failed", settled: true });
       });
     },
     dispose() {

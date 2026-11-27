@@ -1,0 +1,119 @@
+{
+  "segment": "Architecture map",
+  "region": "Architecture map",
+  "profile": "Profile",
+  "breadcrumb": {
+    "label": "Architecture map location",
+    "root": "Session",
+    "up": "Up to parent map",
+    "folded": "Show hidden levels"
+  },
+  "status": {
+    "events": "Events: {n, number}",
+    "wholeRange": "Whole range",
+    "unassigned": "Unassigned: {n, number}",
+    "unassignedView": "View",
+    "unavailable": "Not collected: {n}",
+    "live": "Running",
+    "liveUpdated": "Running · updated {time}",
+    "reflected": "{n, number} new events included",
+    "laneBasis": "By lane {name}",
+    "loading": "Drawing the map…",
+    "refreshing": "Redrawing…",
+    "unavailableOpen": "Expand",
+    "unavailableClose": "Collapse",
+    "unavailableItem": "{item} — {reason}"
+  },
+  "chip": {
+    "cell": "Map: {name}",
+    "edge": "Map: {label}",
+    "group": "Map: {cell} › {group}",
+    "unassigned": "Map: Unassigned",
+    "clear": "Clear map filter",
+    "drillClear": "Clear filter {label}"
+  },
+  "noName": "(no name)",
+  "unassigned": "Unassigned",
+  "toast": {
+    "notCollected": "A not-collected cell has no events to filter by.",
+    "structural": "A structural edge has no events.",
+    "pickGroup": "Select a group chip to go into a child map."
+  },
+  "table": {
+    "only": "Map {name}: {n, number} events",
+    "partial": "Map {name}: {k, number} of {n, number} events (other filters applied)",
+    "loading": "Loading events for map {name}…",
+    "zero": "Map {name} has 0 events, so there is nothing to filter"
+  },
+  "banner": {
+    "openSettings": "View in settings"
+  },
+  "empty": {
+    "rules": {
+      "title": "No architecture map rules",
+      "body": "There are no rules (profiles) to draw the map, so it can't be drawn. Logs and run history still work.",
+      "action": "Open settings"
+    },
+    "noEvents": {
+      "title": "No events in this range",
+      "body": "The map is drawn from its rules. Numbers fill in when events arrive.",
+      "action": "Clear filters"
+    },
+    "noSource": {
+      "title": "No cell can be filled",
+      "action": "Open log source settings",
+      "body": "The log sources in this range ({kinds}) don't record any cell of this profile.",
+      "bodyNoKinds": "The log sources in this range don't record any cell of this profile."
+    },
+    "tooBig": {
+      "title": "Range too large",
+      "action": "Open filters",
+      "body": "{n, number} events exceed the map limit ({max, number}). Narrow the filters.",
+      "bodyGeneric": "The events in this range exceed the map limit. Narrow the filters."
+    },
+    "error": {
+      "title": "Couldn't load the map",
+      "action": "Try again"
+    },
+    "profileError": {
+      "title": "Couldn't draw this profile",
+      "action": "Fix in settings"
+    }
+  },
+  "runTab": {
+    "explain": "A map drawn from this run's platform records and the agent session logs. A call is counted once.",
+    "includeChildren": "Include child runs",
+    "on": "Included",
+    "off": "Excluded",
+    "rootLabel": "Run",
+    "scopeRun": "This run",
+    "scopeTree": "With child runs",
+    "splitLabel": "Resize map height"
+  },
+  "dialog": {
+    "title": "Map · {profile} · {scope}",
+    "close": "Close",
+    "expand": "Enlarge"
+  },
+  "popout": {
+    "open": "Detach to new window",
+    "openHelp": "Detaches the map into a new window. It shares the log, selection, and highlights with this window.",
+    "focus": "Open detached window",
+    "redock": "Re-attach",
+    "detachedTitle": "The map is open in another window",
+    "detachedBody": "Selecting a cell there filters the event table in this window, and events selected here are highlighted there.",
+    "pendingTitle": "The map is set to open in a separate window",
+    "pendingBody": "The browser must allow a new window, so it isn't opened automatically.",
+    "dock": "Show in this screen",
+    "blocked": "The browser blocked the new window. Allow pop-ups in the address bar, then select \"Detach to new window\" again.",
+    "unsupported": "This browser doesn't support linking windows, so the map can't be detached.",
+    "windowTitle": "Map · {label}",
+    "standalone": "Not connected to the original window. Selecting a cell doesn't filter the log table.",
+    "needArch": "This server has no architecture map integration, so the map can't be drawn.",
+    "needKey": "This address has no range information. Open the map with \"Detach to new window\" from a log session or run detail.",
+    "closeWindow": "Close detached window"
+  },
+  "aria": {
+    "live": "Architecture map update"
+  }
+}

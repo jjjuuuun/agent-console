@@ -1,0 +1,100 @@
+{
+  "help": "Choose and edit the rules (profiles) the architecture map uses to draw cells and edges.",
+  "origin": {
+    "default": "Default",
+    "user": "User",
+    "userOverride": "User (overrides)",
+    "plugin": "Plugin: {name}"
+  },
+  "defaultProfile": {
+    "first": "First profile in the list",
+    "missing": "Missing profile (uses the first one)"
+  },
+  "list": {
+    "title": "Profiles ({n})",
+    "label": "Profile list",
+    "new": "New profile",
+    "import": "Import YAML",
+    "issues": "Issues: {n}",
+    "noIssues": "No issues",
+    "counts": "Cells {cells} · Edges {edges}",
+    "unsaved": "Unsaved changes",
+    "unknownCounts": "Updates when saved",
+    "notInList": "Not in the server list (the format may be wrong). Check it in the editor.",
+    "view": "View",
+    "edit": "Edit",
+    "clone": "Duplicate and edit",
+    "disable": "Turn off",
+    "enable": "Turn on again",
+    "remove": "Delete",
+    "revert": "Revert to default",
+    "disabledTitle": "Turned-off profiles: {n}",
+    "empty": "No profiles",
+    "emptyBody": "Create a profile or turn on the default profiles.",
+    "enableDefaults": "Turn on default profiles",
+    "loadFailed": "Couldn't load the profile list",
+    "retry": "Try again",
+    "defaultsPending": "The default profile list updates when you save the settings.",
+    "actionsFor": "Actions for {title}"
+  },
+  "dialog": {
+    "cloneTitle": "Duplicate and edit “{title}”",
+    "newTitle": "New profile",
+    "importTitle": "Import YAML",
+    "id": "New id",
+    "profileTitle": "Title",
+    "sameId": "Using the same id overrides the default profile. You can always undo it with \"Revert to default\".",
+    "idTaken": "A user profile already uses this id. Creating it will change that profile.",
+    "idEmpty": "Enter an id.",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "importBody": "Paste the profile YAML.",
+    "importPaste": "Profile YAML",
+    "importCheck": "Check",
+    "importToEditor": "Import into editor",
+    "importParse": "Couldn't read the YAML",
+    "removeTitle": "Delete the profile “{title}”?",
+    "removeBody": "This records the profile as turned off in the settings. Nothing changes until you save.",
+    "removeOk": "Delete"
+  },
+  "editor": {
+    "title": "Edit — {title} ({id})",
+    "viewTitle": "View — {title} ({id})",
+    "close": "Close",
+    "yaml": "YAML",
+    "yamlLabel": "Profile YAML",
+    "results": "Check results",
+    "save": "Save profile",
+    "saveNote": "Select \"Save\" at the top of the screen to write it to the settings file.",
+    "saveBlocked": "Can't save while errors remain. Fix the problems.",
+    "saveChecking": "Can't save while checking.",
+    "discardTitle": "Close the editor?",
+    "discardBody": "Unsaved edits will be lost.",
+    "discardOk": "Close",
+    "checking": "Checking…",
+    "ok": "No problems",
+    "problems": "Problems: {n}",
+    "line": "Line {n}",
+    "checkFailed": "Couldn't run the check",
+    "checkedAt": "Last checked {time}",
+    "parseError": "YAML format error",
+    "notMap": "The top level must be a map of key: value entries.",
+    "readOnly": "Read-only. Use \"Duplicate and edit\" to change it.",
+    "loadFailed": "Couldn't load the profile body",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Info"
+    }
+  },
+  "arrange": {
+    "groupOrigin": "Origin",
+    "sortTitle": "Title",
+    "sortIssues": "Most issues first",
+    "sortTitleSummary": "By title"
+  },
+  "switch": {
+    "on": "On",
+    "off": "Off"
+  }
+}

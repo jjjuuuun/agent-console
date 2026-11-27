@@ -217,7 +217,7 @@ class RunMover:
         try:
             counts = run_moves([move], remove_source=request.remove_source)[0]
         except Exception as exc:
-            _log.exception("Run 옮기기 실패: %s", request.project_id)
+            _log.exception("Moving runs failed: %s", request.project_id)
             failed.extend(_issue(MOVE_FAILED, f"옮기지 못했습니다: {exc}", i) for i in units)
             return RecordsMoveResult(failed=failed)
         return RecordsMoveResult(moved=counts.moved, skipped=counts.skipped, failed=failed)

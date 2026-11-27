@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/list-arrange",
-  "version": "0.1.0",
-  "description": "@agent-console/list-arrange 패키지",
+  "version": "0.1.1",
+  "description": "Pure functions that group, sort, and divide a list into folders",
   "private": true,
   "license": "MIT",
   "type": "module",

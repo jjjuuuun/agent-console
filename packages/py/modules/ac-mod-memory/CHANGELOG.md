@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- I.7c: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-memory`, so the web can show the module description and settings and the `memory.invalid_request` issue in English (data only, no API change). Log lines are now English.
 - REL.16(계약 0.15.0, memory 1.3.0): WS `memory.changed`의 `MemoryChanged.space`를 채운다 — 공간
   서비스는 자기 공간 이름(등록 id), 라이브러리는 null. 공간 제공자 예외에 문자열 `reason`이 있으면 오류
   응답 `details.reason`으로 싣는다(예: `project.memory_unavailable`). `MemorySpaceError(reason=)`.

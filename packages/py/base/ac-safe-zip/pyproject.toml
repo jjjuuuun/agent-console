@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-safe-zip"
 version = "0.1.0"
-description = "Agent Console — 안전한 zip 읽기(경로 공격·압축 폭탄 상한)와 고정 바이트 zip 쓰기"
+description = "Agent Console — safe zip reading (path attack and zip bomb limits) and byte-stable zip writing"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

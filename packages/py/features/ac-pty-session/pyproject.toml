@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-pty-session"
 version = "0.1.0"
-description = "대화형 CLI를 PTY로 띄우고 화면 줄·원문 흐름·규칙 신호로 읽는 라이브러리"
+description = "A library that starts an interactive CLI in a PTY and reads it as screen lines, the raw stream, and rule-based signals"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -19,7 +19,7 @@ from agent_console_contracts import (
     PluginOptionsView,
     ServerInfo,
 )
-from agent_console_modkit import Assembly
+from agent_console_modkit import Assembly, SettingsNotice
 from agent_console_registry import LoadReport
 
 from ._config import ServerSettings
@@ -28,7 +28,7 @@ from ._ports import SECRET_REDACT, SERVER_ATTRIBUTES, SERVER_WARNINGS
 _log = logging.getLogger("agent_console_server")
 
 PLUGIN_CONFIG_WARNING = "plugins.config"
-"""`server-info` 경고 코드: 플러그인 설정(`plugins.*`) 경고."""
+"""`server-info` 경고 코드: 코드 없이 문장만 온 플러그인 설정(`plugins.*`) 경고."""
 
 
 def plugin_infos(
@@ -71,13 +71,14 @@ def server_info(
     server_version: str,
     reports: Sequence[tuple[str, LoadReport]],
     assembly: Assembly,
-    plugin_warnings: Sequence[str] = (),
+    plugin_warnings: Sequence[str | SettingsNotice] = (),
     plugin_options: Sequence[PluginOptionsView] = (),
 ) -> ServerInfo:
     """`ServerInfo`(읽기 전용, 비밀 값 없음).
 
     `security.expose_paths`가 꺼지면 workspace 경로를 뺀다. `plugin_warnings`(플러그인 설정
-    경고, 예: `plugins.disabled`의 모르는 이름)는 `warnings`에 `plugins.config` 경고로 더한다.
+    경고, 예: `plugins.disabled`의 모르는 이름)는 `warnings`에 더한다 — `SettingsNotice`는 그
+    코드·`details`로(웹이 문구 묶음에서 문구를 고른다), 문장만 온 것은 `plugins.config` 경고로.
     `plugin_options`(설정을 선언한 플러그인의 가린 옵션 보기)는 그대로 싣는다.
     """
     attributes: dict[str, Any] = {
@@ -95,8 +96,10 @@ def server_info(
     if settings.security.expose_paths:
         attributes["workspace"] = str(settings.workspace_path)
     warnings: list[Issue] = [
-        Issue(severity="warning", code=PLUGIN_CONFIG_WARNING, message=text)
-        for text in plugin_warnings
+        Issue(severity="warning", code=w.code, message=w.message, details=dict(w.details))
+        if isinstance(w, SettingsNotice)
+        else Issue(severity="warning", code=PLUGIN_CONFIG_WARNING, message=w)
+        for w in plugin_warnings
     ]
     for warning_source in assembly.ports(SERVER_WARNINGS):
         try:

@@ -3,14 +3,14 @@ import { WidgetEditor, DashboardGrid, validateWidget, type WidgetRegistry, type 
 import { SchemaForm } from "@agent-console/schema-form";
 import type { LogDimensionInfo, LogMetricInfo, LogWidget } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
-import { defaultLogViewMessages } from "@agent-console/log-view";
 import { Drawer } from "./Drawer";
 import { LogFilters, type FilterOptionsData } from "./LogFilters";
 import { LOGS_LIMITS } from "./logsConfig";
-import { logsMessages as t } from "./messages";
+import { useLogsMessages } from "./messages";
 import { slotFor } from "./slots";
 import { ApiError } from "@agent-console/api-client";
 import type { LogFilterValue } from "@agent-console/log-view";
+import { useLogViewMessages, useLogViewFormatters } from "./useLogViewMessages";
 
 export interface WidgetEditorDrawerProps {
   /** 편집 중인 위젯 사본(새 위젯이면 기본값으로 만든 것). 닫으면 undefined */
@@ -40,12 +40,15 @@ function toFilterValue(filter: Record<string, unknown> | undefined): LogFilterVa
  * 미리보기(400ms 디바운스 집계)를 주입한다. [위젯 적용]은 로컬 복사본에만 반영하고 서버 저장은 아니다.
  */
 export function WidgetEditorDrawer(p: WidgetEditorDrawerProps) {
+  const lv = useLogViewMessages();
+  const lvFormatters = useLogViewFormatters();
+  const t = useLogsMessages();
   const { rest } = useApi();
   const [draft, setDraft] = useState<LogWidget>(p.initial);
   // 미리보기 결과는 어떤 질의의 것인지 함께 둔다(질의가 바뀌면 이전 결과는 "불러오는 중"으로 본다)
   const [previewState, setPreviewState] = useState<{ key: string; result: WidgetResult } | null>(null);
   const descriptors = useMemo(() => [...p.registry.values()], [p.registry]);
-  const problems = validateWidget(draft, p.registry.get(draft.kind), p.dimensions, defaultLogViewMessages);
+  const problems = validateWidget(draft, p.registry.get(draft.kind), p.dimensions, lv);
   const ready = problems.length === 0;
   const queryKey = JSON.stringify([draft.query, p.tz]);
   const preview: WidgetResult = previewState?.key === queryKey ? previewState.result : { loading: true, ...(previewState?.result.rows ? { rows: previewState.result.rows } : {}) };
@@ -75,7 +78,7 @@ export function WidgetEditorDrawer(p: WidgetEditorDrawerProps) {
   const previewWidget: LogWidget = { ...draft, options: { ...(draft.options ?? {}), w: 12, h: 3 } };
   return (
     <Drawer open title={p.isNew ? t.dashboards.editorTitleNew : t.dashboards.editorTitleEdit} onClose={p.onCancel} width={440}>
-      <WidgetEditor
+      <WidgetEditor messages={lv}
         value={draft}
         onChange={setDraft}
         descriptors={descriptors}
@@ -107,7 +110,7 @@ export function WidgetEditorDrawer(p: WidgetEditorDrawerProps) {
         preview={
           ready && descriptor !== undefined ? (
             <div className="logs-preview">
-              <DashboardGrid widgets={[previewWidget]} registry={p.registry} results={{ [draft.id]: preview }} columns={6} rowHeight={60} slotFor={slotFor} metrics={p.metrics ?? []} dimensions={p.dimensions ?? []} ariaLabel={t.dashboards.editorTitleEdit} />
+              <DashboardGrid messages={lv} formatters={lvFormatters} widgets={[previewWidget]} registry={p.registry} results={{ [draft.id]: preview }} columns={6} rowHeight={60} slotFor={slotFor} metrics={p.metrics ?? []} dimensions={p.dimensions ?? []} ariaLabel={t.dashboards.editorTitleEdit} />
             </div>
           ) : (
             <p className="app-muted">{t.dashboards.previewHint}</p>

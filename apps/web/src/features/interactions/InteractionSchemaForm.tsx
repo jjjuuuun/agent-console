@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { FallbackArgs } from "@agent-console/chat";
-import { getDefaultValue, SchemaForm, type JsonSchema } from "@agent-console/schema-form";
+import { getDefaultValue, type JsonSchema } from "@agent-console/schema-form";
+import { AppSchemaForm as SchemaForm } from "../../i18n";
 import { Button } from "@agent-console/ui";
-import { interactionMessages, type InteractionMessages } from "./messages";
+import { useInteractionMessages, type InteractionMessages } from "./messages";
 
 export interface InteractionSchemaFormProps extends FallbackArgs {
   /** 문구를 덮어쓴다(`payload`, `send`) */
@@ -19,7 +20,7 @@ export interface InteractionSchemaFormProps extends FallbackArgs {
  * 요청 내용(`payload`)은 접어서 보여 주고, Ctrl/Cmd+Enter로 보낸다.
  */
 export function InteractionSchemaForm({ interaction, descriptor, onSubmit, submitting, errors, disabled, readOnly, messages, className, actionsClassName }: InteractionSchemaFormProps) {
-  const text = { ...interactionMessages, ...messages };
+  const text = { ...useInteractionMessages(), ...messages };
   const schema = (interaction.response_schema ?? descriptor?.response_schema ?? { type: "object" }) as JsonSchema;
   const [value, setValue] = useState<unknown>(() => (readOnly && interaction.response !== undefined ? interaction.response : getDefaultValue(schema)));
   const locked = disabled || readOnly || submitting;

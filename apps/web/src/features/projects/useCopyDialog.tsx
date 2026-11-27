@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@agent-console/ui";
-import { createProjectsText, toSpaceRef } from "@agent-console/projects";
+import { toSpaceRef } from "@agent-console/projects";
+import { useProjectsText } from "./projectsText";
 import type { DefinitionKey } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
@@ -10,7 +11,6 @@ import { CopyPlanDialog, type CopyDirection, type CopyOutcome } from "./CopyPlan
 import { useProjects } from "./ProjectsContext";
 import { useSpaceItems, type SpaceItem } from "./useSpaceItems";
 
-const text = createProjectsText();
 
 /** 복사 대화상자를 여는 요청. 공용이 아닌 쪽 공간은 항상 프로젝트 하나(`project`)다. */
 export interface CopyRequest {
@@ -54,6 +54,7 @@ export function useCopyDialog(): CopyDialogApi {
 }
 
 function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: () => void }) {
+  const text = useProjectsText();
   const { rest } = useApi();
   const p = useProjects();
   const toast = useToast();

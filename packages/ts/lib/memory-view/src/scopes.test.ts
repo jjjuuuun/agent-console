@@ -184,3 +184,12 @@ describe("formatAuthor", () => {
   });
 });
 
+describe("groupScopes locale", () => {
+  const k = [{ kind: "x", label: "x", id: "{/proj}", origin: "user", context_fields: ["proj"] }];
+  const s = ["z", "ä", "b"].map((id) => ({ ...scopes[0]!, scope: { kind: "x", id } }));
+  const order = (locale?: string) => groupScopes(k, s, locale === undefined ? {} : { locale }).groups[0]!.scopes.map((x) => x.scope.id);
+  it("sorts labels by the given locale and defaults to en", () => {
+    expect(order()).toEqual(["ä", "b", "z"]);
+    expect(order("sv")).toEqual(["b", "z", "ä"]);
+  });
+});

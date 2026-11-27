@@ -78,5 +78,5 @@ def build_import_sources(
             )
             sources.extend(entry.item(local))
         except Exception as exc:
-            _log.warning("가져오기 출처 공장 %s 실패: %s", entry.key, type(exc).__name__)
+            _log.warning("Import source factory %s failed: %s", entry.key, type(exc).__name__)
     return sources

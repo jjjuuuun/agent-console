@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { defaultFormatters } from "./format";
+import { defaultFormatters, fullTimeTitle } from "./format";
 import { LogEventTable, eventColumns } from "./LogEventTable";
 import { toTaxonomyView } from "./taxonomy";
 import { formatEventTime, parseTimeMode, timeColumnWidth, type TimeMode } from "./timeMode";
@@ -74,5 +74,12 @@ describe("LogEventTable 시각 열", () => {
     fireEvent.click(screen.getByRole("button", { name: /시각 표시 방식/ }));
     fireEvent.keyDown(screen.getAllByRole("menuitemradio")[0]!, { key: "Escape" });
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+});
+
+describe("fullTime formatter", () => {
+  it("uses the injected formatter for the tooltip and the given locale by default", () => {
+    expect(formatEventTime("time", T, null, { ...defaultFormatters, fullTime: () => "tip" })!.title).toBe("tip");
+    expect(fullTimeTitle(T, "de")).toContain(new Date(T * 1000).toLocaleString("de"));
   });
 });

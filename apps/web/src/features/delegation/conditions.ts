@@ -1,5 +1,5 @@
 import type { ConditionItem, ConditionOperatorDescriptor, ConditionSpec } from "@agent-console/contracts";
-import { delegationMessages } from "./messages";
+import type { ConditionMessages } from "./messages";
 
 /** 조건 항목·묶음은 계약 모델(`ConditionItem`·`ConditionSpec`)이 정한 모양이다. 연산자 id·경로 값은 데이터다. */
 export type { ConditionItem, ConditionOperatorDescriptor, ConditionSpec };
@@ -112,7 +112,7 @@ export function guessFreeKind(value: unknown): "string" | "number" | "boolean" |
 
 const ITEM_MAX = 36;
 
-export type SummaryMessages = typeof delegationMessages.condition.summary;
+export type SummaryMessages = ConditionMessages["summary"];
 
 export interface ConditionSummary {
   /** 칩·한 줄에 쓰는 문구(항목이 길면 말줄임) */
@@ -128,7 +128,7 @@ function clip(text: string, max: number): string {
 }
 
 /** 값 표시: 문자열 ‘값’, 숫자·불리언 그대로, 배열 `[a, b, …]`(3개 초과 `외 N개`), 객체 JSON 한 줄, 값 없음이면 빈 문자열. */
-export function formatConditionValue(value: unknown, m: SummaryMessages = delegationMessages.condition.summary): string {
+export function formatConditionValue(value: unknown, m: SummaryMessages): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return `‘${value}’`;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -153,14 +153,14 @@ export function summarizeConditions(
   spec: ConditionSpec | null | undefined,
   operators: readonly Pick<ConditionOperatorDescriptor, "id" | "title">[] | null | undefined,
   pathTitles: Readonly<Record<string, string>> | undefined,
-  messages: SummaryMessages = delegationMessages.condition.summary,
+  messages: SummaryMessages,
 ): ConditionSummary {
   const items = itemsOf(spec);
   const mode = formMode(spec);
   if (conditionShape(spec) === "both") {
     // 폼으로 그릴 수 없는 묶음도 요약은 두 목록을 모두 센다
     const all = [...(spec?.all ?? []), ...(spec?.any ?? [])];
-    return summarizeItems(all, " 그리고 ", operators, pathTitles, messages, spec?.negate === true);
+    return summarizeItems(all, messages.and, operators, pathTitles, messages, spec?.negate === true);
   }
   return summarizeItems(items, mode === "any" ? messages.or : messages.and, operators, pathTitles, messages, spec?.negate === true);
 }

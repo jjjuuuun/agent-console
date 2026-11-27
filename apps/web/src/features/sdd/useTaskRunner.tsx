@@ -13,11 +13,11 @@ import type { Issue } from "@agent-console/contracts";
 import { KNOWN_TASK_ACTION_STATUSES } from "@agent-console/contracts/constants";
 import { useToast } from "@agent-console/ui";
 import type { ParsedTask, SddGateBlockedDetails, SddTaskChangedDetails, TaskAction, TaskActionResult } from "@agent-console/contracts/sdd";
-import { startErrorView, useCopyDialog, type StartErrorView } from "../projects";
+import { useStartErrorView, useCopyDialog, type StartErrorView } from "../projects";
 import { ROUTE_ROLES, routePath } from "../library";
-import { sddMessages as m } from "./messages";
 import { sddKeys, useSddSpace } from "./useSddApi";
 import type { SddContext } from "./useSddContext";
+import { useT } from "@agent-console/i18n";
 
 /** 화면에 한 번에 하나만 둔다(새 것이 이전 것을 대체). */
 export type RunNotice =
@@ -56,6 +56,8 @@ export interface TaskRunnerOptions {
 }
 
 export function useTaskRunner({ specId, ctx, onTaskChanged }: TaskRunnerOptions): TaskRunner {
+  const startErrorView = useStartErrorView();
+  const t = useT("sdd");
   const space = useSddSpace();
   const qc = useQueryClient();
   const toast = useToast();
@@ -69,7 +71,7 @@ export function useTaskRunner({ specId, ctx, onTaskChanged }: TaskRunnerOptions)
   const fail = (task: ParsedTask, action: TaskAction, error: unknown, issue?: Issue) => {
     const err = error instanceof ApiError ? error : issue !== undefined ? new ApiError(422, { code: issue.code, message: issue.message, details: issue.details ?? {} }) : undefined;
     const view = err === undefined ? null : startErrorView(err);
-    const message = view?.message ?? (err !== undefined && err.message !== "" ? err.message : error instanceof Error && error.message !== "" ? error.message : m.run.failed);
+    const message = view?.message ?? (err !== undefined && err.message !== "" ? err.message : error instanceof Error && error.message !== "" ? error.message : t("run.failed"));
     setNotice({ kind: "error", message, view, task, action });
   };
 
@@ -82,9 +84,9 @@ export function useTaskRunner({ specId, ctx, onTaskChanged }: TaskRunnerOptions)
         const runId = result.run_id ?? undefined;
         toast({
           tone: "success",
-          text: m.run.started(task.title ?? task.key),
+          text: t("run.started", { title: task.title ?? task.key }),
           durationMs: 8000,
-          ...(runId === undefined ? {} : { action: { label: m.run.open, onClick: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) } }),
+          ...(runId === undefined ? {} : { action: { label: t("run.open"), onClick: () => void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(runId)}`) } }),
         });
         void refresh();
       } else if (result.status === KNOWN_TASK_ACTION_STATUSES.BLOCKED && result.issue != null) {

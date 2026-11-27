@@ -1,6 +1,6 @@
 import { Button, EmptyState, Icon } from "@agent-console/ui";
 import type { ArchErrorInfo } from "./archLib";
-import { archMessages as t } from "./messages";
+import { useArchMessages } from "./messages";
 
 export interface ArchitectureEmptyProps {
   /** 오류 분류(§8의 A 규칙 없음 · D 상한 초과 · E 요청 오류 · F 프로필 오류) */
@@ -14,6 +14,7 @@ export interface ArchitectureEmptyProps {
 
 /** 그림 자리를 대신하는 블록(§8 A·D·E·F). B(이벤트 없음)·C(모두 수집 안 됨)는 그림을 그대로 두므로 `ArchitectureNotice`가 맡는다. */
 export function ArchitectureEmpty({ error, onRetry, onOpenSettings, onFocusFilters }: ArchitectureEmptyProps) {
+  const t = useArchMessages();
   const icon = <Icon name="architecture" size={32} />;
   const button = (label: string, onClick: (() => void) | undefined, primary = false) =>
     onClick === undefined ? undefined : <Button variant={primary ? "primary" : undefined} onClick={onClick}>{label}</Button>;

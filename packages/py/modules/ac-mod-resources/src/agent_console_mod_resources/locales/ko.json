@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "resource.not_multi_file": "이 리소스 종류는 여러 파일 본문을 쓰지 않습니다(본문은 /content로 저장)",
+    "resource.reserved_file_name": "파일 '{path}' 경로에 예약 이름 '{name}'이(가) 있습니다. 저장했지만 실행 폴더·버전 관리와 겹칠 수 있으니 다른 이름을 권장합니다"
+  }
+}

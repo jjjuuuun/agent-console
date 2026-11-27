@@ -1,6 +1,7 @@
 import { Switch } from "@agent-console/ui";
 import type { SchemaFormWidgetProps } from "@agent-console/schema-form";
-import { memorySettingsMessages as t } from "./messages";
+import { useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -10,7 +11,8 @@ export const SWITCH_WIDGET = "ac-boolean-switch";
 export const CHOICE_CARDS_WIDGET = "ac-choice-cards";
 
 export function SwitchWidget({ id, value, onChange, label, disabled, readonly }: SchemaFormWidgetProps) {
-  return <Switch checked={value === true} onChange={onChange} ariaLabel={label} onText="켜짐" offText="꺼짐" disabled={disabled || readonly} className={id} />;
+  const t = useT("memorySettings");
+  return <Switch checked={value === true} onChange={onChange} ariaLabel={label} onText={t("widgets.on")} offText={t("widgets.off")} disabled={disabled || readonly} className={id} />;
 }
 
 /** 스키마 enum의 선택지 목록(값 + `x-ui.enum_labels` 라벨, 없으면 값 원문). */
@@ -26,25 +28,27 @@ export function enumChoices(schema: Obj): { value: string; label: string }[] {
  * 값을 "그대로 저장"하는 선택지는 스키마에 없으므로 그 사실을 한 줄로 알린다.
  */
 export function ChoiceCardsWidget({ id, value, onChange, label, disabled, readonly, schema }: SchemaFormWidgetProps) {
+  const t = useT("memorySettings");
+  const tm = useMaybeT("memorySettings");
   const choices = enumChoices(schema);
   const current = typeof value === "string" ? value : typeof schema["default"] === "string" ? schema["default"] : "";
   const locked = disabled || readonly;
   return (
     <div role="radiogroup" aria-label={label} id={id} className="memset-cards">
       {choices.map((c) => {
-        const info = t.secrets.byValue[c.value];
+        const info = { title: tm(`secrets.byValue.${c.value}.title`), body: tm(`secrets.byValue.${c.value}.body`) };
         const checked = current === c.value;
         return (
           <label key={c.value} className="memset-card" data-checked={checked ? "true" : undefined}>
             <input type="radio" name={id} value={c.value} checked={checked} disabled={locked} onChange={() => onChange(c.value)} />
             <span className="memset-card-body">
-              <span className="memset-strong">{info?.title ?? c.label}</span>
-              {info === undefined ? null : <span className="memset-note app-muted">{info.body}</span>}
+              <span className="memset-strong">{info.title ?? c.label}</span>
+              {info.body === undefined ? null : <span className="memset-note app-muted">{info.body}</span>}
             </span>
           </label>
         );
       })}
-      <p className="memset-note app-muted">{t.secrets.none}</p>
+      <p className="memset-note app-muted">{t("secrets.none")}</p>
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function splitFieldPair(pair: string): { key: string; value: string } {
 export const fieldPair = (key: string, value: string): string => `${key}=${value}`;
 
 /** 작업들에 실제 나온 필드 키 → 값(많이 나온 순) 목록. 키 순서는 처음 나온 순서. 필드 이름은 서버 데이터라 코드에 없다. */
-export function collectFieldValues(tasks: readonly { fields?: Readonly<Record<string, string>> | undefined }[]): { key: string; values: { value: string; count: number }[] }[] {
+export function collectFieldValues(tasks: readonly { fields?: Readonly<Record<string, string>> | undefined }[], language: string): { key: string; values: { value: string; count: number }[] }[] {
   const byKey = new Map<string, Map<string, number>>();
   for (const task of tasks) {
     for (const [key, value] of Object.entries(task.fields ?? {})) {
@@ -56,5 +56,5 @@ export function collectFieldValues(tasks: readonly { fields?: Readonly<Record<st
       byKey.set(key, values);
     }
   }
-  return [...byKey].map(([key, values]) => ({ key, values: [...values].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)) }));
+  return [...byKey].map(([key, values]) => ({ key, values: [...values].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, language)) }));
 }

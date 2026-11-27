@@ -2,7 +2,7 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { Project } from "@agent-console/contracts/projects";
 import { Button, Icon, Popover } from "@agent-console/ui";
 import type { CurrentProject } from "@agent-console/projects";
-import { projectMessages as t } from "./messages";
+import { useProjectMessages } from "./messages";
 
 export interface ProjectSwitcherProps {
   projects: readonly Project[];
@@ -34,6 +34,7 @@ function initialOf(project: Project | undefined): string {
  * 키보드: 트리거 ↓ 또는 Enter로 열기, 목록 ↑↓·Home·End 이동, Enter 선택, Esc 닫기(트리거로 포커스 복귀).
  */
 export function ProjectSwitcher({ projects, current, onSelect, onCreate, onManage, collapsed = false, shortcutHint, open: openProp, onOpenChange }: ProjectSwitcherProps) {
+  const t = useProjectMessages();
   const [openState, setOpenState] = useState(false);
   const open = openProp ?? openState;
   const setOpen = (next: boolean) => {

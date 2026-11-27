@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
-import { folderHomeMessages as m } from "./folderHomeMessages";
+import { useFolderHomeMessages } from "./folderHomeMessages";
 
 export interface ManifestResetDialogProps {
   /** 등록된 이름·설명(기본값) */
@@ -22,6 +22,7 @@ function withCode(template: string, dir: string): ReactNode {
 
 /** 설정 파일 다시 만들기(screen-projects §6.1, 폭 480). 기존 파일은 서버가 백업으로 옮긴다. 기본 포커스는 [취소]. */
 export function ManifestResetDialog({ name: initialName, description: initialDesc, configDir, blockedReason, onSubmit, onClose }: ManifestResetDialogProps) {
+  const m = useFolderHomeMessages();
   const uid = useId();
   const cancel = useRef<HTMLButtonElement>(null);
   const [name, setName] = useState(initialName);

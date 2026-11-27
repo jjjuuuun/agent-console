@@ -4,12 +4,13 @@ import type { Agent, EffectiveSettings, ResourceAttachment } from "@agent-consol
 import { Banner, Button, EmptyState } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
-import { formatDateTime, shortId } from "../../lib/format";
+import { shortId } from "../../lib/format";
 import { Skeleton, useResourceList, useResourceTypes } from "../settings";
-import { ATTACHMENT_MODES, toUiLayers, LayeredAttachments, libraryMessages, definitionPath, routePath, ROUTE_ROLES } from "../library";
+import { ATTACHMENT_MODES, toUiLayers, LayeredAttachments, useLibraryMessages, definitionPath, routePath, ROUTE_ROLES } from "../library";
 import { attachmentErrorsAt } from "../../lib/attachmentProblems";
 import { groupActivity } from "./agentLogic";
-import { agentMessages as t } from "./messages";
+import { useAgentMessages } from "./messages";
+import { useFormat, useServerTranslate } from "../../i18n";
 
 export interface ResourcesTabProps {
   agent: Agent;
@@ -24,12 +25,14 @@ export interface ResourcesTabProps {
 
 /** 에이전트 층 첨부 편집 + 공통 층 상속(읽기 전용) 표시. */
 export function AgentResourcesTab({ agent, onChange, effective, disabled, errors, onCreateResource }: ResourcesTabProps) {
+  const t = useAgentMessages();
   const navigate = useNavigate();
   const resources = useResourceList();
   const types = useResourceTypes();
   const common = useWorkspaceSettings();
   const modes = ATTACHMENT_MODES;
-  const formLayers = toUiLayers(effective);
+  const tr = useServerTranslate();
+  const formLayers = toUiLayers(effective, tr);
   const own = formLayers[formLayers.length - 1] ?? { id: "layer-own", label: t.resources.layerFallback, index: 1 };
   const inherited = formLayers[0] !== undefined && formLayers.length > 1 ? formLayers[0] : undefined;
   const commonAttachments = (common.data?.value.agent_defaults?.resources ?? []) as ResourceAttachment[];
@@ -61,6 +64,8 @@ export function AgentResourcesTab({ agent, onChange, effective, disabled, errors
 
 /** 이 에이전트를 노드로 쓰는 팀 구성 목록. */
 export function AgentUsagesTab({ agentId }: { agentId: string }) {
+  const libraryMessages = useLibraryMessages();
+  const t = useAgentMessages();
   const usages = useApiQuery(["list", "agent-usages", agentId], (rest) => rest.listAgentUsages(agentId));
   if (usages.isLoading) return <Skeleton rows={3} />;
   if (usages.isError) return <ErrorBlock title={t.usages.failed} message={usages.error.message} retryLabel={libraryMessages.retry} onRetry={() => void usages.refetch()} />;
@@ -95,6 +100,9 @@ const PAGE = 100;
 
 /** 이 에이전트가 낸 최근 이벤트를 실행별로 묶어 보여 준다. */
 export function AgentActivityTab({ agentId }: { agentId: string }) {
+  const fmt = useFormat();
+  const libraryMessages = useLibraryMessages();
+  const t = useAgentMessages();
   const [limit, setLimit] = useState(PAGE);
   const q = useApiQuery(["list", "agent-activity", agentId, limit], (rest) => rest.getAgentActivity(agentId, limit));
   const groups = useMemo(() => groupActivity(q.data ?? []), [q.data]);
@@ -115,7 +123,7 @@ export function AgentActivityTab({ agentId }: { agentId: string }) {
         <tbody>
           {groups.map((g) => (
             <tr key={g.runId}>
-              <td title={formatDateTime(g.firstTs)}>{formatDateTime(g.firstTs)}</td>
+              <td title={fmt.dateTimeFull(g.firstTs)}>{fmt.dateTimeFull(g.firstTs)}</td>
               <td>
                 <Link to={`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(g.runId)}?tab=agents&actor=${encodeURIComponent(agentId)}`} aria-label={`${t.activity.open} ${shortId(g.runId)}`}>
                   {shortId(g.runId)}

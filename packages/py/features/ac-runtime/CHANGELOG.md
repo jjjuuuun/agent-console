@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7d: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-runtime`, so the web can show the engine error and issue codes in English (data only, no API change). Internal log messages are now in English.
 - 6R.12: `GraphRuntime.start(labels=)` — 루트 Run의 `Run.labels`로 기록만 한다(자식 Run은 물려받지 않음, 상한 검사는 호출자).
 
 - 5.2R.80(F14): 백엔드 계정 로그인 확장 지점 — 선택 능력 `LoginCapableBackend`·`LogoutCapableBackend`,

@@ -1,11 +1,14 @@
 import { requesterName } from "../../lib/requester";
-import { useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Agent, Interaction } from "@agent-console/contracts";
 import { useToast } from "@agent-console/ui";
+import { createToastText } from "../../app/ToastText";
 import { usePendingInteractions } from "../../shell/pending";
-import { chatMessages } from "./chatMessages";
+import { useChatMessages } from "./chatMessages";
 import { chatPaths } from "./paths";
+
+const ChatToast = createToastText(useChatMessages);
 
 export interface PendingNoticeInput {
   /** 지금 열려 있는 대화(그 대화의 새 대기는 토스트 없이 스크린리더 알림만) */
@@ -23,6 +26,7 @@ export interface PendingNoticeInput {
  * @returns aria-live 영역에 넣을 문구(없으면 빈 문자열)
  */
 export function usePendingNotices({ currentConversationId, agents, nowSeconds, nodeLabelOf }: PendingNoticeInput): string {
+  const chatMessages = useChatMessages();
   const { items } = usePendingInteractions();
   const toast = useToast();
   const navigate = useNavigate();
@@ -48,10 +52,11 @@ export function usePendingNotices({ currentConversationId, agents, nowSeconds, n
       notified.current.add(i.id);
       if (i.created_at < since || i.conversation_id == null || i.conversation_id === currentConversationId) continue;
       const conversationId = i.conversation_id;
+      const who = nameOf(i);
       toast({
         tone: "info",
-        text: chatMessages.interaction.toastWaiting(nameOf(i)),
-        action: { label: chatMessages.interaction.toastOpen, onClick: () => void navigate(chatPaths.conversation(conversationId)) },
+        text: createElement(ChatToast, { render: (c) => c.interaction.toastWaiting(who) }),
+        action: { label: createElement(ChatToast, { render: (c) => c.interaction.toastOpen }), onClick: () => void navigate(chatPaths.conversation(conversationId)) },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

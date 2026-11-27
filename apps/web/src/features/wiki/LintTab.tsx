@@ -9,7 +9,6 @@ import { Banner, Button, useToast } from "@agent-console/ui";
 import { LintTable, issuePage, type LintFilter } from "@agent-console/wiki-view";
 import type { WikiIssue } from "@agent-console/contracts/wiki";
 import { useNow } from "../../app/useNow";
-import { formatRelative } from "../../lib/format";
 import { AnchoredMenu } from "./AnchoredMenu";
 import { FailureBlock, ListSkeleton } from "./parts";
 import { useWikiLint } from "./useWikiTabsApi";
@@ -17,11 +16,12 @@ import { useWikiSpace, useWikiSyntax } from "./useWikiApi";
 import { SEVERITY_ORDER, WIKI_PARAMS } from "./wikiConfig";
 import { wikiRulesPath } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
-import { wikiMessages as m } from "./messages";
-import { localizeIssue } from "../../app/wikiIssueMessages";
-import { wikiTabMessages } from "./tabMessages";
+import { localizeIssue } from "./wikiIssueText";
+import { useServerText, useT } from "@agent-console/i18n";
+import { useMaybeT } from "../../i18n/useMaybeT";
+import { useWikiViewMessages } from "./useViewMessages";
+import { useFormat } from "../../i18n";
 
-const t = wikiTabMessages.lint;
 const P = WIKI_PARAMS;
 
 /** 코드 거르기 값은 점검 결과에 실제 있는 코드만 의미가 있으므로 그대로 쓴다. 주소 값을 거르기 상태로. */
@@ -31,6 +31,11 @@ function filterFromParams(params: URLSearchParams): Partial<LintFilter> {
 }
 
 export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, hasTab, refresh }: WikiTabProps) {
+  const fmt = useFormat();
+  const wikiViewMessages = useWikiViewMessages();
+  const t = useT("wiki");
+  const server = useServerText();
+  const tm = useMaybeT("wiki");
   const navigate = useNavigate();
   const lintQ = useWikiLint(wikiId);
   const syntaxQ = useWikiSyntax(wikiId);
@@ -88,7 +93,7 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
       await lintQ.refetch();
       await refresh();
     } catch (e) {
-      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : m.problem.generic });
+      toast({ tone: "danger", text: e instanceof Error && e.message !== "" ? e.message : t("problem.generic") });
     } finally {
       setChecking(false);
     }
@@ -98,21 +103,21 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
   const issues = report?.issues ?? [];
   const generated = report?.generated_at;
   const skipped = report?.partial === true ? (report.skipped ?? []) : [];
-  const enabledNames = (report?.enabled_checks ?? []).map((name) => display.codes?.[name]?.label ?? t.checkNames[name] ?? name);
+  const enabledNames = (report?.enabled_checks ?? []).map((name) => display.codes?.[name]?.label ?? tm(`tab.lint.checkNames.${name}`) ?? name);
   const menuIssue = menu?.issue;
   const menuRule = menuIssue === undefined ? null : ruleOf(menuIssue);
 
   let body;
   if (lintQ.isPending) body = <ListSkeleton rows={8} />;
-  else if (lintQ.isError || report === undefined) body = <FailureBlock error={lintQ.error} title={t.loadFailed} onRetry={() => void lintQ.refetch()} />;
+  else if (lintQ.isError || report === undefined) body = <FailureBlock error={lintQ.error} title={t("tab.lint.loadFailed")} onRetry={() => void lintQ.refetch()} />;
   else if (issues.length === 0 && noSyntax && lintRules === 0) {
     body = (
-      <Banner tone="info" data-testid="wiki-lint-none-enabled" actions={hasTab("rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t.openRule}</Button> : undefined}>{t.noneEnabled}</Banner>
+      <Banner tone="info" data-testid="wiki-lint-none-enabled" actions={hasTab("rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t("tab.lint.openRule")}</Button> : undefined}>{t("tab.lint.noneEnabled")}</Banner>
     );
   } else {
     body = (
-      <LintTable
-        issues={issues.map(localizeIssue)}
+      <LintTable messages={wikiViewMessages} locale={fmt.language}
+        issues={issues.map((i) => localizeIssue(i, server))}
         display={display}
         severityOrder={SEVERITY_ORDER}
         lineOf={lineOf}
@@ -127,7 +132,7 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
         height="100%"
         notice={
           noSyntax ? (
-            <Banner tone="info" data-testid="wiki-lint-nosyntax" actions={hasTab("rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t.openRule}</Button> : undefined}>{t.noSyntax}</Banner>
+            <Banner tone="info" data-testid="wiki-lint-nosyntax" actions={hasTab("rules") ? <Button size="sm" onClick={() => goTab("rules")}>{t("tab.lint.openRule")}</Button> : undefined}>{t("tab.lint.noSyntax")}</Banner>
           ) : undefined
         }
       />
@@ -136,20 +141,20 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
 
   return (
     <div className="wiki-lint" data-testid="wiki-lint">
-      <div className="wiki-lint-toolbar" role="group" aria-label={t.toolbar}>
-        <Button size="sm" loading={checking} onClick={() => void recheck()}>{checking ? t.checking : t.recheck}</Button>
-        {typeof generated === "number" ? <span className="app-muted" title={String(generated)}>{t.lastChecked(formatRelative(generated, now))}</span> : null}
-        {typeof report?.pages === "number" ? <span className="app-muted">{t.pages(report.pages)}</span> : null}
+      <div className="wiki-lint-toolbar" role="group" aria-label={t("tab.lint.toolbar")}>
+        <Button size="sm" loading={checking} onClick={() => void recheck()}>{checking ? t("tab.lint.checking") : t("tab.lint.recheck")}</Button>
+        {typeof generated === "number" ? <span className="app-muted" title={String(generated)}>{t("tab.lint.lastChecked", { time: fmt.relative(generated, now) })}</span> : null}
+        {typeof report?.pages === "number" ? <span className="app-muted">{t("tab.lint.pages", { n: report.pages })}</span> : null}
       </div>
-      {report?.enabled_checks == null || enabledNames.length === 0 ? null : <p className="app-muted wiki-lint-enabled" data-testid="wiki-lint-enabled">{t.enabledChecks(enabledNames.join(", "))}</p>}
+      {report?.enabled_checks == null || enabledNames.length === 0 ? null : <p className="app-muted wiki-lint-enabled" data-testid="wiki-lint-enabled">{t("tab.lint.enabledChecks", { names: enabledNames.join(", ") })}</p>}
       {report?.partial !== true ? null : (
         <Banner tone="warning" data-testid="wiki-lint-partial">
-          <span>{t.partial}{skipped.length > 0 ? ` · ${t.partialCount(skipped.length)}` : ""}</span>
+          <span>{t("tab.lint.partial")}{skipped.length > 0 ? ` · ${t("tab.lint.partialCount", { count: skipped.length })}` : ""}</span>
           {skipped.length === 0 ? null : (
             <ul className="wiki-lint-skipped">
               {skipped.map((path) => (
                 <li key={path}>
-                  <button type="button" className="app-link-btn wiki-mono" aria-label={t.openSkipped(path)} onClick={() => goTab("page", { [P.path]: path })}>{path}</button>
+                  <button type="button" className="app-link-btn wiki-mono" aria-label={t("tab.lint.openSkipped", { path })} onClick={() => goTab("page", { [P.path]: path })}>{path}</button>
                 </li>
               ))}
             </ul>
@@ -161,20 +166,20 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
         <AnchoredMenu
           x={menu.x}
           y={menu.y}
-          label={t.menu}
+          label={t("tab.lint.menu")}
           onClose={() => setMenu(null)}
           items={[
-            { id: "open", label: t.openPage, disabled: issuePage(menuIssue) === null, onSelect: () => openIssue(menuIssue, lineOf(menuIssue)) },
+            { id: "open", label: t("tab.lint.openPage"), disabled: issuePage(menuIssue) === null, onSelect: () => openIssue(menuIssue, lineOf(menuIssue)) },
             {
               id: "copy",
-              label: t.copyPath,
+              label: t("tab.lint.copyPath"),
               disabled: issuePage(menuIssue) === null,
               onSelect: () => {
                 void navigator.clipboard?.writeText(issuePage(menuIssue) ?? "");
-                toast({ tone: "success", text: t.copied });
+                toast({ tone: "success", text: t("tab.lint.copied") });
               },
             },
-            ...(menuRule !== null ? [{ id: "rule", label: t.openRule, onSelect: () => openRule(menuRule) }] : []),
+            ...(menuRule !== null ? [{ id: "rule", label: t("tab.lint.openRule"), onSelect: () => openRule(menuRule) }] : []),
           ]}
         />
       )}

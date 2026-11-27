@@ -1,0 +1,71 @@
+{
+  "folder": {
+    "label": "Folder",
+    "change": "Change",
+    "changeLabel": "Change the folder for this dialog",
+    "willSwitch": "Starting switches the current project to “{name}”.",
+    "repath": "Change path",
+    "problem": "Folder status: {status}"
+  },
+  "config": {
+    "label": "Team",
+    "search": "Search teams",
+    "searchPlaceholder": "Search…",
+    "list": "Teams to start",
+    "loading": "Loading teams…",
+    "loadFailed": "Couldn't load teams",
+    "retry": "Try again",
+    "noMatches": "No matching teams",
+    "import": "＋ Copy from shared library…",
+    "emptyTitle": "This project has no teams",
+    "importPrimary": "Copy from shared library…",
+    "createHere": "Create one in this project",
+    "editConfig": "Edit team →",
+    "showIssues": "Show problems",
+    "hideIssues": "Hide problems",
+    "blockedChip_one": "{n} blocking problem",
+    "blockedChip_other": "{n} blocking problems",
+    "warnChip_one": "▲ {n} warning",
+    "warnChip_other": "▲ {n} warnings",
+    "nodes": "Nodes {n}",
+    "lastUsed": "Last used {rel}",
+    "notSelectable": "Has blocking problems, so it can't be selected"
+  },
+  "start": {
+    "newChatTitle": "New chat",
+    "startChat": "Start chat",
+    "titleLabel": "Title",
+    "titleHelp": "If empty, the title comes from the first message.",
+    "cancel": "Cancel",
+    "creating": "Starting…"
+  },
+  "blocked": {
+    "noConfig": "Choose a team to start",
+    "signedOut": "Sign-in required",
+    "signIn": "Settings › Backend"
+  },
+  "error": {
+    "required": "Choose a project before you start",
+    "pickProject": "Choose a project",
+    "notImportedInLibrary": "“{name}” isn't in this project, only in the shared library",
+    "importAndRun": "Copy and run",
+    "notImportedMissing": "Couldn't find “{name}”",
+    "toLibrary": "Go to teams",
+    "folderUnusable": "Couldn't start because the project folder can't be used",
+    "repath": "Change path",
+    "manifestInvalid": "Couldn't start because the project settings file can't be read",
+    "checkInHome": "Check in project home",
+    "recordsReadonly": "Couldn't start because this folder is read-only, so chat and run records can't be saved",
+    "recordsFolderMissing": "Couldn't start because the project folder can't be used",
+    "recordsNewer": "A newer version of the app created this folder's records. Update the app",
+    "recordsBroken": "Couldn't start because this folder's record file can't be written",
+    "recordsBusy": "Couldn't start because another app is writing the record file",
+    "retry": "Try again",
+    "configReadonly": "Couldn't copy or change the team because this folder is read-only",
+    "outsideFolderAt": " — node path {nodePath}",
+    "openSettings": "Open settings",
+    "dismiss": "Cancel",
+    "outsideFolder": "“{path}” is outside the project folder",
+    "outsideFolderLayer": "“{path}” is outside the project folder (from {layer})"
+  }
+}

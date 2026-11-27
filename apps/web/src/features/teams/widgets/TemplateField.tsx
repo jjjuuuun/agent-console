@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
-import { teamMessages as t } from "../messages";
+import { useTeamMessages } from "../messages";
 
 /** `ui:field` 이름. */
 export const TEMPLATE_FIELD = "template-text";
@@ -20,6 +20,7 @@ export function parseVariables(description: string | undefined): string[] {
 
 /** 템플릿 문자열: 텍스트 영역 + 변수 칩(누르면 커서 위치에 `{변수}`를 넣는다). 비우면 null. */
 export function TemplateField({ id, value, onChange, label, disabled, readonly, options }: SchemaFormFieldProps) {
+  const t = useTeamMessages();
   const opts = options as unknown as TemplateOptions;
   const ref = useRef<HTMLTextAreaElement>(null);
   const text = typeof value === "string" ? value : "";

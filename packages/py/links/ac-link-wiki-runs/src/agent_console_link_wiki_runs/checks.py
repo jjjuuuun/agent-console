@@ -41,7 +41,9 @@ def _spaces(projects: ProjectLookupLike | None) -> list[str | None]:
     try:
         listed = list(projects.list_projects())
     except Exception:
-        _log.info("프로젝트 목록을 읽지 못해 단독 공간 위키만 봅니다", exc_info=True)
+        _log.info(
+            "Couldn't read the project list; checking the standalone space wiki only", exc_info=True
+        )
         return found
     for project in listed:
         project_id = getattr(project, "id", None)

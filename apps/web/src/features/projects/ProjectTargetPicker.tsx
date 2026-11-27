@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Banner, Button, EmptyState, Icon, MiddleEllipsis } from "@agent-console/ui";
 import { MenuPopover } from "./MenuPopover";
 import "./targetPicker.css";
-import { targetPickerMessages as m } from "./targetPickerMessages";
+import { useTargetPickerMessages } from "./targetPickerMessages";
 
 /** 고를 수 있는 시작 대상 하나(팀 구성 등). 종류 이름은 모른다 — 호출자가 데이터를 이 모양으로 만들어 준다. */
 export interface TargetOption {
@@ -70,6 +70,7 @@ export interface ProjectTargetPickerProps {
  * 목록은 최대 높이에서 스크롤하고 `children`(제목 입력)은 늘 보인다.
  */
 export function ProjectTargetPicker(p: ProjectTargetPickerProps) {
+  const m = useTargetPickerMessages();
   const uid = useId();
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());

@@ -12,7 +12,8 @@ export { useLogSources, useLogTaxonomy, useLogSchema, useLogClassifiers } from "
 export { useLogScan } from "./useLogScan";
 export { describeSourceStatus } from "./sourceStatus";
 export { settingsLogsHref } from "./LogsEmpty";
-export { logsMessages } from "./messages";
+export { createLogsMessages, useLogsMessages } from "./messages";
+export type { LogsMessages } from "./messages";
 export { FILTER_KEYS, TONE_VOCABULARY } from "./logsConfig";
 export { RunSessionLogsTab } from "./RunSessionLogsTab";
 export type { RunSessionLogsTabProps } from "./RunSessionLogsTab";
@@ -21,3 +22,4 @@ export { slotFor } from "./slots";
 export { RunArchitectureTab } from "./RunArchitectureTab";
 export type { RunArchitectureTabProps } from "./RunArchitectureTab";
 export { ArchitecturePopoutScreen, parseScope } from "./ArchitecturePopoutScreen";
+export { useLogViewMessages } from "./useLogViewMessages";

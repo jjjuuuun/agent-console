@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "example_notes.settings_invalid": "Couldn't read a user settings section, so the defaults are used.",
+    "example_notes.storage_memory": "No database, so app notes are kept in memory only (lost on restart)."
+  }
+}

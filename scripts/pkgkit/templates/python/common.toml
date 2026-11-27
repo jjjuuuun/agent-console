@@ -1,5 +1,5 @@
-# 모든 Python 패키지에 공통인 필수 파일(pkg-lint `required-files`). `{{import_name}}` 자리표시자 가능.
-# 종류별 추가 파일은 kinds/<kind>/kind.toml의 required_files.
+# Required files common to every Python package (pkg-lint `required-files`). The `{{import_name}}` placeholder is allowed.
+# Extra files per kind go in required_files of kinds/<kind>/kind.toml.
 required_files = [
     "pyproject.toml",
     "README.md",
@@ -10,7 +10,7 @@ required_files = [
     "tests",
 ]
 
-# 모든 패키지 dev 그룹에 들어가는 개발 도구(루트 dev 그룹과 같은 하한)
+# Development tools added to every package's dev group (same lower bounds as the root dev group)
 dev_dependencies = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",

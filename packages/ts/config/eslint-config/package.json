@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/eslint-config",
   "version": "0.1.0",
-  "description": "Agent Console TS 패키지 공용 ESLint flat config",
+  "description": "Shared ESLint flat config for Agent Console TS packages",
   "private": true,
   "license": "MIT",
   "type": "module",

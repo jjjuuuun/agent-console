@@ -3,13 +3,13 @@ import { ApiError } from "@agent-console/api-client";
 import type { Issue, ResourceTypeDescriptor } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { useApi } from "../../app/ApiContext";
-import { describeError } from "../../app/errors";
+import { useErrorState, raised } from "../../app/errors";
 import { issuesToFormErrors } from "../../definition/useDefinitionEditor";
 import { AgentCreateForm, useAgentCreateDraft } from "../agents";
 import { DEFINITION_KINDS, useInvalidateLists } from "../library";
-import { ResourceCreateForm, createResourceDoc, useResourceCreateDraft } from "../resources";
+import { ResourceCreateForm, createResourceDoc, useResourceCreateDraft, useResourceMessages } from "../resources";
 import { DrawerFrame } from "./DrawerFrame";
-import { teamMessages as t } from "./messages";
+import { useTeamMessages } from "./messages";
 
 /** 만들기 폼이 있는 정의 종류. 정의 화면(에이전트·리소스)의 폼을 쓰는 종류만 서랍으로 만들 수 있다. */
 export const CREATABLE_KINDS: readonly string[] = [DEFINITION_KINDS.agent, DEFINITION_KINDS.resource].filter((k): k is string => k !== undefined);
@@ -55,11 +55,12 @@ export function CreateDefinitionDrawer(props: CreateDefinitionDrawerProps) {
 }
 
 function AgentDrawer({ kind, kindTitle, existingIds, onCreated, onClose }: CreateDefinitionDrawerProps) {
+  const t = useTeamMessages();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const draft = useAgentCreateDraft(existingIds, t.palette.createAgentFallbackId);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.drawer.failed);
   const [fieldErrors, setFieldErrors] = useState<FormError[]>([]);
   const submit = async () => {
     setBusy(true);
@@ -71,7 +72,7 @@ function AgentDrawer({ kind, kindTitle, existingIds, onCreated, onClose }: Creat
       await invalidate();
       onCreated({ kind, id: body.id, name: body.name, attach: "none", ...(saved.issues === undefined ? {} : { issues: saved.issues }) });
     } catch (e) {
-      setError(describeError(e, t.drawer.failed).message);
+      setError(raised(e));
       setFieldErrors(e instanceof ApiError && e.status === 422 ? issuesToFormErrors(e.details["issues"]) : []);
       setBusy(false);
     }
@@ -95,12 +96,14 @@ function AgentDrawer({ kind, kindTitle, existingIds, onCreated, onClose }: Creat
 }
 
 function ResourceDrawer({ kind, kindTitle, existingIds, resourceTypes, attachNode, onCreated, onClose }: CreateDefinitionDrawerProps) {
+  const t = useTeamMessages();
+  const rt = useResourceMessages();
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
   const draft = useResourceCreateDraft(resourceTypes, existingIds, t.drawer.resourceFallbackId);
   const [attach, setAttach] = useState<AttachTarget>(attachNode === undefined ? "shared" : "node");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorState(t.drawer.failed);
   const [fieldErrors, setFieldErrors] = useState<FormError[]>([]);
   const target: AttachTarget = attach === "node" && attachNode === undefined ? "shared" : attach;
   const submit = async () => {
@@ -110,11 +113,11 @@ function ResourceDrawer({ kind, kindTitle, existingIds, resourceTypes, attachNod
     setError(null);
     setFieldErrors([]);
     try {
-      const outcome = await createResourceDoc(rest, doc, resourceTypes);
+      const outcome = await createResourceDoc(rest, doc, resourceTypes, rt);
       await invalidate();
       onCreated({ kind, id: outcome.resource.id, name: outcome.resource.name, attach: target, ...(outcome.bodyError === undefined ? {} : { bodyFailed: true }), ...(outcome.issues === undefined ? {} : { issues: outcome.issues }) });
     } catch (e) {
-      setError(describeError(e, t.drawer.failed).message);
+      setError(raised(e));
       setFieldErrors(e instanceof ApiError && e.status === 422 ? issuesToFormErrors(e.details["issues"]) : []);
       setBusy(false);
     }

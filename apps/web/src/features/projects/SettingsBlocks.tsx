@@ -3,9 +3,8 @@ import { Link } from "react-router";
 import { MiddleEllipsisPath } from "@agent-console/folder-picker";
 import { Banner, Button, Disclosure, Icon, Menu, Popover, Tag, type MenuItemDef } from "@agent-console/ui";
 import { useState } from "react";
-import { scopeMessages } from "./scopeMessages";
+import { useScopeMessages } from "./scopeMessages";
 
-const t = scopeMessages.settings;
 
 /** 좁은 화면(컨테이너 640px 미만)에서 행 동작을 접는 `⋯` 메뉴. 넓은 화면에서는 CSS가 숨긴다. */
 function RowMenu({ label, items }: { label: string; items: readonly MenuItemDef[] }) {
@@ -49,6 +48,7 @@ export interface ProjectsTableProps {
 
 /** 등록된 프로젝트 표(screen-projects §8.1): 이름(홈 링크)·폴더·상태·동작. `↑↓`로 행의 링크 사이를 옮긴다. 표현 전용. */
 export function ProjectsTable({ rows, onRepath, onUnregister }: ProjectsTableProps) {
+  const t = useScopeMessages().settings;
   const body = useRef<HTMLTableSectionElement>(null);
   const onKey = (e: KeyboardEvent<HTMLTableSectionElement>) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -104,6 +104,7 @@ export interface ArchivedRow {
 
 /** 등록 해제된 프로젝트(기본 접힘, 0개면 그리지 않는다). */
 export function ArchivedProjects({ rows, busyId, onReregister, onView }: { rows: readonly ArchivedRow[]; busyId?: string | null | undefined; onReregister: (id: string) => void; onView: (id: string) => void }) {
+  const t = useScopeMessages().settings;
   if (rows.length === 0) return null;
   return (
     <Disclosure summary={t.archived(rows.length)}>
@@ -140,6 +141,7 @@ export interface LegacyRow {
 
 /** 프로젝트에 속하지 않은 이전 기록(screen-projects §8.3). 개수가 있는 행만 받는다. 행이 없으면 그리지 않는다. */
 export function LegacyRecordsBlock({ rows, hiddenCount, onAssign, onKeep, onShowHidden }: { rows: readonly LegacyRow[]; hiddenCount: number; onAssign: (key: string) => void; onKeep: (key: string) => void; onShowHidden: () => void }) {
+  const t = useScopeMessages().settings;
   if (rows.length === 0 && hiddenCount === 0) return null;
   return (
     <section className="prj-card" aria-labelledby="prj-legacy-title">
@@ -181,6 +183,7 @@ export interface CleanupRow {
 
 /** 옛 프로젝트 전용 구성 옮기기(screen-projects §8.4). 옮길 구성이 없으면 그리지 않는다. */
 export function LegacyConfigBlock({ rows, orphans, onMove }: { rows: readonly CleanupRow[]; orphans: number; onMove: (id: string) => void }) {
+  const t = useScopeMessages().settings;
   const total = rows.reduce((n, r) => n + r.count, 0) + orphans;
   if (total === 0) return null;
   return (
@@ -222,6 +225,7 @@ export interface RecordsRow {
 
 /** 앱에 남은 기록(screen-projects §8.6). 모두 0이면 그리지 않는다. 프로젝트 없음 행은 `[프로젝트에 넣기…]`가 아니라 `onAssignNone`을 부른다. */
 export function AppRecordsBlock({ rows, onMove, onAssignNone, children }: { rows: readonly RecordsRow[]; onMove: (id: string) => void; onAssignNone: () => void; children?: ReactNode }) {
+  const t = useScopeMessages().settings;
   const shown = rows.filter((r) => r.chats + r.runs > 0);
   if (shown.length === 0) return null;
   return (
@@ -254,5 +258,6 @@ export function AppRecordsBlock({ rows, onMove, onAssignNone, children }: { rows
 
 /** 섹션 맨 위 오류 배너. */
 export function SectionError({ onRetry }: { onRetry: () => void }) {
+  const t = useScopeMessages().settings;
   return <Banner tone="danger" actions={<Button size="sm" onClick={onRetry}>{t.retry}</Button>}>{t.loadFailed}</Banner>;
 }

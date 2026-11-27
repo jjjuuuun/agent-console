@@ -1,0 +1,18 @@
+{
+  "codes": {
+    "cancelled": "Canceled.",
+    "delegation.conflicting_options": "The request option values of the combined delegation strategies differ.",
+    "delegation.cycle": "This node is already on the delegation path, so it can't be called again.",
+    "delegation.duplicate_host_tool_names": "Platform tool names of the combined delegation strategies clash.",
+    "delegation.duplicate_subagent_names": "Subagent names of the combined delegation strategies clash.",
+    "interrupted": "The run was interrupted (for example by a server restart).",
+    "invalid_node_result": "The node returned an invalid result.",
+    "invalid_response": "The response doesn't match the requested format.",
+    "no_entry": "Can't run: there is no entry edge (scheduling=entry).",
+    "node_exception": "The node raised an exception while running.",
+    "node_failed": "“{node_name}” failed.",
+    "resume.not_rerunnable": "This node can't be run again.",
+    "resume.unknown_node": "The chosen node wasn't interrupted in this run, so it can't be run again.",
+    "seed_not_scheduled": "Can't run again from here: the node isn't run in this team."
+  }
+}

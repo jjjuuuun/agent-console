@@ -1,5 +1,5 @@
+import { useProjectsText } from "./projectsText";
 import type { ReactNode } from "react";
-import { createProjectsText } from "@agent-console/projects";
 import { useSpace } from "./SpaceScope";
 
 export interface NewScope {
@@ -9,13 +9,13 @@ export interface NewScope {
   field: ReactNode;
 }
 
-const spaceText = createProjectsText();
 
 /**
  * 새 정의의 저장 위치 표시(screen-projects §5.3). 범위를 고르는 입력은 없다: 공용 구성 화면에서 만들면 공용,
  * 프로젝트 사본(`?prj=`) 화면에서 만들면 그 프로젝트에 저장된다. 호출자가 대화상자를 열 때마다 새로 마운트한다.
  */
 export function useNewScope(): NewScope {
+  const spaceText = useProjectsText();
   const space = useSpace();
   return {
     patch: {},

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Popover } from "@agent-console/ui";
-import { delegationMessages as dm } from "../delegation";
+import { useDelegationMessages } from "../delegation";
 
 export interface BreadcrumbItem {
   id: string;
@@ -24,6 +24,7 @@ export interface RunBreadcrumbProps {
  * 루트 실행(체인이 1개)이면 아무것도 그리지 않는다.
  */
 export function RunBreadcrumb({ items, hrefOf, max = 5 }: RunBreadcrumbProps) {
+  const dm = useDelegationMessages();
   const [foldOpen, setFoldOpen] = useState(false);
   if (items.length < 2) return null;
   const folded = items.length > max ? items.slice(0, items.length - (max - 1)) : [];
