@@ -13,6 +13,7 @@
 .logs-mono { font-family: var(--ac-font-mono, monospace); font-size: 12.5px; }
 .logs-linkbtn { min-height: var(--ac-control-sm); background: none; border: 0; padding: 0; color: var(--ac-accent); cursor: pointer; font: inherit; text-decoration: underline; }
 .logs-linkbtn:focus-visible, .logs-menu-item:focus-visible, .logs-split:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.ac-lv-row[data-current] .logs-linkbtn, .ac-lv-row[data-selected] .logs-linkbtn { color: var(--ac-text); }
 .logs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 20px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); font-size: 12px; background: var(--ac-surface-2); }
 .logs-chipx { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; }
 .logs-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }

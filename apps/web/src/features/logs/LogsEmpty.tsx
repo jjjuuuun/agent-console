@@ -12,7 +12,7 @@ import type { LogNotice } from "./NoticeBar";
 import { firstUseSources, offReadingSources } from "./logsLib";
 import { useLogsMessages } from "./messages";
 import { sourceStatusLine } from "./sourceStatus";
-import { useFormat } from "../../i18n";
+import { useFormat, useServerTranslate } from "../../i18n";
 
 /** 설정 화면의 로그 출처 섹션 주소(`#logs`, 출처 카드를 펼치려면 `?source=<id>`). */
 export function settingsLogsHref(sourceId?: string): string {
@@ -93,6 +93,7 @@ export interface EmptyBProps {
 export function EmptyNoLogs({ sources, scanning, onScan }: EmptyBProps) {
   const fmt = useFormat();
   const t = useLogsMessages();
+  const tr = useServerTranslate();
   const nowMs = useNow(true, 30_000);
   const enabled = sources.filter((s) => s.enabled);
   return (
@@ -105,7 +106,7 @@ export function EmptyNoLogs({ sources, scanning, onScan }: EmptyBProps) {
             <p>{t.empty.bBody}</p>
             <ul className="logs-empty-sources">
               {enabled.map((s) => (
-                <li key={s.descriptor.id} className="app-wrap">{t.empty.sourceLine(s.descriptor.title, sourceStatusLine(s, nowMs, t, fmt))}</li>
+                <li key={s.descriptor.id} className="app-wrap">{t.empty.sourceLine(tr(s.descriptor.title), sourceStatusLine(s, nowMs, t, fmt))}</li>
               ))}
             </ul>
           </>
@@ -146,9 +147,10 @@ export function EmptyNoMatch({ onClearFilters, onAllRange }: EmptyCProps) {
 export function useOtherSourcesNotice(sources: readonly LogSourceInfo[] | undefined, active: boolean): LogNotice | null {
   const t = useLogsMessages();
   const hint = useHint(LOGS_STORAGE.hintOtherSources);
+  const tr = useServerTranslate();
   const off = offReadingSources(sources);
   if (!active || !hint.visible || off.length === 0) return null;
-  const titles = off.slice(0, 2).map((s) => s.descriptor.title).join(", ");
+  const titles = off.slice(0, 2).map((s) => tr(s.descriptor.title)).join(", ");
   const plain = t.empty.hintD(titles, Math.max(0, off.length - 2));
   return {
     id: "other-sources",

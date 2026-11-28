@@ -156,7 +156,7 @@ export function TeamPalette(props: TeamPaletteProps) {
                             disabledReason={it.disabledReason}
                             iconText={safeIconText(it.iconName) ?? firstGlyph(it.name)}
                             color={hints.color ?? categoryColorVar(g.type.category)}
-                            meta={it.usageCount !== undefined && it.usageCount > 0 ? format(m.paletteUsage, { n: it.usageCount }) : undefined}
+                            meta={it.usageCount !== undefined && it.usageCount > 0 ? format(it.usageCount === 1 ? m.paletteUsageOne : m.paletteUsage, { n: it.usageCount }) : undefined}
                             onAdd={() => props.onAdd({ typeId: g.type.id, definition: { id: it.id, name: it.name } })}
                             dragData={{
                               [PALETTE_DRAG_MIME]: g.type.id,

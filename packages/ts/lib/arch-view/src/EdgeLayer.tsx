@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { ViewportPortal } from "@xyflow/react";
 import { useDiagram } from "./context";
-import { edgeAriaLabel, edgeBlockedReason } from "./model";
+import { edgeAccessibleName, edgeBlockedReason } from "./model";
 import type { EdgeModel } from "./model";
 
 /** 선택·강조·상태가 정한 선 색(토큰 변수 이름). 화살촉도 같은 색으로 채운다. */
@@ -72,7 +72,7 @@ export function EdgeLayer({ models, width, height }: { models: readonly EdgeMode
               data-highlighted={highlighted ? "" : undefined}
               data-blocked={blocked ?? undefined}
               aria-pressed={selected}
-              aria-label={edgeAriaLabel(e, ctx.cellLabels, ctx.messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) })}
+              aria-label={edgeAccessibleName(e, ctx.cellLabels, summary ? "" : [e.label ?? "", m.fit.count, m.errorText && !m.fit.errorsIconOnly ? m.errorText : ""].filter((x) => x !== "").join(" "), ctx.messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) })}
               title={m.fit.labelClipped ? (e.label ?? undefined) : undefined}
               style={{ left: m.center[0], top: m.center[1], maxWidth: m.cap, ["--arch-stroke" as string]: `var(${stroke})` }}
               onClick={() => ctx.activate({ kind: "edge", id: e.id })}
@@ -80,13 +80,13 @@ export function EdgeLayer({ models, width, height }: { models: readonly EdgeMode
               {summary ? null : (
                 <>
                   {highlighted ? <span className="ac-arch-chip-dot" aria-hidden="true" /> : null}
-                  <span className="ac-arch-chip-label">{e.label ?? ""}</span>
-                  {m.fit.count ? <b className="ac-arch-chip-count">{m.fit.count}</b> : null}
+                  <span className="ac-arch-chip-label" title={e.label ?? undefined}>{e.label ?? ""}</span>
+                  {m.fit.count ? <>{" "}<b className="ac-arch-chip-count">{m.fit.count}</b></> : null}
                   {m.errorText ? (
-                    <span className="ac-arch-chip-err">
+                    <>{" "}<span className="ac-arch-chip-err">
                       <span className="ac-arch-icon" data-icon="failed" aria-hidden="true" />
                       {m.fit.errorsIconOnly ? null : m.errorText}
-                    </span>
+                    </span></>
                   ) : null}
                 </>
               )}

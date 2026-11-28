@@ -56,7 +56,7 @@ export function ModelCatalogLine({ state, text, reason, variant = "form", refres
     <div ref={rootRef} className="app-mcl" data-state={state} data-variant={variant} data-testid={rest["data-testid"]} role="status" aria-busy={busy || undefined}>
       <span className="app-mcl-text ac-ellipsis" title={full}>
         {icon === null ? null : <StatusIcon status={icon} size={14} className="app-mcl-icon" />}
-        <span className="app-mcl-body ac-ellipsis">{full}</span>
+        <span className="app-mcl-body ac-ellipsis" title={full}>{full}</span>
       </span>
       {onCheck === undefined || collapse ? null : (
         <Button variant="ghost" size="sm" className="app-mcl-btn" onClick={onCheck}>{checkLabel}</Button>

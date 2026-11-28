@@ -226,7 +226,7 @@ function AdvancedDisclosure(props: { entries: SplitEntry<Prop>[]; setCount: numb
         {errorCount > 0 ? (
           <span className="ac-sf-chip ac-sf-adv-error" role="status">
             <span aria-hidden="true">✕ </span>
-            {fill(m.advancedErrorCount, { count: errorCount })}
+            {fill(errorCount === 1 ? m.advancedErrorCountOne : m.advancedErrorCount, { count: errorCount })}
           </span>
         ) : null}
       </div>

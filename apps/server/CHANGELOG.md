@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## [1.1.0] - 2026-11-29
+
+- Raised the display version to 1.1.0 (`project.version`). `server_version` in `/health`, `/bootstrap` and
+  `/server-info` and the OpenAPI `info.version` still come from the installed metadata.
+- Moved to contracts 0.16 (`agent-console-contracts>=0.16,<0.17`); `/bootstrap` reports `contracts_version` 0.16.1.
+  A workspace `settings.yaml` that still has the removed key `default_backend` starts as before: the value is not
+  used, and `/server-info` reports the info issue `settings.ignored_key` (`details.key = "default_backend"`,
+  `details.replacement = "agent_defaults.backend"`).
+- The server now bundles the language module `mod-i18n` (dependency `agent-console-mod-i18n`), which serves the merged
+  message catalogs (`GET /api/v1/i18n`, `GET /api/v1/i18n/{lang}`). Turn it off with `--disable-module mod-i18n`; the
+  routes then return 404, the web app uses only its own catalogs and server text stays as the original.
+- Raised the dependency ranges to 0.2 for `agent-console-backend-claude-sdk`, `agent-console-backend-fake-agent`,
+  `agent-console-mod-runs`, `agent-console-link-runs-teams`, `agent-console-link-logs-runs`, `agent-console-mod-sdd`
+  and `agent-console-mod-wiki`. These bring the model lookup (`GET /api/v1/backends/{id}/model-catalog`), text
+  templates on backend and log sentences, template version comparison and the wiki freshness window.
 - Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
   `agent_console.message_catalogs` `server`, so the web app can show the `plugin_load_failed`, `plugins.config` and
   `settings.removed_key` codes in English (data only, no API change).

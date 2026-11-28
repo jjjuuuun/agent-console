@@ -71,7 +71,8 @@ describe("노드 표현", () => {
   });
   it("waiting 노드: 상태 라벨과 경과 줄", () => {
     setup({ nodeStates: { h1: { status: "waiting" } }, waitingNodes: { h1: { since: "2026-01-01T00:00:00Z" } }, nowMs: Date.parse("2026-01-01T00:01:05Z") });
-    expect(screen.getByText("대기 중(입력·승인)")).toBeTruthy();
+    // 노드 박스에는 짧은 형, 전체 문구는 툴팁
+    expect(screen.getByText("대기 중").closest(".ac-ge-status")?.getAttribute("title")).toBe("대기 중(입력·승인)");
     expect(screen.getByText("응답 대기 1분 5초")).toBeTruthy();
   });
   it("동적 포트(사용자 노드): resolvePorts 결과를 그린다", async () => {

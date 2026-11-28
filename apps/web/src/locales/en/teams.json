@@ -528,6 +528,7 @@
     "nodeBackendSep": " · ",
     "nodeViewEdge": "View edge",
     "nodeSessionList": "Sessions of incoming delegation edges",
-    "teamSummary": "{n} separate sessions · {m} inside the same session"
+    "teamSummary_one": "{count} separate session · {m} inside the same session",
+    "teamSummary_other": "{count} separate sessions · {m} inside the same session"
   }
 }

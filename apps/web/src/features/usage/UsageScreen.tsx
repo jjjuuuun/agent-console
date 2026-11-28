@@ -25,7 +25,7 @@ import { useUsageMessages } from "./messages";
 import { OFFICIAL_TRUST, USAGE_TRUST_ORDER, USAGE_POLL_MS, USAGE_REPORT_KEY, USAGE_SOURCES_KEY, USAGE_ROLLUP_PERIODS, USAGE_ROLLUP_VIEWS, USAGE_SETUP_HASH, DEFAULT_ROLLUP_PERIOD, DEFAULT_ROLLUP_VIEW } from "./usageConfig";
 import { buildWindowGroups, groupWindowsByTrust, plainText, filterRollupByDays, sourceIndex, windowDisplayName, windowNameIndex, type RollupDimension } from "./usageLib";
 import "./usage.css";
-import { useFormat } from "../../i18n";
+import { useFormat, useServerTranslate } from "../../i18n";
 
 const NO_SOURCES: readonly string[] = [];
 const usageKey = USAGE_REPORT_KEY;
@@ -38,6 +38,7 @@ export function UsageScreen() {
   const lookupMessage = useLookupMessage();
   const fmt = useFormat();
   const t = useUsageMessages();
+  const tr = useServerTranslate();
   const qc = useQueryClient();
   // 토큰 합계는 현재 프로젝트 것만(R15.3). 프로젝트가 없거나 기능이 꺼졌으면 생략(전체). 창 스냅샷은 계정 값 그대로.
   const projectId = useProjectId();
@@ -175,8 +176,8 @@ export function UsageScreen() {
           <ul className="usage-empty-rows">
             {rows.map((x) => (
               <li key={x.descriptor.id}>
-                <strong>{x.descriptor.title}</strong>
-                {x.descriptor.description ? <span className="app-muted usage-empty-summary" title={plainText(x.descriptor.description)}>{plainText(x.descriptor.description)}</span> : null}
+                <strong>{tr(x.descriptor.title)}</strong>
+                {x.descriptor.description ? <span className="app-muted usage-empty-summary" title={plainText(tr(x.descriptor.description))}>{plainText(tr(x.descriptor.description))}</span> : null}
               </li>
             ))}
           </ul>

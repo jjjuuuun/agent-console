@@ -17,6 +17,10 @@
     "rejected": {
       "label": "거부됨"
     },
+    "active": {
+      "label": "사용 중",
+      "aria": "{window}: 사용 중"
+    },
     "idle": {
       "label": "사용 없음",
       "aria": "최근 {window} 사용 없음"

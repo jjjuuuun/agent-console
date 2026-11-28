@@ -128,6 +128,28 @@ class DataSource:
     files: tuple[str, ...]
     """저장소 루트 기준 glob."""
     select: tuple[str, ...] = ()
+    pointer_slots: bool = False
+    """참이면 값의 ``{/포인터}``·``{/포인터|방식}`` 자리 표시를 이름 자리 표시(``{이름}``)로
+    바꾼 틀을 모은다(출처가 응답 ``text_templates``에 싣는 틀과 같은 규칙 —
+    ``i18n_static.pointer_key``)."""
+
+
+@dataclass(frozen=True, slots=True)
+class PythonSource:
+    """정적 S1 출처: 파이썬 소스에서 화면에 가는 글자(정한 호출의 키워드 인자·사전 키 값).
+
+    값 식 안의 문자열 상수(조건식·``or`` 양쪽 포함)를 모으고, f-string은 값 자리를 ``{…}``로 둔
+    꼴로 모은다(묶음 키가 될 수 없어 ``dynamic_text``가 된다 — 틀 + 값으로 바꾸라는 뜻).
+    """
+
+    files: tuple[str, ...]
+    """저장소 루트 기준 glob."""
+    calls: tuple[str, ...] = ()
+    """호출 이름(``Name``이나 속성 이름, 예: ``LogEventDraft``·``update``)."""
+    keywords: tuple[str, ...] = ()
+    """그 호출에서 볼 키워드 인자 이름."""
+    dict_keys: tuple[str, ...] = ()
+    """사전 글자(``{"title": ...}``)에서 볼 키."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +158,7 @@ class StaticConfig:
 
     schemas: tuple[SchemaSource, ...] = ()
     data: tuple[DataSource, ...] = ()
+    python: tuple[PythonSource, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,14 +377,36 @@ def _static(top: Mapping[str, Any]) -> StaticConfig:
                 discover=discover,
             )
         )
-    data = tuple(
-        DataSource(
-            files=_strs(_map(raw, f"static.data[{i}]").get("files"), f"static.data[{i}].files"),
-            select=_strs(_map(raw, f"static.data[{i}]").get("select"), f"static.data[{i}].select"),
+    data: list[DataSource] = []
+    for i, raw in enumerate(top.get("data") or []):
+        where = f"static.data[{i}]"
+        spec = _map(raw, where)
+        slots = spec.get("pointer_slots", False)
+        if not isinstance(slots, bool):
+            raise I18nToolError(f"{where}.pointer_slots must be true or false")
+        data.append(
+            DataSource(
+                files=_strs(spec.get("files"), f"{where}.files"),
+                select=_strs(spec.get("select"), f"{where}.select"),
+                pointer_slots=slots,
+            )
         )
-        for i, raw in enumerate(top.get("data") or [])
-    )
-    return StaticConfig(tuple(schemas), data)
+    python: list[PythonSource] = []
+    for i, raw in enumerate(top.get("python") or []):
+        where = f"static.python[{i}]"
+        spec = _map(raw, where)
+        source = PythonSource(
+            files=_strs(spec.get("files"), f"{where}.files"),
+            calls=_strs(spec.get("calls"), f"{where}.calls"),
+            keywords=_strs(spec.get("keywords"), f"{where}.keywords"),
+            dict_keys=_strs(spec.get("dict_keys"), f"{where}.dict_keys"),
+        )
+        if not source.files:
+            raise I18nToolError(f"{where}.files must not be empty")
+        if not ((source.calls and source.keywords) or source.dict_keys):
+            raise I18nToolError(f"{where} needs calls + keywords or dict_keys")
+        python.append(source)
+    return StaticConfig(tuple(schemas), tuple(data), tuple(python))
 
 
 def load_config(path: Path = DEFAULT_CONFIG) -> Config:
@@ -580,6 +625,7 @@ __all__ = [
     "Package",
     "PackageCatalogs",
     "ParamSource",
+    "PythonSource",
     "SchemaDiscover",
     "SchemaSource",
     "Seed",

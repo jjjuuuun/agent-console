@@ -29,6 +29,7 @@
   "detailLabel": "Details",
   "closeDetail": "Close",
   "tokensTotal": "{n} tokens (total)",
+  "tokensTotalOne": "{n} token (total)",
   "tokensTitle": "Total tokens {n}",
   "tokensUnit": "tok",
   "showMethodText": "Show method text",

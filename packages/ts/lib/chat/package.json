@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/chat",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Chat presentation components (message list, composer, interaction cards)",
   "private": true,
   "license": "MIT",

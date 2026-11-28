@@ -119,7 +119,7 @@
     "deleted": "This conversation was deleted."
   },
   "composer": {
-    "backendBadgeNote": "Running on the {badge} backend. Change the backend to use a real model.",
+    "backendBadgeNote": "Running on a marked backend ({badge}). Change the backend to use a real model.",
     "backendChange": "Change backend",
     "backendChanged": "Changed the default backend.",
     "hideNoteForSession": "Hide for this app session",

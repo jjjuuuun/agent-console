@@ -56,6 +56,7 @@
   "advancedTitle": "Advanced settings ({count})",
   "advancedSetCount": "{count} set",
   "advancedErrorCount": "{count} errors",
+  "advancedErrorCountOne": "{count} error",
   "advancedAllHint": "Every item in this form is an advanced setting",
   "defaultHint": "Default: {value}",
   "exampleHint": "Example: {value}",

@@ -2,6 +2,9 @@
 
 ## Unreleased (0.2.0)
 
+- `fail.message` is optional (default `null`). Empty means the default text `fake 백엔드가 설정에 따라 실패했습니다`
+  (in the message catalog `en`), so settings forms no longer prefill a Korean value. New method
+  `FakeFailure.error_message()`.
 - Model discovery stand-in. Administrator settings `discovered_models` (`null` = no capability), `discovery_failure`
   (a reason code; `unsupported` = state `unsupported`, constant `FAKE_DISCOVERY_UNSUPPORTED`) and
   `discovery_delay_s`, the method `FakeBackend.discover_models` and the counter `FakeBackend.discovery_calls`.

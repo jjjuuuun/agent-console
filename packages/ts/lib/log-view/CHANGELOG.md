@@ -4,6 +4,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
+- Accessibility (0.2.3): the scrolling event list is now `tabIndex={0}` with an accessible name (new message `eventRows`, ko/en) and a focus ring, so scrollable-region-focusable passes with keyboard access (it stays -1 only while the empty state hides it). Korean `groupBlocks` is `응답 · 블록 수: {n}` so the group button name contains the visible count as a whole word (label-content-name-mismatch). `NeutralChip` takes `fixed`; the title-column error chip uses it so "Error" no longer shrinks to an ellipsis in narrow columns.
+- Plural (0.2.2): new messages `handoffLimitOne` and `widgetMoreHiddenOne` (singular forms, used when the count is 1).
+- Accessibility (0.2.2, axe serious 0): `aria-expanded` moved from the grid row (not allowed on `role="row"` in a grid)
+  to the group expand button, whose name now includes the visible count; the scrolling event list is focusable
+  (`tabIndex={-1}`) for scrollable-region-focusable. The default `category` column of `eventColumns` is 168px wide (was 120) so English category names fit.
 - Locale (0.2.1): `Formatters` gains `fullTime(epochSeconds)` (tooltip time, default `fullTimeTitle`);
   `fullTimeTitle(epochSeconds, locale = "en-US")` takes a locale instead of the host locale. `LogEventDetail`,
   `SessionList` and `formatEventTime` use `formatters.fullTime`, so an app that injects `formatters` (duration, number,

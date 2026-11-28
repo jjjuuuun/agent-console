@@ -68,7 +68,7 @@
     "errorOpenRun": "See the cause in run detail",
     "units": {
       "s": "s",
-      "m": "min",
+      "m": "m",
       "h": "h"
     }
   },
@@ -107,7 +107,7 @@
     "resendAsMessage": "Send the answer as a new message",
     "units": {
       "s": "s",
-      "m": "min",
+      "m": "m",
       "h": "h"
     },
     "choices": {

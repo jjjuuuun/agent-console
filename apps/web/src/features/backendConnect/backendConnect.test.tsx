@@ -148,7 +148,8 @@ describe("사용량 머리 칩", () => {
   it("칩이 새로 고침 앞에 있고 누르면 같은 모달이 열린다. 아이콘·글자·툴팁이 단추와 같은 상태", async () => {
     mount();
     const chip = await screen.findByTestId("backend-connect-chip", {}, LONG);
-    expect(chip.getAttribute("aria-label")).toBe("백엔드 연결: 백엔드 둘 — 로그인 필요");
+    expect(chip.getAttribute("aria-label")).toBe("백엔드 · 로그인 필요. 백엔드 연결: 백엔드 둘 — 로그인 필요");
+    expect(chip.getAttribute("title")).toBe("백엔드 연결: 백엔드 둘 — 로그인 필요");
     expect(chip.textContent).toContain("로그인 필요");
     expect(chip.nextElementSibling?.getAttribute("aria-label")).toBe("새로 고침");
     fireEvent.click(chip);
@@ -185,7 +186,7 @@ describe("배지 모양", () => {
         <BackendConnectChip tone="warn" summary="주의 상태" label="백엔드" tip="전체 툴팁" onClick={onClick} />
       </TestI18n>,
     );
-    const chip = screen.getByRole("button", { name: "전체 툴팁" });
+    const chip = screen.getByRole("button", { name: "백엔드 · 주의 상태. 전체 툴팁" });
     expect(chip.textContent).toContain("주의 상태");
     fireEvent.click(chip);
     expect(onClick).toHaveBeenCalledOnce();

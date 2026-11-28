@@ -11,6 +11,7 @@
     "읽을 폴더 목록. 비우면 Run 파일 폴더. 직접 감싼 hook(도구 실행 전후에 도는 명령)의 기록 폴더를 더할 수 있다.": "Folders to read. Leave empty for the run files folder. You can add the record folders of hooks (commands that run before or after a tool) you wrapped yourself.",
     "Run 폴더 구조 읽기": "Read run folder structure",
     "경로를 `<run>/<노드…>/hook-probe/<파일>`로 보고 run_id·node_path를 채운다(기록의 context가 있으면 그쪽이 우선).": "Reads paths as `<run>/<node…>/hook-probe/<file>` and fills run_id and node_path (the context in the record wins if present).",
-    "플랫폼 실행에서 `observe.hook_probe`를 켜면 Run 파일 폴더에 기록이 생긴다. 외부 Claude Code 세션은 hook 명령 앞에 `agent-console-hook-probe --out <폴더> --`를 붙이고 그 폴더를 `roots`에 더한다.": "Turning on `observe.hook_probe` in platform runs writes records to the run files folder. For outside Claude Code sessions, put `agent-console-hook-probe --out <folder> --` before the hook command and add that folder to `roots`."
+    "플랫폼 실행에서 `observe.hook_probe`를 켜면 Run 파일 폴더에 기록이 생긴다. 외부 Claude Code 세션은 hook 명령 앞에 `agent-console-hook-probe --out <폴더> --`를 붙이고 그 폴더를 `roots`에 더한다.": "Turning on `observe.hook_probe` in platform runs writes records to the run files folder. For outside Claude Code sessions, put `agent-console-hook-probe --out <folder> --` before the hook command and add that folder to `roots`.",
+    "{label} 시작": "{label} started"
   }
 }

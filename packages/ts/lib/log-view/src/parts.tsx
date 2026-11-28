@@ -12,9 +12,10 @@ export function CategoryChip({ name, color, title }: { name: string; color?: str
   );
 }
 
-export function NeutralChip({ children, title }: { children: ReactNode; title?: string }) {
+/** 중립 칩. fixed면 좁은 칸에서도 줄지 않는다(상태 칩처럼 글자가 곧 정보일 때). */
+export function NeutralChip({ children, title, fixed }: { children: ReactNode; title?: string; fixed?: boolean }) {
   return (
-    <span className="ac-lv-chip" title={title}>
+    <span className="ac-lv-chip" data-fixed={fixed || undefined} title={title}>
       <span className="ac-lv-ellipsis">{children}</span>
     </span>
   );

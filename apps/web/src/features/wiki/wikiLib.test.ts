@@ -139,6 +139,11 @@ describe("위키 이슈 코드 문구 표(FU.20)", () => {
     expect(localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE, message: "x", severity: "warning" }, server).message).toContain("제목 출처");
     expect(localizeIssue({ code: "other", message: "x" }, server).message).toBe("x");
   });
+  it("빠진 규칙 이슈는 코드 문장 뒤에 details의 규칙 id를 붙인다", () => {
+    const out = localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_RULES_MISSING, message: "원문", details: { id: "plain-rules" } }, server).message;
+    expect(out).toBe(`${serverCodes["wiki.rules_missing"]} (plain-rules)`);
+    expect(localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_RULES_MISSING, message: "원문" }, server).message).toBe(serverCodes["wiki.rules_missing"]);
+  });
   it("실행 이벤트 요약은 사유 코드가 표에 있을 때만 바꾼다", () => {
     expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" }, server)).toContain("가린 줄을 직접 고치세요");
     expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.secret_rejected" }, server)).toBeUndefined();

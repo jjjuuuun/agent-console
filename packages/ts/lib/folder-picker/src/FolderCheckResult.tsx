@@ -65,7 +65,7 @@ export function FolderCheckResult({ state, t, id, onCreate, creating, onRecheck,
         break;
       case "manifest_found": {
         const m = c?.manifest;
-        const detail = `${m?.name ? t("folder.check.manifest_detail_name", { name: m.name }) : ""}${m?.count != null ? t("folder.check.manifest_detail_count", { n: m.count }) : ""}`;
+        const detail = `${m?.name ? t("folder.check.manifest_detail_name", { name: m.name }) : ""}${m?.count != null ? t(m.count === 1 ? "folder.check.manifest_detail_countOne" : "folder.check.manifest_detail_count", { n: m.count }) : ""}`;
         body = <><span className="ac-fp-line">{t("folder.check.manifest_found", { detail })}</span>{savedLines}</>;
         break;
       }

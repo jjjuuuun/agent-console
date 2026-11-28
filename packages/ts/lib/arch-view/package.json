@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/arch-view",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Observed architecture map presentation component (draws an ArchitectureView as cells, connections, and areas)",
   "private": true,
   "license": "MIT",

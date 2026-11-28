@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0
 
 - New package. Per-language JSON message catalogs (`text`, `codes`, `ns`), loading from the entry point group
   `agent_console.message_catalogs` and from folders, merging in source order, lookup with a fallback chain,

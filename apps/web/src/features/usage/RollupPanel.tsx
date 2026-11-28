@@ -52,7 +52,7 @@ export function RollupPanel(p: RollupPanelProps) {
     <section className="usage-rollup" aria-labelledby="usage-rollup-title">
       <div className="usage-rollup-head">
         <h2 id="usage-rollup-title" className="app-block-title">{p.title ?? t.rollup.title}</h2>
-        <label className="runs-filter">
+        <label className="usage-rollup-period">
           <span className="app-muted">{t.rollup.period}</span>
           <select value={p.period} onChange={(e) => p.onPeriodChange(e.target.value)}>
             {p.periods.map((id) => (

@@ -517,7 +517,7 @@ export function createTeamMessages(t: Translate) {
       nodeBackendSep: t("sessions.nodeBackendSep"),
       nodeViewEdge: t("sessions.nodeViewEdge"),
       nodeSessionList: t("sessions.nodeSessionList"),
-      teamSummary: (n: number, m: number) => t("sessions.teamSummary", { n, m }),
+      teamSummary: (n: number, m: number) => t("sessions.teamSummary", { count: n, m }),
     },
   };
 }

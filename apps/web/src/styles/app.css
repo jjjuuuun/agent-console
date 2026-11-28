@@ -141,7 +141,9 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-kv { display: flex; flex-direction: column; gap: var(--ac-space-2); align-items: flex-start; }
 .app-kv-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto; gap: var(--ac-space-2); align-items: center; width: 100%; }
 .app-kv-note { grid-column: 1 / -1; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
-.app-attach-add { display: flex; gap: var(--ac-space-2); margin-top: var(--ac-space-2); }
+.app-attach-add { display: flex; flex-wrap: wrap; gap: var(--ac-space-2); margin-top: var(--ac-space-2); }
+.app-attach-add > select { flex: 1 1 160px; min-width: 0; }
+.app-attach-add > button, .app-tags-add > button { flex: none; max-width: 280px; }
 .app-attach-warning { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); margin: var(--ac-space-1) 0 0; }
 .app-source-list, .app-order { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .app-source-row { border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); box-shadow: var(--ac-shadow-card); }
@@ -163,7 +165,8 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-tags-list { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); list-style: none; margin: 0; padding: 0; }
 .app-tag { display: inline-flex; align-items: center; gap: var(--ac-space-1); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm, 4px); }
 .app-tag-remove { background: none; border: 0; cursor: pointer; color: inherit; padding: 0 var(--ac-space-1); }
-.app-tags-add { display: flex; gap: var(--ac-space-2); }
+.app-tags-add { display: flex; flex-wrap: wrap; gap: var(--ac-space-2); }
+.app-tags-add > input { flex: 1 1 160px; min-width: 0; }
 
 /* 서버 기능 모듈: 상태 칩·꺼진 기능 안내 화면·설정의 기능 모듈 섹션(docs/design/screen-modules.md). 색은 상태 토큰만 쓴다. */
 .app-module-chip { display: inline-flex; align-items: center; gap: var(--ac-space-1); height: 20px; padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); font-size: 12px; font-weight: var(--ac-fw-strong); line-height: 1; white-space: nowrap; border: 1px solid var(--ac-text-muted); color: var(--ac-text-muted); background: var(--ac-surface-3); flex: none; }

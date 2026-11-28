@@ -5,7 +5,7 @@ import { shortId } from "../../lib/format";
 import { isImeKeyEvent } from "../../lib/ime";
 import { ActionMenu } from "../library";
 import type { CompareMode } from "./versionsLogic";
-import { useT } from "@agent-console/i18n";
+import { useServerText, useT } from "@agent-console/i18n";
 import { useFormat } from "../../i18n";
 
 export interface VersionListProps {
@@ -35,6 +35,7 @@ export interface VersionListProps {
 export function VersionList({ versions, now, checked, mode, onModeChange, onToggle, onCompareCurrent, onComparePair, onRestore, onViewRaw, onCopyHash, pageSize = 20, compare = true }: VersionListProps) {
   const fmt = useFormat();
   const t = useT("versions");
+  const serverText = useServerText();
   const [shown, setShown] = useState(pageSize);
   const [active, setActive] = useState(0);
   const rows = useRef(new Map<string, HTMLDivElement>());
@@ -133,8 +134,8 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
               <span className="app-muted ver-time" title={fmt.dateTimeFull(v.saved_at)}>
                 {fmt.relative(v.saved_at, now)}
               </span>
-              <span className="ver-msg ac-ellipsis" title={v.message ?? ""}>
-                {v.message ?? ""}
+              <span className="ver-msg ac-ellipsis" title={serverText.text(v.message ?? "")}>
+                {serverText.text(v.message ?? "")}
               </span>
               <ActionMenu
                 label={`${t("list.rowMenu")} ${hash8}`}

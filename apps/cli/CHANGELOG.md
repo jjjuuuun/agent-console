@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## [1.1.0] - 2026-11-29
+
+- Display version 1.1.0; `agent-console --version` prints `agent-console 1.1.0` (read from the installed metadata).
+  `serve` runs server 1.1.0 (the dependency range `agent-console-server>=1.0,<2` is unchanged).
+- Raised the dependency range of `agent-console-logs` to 0.2 (`>=0.2,<0.3`).
 - Terminal text is now English: the help of every command (`--help`, `serve`, `statusline`, `logs purge`), option
   errors, and the `logs purge` and `statusline` output lines (for example
   `Deleted: events 1 · token samples 0 · cursors 1 · agents 0`). Options, exit codes and behavior are unchanged.

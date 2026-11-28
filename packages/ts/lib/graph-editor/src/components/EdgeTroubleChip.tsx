@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import { defaultMessages } from "../messages";
 import type { GraphEditorMessages } from "../messages";
-import { format } from "../messages";
+import { formatCount } from "../messages";
 
 export interface EdgeTroubleChipProps {
   /** 노드를 지나는 연결선 수 */
@@ -21,7 +21,7 @@ export function EdgeTroubleChip({ count, onAutoRoute, onDismiss, messages, class
   const m = messages ?? defaultMessages;
   return (
     <div className={["ac-ge-trouble", className].filter(Boolean).join(" ")} role="status">
-      <span className="ac-ge-trouble-text">{format(m.troubleHint, { count })}</span>
+      <span className="ac-ge-trouble-text">{formatCount(m, "troubleHint", count, { count })}</span>
       {onAutoRoute !== undefined && (
         <>
           <span aria-hidden="true">·</span>

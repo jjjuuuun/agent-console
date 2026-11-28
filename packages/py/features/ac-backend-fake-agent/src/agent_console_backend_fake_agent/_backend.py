@@ -631,7 +631,7 @@ class FakeBackend:
                 text="".join(sent),
                 usage=usage,
                 session=session,
-                error=ErrorInfo(code=rule.fail.code, message=rule.fail.message),
+                error=ErrorInfo(code=rule.fail.code, message=rule.fail.error_message()),
             )
         await sink.emit(
             "agent.message",

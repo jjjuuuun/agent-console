@@ -63,7 +63,7 @@ export function WindowCard({ name, group, sourceInfo, nowMs, staleAfterSeconds }
         <p className="usage-reset usage-oneline" title={resetLine.full}>{resetLine.text}</p>
       ) : null}
       <p className="usage-source app-muted">
-        <span className="usage-oneline">
+        <span className="usage-oneline" title={`${t.cards.sourceLine(src.title)} · ${t.cards.observedAt(fmt.relative(s.observed_at, nowMs))}`}>
           {t.cards.sourceLine(src.title)} · <span title={fmt.dateTimeFull(s.observed_at)}>{t.cards.observedAt(fmt.relative(s.observed_at, nowMs))}</span>
         </span>
         <InfoHint lines={v.hidden} />

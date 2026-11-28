@@ -51,7 +51,7 @@ describe("문구 묶음 ko·en", () => {
     const html = renderToStaticMarkup(createElement(Composer, { value: "", onChange: () => {}, onSend: () => {}, messages: enExport.composer }));
     expect(html).toContain("Type a message…");
     expect(html).not.toContain("메시지");
-    expect(formatSeconds(125, enExport.chat.units)).toBe("2min 5s");
+    expect(formatSeconds(125, enExport.chat.units)).toBe("2m 5s");
   });
 });
 

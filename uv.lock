@@ -289,7 +289,7 @@ dev = [
 
 [[package]]
 name = "agent-console-cli"
-version = "1.0.0"
+version = "1.1.0"
 source = { editable = "apps/cli" }
 dependencies = [
     { name = "agent-console-logs" },
@@ -2937,7 +2937,7 @@ dev = [
 
 [[package]]
 name = "agent-console-server"
-version = "1.0.0"
+version = "1.1.0"
 source = { editable = "apps/server" }
 dependencies = [
     { name = "agent-console-backend-claude-sdk", extra = ["login"] },

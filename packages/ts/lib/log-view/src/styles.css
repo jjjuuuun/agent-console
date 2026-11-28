@@ -28,6 +28,8 @@
 .ac-lv-nowrap { white-space: nowrap; flex: none; }
 .ac-lv-cell .ac-lv-chiprow { flex-wrap: nowrap; overflow: hidden; }
 .ac-lv-cell .ac-lv-chip { flex: 0 1 auto; min-width: 0; }
+.ac-lv-cell .ac-lv-chip[data-fixed] { flex: none; }
+.ac-lv-chip[data-fixed] > .ac-lv-ellipsis { overflow: visible; text-overflow: clip; }
 [class*="ac-lv-"][data-tone="danger"] { color: var(--ac-danger, #f26b6b); }
 
 /* 버튼·입력(공용 UI 패키지를 쓰지 않을 때의 기본 모양) */
@@ -38,7 +40,7 @@
 .ac-lv-linkbtn { font: inherit; color: var(--ac-accent, #5b8def); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
 .ac-lv-input { font: inherit; color: inherit; background: var(--lv-surface, transparent); border: 1px solid var(--lv-border, #2a313c); border-radius: var(--lv-radius, 4px); padding: 2px 8px; min-height: var(--ac-control-md, 28px); box-sizing: border-box; }
 .ac-lv-btn:focus-visible, .ac-lv-iconbtn:focus-visible, .ac-lv-linkbtn:focus-visible, .ac-lv-input:focus-visible, .ac-lv-togglechip:focus-visible,
-.ac-lv-grid-table:focus-visible, .ac-lv-scrub:focus-visible, .ac-lv-card:focus-visible, .ac-lv-lane:focus-visible, .ac-lv-chipmain:focus-visible, .ac-lv-chipx:focus-visible, .ac-lv-tabs [role="tab"]:focus-visible {
+.ac-lv-grid-table:focus-visible, .ac-lv-scroll:focus-visible, .ac-lv-scrub:focus-visible, .ac-lv-card:focus-visible, .ac-lv-lane:focus-visible, .ac-lv-chipmain:focus-visible, .ac-lv-chipx:focus-visible, .ac-lv-tabs [role="tab"]:focus-visible {
   outline: 2px solid var(--ac-focus-ring, var(--ac-accent, #5b8def)); outline-offset: 1px;
 }
 .ac-lv-inline { display: inline-flex; align-items: center; gap: 4px; font-size: var(--ac-text-xs, 12px); }

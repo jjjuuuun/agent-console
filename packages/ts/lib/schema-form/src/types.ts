@@ -86,6 +86,8 @@ export interface SchemaFormMessages {
   /** 고급 제목 옆 칩. `{count}` = 지정된 고급 필드 수 */
   advancedSetCount: string;
   advancedErrorCount: string;
+  /** `advancedErrorCount`의 단수형(1일 때) */
+  advancedErrorCountOne: string;
   advancedAllHint: string;
   /** `{value}` 자리표시자 */
   defaultHint: string;

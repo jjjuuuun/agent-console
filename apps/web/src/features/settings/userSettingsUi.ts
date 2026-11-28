@@ -192,7 +192,7 @@ export function buildAgentDefaultsUi(root: SchemaNode, options: AgentDefaultsOpt
   if ("backend" in props) {
     ui = put(ui, "/backend", {
       "ui:widget": CHOICE_SELECT_WIDGET,
-      "ui:options": { choices: visibleBackends(options.backends ?? []).map((b) => ({ value: b.id, label: b.title })), emptyLabel: options.backendEmptyLabel ?? m.settings.unset },
+      "ui:options": { choices: visibleBackends(options.backends ?? []).map((b) => ({ value: b.id, label: (text.translate ?? ((s: string) => s))(b.title) })), emptyLabel: options.backendEmptyLabel ?? m.settings.unset },
     });
   }
   if ("resources" in props) {

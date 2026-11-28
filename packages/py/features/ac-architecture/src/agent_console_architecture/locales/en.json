@@ -43,6 +43,13 @@
     "결과 통합": "Merge results",
     "도구로 연 문서만 보임(자동 로드는 기록 없음)": "Only documents opened with tools are shown (automatic loads leave no record)",
     "hook 소요는 세션 로그에 없음": "hook durations aren't in the session log",
-    "MCP 결과·오류는 Tool result 칸에 함께 보임": "MCP results and errors are shown in the Tool result cell too"
+    "MCP 결과·오류는 Tool result 칸에 함께 보임": "MCP results and errors are shown in the Tool result cell too",
+    "에이전트 아키텍처": "Agent architecture",
+    "LOCAL · 사용자 PC": "LOCAL · Your PC",
+    "네트워크로 모델 요청 / 응답": "Model request / response over the network",
+    "원격 모델 API": "Remote model API",
+    "시스템 프롬프트 본문": "System prompt body",
+    "도구 호출": "Tool calls",
+    "위임": "Delegation"
   }
 }

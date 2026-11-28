@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1 (unreleased)
+## Unreleased
 
 - Message catalogs `locales/en.json` and `locales/ko.json` are registered as the entry point
   `agent_console.message_catalogs` `ac-link-logs-architecture`, so the web app can show the link module description

@@ -83,6 +83,28 @@ static:
   data:
     - files: [packages/py/features/ac-sdd/src/agent_console_sdd/data/default_syntax.yaml]
       select: ["/*/statuses/*/label"]
+    # 로그 분류기 기본 설정의 이벤트 제목·요약 틀과 내부 추론 표시(`default` 값이지만 화면에 가는
+    # 이벤트 글자다 — 웹이 이벤트 제목·요약을 서버 묶음으로 옮긴다). 크롤 서버에는 세션 기록이 없어
+    # 응답으로는 보이지 않는다. `pointer_slots`: `{/포인터}` 틀은 분류기가 `text_templates`로 싣는
+    # 이름 자리 표시 꼴(`{이름}`)로 본다.
+    - files: [packages/py/features/ac-logs-claude/src/agent_console_logs_claude/data/classifier_config.schema.json]
+      select:
+        - "/properties/row_rules/default/*/title"
+        - "/properties/row_rules/default/*/summary/*"
+        - "/properties/summaries/default/*/*"
+        - "/properties/thinking_note/default"
+      pointer_slots: true
+  # 파이썬 소스에서 화면에 가는 글자: 로그 출처·분류기가 코드로 정한 이벤트 제목·틀(정한 호출의
+  # 키워드 인자와 사전 키 값). f-string은 값 자리를 `{…}`로 둔 꼴로 모아 dynamic_text가 된다.
+  python:
+    - files:
+        - "packages/py/features/ac-logs/src/**/*.py"
+        - "packages/py/features/ac-logs-claude/src/**/*.py"
+        - "packages/py/features/ac-hook-probe/src/**/*.py"
+        - "packages/py/links/ac-link-logs-*/src/**/*.py"
+      calls: [LogEventDraft, TextTemplate, update, replace, _diagnostic]
+      keywords: [title, summary, template]
+      dict_keys: [title]
 
 # 오류·이슈 객체 모양: 이 두 키가 문자열이면 이슈로 보고 `message`는 S1이 아니라 S2(코드)로 본다.
 issue:

@@ -35,7 +35,7 @@ export function ProjectChipView({ name, folder, problem, archived, onOpenHome, o
       renderTrigger={(trigger) => (
         <button type="button" {...trigger} className="prj-pchip" data-problem={problem === undefined ? undefined : "true"} aria-describedby={fullId} title={problem ?? folder}>
           <Icon name="folder" size={14} />
-          <span className="prj-pchip-name ac-ellipsis">{name}</span>
+          <span className="prj-pchip-name ac-ellipsis" title={name}>{name}</span>
           <span className="prj-pchip-path ac-ellipsis">{middleEllipsis(folder, 14, 22)}</span>
           {/* 접근성 이름은 보이는 글자(이름 + 줄인 경로)에서 나오고(WCAG 2.5.3), 전체 경로는 설명으로 붙는다 */}
           <span id={fullId} hidden>{m.chip.aria(name, folder)}</span>

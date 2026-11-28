@@ -2,6 +2,7 @@ import "./teams.css";
 import type { GraphValidationSummary, Issue } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { sortIssues } from "../../lib/issues";
+import { useIssueMessage } from "../../app/appMessages";
 import { useTeamMessages } from "./messages";
 
 export type ValidationChipKind = "blocked" | "errors" | "warnings";
@@ -71,6 +72,7 @@ export interface IssuePreviewProps {
 /** 팀 구성 행 아래 펼침: 서버 메시지 그대로 최대 5개 + "외 N건" + 코드(mono muted). */
 export function IssuePreview({ issues, loading, failed, blocked, onRetry }: IssuePreviewProps) {
   const t = useTeamMessages();
+  const issueMessage = useIssueMessage();
   if (loading) return <p className="app-muted" role="status">{t.validation.loadingIssues}</p>;
   if (failed) {
     return (
@@ -85,7 +87,7 @@ export function IssuePreview({ issues, loading, failed, blocked, onRetry }: Issu
       <ul className="team-vpreview-list">
         {shown.map((issue, i) => (
           <li key={`${i}:${issue.code}`}>
-            <span className="app-sev" data-severity={issue.severity}>{issue.severity === "error" ? "✕" : issue.severity === "warning" ? "▲" : "ℹ"}</span> {issue.message}{" "}
+            <span className="app-sev" data-severity={issue.severity}>{issue.severity === "error" ? "✕" : issue.severity === "warning" ? "▲" : "ℹ"}</span> {issueMessage(issue)}{" "}
             <span className="app-muted lib-mono">{issue.code}</span>
           </li>
         ))}

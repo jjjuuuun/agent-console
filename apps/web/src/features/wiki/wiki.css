@@ -105,8 +105,13 @@
 
 /* 오른쪽 패널 */
 .wiki-side-pane { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.wiki-side-pane .wiki-segment { container-type: inline-size; }
 .wiki-segment { display: flex; gap: 2px; padding: var(--ac-space-1) var(--ac-space-2); min-height: 40px; align-items: center; border-bottom: 1px solid var(--ac-border-soft); }
-.wiki-segment-btn { flex: 1; min-width: 0; height: 28px; padding: 0 var(--ac-space-1); border: 1px solid transparent; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wiki-segment-btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--ac-space-1); min-width: 0; height: 28px; padding: 0 var(--ac-space-1); border: 1px solid transparent; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wiki-segment-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wiki-segment-count { flex: none; color: var(--ac-text-muted); font-variant-numeric: tabular-nums; }
+/* 모자라면 개수 배지부터 숨긴다(이름은 자르지 않는다, I.14 B7) */
+@container (max-width: 300px) { .wiki-segment-count { display: none; } }
 .wiki-segment-btn[aria-selected="true"] { background: var(--ac-accent-bg-strong); border-color: var(--ac-accent); }
 .wiki-segment-btn:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: -2px; }
 .wiki-side-body { flex: 1; min-height: 0; overflow: auto; }

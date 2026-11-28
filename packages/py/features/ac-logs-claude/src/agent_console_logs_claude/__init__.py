@@ -23,6 +23,7 @@ from ._classifier import (
     compile_mcp_pattern,
     omitted_row,
     summary_text,
+    summary_with_template,
 )
 from ._schemas import classifier_config_schema, source_config_schema
 from ._source import (
@@ -33,6 +34,7 @@ from ._source import (
     ClaudeCodeJsonlSource,
     project_key,
 )
+from ._templates import pointer_text_template, slot_name
 
 __all__ = [
     "CLAUDE_CODE_FORMAT",
@@ -47,7 +49,10 @@ __all__ = [
     "classifier_config_schema",
     "compile_mcp_pattern",
     "omitted_row",
+    "pointer_text_template",
     "project_key",
+    "slot_name",
     "source_config_schema",
     "summary_text",
+    "summary_with_template",
 ]

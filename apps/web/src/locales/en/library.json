@@ -71,7 +71,7 @@
   },
   "agentForm": {
     "customModel": "Enter manually",
-    "modelsFailed": "Couldn't load the model list. You can enter one manually.",
+    "modelsFailed": "Couldn't fetch the model list. You can enter one manually.",
     "addTag": "Add item",
     "removeTag": "Remove {tag}"
   },

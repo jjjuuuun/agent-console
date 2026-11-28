@@ -175,9 +175,9 @@ export function PaletteItem(props: PaletteItemProps) {
         {props.iconText}
       </span>
       <span className="ac-ge-palette-texts">
-        <span className="ac-ge-palette-title ac-ellipsis">{props.title}</span>
-        {props.subtitle ? <span className="ac-ge-palette-meta-line ac-ellipsis">{props.subtitle}</span> : props.description && <span className="ac-ge-palette-desc ac-clamp-2">{props.description}</span>}
-        {disabled && <span className="ac-ge-palette-meta-line ac-ellipsis">{props.disabledReason}</span>}
+        <span className="ac-ge-palette-title ac-ellipsis" title={props.title}>{props.title}</span>
+        {props.subtitle ? <span className="ac-ge-palette-meta-line ac-ellipsis" title={props.subtitle}>{props.subtitle}</span> : props.description && <span className="ac-ge-palette-desc ac-clamp-2" title={props.description}>{props.description}</span>}
+        {disabled && <span className="ac-ge-palette-meta-line ac-ellipsis" title={props.disabledReason}>{props.disabledReason}</span>}
       </span>
       {props.meta && <span className="ac-ge-palette-meta">{props.meta}</span>}
     </button>

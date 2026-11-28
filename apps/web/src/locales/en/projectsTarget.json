@@ -42,7 +42,7 @@
   "blocked": {
     "noConfig": "Choose a team to start",
     "signedOut": "Sign-in required",
-    "signIn": "Settings › Backend"
+    "signIn": "Settings › Agent defaults"
   },
   "error": {
     "required": "Choose a project before you start",

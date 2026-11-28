@@ -464,7 +464,9 @@ class LogIngestor:
                 break
         return budget
 
-    def _diagnostic(self, raw: RawRecord, title: str, error: str, sid: str) -> LogEventDraft:
+    def _diagnostic(self, raw: RawRecord, error: str, sid: str, *, title: str) -> LogEventDraft:
+        """진단 이벤트 초안(제목은 고정 원문 — 화면은 문구 묶음으로 옮긴다)."""
+
         def meta_str(key: str) -> str:
             value = raw.meta.get(key)
             return value if isinstance(value, str) else ""
@@ -493,14 +495,16 @@ class LogIngestor:
         event_source: str | None = None
         problem = raw.meta.get(DIAGNOSTIC_META_KEY)
         if isinstance(problem, str):
-            drafts = [self._diagnostic(raw, "로그 형식 해석 실패", problem, sid)]
+            drafts = [self._diagnostic(raw, problem, sid, title="로그 형식 해석 실패")]
             event_source = self._diag_source
         else:
             try:
                 drafts = list(classifier.classify(raw, cctx))
             except Exception as exc:
                 drafts = [
-                    self._diagnostic(raw, "로그 분류 실패", f"{type(exc).__name__}: {exc}", sid)
+                    self._diagnostic(
+                        raw, f"{type(exc).__name__}: {exc}", sid, title="로그 분류 실패"
+                    )
                 ]
                 event_source = self._diag_source
         if event_source is not None:

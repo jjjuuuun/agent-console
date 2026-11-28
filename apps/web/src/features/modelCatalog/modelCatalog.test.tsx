@@ -139,7 +139,7 @@ describe("모델 칸 상태 줄 6상태", () => {
     await act(async () => {
       await i18n.changeLanguage("en");
     });
-    expect((await line()).textContent).toContain("Automatic model lookup is off.");
+    expect((await line()).textContent).toContain("Automatic model fetching is off.");
   });
 
   it("모달 줄: 새로 고침만, 개수는 계정 출처 항목 수", async () => {

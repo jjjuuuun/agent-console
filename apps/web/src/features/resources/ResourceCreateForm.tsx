@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useServerTranslate } from "../../i18n";
 import type { Resource, ResourceTypeDescriptor } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { DEFINITION_KINDS, DefinitionIdField, DescriptorIcon, Field, useKindReservedIds, useLibraryMessages, useDefinitionId, type DefinitionId } from "../library";
@@ -91,6 +92,7 @@ export interface ResourceCreateFormProps {
 export function ResourceCreateForm({ draft, errors = [], disabled = false }: ResourceCreateFormProps) {
   const lm = useLibraryMessages();
   const t = useResourceMessages();
+  const tr = useServerTranslate();
   const { doc, descriptor } = draft;
   if (doc === null || descriptor === undefined) return <ResourceTypeGrid types={draft.types} onPick={draft.setTypeId} />;
   const patch = (p: Partial<Resource>) =>
@@ -103,7 +105,7 @@ export function ResourceCreateForm({ draft, errors = [], disabled = false }: Res
     <div className="lib-form">
       <p className="ac-text lib-row-main">
         <DescriptorIcon hint={descriptor.ui_hints?.icon} title={descriptor.title} size={16} />
-        <span>{t.create.chosen(descriptor.title)}</span>
+        <span>{t.create.chosen(tr(descriptor.title))}</span>
         {draft.types.length > 1 ? (
           <button type="button" className="app-link-btn" onClick={() => draft.setTypeId(null)}>
             {t.create.change}

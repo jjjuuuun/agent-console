@@ -8,7 +8,7 @@ import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { AUTO_DIRECTION, SIDE_GLYPH } from "../logic/layout";
 import type { DirectionSides } from "../logic/layout";
-import { defaultMessages, format } from "../messages";
+import { defaultMessages, format, formatCount } from "../messages";
 import type { GraphEditorMessages } from "../messages";
 import type { EdgeShapeDescriptor } from "../shapes/types";
 
@@ -95,7 +95,7 @@ export function MultiLayoutPanel(props: MultiLayoutPanelProps): ReactNode {
             <div className="ac-ge-lp-row">
               {confirm ? (
                 <div role="alertdialog" aria-label={m.edgeLayoutResetPath} className="ac-ge-tidy-confirm">
-                  <span>{format(m.routeResetConfirm, { n: edges.resettable })}</span>
+                  <span>{formatCount(m, "routeResetConfirm", edges.resettable, { n: edges.resettable })}</span>
                   <button
                     type="button"
                     className="ac-ge-btn ac-ge-btn--danger"

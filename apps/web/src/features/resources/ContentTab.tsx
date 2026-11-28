@@ -90,7 +90,7 @@ export function ContentTab({ text, onChange, language, mediaTypes, mediaType, on
           />
         </div>
         {canPreview && preview ? (
-          <section className="res-preview" aria-label={t.content.preview}>
+          <section className="res-preview" tabIndex={0} aria-label={t.content.preview}>
             {text.trim() === "" ? <p className="app-muted">{t.content.previewEmpty}</p> : <Markdown text={text} />}
           </section>
         ) : null}

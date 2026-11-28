@@ -20,6 +20,8 @@ export interface TraceMessages {
   detailLabel: string;
   closeDetail: string;
   tokensTotal: string; // {n}
+  /** `tokensTotal`의 단수형(1일 때) */
+  tokensTotalOne: string; // {n}
   /** 수치 열 툴팁. {n} = 총 토큰 */
   tokensTitle: string;
   /** 수치 열 토큰 단위 */

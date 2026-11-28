@@ -482,7 +482,7 @@ export function SessionDetailPage() {
         <div className="logs-session-main">
           <header className="logs-session-head">
             <div className="logs-session-line">
-              <Link className="logs-linkbtn" to="/logs/sessions" aria-label={t.detail.backToList}>← {t.detail.back}</Link>
+              <Link className="logs-linkbtn" to="/logs/sessions" title={t.detail.backToList}><span aria-hidden="true">← </span>{t.detail.back}</Link>
               <span className="app-muted">/</span>
               <code className="logs-mono" title={session}>{session.length > 8 ? `${session.slice(0, 8)}…` : session}</code>
               <IconButton label={t.detail.copySession} icon={<span aria-hidden="true">⧉</span>} size="sm" onClick={() => copy(session)} />

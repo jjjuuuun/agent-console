@@ -4,6 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased] (pick-first layout)
+- Plural (0.2.1): new messages `folder.browse.truncatedOne` and `folder.check.manifest_detail_countOne`, used when the count is 1.
 - Fix: the primary button (`.ac-fp-btn[data-variant="primary"]`) showed the light neutral hover background under white text on hover (contrast 1.12:1). It now has its own hover rule using `--ac-accent-hover`, so text contrast stays at least 4.5:1 in light and dark themes.
 - Messages (0.2.0): moved the default messages to `src/locales/ko.json` (`defaultMessages` is still the Korean table) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`messages={en}` for English). Added tests for matching keys and placeholders and for no Korean string literals in the source. The public API only grew and the default behavior is the same.
 - `FolderPicker`: the layout is now "pick first". [Select folder…] is the primary button with the first focus, followed by the selected folder box and a collapsed "Enter the path directly". New props `capabilities`, `onPickNative(initial, signal)`, `configDir`, `autoFocus`, `pickRef`, `defaultManualOpen`, `onSelectPhaseChange`, `waitingEscapeMs`, `cancelledNoticeMs` and `copy`.

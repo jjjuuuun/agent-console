@@ -4,14 +4,24 @@ import ko from "./locales/ko.json";
 export interface GraphEditorMessages {
   /** 상태 문자열 → 라벨. 없는 상태는 원문을 그대로 쓴다 */
   statusLabels: Record<string, string>;
+  /** 노드 박스처럼 좁은 칸에 쓰는 짧은 상태 라벨. 없는 상태는 `statusLabels`를 쓴다(전체 단어는 title·aria-label에 남는다) */
+  statusShortLabels?: Record<string, string>;
   unknownType: string; // {type}
   nodeAria: string; // {label} {typeTitle} {status}
   statusUnknown: string;
   errorCount: string; // {count}
+  /** `errorCount`의 단수형(개수 1일 때) */
+  errorCountOne: string;
   issueAria: string; // {error} {warning}
   issueAriaErrorOnly: string; // {error}
+  /** `issueAriaErrorOnly`의 단수형(개수 1일 때) */
+  issueAriaErrorOnlyOne: string;
   issueAriaWarningOnly: string; // {warning}
+  /** `issueAriaWarningOnly`의 단수형(개수 1일 때) */
+  issueAriaWarningOnlyOne: string;
   issueAriaInfo: string; // {info}
+  /** `issueAriaInfo`의 단수형(개수 1일 때) */
+  issueAriaInfoOne: string;
   attemptBadge: string; // {n}
   portMissing: string;
   portsLoading: string;
@@ -34,9 +44,13 @@ export interface GraphEditorMessages {
   moreActions: string;
   duplicate: string;
   removed: string; // {count}
+  /** `removed`의 단수형(개수 1일 때) */
+  removedOne: string;
   undo: string;
   added: string; // {label}
   duplicated: string; // {count}
+  /** `duplicated`의 단수형(개수 1일 때) */
+  duplicatedOne: string;
   connected: string;
   selectedCount: string; // {count}
   cycleRejected: string;
@@ -44,6 +58,8 @@ export interface GraphEditorMessages {
   connectCycleNeeded: string;
   /** 반복 영역 안내(라이브). {count} 노드 수, {names} 이름 목록(최대 5개 + 외 N개) */
   loopRegionAnnounce: string;
+  /** `loopRegionAnnounce`의 단수형(개수 1일 때) */
+  loopRegionAnnounceOne: string;
   /** 이름이 5개를 넘을 때 뒤에 붙는 말. {n} */
   loopRegionMore: string;
   /** 반복 영역 노드의 접근성 이름 덧붙임 */
@@ -102,6 +118,8 @@ export interface GraphEditorMessages {
   paletteOnlyDisabled: string; // {kind}
   paletteCreateDefinition: string; // {kind}
   paletteUsage: string; // {n}
+  /** 사용 횟수가 1일 때(영어 단수형) */
+  paletteUsageOne: string; // {n}
   /** 선언형 배지·칩(`ui_hints.badges/chips`)의 `label_key` → 문구. 기본은 비어 있고 앱/디스크립터 `label`이 채운다 */
   hintLabels: Record<string, string>;
   toggleLabels: Record<string, string>;
@@ -116,6 +134,8 @@ export interface GraphEditorMessages {
   minimapShow: string;
   minimapHide: string;
   offscreenNodes: string; // {count}
+  /** `offscreenNodes`의 단수형(개수 1일 때) */
+  offscreenNodesOne: string;
   offscreenHint: string;
   resourceChipsLabel: string;
   resourceChipTitle: string; // {title} {count} {names}
@@ -255,10 +275,14 @@ export interface GraphEditorMessages {
   tidyPreviewShown: string;
   tidyResetAllRoutes: string;
   routeResetConfirm: string;
+  /** `routeResetConfirm`의 단수형(개수 1일 때) */
+  routeResetConfirmOne: string;
   routeResetConfirmYes: string;
   routeResetDone: string;
   routeResetNothing: string;
   troubleHint: string;
+  /** `troubleHint`의 단수형(개수 1일 때) */
+  troubleHintOne: string;
   troubleAutoRoute: string;
   troubleDismiss: string;
   /** 실행 상세 [연결선 ▾] 보기 전용 덮어쓰기 */
@@ -289,6 +313,7 @@ export function mergeMessages(partial?: Partial<GraphEditorMessages>): GraphEdit
     ...defaultMessages,
     ...partial,
     statusLabels: { ...defaultMessages.statusLabels, ...(partial.statusLabels ?? {}) },
+    statusShortLabels: { ...defaultMessages.statusShortLabels, ...(partial.statusShortLabels ?? {}) },
     flowLabels: { ...defaultMessages.flowLabels, ...(partial.flowLabels ?? {}) },
     badgeLabels: { ...defaultMessages.badgeLabels, ...(partial.badgeLabels ?? {}) },
     kindBadgeLabels: { ...defaultMessages.kindBadgeLabels, ...(partial.kindBadgeLabels ?? {}) },
@@ -303,6 +328,14 @@ export function mergeMessages(partial?: Partial<GraphEditorMessages>): GraphEdit
 }
 
 /** `{name}` 자리표시자 치환. */
+/** 개수에 맞는 문구를 고른다: 개수가 1이면 단수형(`xxxOne`), 아니면 `xxx`. 채우는 값은 `format`과 같다. */
+export function formatCount(m: GraphEditorMessages, key: PluralKey, count: number, vars: Record<string, string | number>): string {
+  return format(count === 1 ? m[`${key}One`] : m[key], vars);
+}
+
+/** 단수형 짝(`xxxOne`)을 가진 문구 이름 */
+export type PluralKey = "errorCount" | "removed" | "duplicated" | "offscreenNodes" | "troubleHint" | "loopRegionAnnounce" | "routeResetConfirm" | "issueAriaInfo" | "issueAriaErrorOnly" | "issueAriaWarningOnly";
+
 export function format(template: string, vars: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
 }

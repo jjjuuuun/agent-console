@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/graph-editor",
-  "version": "0.2.3",
+  "version": "0.2.5",
   "description": "Graph editor component (node and edge editing drawn from schemas and descriptors)",
   "private": true,
   "license": "MIT",

@@ -67,11 +67,18 @@ describe("LogEventTable", () => {
       ev({ uid: "g2", seq: 2, time: 2, thread: "t", message_id: "m", title: "second" }),
       ev({ uid: "s", seq: 3, time: 3, title: "single" }),
     ];
-    render(<LogEventTable {...base} rows={grouped} groupByMessage />);
+    const { container } = render(<LogEventTable {...base} rows={grouped} groupByMessage />);
     const grid = screen.getByRole("grid");
-    expect(screen.getByText(/응답 · 2개 블록/)).toBeTruthy();
+    const toggle = screen.getByRole("button", { name: /응답 · 블록 수: 2/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(container.querySelector('[role="row"][data-uid="g1"]')?.hasAttribute("aria-expanded")).toBe(false);
+    // 스크롤 영역은 키보드로 닿고(tabIndex 0) 이름이 있다 — axe scrollable-region-focusable
+    const rows = container.querySelector('[role="rowgroup"]');
+    expect(rows?.getAttribute("tabindex")).toBe("0");
+    expect(rows?.getAttribute("aria-label")).toBeTruthy();
     expect(screen.queryByText("second")).toBeNull();
     fireEvent.keyDown(grid, { key: "ArrowRight" });
+    expect(screen.getByRole("button", { name: /응답 · 블록 수: 2/ }).getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("second")).toBeTruthy();
     fireEvent.keyDown(grid, { key: "ArrowLeft" });
     expect(screen.queryByText("second")).toBeNull();

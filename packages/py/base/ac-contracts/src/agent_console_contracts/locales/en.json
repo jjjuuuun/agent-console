@@ -1221,7 +1221,7 @@
     "backend.login_session_not_found": "The sign-in session doesn't exist or has expired. Start signing in again.",
     "backend.login_unsupported": "This execution backend doesn't support signing in from the app.",
     "backend.logout_unsupported": "This execution backend doesn't support signing out from the app.",
-    "backend.model_discovery_failed": "Couldn't get the model list for execution backend {backend_id} ({reason}). The configured list and typing a model id still work.",
+    "backend.model_discovery_failed": "Couldn't fetch the model list for execution backend {backend_id} ({reason}). The configured list and typing a model id still work.",
     "backend.probe_unsupported": "This execution backend doesn't support the connection test.",
     "backend.unresolved": "Some nodes have no execution backend, so the run didn't start.",
     "bad_request": "The request is invalid.",

@@ -363,10 +363,11 @@ def report(
     else:
         p("S1 server crawl: skipped (--no-server)")
     static = analysis.static
-    if static.models or static.files or static.unknown_models:
+    if static.models or static.files or static.python_files or static.unknown_models:
+        python = f"{len(static.python_files)} python files, " if static.python_files else ""
         p(
             f"S1 static sources: {len(static.models)} schema models, {len(static.files)} data "
-            f"files, {len(static.result.texts)} source-language strings"
+            f"files, {python}{len(static.result.texts)} source-language strings"
         )
         if static.unknown_models and not quiet:
             p(f"  models not in the schema document: {', '.join(static.unknown_models)}")

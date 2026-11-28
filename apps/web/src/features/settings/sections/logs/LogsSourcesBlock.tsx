@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineMarkdown, type UiSchema } from "@agent-console/schema-form";
-import { AppSchemaForm, useFormat } from "../../../../i18n";
+import { AppSchemaForm, useFormat, useServerTranslate } from "../../../../i18n";
 import { Button, ConfirmDialog, Disclosure, Icon, StatusChip, useToast } from "@agent-console/ui";
 import type { LogSourceInfo, LogSourceSetting, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
@@ -43,6 +43,7 @@ export function effectiveEnabled(info: LogSourceInfo, s: LogSourceSetting | unde
 /** 수집 출처: 서버 디스크립터 카드(스위치·상태·[지금 수집]·설정 폼). 출처 이름을 코드에 두지 않는다. */
 export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, focusSource, observeHref }: LogsSourcesBlockProps) {
   const m = useAppMessages();
+  const tr = useServerTranslate();
   const fmt = useFormat();
   const t = useLogsMessages();
   const sources = useLogSources();
@@ -89,7 +90,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
     if (sources.data.some((s) => s.descriptor.id === focusSource)) requestAnimationFrame(() => switchRefs.current.get(focusSource)?.focus());
   }, [focusSource, sources.data]);
 
-  const classifierChoices = useMemo(() => (classifiers.data ?? []).map((c) => ({ value: c.id, label: c.title })), [classifiers.data]);
+  const classifierChoices = useMemo(() => (classifiers.data ?? []).map((c) => ({ value: c.id, label: tr(c.title) })), [classifiers.data, tr]);
   const uiFor = (info: LogSourceInfo): UiSchema | undefined => {
     const props = (info.descriptor.config_schema?.["properties"] ?? {}) as Record<string, unknown>;
     return "classifier" in props && classifierChoices.length > 0 ? { classifier: { "ui:widget": CHOICE_SELECT_WIDGET, "ui:options": { choices: classifierChoices, emptyLabel: "" } } } : undefined;
@@ -241,7 +242,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
       ) : null}
       <ConfirmDialog
         open={confirm !== null}
-        title={t.settings.sources.confirmTitle(confirm?.descriptor.title ?? "")}
+        title={t.settings.sources.confirmTitle(tr(confirm?.descriptor.title ?? ""))}
         confirmLabel={t.settings.sources.confirmOk}
         cancelLabel={t.settings.sources.confirmCancel}
         onConfirm={() => {

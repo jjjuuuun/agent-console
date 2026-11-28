@@ -54,6 +54,8 @@
     "`roots`에 jsonl 폴더를 넣는다. 각 줄은 `schema_version: 1`, `category`, `title`을 가진다.": "Put jsonl folders in `roots`. Each line has `schema_version: 1`, `category` and `title`.",
     "Agent Console 로그 보관본": "Agent Console log archive",
     "줄": "Line",
-    "이벤트": "Event"
+    "이벤트": "Event",
+    "로그 형식 해석 실패": "Couldn't parse the log format",
+    "로그 분류 실패": "Couldn't classify the log row"
   }
 }

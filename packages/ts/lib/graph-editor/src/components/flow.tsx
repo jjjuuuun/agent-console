@@ -500,7 +500,7 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
   // 앞 칩이 있으면 1행 = 종류 라벨, 2행 = 앞 칩 → 나머지 칩. 줌이 낮으면(CSS, 루트 `data-zoom-lod`) 종류 아이콘 + 앞 칩 아이콘만 한 줄
   const chipBody = stacked ? (
     <span className="ac-ge-edge-rows">
-      <span className="ac-ge-edge-row ac-ge-edge-row1">{labelText}</span>
+      <span className="ac-ge-edge-row ac-ge-edge-row1" title={data?.label}>{labelText}</span>
       <span className="ac-ge-edge-row ac-ge-edge-row2">
         {chips.shown.map((c) => (
           <Fragment key={c.key}>{c.node}</Fragment>

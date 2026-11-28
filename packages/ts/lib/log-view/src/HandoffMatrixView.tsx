@@ -101,7 +101,7 @@ export function HandoffMatrixView(props: HandoffMatrixViewProps) {
           </tbody>
         </table>
       </div>
-      {cells.length >= limit ? <p className="ac-lv-muted">{fmt(m.handoffLimit, { n: limit })}</p> : null}
+      {cells.length >= limit ? <p className="ac-lv-muted">{fmt(limit === 1 ? m.handoffLimitOne : m.handoffLimit, { n: limit })}</p> : null}
     </div>
   );
 }

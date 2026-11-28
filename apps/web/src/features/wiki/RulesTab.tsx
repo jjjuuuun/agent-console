@@ -28,6 +28,7 @@ import { severityTone, WIKI_PARAMS } from "./wikiConfig";
 import { wikiRulesPath } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
 import { useServerText, useT, type Translate } from "@agent-console/i18n";
+import { localizeIssue } from "./wikiIssueText";
 import { useMaybeT } from "../../i18n/useMaybeT";
 import { useWikiViewMessages } from "./useViewMessages";
 import { WikiToast } from "./WikiToast";
@@ -291,7 +292,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
           </RuleRefsProvider>
           {issues.length === 0 ? null : (
             <ul className="wiki-issue-lines" aria-label={t("tab.rules.issuesChip", { count: issues.length })}>
-              {issues.map((i, idx) => <li key={`${i.code}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{i.message}</li>)}
+              {issues.map((i, idx) => <li key={`${i.code}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{localizeIssue(i, serverText).message}</li>)}
             </ul>
           )}
         </section>

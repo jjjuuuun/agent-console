@@ -396,7 +396,7 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
                             <Icon name={open ? "chevronDown" : "chevronRight"} size={16} />
                             <span className="app-mod-main">
                               <code className="app-mod-id" title={mod.id}>{mod.id}</code>
-                              {showsReasonCollapsed(mod) ? <span className="app-mod-reason app-muted">{mod.reason}</span> : describeModule(mod, t) === "" ? null : <span className="app-mod-reason app-muted">{describeModule(mod, t)}</span>}
+                              {showsReasonCollapsed(mod) ? <span className="app-mod-reason app-muted" title={mod.reason ?? undefined}>{mod.reason}</span> : describeModule(mod, t) === "" ? null : <span className="app-mod-reason app-muted" title={describeModule(mod, t)}>{describeModule(mod, t)}</span>}
                             </span>
                             <ModuleStatusChip status={mod.status} />
                             <span className="app-muted app-mod-version">{mod.version}</span>

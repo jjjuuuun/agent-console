@@ -27,7 +27,7 @@ export {
   gridLayout, nearestInDirection, pathData, polylineMidpoint, zoomAround,
 } from "./layout";
 export type { AutoFit, ChipContent, ChipFit, FitOptions, Direction, LayoutIssue, LayoutIssueKind, Size, Viewport } from "./layout";
-export { cellAriaLabel, cellBlockedReason, edgeAriaLabel, edgeBlockedReason, sameSelection } from "./model";
+export { cellAccessibleName, cellAriaLabel, cellBlockedReason, edgeAccessibleName, edgeAriaLabel, edgeBlockedReason, sameSelection } from "./model";
 export type {
   ArchFitMode, ArchLevel, ArchSelection, ArchSelectionKind, ArchViewMode, BlockedReason, CellRenderProps, CellRenderer,
   EdgeStyleSpec, MetricKindSpec, Pt, Rect, ZoneLegendItem,

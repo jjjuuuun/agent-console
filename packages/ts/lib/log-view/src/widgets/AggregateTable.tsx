@@ -73,7 +73,7 @@ export function AggregateTable(props: AggregateTableProps) {
           ))}
         </tbody>
       </table>
-      {limit != null && rows.length > limit ? <p className="ac-lv-muted">{m.widgetMoreHidden.replace("{n}", String(rows.length - limit))}</p> : null}
+      {limit != null && rows.length > limit ? <p className="ac-lv-muted">{(rows.length - limit === 1 ? m.widgetMoreHiddenOne : m.widgetMoreHidden).replace("{n}", String(rows.length - limit))}</p> : null}
     </div>
   );
 }

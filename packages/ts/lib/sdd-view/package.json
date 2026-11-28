@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/sdd-view",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Spec (SDD) presentation components: document editor, task table, plan graph, trace table",
   "private": true,
   "license": "MIT",

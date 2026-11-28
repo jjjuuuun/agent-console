@@ -126,7 +126,7 @@
     "panelLabel": "Run inspection panel",
     "cancelBodyWaiting": "Nodes in progress are stopped. Requests waiting for a reply ({waiting}) are canceled.",
     "cancelBody": "Nodes in progress are stopped.",
-    "tokensShort": "{n} tokens",
+    "tokensShort": "{n} tok",
     "delegatedBy": "(← delegated by {name})",
     "callOrdinalAria": "{ordinal}"
   },

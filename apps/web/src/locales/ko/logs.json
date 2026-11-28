@@ -146,7 +146,7 @@
     "archiveDone": "{name} 파일을 내려받았습니다",
     "rowMenu": "행 메뉴",
     "toUsage": "사용량에서 보기",
-    "newEvents": "새 이벤트 {n}건이 수집되었습니다",
+    "newEvents_other": "새 이벤트 {count}건이 수집되었습니다",
     "reloadBanner": "새로 고침"
   },
   "view": {

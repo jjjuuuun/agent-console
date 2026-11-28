@@ -538,7 +538,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
       ) : store.canChoose && store.library ? (
         <HintBanner id="memory.store.library">{t("store.libraryNote")}</HintBanner>
       ) : null}
-      {otherWarnings.map((w) => <Banner key={w.code} tone="warning" className="mem-banner">{w.message}</Banner>)}
+      {otherWarnings.map((w) => <Banner key={w.code} tone="warning" className="mem-banner">{serverText.issue(w.code, w.details, serverText.text(w.message))}</Banner>)}
       {noKinds ? null : (
         <MemoryToolbar
           view={view}

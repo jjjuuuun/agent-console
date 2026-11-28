@@ -1,3 +1,4 @@
+import { useServerText } from "@agent-console/i18n";
 import { useMemo, useState } from "react";
 import type { ArchitectureProfileCheckRequest, ArchitectureProfileCheckResult, Issue } from "@agent-console/contracts";
 import { Button, Icon, Tooltip } from "@agent-console/ui";
@@ -132,13 +133,14 @@ function CheckBody({ result, text, count, parseMessage }: { result: ReturnType<t
 
 function IssueItem({ issue, text }: { issue: Issue; text: string }) {
   const t = useArchSettingsMessages();
+  const serverText = useServerText();
   const line = issue.path ? lineOfPath(text, issue.path) : null;
   const label = t.editor.severity[issue.severity] ?? issue.severity;
   return (
     <li className="arch-settings-issue" data-severity={issue.severity}>
       <span className="app-sev" data-severity={issue.severity === "error" ? "error" : "warning"} data-glyph={issue.severity} role="img" aria-label={label}>{t.editor.severityGlyph[issue.severity] ?? t.editor.severityGlyph["warning"]}</span>
       <span className="arch-settings-issue-text">
-        {issue.message}
+        {serverText.issue(issue.code, issue.details, serverText.text(issue.message))}
         {issue.path ? <span className="arch-settings-issue-path"> {issue.path}</span> : null}
         {line === null ? null : <span className="app-muted"> · {t.editor.line(line)}</span>}
       </span>

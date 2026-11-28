@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useServerTranslate } from "../../i18n";
 import type { UsageSourceInfo, UsageWindowSnapshot } from "@agent-console/contracts";
 import { useUsageIndicatorMessages, type UsageIndicatorMessages } from "./messages";
 import { splitFields, type ResolvedIndicatorSettings } from "./indicatorSettings";
@@ -33,6 +34,7 @@ function sampleItems(settings: ResolvedIndicatorSettings, t: UsageIndicatorMessa
 /** 설정 화면 미리보기: 같은 `UsageIndicatorView`를 펼침·레일 두 모양으로 그린다. 링크는 이동하지 않는다. */
 export function UsageIndicatorPreview({ settings, windows, sources, labels = {}, primaryOrder = [], staleAfterSeconds = null, nowMs, href }: UsageIndicatorPreviewProps) {
   const x = useIndicatorTexts();
+  const tr = useServerTranslate();
   const t = useUsageIndicatorMessages();
   const index = useMemo(() => sourceIndex(sources), [sources]);
   const windowInfo = useMemo(() => windowNameIndex(sources), [sources]);
@@ -42,7 +44,7 @@ export function UsageIndicatorPreview({ settings, windows, sources, labels = {},
   }, [windows, primaryOrder, index, windowInfo, settings.windows, settings.max_items, settings.color_rules, labels, nowMs, staleAfterSeconds]);
   const items = real ?? sampleItems(settings, t);
   const { known } = splitFields(settings.fields);
-  const sourceInfo = (id: string) => ({ title: index.get(id)?.descriptor.title ?? id, trust: index.get(id)?.descriptor.trust ?? "" });
+  const sourceInfo = (id: string) => ({ title: tr(index.get(id)?.descriptor.title ?? id), trust: index.get(id)?.descriptor.trust ?? "" });
   const render = (layout: IndicatorLayout, title: string) => (
     <figure className="usage-ind-preview-cell">
       <figcaption className="app-muted">{title}</figcaption>

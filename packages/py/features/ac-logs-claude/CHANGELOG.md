@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Event titles and summaries that mix in values carry their source template + values in `LogEventDraft.text_templates`
+  (`/title`, `/summary`), so the web app can translate them: row rule titles and summary templates (`{/pointer}`
+  placeholders become `{name}` — the last pointer segment, `_count`/`_keys` for `|count`/`|keys`, no template when two
+  placeholders would get the same name) and the code-built titles `응답 블록 · {kind}` and `서브에이전트 위임 · {value}`.
+  Values read from the log (user text, tool output) have no template. New public function `summary_with_template`.
+- Message catalog `en`: the fixed event titles the classifier builds, the default row rule titles and summaries, the
+  default per-kind summaries and the default `thinking_note`.
 - Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
   `ac-logs-claude`, so the web app can show the Claude Code log source and classifier settings in English (data only,
   no API change).

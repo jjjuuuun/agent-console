@@ -2,6 +2,7 @@
 
 ## Unreleased (0.2.0)
 
+- Diagnostic event titles (`로그 형식 해석 실패`, `로그 분류 실패`) are in the message catalog `en`.
 - `LogEventDraft.text_templates` (`/title` or `/summary` → `TextTemplate` list, contracts 0.16.1
   `LogEvent.text_templates`, `logs` 2.1.0): source template + values of a title or summary that mixes in values. The core
   masks the templates with the same `redact` as the field and keeps only entries whose filled text equals the stored

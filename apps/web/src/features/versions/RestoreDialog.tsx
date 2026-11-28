@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
-import { useT } from "@agent-console/i18n";
+import { useServerText, useT } from "@agent-console/i18n";
 
 export interface RestoreIssue {
   path: string;
@@ -27,6 +27,7 @@ export interface RestoreDialogProps {
 /** 되돌리기 확인(끌 수 없음). 기본 포커스는 [취소]. 확인·메시지 입력·오류 영역만 있고 서버를 모른다. */
 export function RestoreDialog({ open, hash8, summary, dirty, busy, issues, error, onConfirm, onCancel }: RestoreDialogProps) {
   const t = useT("versions");
+  const serverText = useServerText();
   const cancel = useRef<HTMLButtonElement>(null);
   const [message, setMessage] = useState("");
   return (
@@ -68,7 +69,7 @@ export function RestoreDialog({ open, hash8, summary, dirty, busy, issues, error
               {issues.map((issue, i) => (
                 <li key={i}>
                   {issue.path === "" ? null : <span className="lib-mono app-muted">{issue.path} </span>}
-                  <span className="app-wrap">{issue.message}</span>
+                  <span className="app-wrap">{serverText.text(issue.message)}</span>
                 </li>
               ))}
             </ul>

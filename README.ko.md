@@ -37,12 +37,14 @@ Agent Console은 내 컴퓨터에서 Python 서버와 React 웹 앱으로 돌아
 
 ## 스크린샷
 
-![에이전트 노드와 연결이 있는 팀 그래프 편집기](assets/readme/team-graph.png)
+![에이전트 노드와 연결이 보이는 팀 그래프 편집기](assets/readme/ko/team-graph.png)
 
 | | |
 | --- | --- |
-| ![팀에 일을 맡긴 채팅과 옆에 보이는 실행 진행 상황](assets/readme/chat-run.png) | ![위임 흐름, hook 이벤트, MCP 도구 호출이 보이는 실행 상세](assets/readme/run-detail.png) |
-| ![등록한 프로젝트의 Claude Code 세션 목록이 보이는 로그 화면](assets/readme/logs.png) | ![5시간·주간 사용량 창과 토큰 합계가 보이는 사용량 대시보드](assets/readme/usage.png) |
+| ![팀에 작업을 넘기는 채팅과 대화 옆에 보이는 실행 진행 상황](assets/readme/ko/chat-run.png) | ![위임 흐름, hook 이벤트, MCP 도구 호출을 보여 주는 실행 상세](assets/readme/ko/run-detail.png) |
+| ![등록한 프로젝트의 Claude Code 세션을 나열한 로그 화면](assets/readme/ko/logs.png) | ![5시간·주간 사용량 창과 토큰 합계가 보이는 사용량 화면](assets/readme/ko/usage.png) |
+
+![다크 테마의 팀 그래프 편집기](assets/readme/ko/team-graph-dark.png)
 
 ## 준비물
 

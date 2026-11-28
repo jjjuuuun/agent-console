@@ -13,6 +13,7 @@ export interface LogViewMessages {
   more: string; // [더 보기]
   // 이벤트 표
   eventTable: string;
+  eventRows: string;
   errorBadge: string;
   errorRow: string; // 오류 행 접근성 보충
   currentPosition: string;
@@ -102,6 +103,8 @@ export interface LogViewMessages {
   handoffCell: string; // {from} {to} {n}
   handoffEmpty: string;
   handoffLimit: string; // {n}
+  /** `handoffLimit`의 단수형(1일 때) */
+  handoffLimitOne: string; // {n}
   // 대시보드
   dashboard: string;
   widgetRefresh: string;
@@ -117,6 +120,8 @@ export interface LogViewMessages {
   widgetChartFailed: string;
   widgetChartLabel: string; // {title} {dims} {metric} {n}
   widgetMoreHidden: string; // {n}
+  /** `widgetMoreHidden`의 단수형(1일 때) */
+  widgetMoreHiddenOne: string; // {n}
   widgetUpdated: string; // {ago}
   widgetInvalid: string; // {message}
   widgetUntitled: string;

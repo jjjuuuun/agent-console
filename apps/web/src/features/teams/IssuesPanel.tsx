@@ -5,6 +5,7 @@ import { Button } from "@agent-console/ui";
 import { useAppMessages } from "../../app/appMessages";
 import { sortIssues } from "../../lib/issues";
 import { useIssueMessage } from "../../app/appMessages";
+import { useServerTranslate } from "../../i18n";
 import { IssueActions } from "./IssueActions";
 import { buildIssueRows, rowSuggestions, severityCounts, type IssueRow } from "./issueRows";
 import type { ValidationState } from "./useValidation";
@@ -41,6 +42,7 @@ export function issueFieldPath(issue: Issue): string | undefined {
  */
 export function IssuesPanel({ graph, validation, open, onToggle, onValidate, onFocus, onApplySuggestion, onOpenNode }: IssuesPanelProps) {
   const issueMessage = useIssueMessage();
+  const serverText = useServerTranslate();
   const m = useAppMessages();
   const t = useTeamMessages();
   const [filter, setFilter] = useState<Filter>("all");
@@ -93,7 +95,7 @@ export function IssuesPanel({ graph, validation, open, onToggle, onValidate, onF
             )}
           </td>
           <td>
-            <div className="ac-clamp-2">{grouped ? row.groupMessage : issueMessage(first)}</div>
+            <div className="ac-clamp-2">{grouped ? serverText(row.groupMessage ?? "") : issueMessage(first)}</div>
             {hint ? <div className="team-issue-hint app-muted">{hint}</div> : null}
           </td>
           <td className="lib-mono app-muted">{grouped ? "" : first.code}</td>

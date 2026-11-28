@@ -121,6 +121,28 @@ describe("setLanguage", () => {
     expect(i18n.t("issues", { ns: "app", count: 2, replace: { count: 2 } })).toBe("2건");
   });
 
+  test("loads the lazy app bundles of the fallback chain too, so a key missing in the new language shows the fallback text", async () => {
+    const loads: string[] = [];
+    const i18n = createI18n({
+      language: "ko",
+      fallbackLanguage: "en",
+      bundled: { ko: bundled.ko },
+      loadBundled: async (language) => {
+        loads.push(language);
+        return language === "en" ? bundled.en : language === "ko" ? bundled.ko : language === "de" ? { app: { other: "nur de" } } : undefined;
+      },
+    });
+    await setLanguage(i18n, "de");
+    expect(loads.sort()).toEqual(["de", "en"]);
+    expect(i18n.t("hello", { ns: "app", replace: { name: "A" } })).toBe(bundled.en.app.hello.replace("{name}", "A"));
+    expect(i18n.t("other", { ns: "app" })).toBe("nur de");
+    // A language given in `bundled` may be a boot subset, so it is loaded once; nothing is fetched twice.
+    await setLanguage(i18n, "ko");
+    await setLanguage(i18n, "de");
+    await setLanguage(i18n, "ko");
+    expect(loads.sort()).toEqual(["de", "en", "ko"]);
+  });
+
   test("a failing server still switches with app messages only", async () => {
     const i18n = createI18n({ language: "en", bundled });
     const result = await setLanguage(i18n, "ko", {

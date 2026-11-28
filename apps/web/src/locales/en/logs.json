@@ -146,7 +146,8 @@
     "archiveDone": "Downloaded {name}",
     "rowMenu": "Row menu",
     "toUsage": "View in usage",
-    "newEvents": "{n} new events were collected",
+    "newEvents_one": "{count} new event was collected",
+    "newEvents_other": "{count} new events were collected",
     "reloadBanner": "Refresh"
   },
   "view": {

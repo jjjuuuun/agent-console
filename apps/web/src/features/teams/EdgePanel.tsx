@@ -47,7 +47,7 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
   // 서버 이슈 중 연결 설정 안을 가리키는 것(조건 행·한도 필드)은 폼의 해당 위치에 매단다
   const configIssues: ConfigIssue[] = mine.flatMap((issue) => {
     const path = configRelativePath(issue.path);
-    return path === undefined || path === "" ? [] : [{ path, message: issue.message, severity: issue.severity === "error" ? ("error" as const) : ("warning" as const) }];
+    return path === undefined || path === "" ? [] : [{ path, message: issueMessage(issue), severity: issue.severity === "error" ? ("error" as const) : ("warning" as const) }];
   });
   const cycleLimit = kind?.cycle == null ? undefined : resolveCycleLimit({ edgeConfig: edge.config, teamSettings: ctx.graph.settings, commonSettings: ctx.workspace, kindDefault: kind.cycle.max_iterations });
   // 위임 연결: 유효 방식과 위임자 이름(동작 방식 블록·옵션 문구). 방식 id를 비교하지 않고 디스크립터 속성만 본다

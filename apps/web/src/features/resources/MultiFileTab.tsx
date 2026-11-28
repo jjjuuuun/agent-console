@@ -331,7 +331,7 @@ export function MultiFileTab({ files, originFiles, onChange, errors = {}, onDism
                   />
                 </div>
                 {canPreview && preview ? (
-                  <section className="res-preview" aria-label={t.files.preview}>
+                  <section className="res-preview" tabIndex={0} aria-label={t.files.preview}>
                     {current.text.trim() === "" ? <p className="app-muted">{t.content.previewEmpty}</p> : <Markdown text={current.text} />}
                   </section>
                 ) : null}

@@ -1,13 +1,16 @@
 import { memo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { GraphEditorMessages } from "../messages";
-import { defaultMessages, format } from "../messages";
+import { defaultMessages, format, formatCount } from "../messages";
 import type { PortView } from "../logic/ports";
 import { SIDE_GLYPH } from "../logic/layout";
 import type { Side } from "../shapes/types";
 import type { BindSummary, ChipView, NodeAnnotation, NodeRunBadge, NodeStateView, NodeTagView, PortHandleRenderer } from "../types";
 import { ResourceChips } from "./ResourceChips";
 import type { ResourceChip } from "../logic/team";
+
+/** 이 폭(flow px)보다 좁은 노드는 종류 줄을 숨긴다(전체 글자는 툴팁에 남는다). */
+export const NARROW_NODE_WIDTH = 120;
 
 export interface NodeCardProps {
   label: string;
@@ -94,7 +97,7 @@ function FootChip({ chip, renderIcon }: { chip: ChipView; renderIcon: ((name: st
   return (
     <div className="ac-ge-foot" title={full}>
       {icon !== null && icon !== undefined && icon !== false ? <span className="ac-ge-chip-icon" aria-hidden="true">{icon}</span> : null}
-      <span className="ac-ge-foot-text ac-ellipsis">{chip.title}</span>
+      <span className="ac-ge-foot-text ac-ellipsis" title={full}>{chip.title}</span>
     </div>
   );
 }
@@ -125,15 +128,20 @@ export function issueAriaText(c: { error: number; warning: number; info?: number
   const info = c.info ?? 0;
   if (info > 0) {
     const head = c.error + c.warning > 0 ? `${issueAriaText({ error: c.error, warning: c.warning }, m)}, ` : "";
-    return head + format(m.issueAriaInfo, { info });
+    return head + formatCount(m, "issueAriaInfo", info, { info });
   }
-  if (c.error > 0 && c.warning > 0) return format(m.issueAria, { error: c.error, warning: c.warning });
-  if (c.error > 0) return format(m.issueAriaErrorOnly, { error: c.error });
-  return format(m.issueAriaWarningOnly, { warning: c.warning });
+  if (c.error > 0 && c.warning > 0) return `${formatCount(m, "issueAriaErrorOnly", c.error, { error: c.error })}, ${formatCount(m, "issueAriaWarningOnly", c.warning, { warning: c.warning })}`;
+  if (c.error > 0) return formatCount(m, "issueAriaErrorOnly", c.error, { error: c.error });
+  return formatCount(m, "issueAriaWarningOnly", c.warning, { warning: c.warning });
 }
 
 export function statusLabel(status: string, m: GraphEditorMessages): string {
   return m.statusLabels[status] ?? status;
+}
+
+/** 노드 박스처럼 좁은 칸에 쓰는 짧은 라벨(없으면 전체 라벨). */
+export function statusShortLabel(status: string, m: GraphEditorMessages): string {
+  return m.statusShortLabels?.[status] ?? statusLabel(status, m);
 }
 
 const sideOfPort = (p: PortView, io: "in" | "out"): Side => p.side ?? (io === "in" ? "left" : "right");
@@ -161,7 +169,7 @@ function PortRow({ port, side, render, m, hot, setHot }: { port: PortView; side:
       title={title}
     >
       {!placed && render?.(port, side)}
-      <span className="ac-ge-port-label ac-ellipsis">{port.label}</span>
+      <span className="ac-ge-port-label ac-ellipsis" title={title}>{port.label}</span>
       {placed && (
         <span className="ac-ge-port-glyph" aria-hidden="true">
           {SIDE_GLYPH[sideOfPort(port, side)]}
@@ -231,6 +239,7 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
       data-unknown-type={unknownType !== undefined ? "true" : undefined}
       data-status={state?.status}
       data-compact={props.compact ? "true" : undefined}
+      data-narrow={props.width !== undefined && props.width < NARROW_NODE_WIDTH ? "true" : undefined}
       data-dashed={props.dashed ? "true" : undefined}
       data-stacked={props.stacked ? "true" : undefined}
       data-loop-region={props.loopRegion ? "true" : undefined}
@@ -270,10 +279,14 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
             )}
           </span>
         )}
-        {props.annotation?.lead !== undefined ? <NodeTag tag={props.annotation.lead} /> : null}
-        {(props.annotation?.tags ?? []).map((tag) => (
-          <NodeTag key={tag.key} tag={tag} />
-        ))}
+        {props.annotation?.lead !== undefined || (props.annotation?.tags ?? []).length > 0 ? (
+          <span className="ac-ge-corner">
+            {props.annotation?.lead !== undefined ? <NodeTag tag={props.annotation.lead} /> : null}
+            {(props.annotation?.tags ?? []).map((tag) => (
+              <NodeTag key={tag.key} tag={tag} />
+            ))}
+          </span>
+        ) : null}
         {props.runBadge !== undefined &&
           (props.runBadge.onClick !== undefined ? (
             <button
@@ -302,7 +315,7 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
         {state !== undefined && (
           <span className="ac-ge-status" data-status={state.status} title={statusLabel(state.status, m)}>
             <span className="ac-status-icon" aria-hidden="true" />
-            <span className="ac-ge-status-label ac-ellipsis">{statusLabel(state.status, m)}</span>
+            <span className="ac-ge-status-label ac-ellipsis">{statusShortLabel(state.status, m)}</span>
           </span>
         )}
         {props.issueCount !== undefined && props.issueCount.error + props.issueCount.warning + (props.issueCount.info ?? 0) > 0 && (

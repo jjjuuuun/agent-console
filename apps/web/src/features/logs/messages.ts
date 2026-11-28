@@ -144,7 +144,7 @@ export function createLogsMessages(t: Translate) {
       archiveDone: (name: string) => t("sessions.archiveDone", { name }),
       rowMenu: t("sessions.rowMenu"),
       toUsage: t("sessions.toUsage"),
-      newEvents: (n: number) => t("sessions.newEvents", { n }),
+      newEvents: (n: number) => t("sessions.newEvents", { count: n }),
       reloadBanner: t("sessions.reloadBanner"),
     },
     /** [보기 ▾] 메뉴(5.7R.32) */

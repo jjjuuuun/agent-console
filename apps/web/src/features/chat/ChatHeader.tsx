@@ -88,7 +88,7 @@ export function ChatHeader(props: ChatHeaderProps) {
         />
       ) : (
         <button type="button" className="chat-title" title={`${title} (F2)`} onClick={() => props.onRenamingChange(true)}>
-          <h1 className="ac-ellipsis">{title}</h1>
+          <h1 className="ac-ellipsis" title={title}>{title}</h1>
         </button>
       )}
       <div className="chat-header-team">

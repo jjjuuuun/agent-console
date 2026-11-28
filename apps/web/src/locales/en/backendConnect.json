@@ -29,7 +29,7 @@
     "stale_one": "Last fetched {count} model · as of {when} — couldn't refresh",
     "stale_other": "Last fetched {count} models · as of {when} — couldn't refresh",
     "failed": "Couldn't fetch the model list. Only models set in configuration are shown.",
-    "disabled": "Automatic model lookup is off. Only models set in configuration are shown.",
+    "disabled": "Automatic model fetching is off. Only models set in configuration are shown.",
     "unsupported": "This sign-in method can't list models. Only models set in configuration are shown; you can type one in.",
     "refresh": "Refresh",
     "check": "Check connection…",

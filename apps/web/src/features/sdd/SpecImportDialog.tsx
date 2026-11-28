@@ -130,7 +130,7 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
           <div className="sdd-field">
             <div className="sdd-inline">
               <Choice checked={selected.length === rows.length} onChange={(e) => setRows(rows.map((r) => ({ ...r, checked: e.target.checked })))}>{t("import.selectAll")}</Choice>
-              <span className="app-muted">{t("import.selected", { n: rows.length, k: selected.length })}</span>
+              <span className="app-muted">{t("import.selected", { count: rows.length, k: selected.length })}</span>
             </div>
             <ul className="sdd-files" aria-label={t("import.docs")}>
               {rows.map((r, i) => (

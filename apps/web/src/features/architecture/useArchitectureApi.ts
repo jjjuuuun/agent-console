@@ -2,13 +2,15 @@
  * 구조도 서버 상태 훅(TanStack Query). 화면은 이 훅만 부르고 REST를 직접 부르지 않는다.
  * 질의 키는 `["logs", "architecture", …]` — 로그 수집·재연결 때 `["logs"]` 한 번으로 함께 무효화된다.
  */
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { keepPreviousData, useInfiniteQuery, type UseQueryResult } from "@tanstack/react-query";
 import type { LogQueryParams } from "@agent-console/api-client";
 import type { ArchitectureMembership, ArchitectureProfileList, ArchitectureView, LogEvent, LogEventPage } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery } from "../../app/queries";
+import { localizeEventPage, useServerRender, useServerTranslate } from "../../i18n";
 import { ARCH_LIMITS } from "./archConfig";
+import { localizeArchitectureProfiles, localizeArchitectureView } from "./localizeArchitecture";
 
 /** 질의 인자 → 안정된 문자열 키(이름 정렬). */
 export function archParamsKey(params: LogQueryParams): string {
@@ -24,7 +26,11 @@ export const archKeys = {
 
 /** 범위 구조도. 다시 질의하는 동안 이전 그림을 남긴다. 실패는 재시도하지 않는다(상한 초과·규칙 없음은 바로 화면 상태가 된다). */
 export function useArchitectureView(params: LogQueryParams, enabled: boolean): UseQueryResult<ArchitectureView, Error> {
+  const tr = useServerTranslate();
+  // 칸·영역·연결·비고의 글자는 서버 원문이라 화면 언어로 옮긴다
+  const select = useCallback((view: ArchitectureView) => localizeArchitectureView(view, tr), [tr]);
   return useApiQuery(archKeys.view(archParamsKey(params)), (rest) => rest.getLogArchitecture(params), {
+    select,
     enabled,
     retry: false,
     placeholderData: keepPreviousData,
@@ -43,7 +49,10 @@ export function useEventMembership(uid: string | null, profile: string | undefin
 
 /** 프로필 목록(프로필 선택·"선택한 프로필이 없어" 안내용). 실패하면 선택 칸이 없을 뿐이다. */
 export function useArchitectureProfiles(enabled: boolean): UseQueryResult<ArchitectureProfileList, Error> {
+  const tr = useServerTranslate();
+  const select = useCallback((list: ArchitectureProfileList) => localizeArchitectureProfiles(list, tr), [tr]);
   return useApiQuery(archKeys.profiles(), (rest) => rest.listArchitectureProfiles(), {
+    select,
     enabled,
     retry: false,
     staleTime: 60_000,
@@ -66,6 +75,8 @@ export interface ArchitectureRows {
  */
 export function useArchitectureRows(params: LogQueryParams | null, enabled = true): ArchitectureRows {
   const { rest } = useApi();
+  const tr = useServerTranslate();
+  const render = useServerRender();
   const key = params === null ? "" : archParamsKey(params);
   const q = useInfiniteQuery({
     queryKey: archKeys.rows(key),
@@ -73,6 +84,7 @@ export function useArchitectureRows(params: LogQueryParams | null, enabled = tru
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => rest.listLogEvents({ ...(params ?? {}), limit: ARCH_LIMITS.rowsPage, order: "asc", ...(typeof pageParam === "string" ? { cursor: pageParam } : {}) }),
     getNextPageParam: (last: LogEventPage) => last.next_cursor ?? undefined,
+    select: (data) => ({ ...data, pages: data.pages.map((pg) => localizeEventPage(pg, tr, render)) }),
     retry: false,
   });
   const pages = q.data?.pages.length ?? 0;

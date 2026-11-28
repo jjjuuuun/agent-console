@@ -29,6 +29,7 @@
   "detailLabel": "상세",
   "closeDetail": "닫기",
   "tokensTotal": "{n} 토큰(총)",
+  "tokensTotalOne": "{n} 토큰(총)",
   "tokensTitle": "총 토큰 {n}",
   "tokensUnit": "tok",
   "showMethodText": "방식 글자 표시",

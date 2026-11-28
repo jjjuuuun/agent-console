@@ -12,10 +12,14 @@
       "label": "Allowed"
     },
     "allowed_warning": {
-      "label": "Allowed (warning)"
+      "label": "Warning"
     },
     "rejected": {
       "label": "Rejected"
+    },
+    "active": {
+      "label": "In use",
+      "aria": "{window}: in use"
     },
     "idle": {
       "label": "No usage",

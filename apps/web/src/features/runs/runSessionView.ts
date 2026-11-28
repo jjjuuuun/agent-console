@@ -58,7 +58,7 @@ export function buildSessionAnnotations(i: SessionAnnotationInput): Record<strin
     if (sessions.byNode.has(target)) continue;
     const delegator = edge.source.node;
     const base = t.sessions.nodeInside(i.nodeLabel(delegator), sessions.byNode.get(delegator)?.number);
-    const title = i.calledNodes.has(target) ? base : `${base} · ${t.sessions.notCalledYet}`;
+    const title = i.calledNodes.has(target) ? base : `${t.sessions.notCalledYet} · ${base}`;
     set(target, { foot: { key: "session-in", title, fullTitle: title, iconName: "corner-down-right", tone: "neutral" } });
   }
   return out;

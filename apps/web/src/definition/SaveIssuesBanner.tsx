@@ -1,4 +1,5 @@
 import type { Issue } from "@agent-console/contracts";
+import { useServerText } from "@agent-console/i18n";
 import { Banner } from "@agent-console/ui";
 import { useAppMessages, type AppMessages } from "../app/appMessages";
 
@@ -17,6 +18,7 @@ export function readablePath(path: string, t: Pick<AppMessages["definition"]["is
 /** 저장은 성공했지만 서버가 경고한 이슈 목록(정의 편집 화면 공용, 표현 전용). */
 export function SaveIssuesBanner({ issues }: SaveIssuesBannerProps) {
   const m = useAppMessages();
+  const serverText = useServerText();
   if (issues.length === 0) return null;
   const t = m.definition.issues;
   return (
@@ -24,7 +26,7 @@ export function SaveIssuesBanner({ issues }: SaveIssuesBannerProps) {
       <ul className="lib-issue-list">
         {issues.map((i, n) => (
           <li key={`${i.code}-${n}`}>
-            {i.message}
+            {serverText.issue(i.code, i.details, serverText.text(i.message))}
             {i.path != null && i.path !== "" ? <> <code>{t.at(readablePath(i.path, t))}</code></> : null}
           </li>
         ))}

@@ -39,7 +39,7 @@ export function Toolbar(p: ToolbarProps) {
       {p.parts.zoom && diagram ? (
         <>
           <button type="button" className="ac-arch-btn" aria-label={m.zoomOut} title={`${m.zoomOut} (-)`} onClick={() => p.onZoom(1 / 1.25)}>−</button>
-          <button type="button" className="ac-arch-btn ac-arch-scale" aria-label={m.scaleReset} title={m.scaleReset} onClick={p.onResetScale}>{`${Math.round(p.scale * 100)}%`}</button>
+          <button type="button" className="ac-arch-btn ac-arch-scale" aria-label={`${Math.round(p.scale * 100)}%, ${m.scaleReset}`} title={m.scaleReset} onClick={p.onResetScale}>{`${Math.round(p.scale * 100)}%`}</button>
           <button type="button" className="ac-arch-btn" aria-label={m.zoomIn} title={`${m.zoomIn} (+)`} onClick={() => p.onZoom(1.25)}>+</button>
         </>
       ) : null}

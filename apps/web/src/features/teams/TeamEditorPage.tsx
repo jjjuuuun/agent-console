@@ -12,7 +12,7 @@ import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { useDescribeError, useErrorState, raised, raisedAs } from "../../app/errors";
 import { HintBanner } from "../../app/hints";
 import { useStorage } from "../../app/StorageContext";
-import { useAppMessages } from "../../app/appMessages";
+import { useAppMessages, useIssueMessage } from "../../app/appMessages";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
@@ -230,6 +230,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const nodeTypeList = useLocalizedTypes(nodeTypes.data ?? NONE, "node");
   const edgeTypeList = useLocalizedTypes(edgeTypes.data ?? NONE, "edge");
   const translateServer = useServerTranslate();
+  const issueMessage = useIssueMessage();
   // 리소스 종류 이름·설명도 서버 원문이라 화면 언어로 옮긴다
   const resourceTypeList = useMemo(
     () => (resourceTypes.data ?? []).map((x) => ({ ...x, title: translateServer(x.title), ...(x.description !== undefined ? { description: translateServer(x.description) } : {}), ...(typeof x.ui_hints?.icon === "string" ? { ui_hints: { ...x.ui_hints, icon: translateServer(x.ui_hints.icon) } } : {}) })),
@@ -344,7 +345,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const startChat = () => {
     if (!hasEntry) return;
     if (blocking.length > 0) {
-      toast({ tone: "warning", text: <TeamToast render={(m) => `${m.editor.startChatBlocked} ${blocking[0]?.message ?? ""}`} /> });
+      toast({ tone: "warning", text: <TeamToast render={(m) => `${m.editor.startChatBlocked} ${blocking[0] === undefined ? "" : issueMessage(blocking[0])}`} /> });
       return;
     }
     // 실행 백엔드를 미리 점검한다(필요한 데이터를 모두 읽은 뒤에만). 비어 있으면 고르는 카드를 먼저 보이고, 고르면 이어서 시작한다(ux-overhaul §1.5-B).

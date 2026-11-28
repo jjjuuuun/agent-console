@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/log-view",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Log analysis presentation components (event table, filters, details, session list, playback bar, dashboard grid) and the widget registry",
   "private": true,
   "license": "MIT",

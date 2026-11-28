@@ -32,6 +32,17 @@ export interface CreateI18nOptions {
   sourceLanguage?: string | null;
 }
 
+/**
+ * Languages whose app bundle `loadBundled` already delivered. A language given in `bundled` is not counted: the boot
+ * bundle may hold only a few namespaces, the rest is lazy. A global symbol, like the source language.
+ */
+const LOADED_KEY = Symbol.for("@agent-console/i18n:loadedBundles");
+type WithLoaded = { [LOADED_KEY]?: Set<string> };
+function loadedBundles(instance: I18nInstance): Set<string> {
+  const holder = instance as WithLoaded;
+  return (holder[LOADED_KEY] ??= new Set<string>());
+}
+
 /** A created instance. The extra fields are what `setLanguage` needs. */
 export interface Console18n extends I18nInstance {
   /** The app-bundle loader given to `createI18n`. */
@@ -138,9 +149,21 @@ export async function setLanguage(
 ): Promise<SetLanguageResult> {
   const { fetchCatalog, timeoutMs = 5000 } = options;
   if (options.sourceLanguage !== undefined) setSourceLanguage(instance, options.sourceLanguage);
-  if (instance.loadBundled && !instance.hasResourceBundle(language, "")) {
-    const bundle = await instance.loadBundled(language).catch(() => undefined);
-    if (bundle) addBundle(instance, language, bundle, false);
+  // The language and every language in its fallback chain: a key missing in the chosen language must resolve
+  // from the lazily loaded bundle of the next language, not show as a raw key.
+  const loaded = loadedBundles(instance);
+  const loader = instance.loadBundled;
+  if (loader) {
+    await Promise.all(
+      [...new Set([language, ...chainFor(instance, language)])]
+        .filter((code) => !loaded.has(code))
+        .map(async (code) => {
+          const bundle = await loader(code).catch(() => undefined);
+          if (!bundle) return;
+          addBundle(instance, code, bundle, false);
+          loaded.add(code);
+        }),
+    );
   }
   let server: SetLanguageResult["server"] = "skipped";
   if (fetchCatalog) {

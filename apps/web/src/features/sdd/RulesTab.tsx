@@ -217,7 +217,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         onConfirm={() => { const next = pendingAuto; setPendingAuto(null); if (next !== null) setDraft({ value: next, baseHash: draft?.baseHash ?? versionHash }); }}
         onCancel={() => { setPendingAuto(null); setFormEpoch((n) => n + 1); }}
       >
-        {t("automation.confirmBody", { parallelText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) === undefined ? t("automation.parallelUnset") : t("automation.parallelSet", { n: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) }), failuresText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) === undefined ? t("automation.failuresUnset") : t("automation.failuresSet", { n: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) }) })}
+        {t("automation.confirmBody", { parallelText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) === undefined ? t("automation.parallelUnset") : t("automation.parallelSet", { n: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxParallel]) }), failuresText: numText(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) === undefined ? t("automation.failuresUnset") : t("automation.failuresSet", { count: Number(autoOf(pendingAuto ?? undefined)?.[AUTOMATION_FIELDS.maxFailures]) }) })}
       </ConfirmDialog>
       {saveTemplate ? (
         <SaveTemplateDialog

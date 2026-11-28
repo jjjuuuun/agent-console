@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/trace-view",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Run trace timeline display component",
   "private": true,
   "license": "MIT",

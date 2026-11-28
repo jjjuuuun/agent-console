@@ -68,9 +68,13 @@ export function SidePane(p: SidePaneProps) {
       <div role="tablist" aria-label={t("side.label")} className="wiki-segment">
         {SIDE_TAB_DEFS.map((t) => {
           const n = counts[t.id];
+          const name = tm(`side.tabs.${t.labelKey}`) ?? t.id;
+          // 좁으면 개수 배지가 CSS로 숨으므로 접근 이름·툴팁에 개수를 남긴다(정보 손실 금지)
+          const full = n === null || n === undefined ? name : `${name} ${n}`;
           return (
-            <button key={t.id} type="button" role="tab" id={`wiki-side-tab-${t.id}`} aria-selected={p.tab === t.id} aria-controls="wiki-side-panel" className="wiki-segment-btn" onClick={() => p.onTab(t.id)}>
-              {tm(`side.tabs.${t.labelKey}`) ?? t.id}{n === null || n === undefined ? "" : ` ${n}`}
+            <button key={t.id} type="button" role="tab" id={`wiki-side-tab-${t.id}`} aria-selected={p.tab === t.id} aria-controls="wiki-side-panel" aria-label={full} title={full} className="wiki-segment-btn" onClick={() => p.onTab(t.id)}>
+              <span className="wiki-segment-name">{name}</span>
+              {n === null || n === undefined ? null : <span className="wiki-segment-count" aria-hidden="true">{n}</span>}
             </button>
           );
         })}

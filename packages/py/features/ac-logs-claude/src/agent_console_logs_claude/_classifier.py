@@ -29,6 +29,7 @@ from functools import lru_cache
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, ClassVar
 
+from agent_console_contracts import TextTemplate, render_text_template
 from agent_console_contracts.logs import LogClassifierDescriptor, LogDocumentRef, TokenSample
 from agent_console_logs import (
     TAG_SESSION_TITLE,
@@ -45,6 +46,7 @@ from agent_console_logs import (
 
 from ._schemas import classifier_config_schema
 from ._source import CLAUDE_CODE_FORMAT, META_KIND_SUBAGENT
+from ._templates import POINTER_SLOT, pointer_text_template
 
 __all__ = [
     "MCP_PATTERN_GROUPS",
@@ -54,6 +56,7 @@ __all__ = [
     "compile_mcp_pattern",
     "omitted_row",
     "summary_text",
+    "summary_with_template",
 ]
 
 OMITTED_KEY = "omitted"
@@ -122,6 +125,32 @@ def _fill(template: str, row: JsonValue) -> str:
         return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
     return _TEMPLATE.sub(repl, template)
+
+
+def _filled_title(template: str, row: JsonValue) -> tuple[str, TextTemplate | None]:
+    """제목 틀을 채운 값과 그 원문 틀 + 값(값이 섞인 제목만, 아니면 None)."""
+    shown = _fill(template, row)
+    values: dict[tuple[str, str | None], str] = {}
+    for m in POINTER_SLOT.finditer(template):
+        pointer = m.group(1) + (f"|{m.group(2)}" if m.group(2) else "")
+        values[(m.group(1), m.group(2))] = _fill("{" + pointer + "}", row)
+    return shown, pointer_text_template(template, values, shown)
+
+
+def _titled(template: TextTemplate) -> dict[str, Any]:
+    """코드가 정한 틀 → 초안 필드 ``title``·``text_templates``(제목 = 채운 틀)."""
+    return {"title": render_text_template(template), "text_templates": {"/title": [template]}}
+
+
+def _with_summary(
+    draft: LogEventDraft, summary: str, template: TextTemplate | None
+) -> LogEventDraft:
+    """요약과(값이 섞였으면) 요약 틀을 붙인 초안."""
+    templates = dict(draft.text_templates)
+    templates.pop("/summary", None)
+    if template is not None:
+        templates["/summary"] = [template]
+    return replace(draft, summary=summary, text_templates=templates)
 
 
 def _matches(rule: Mapping[str, Any], row: JsonValue) -> bool:
@@ -239,9 +268,11 @@ def _slot_text(value: Any, *, mode: str | None) -> str | None:
     return _plain(value)
 
 
-def _render_summary(detail: JsonValue, template: str) -> str | None:
-    """요약 틀을 채운다. 자리 표시 중 하나라도 값이 없으면 None(다음 항목으로 넘어가게)."""
+def _render_summary(detail: JsonValue, template: str) -> tuple[str, TextTemplate | None] | None:
+    """요약 틀을 채운다(값, 값이 섞였으면 원문 틀 + 값). 자리 표시 중 하나라도 값이 없으면
+    None(다음 항목으로 넘어가게)."""
     missing = False
+    values: dict[tuple[str, str | None], str] = {}
 
     def repl(m: re.Match[str]) -> str:
         nonlocal missing
@@ -249,14 +280,19 @@ def _render_summary(detail: JsonValue, template: str) -> str | None:
         if found is None:
             missing = True
             return ""
+        values[(m.group(1), m.group(2))] = found
         return found
 
     out = _SUMMARY_SLOT.sub(repl, template).strip()
-    return None if missing or not out else out
+    if missing or not out:
+        return None
+    return out, pointer_text_template(template, values, out)
 
 
 def summary_text(detail: JsonValue, pointers: Any) -> str | None:
     """`pointers` 항목 중 처음으로 평문이 나오는 것. 없으면 None.
+
+    값이 섞인 틀의 원문 틀 + 값까지 필요하면 `summary_with_template`.
 
     항목은 detail 기준 JSON 포인터(값이 문자열이면 그대로, 내용 블록 목록이면 text 블록을 잇는다)
     또는 틀이다. 틀은 `{/포인터}`를 그 값(평문·숫자·참거짓)으로, `{/포인터|keys}`를 객체 키
@@ -264,17 +300,35 @@ def summary_text(detail: JsonValue, pointers: Any) -> str | None:
     건너뛴다. `/`로 시작하지 않는 항목은 틀이다(자리 표시가 없으면 그 글자 그대로 — 마지막
     대체 문구로 쓴다).
     """
+    found = summary_with_template(detail, pointers)
+    return found[0] if found is not None else None
+
+
+def summary_with_template(
+    detail: JsonValue, pointers: Any
+) -> tuple[str, TextTemplate | None] | None:
+    """`summary_text`와 같은 값 + 그 값을 만든 원문 틀(값이 섞인 틀일 때만, 아니면 None).
+
+    포인터로 꺼낸 값(원문 데이터)과 자리 표시가 없는 틀(고정 문구)은 틀이 없다.
+
+    >>> detail = {"output": [{"type": "x"}]}
+    >>> found = summary_with_template(detail, ["{/output/0/type} {/output|count}개"])
+    >>> found[0], found[1].template if found and found[1] else None
+    ('x 1개', '{type} {output_count}개')
+    """
     if not isinstance(pointers, list):
         return None
     for item in pointers:
         if not isinstance(item, str):
             continue
         if _is_template(item):
-            found = _render_summary(detail, item)
+            rendered = _render_summary(detail, item)
+            if rendered is not None:
+                return rendered
         else:
             found = _plain(json_pointer(detail, item))
-        if found is not None:
-            return found
+            if found is not None:
+                return found, None
     return None
 
 
@@ -383,8 +437,8 @@ class ClaudeCodeClassifier:
     @staticmethod
     def _summarized(draft: LogEventDraft, cfg: Mapping[str, Any], kind: str) -> LogEventDraft:
         """설정 `summaries[kind]` 포인터로 목록 요약(평문)을 붙인다(못 찾으면 코어 기본)."""
-        found = summary_text(draft.detail, _cfg_map(cfg, "summaries").get(kind))
-        return replace(draft, summary=found) if found is not None else draft
+        found = summary_with_template(draft.detail, _cfg_map(cfg, "summaries").get(kind))
+        return _with_summary(draft, *found) if found is not None else draft
 
     def _base(
         self, row: Mapping[str, Any], meta: Mapping[str, JsonValue], cfg: Mapping[str, Any]
@@ -450,19 +504,27 @@ class ClaudeCodeClassifier:
         for key in ("role", "turn_id"):
             if key in values:
                 merged[key] = values.pop(key)
-        return LogEventDraft(
+        title, title_template = _filled_title(str(rule.get("title") or ""), row)
+        templates: dict[str, list[TextTemplate]] = {}
+        if not title:
+            title = _scalar_text(row.get("type")) or ""
+        elif title_template is not None:
+            templates["/title"] = [title_template]
+        draft = LogEventDraft(
             **merged,
             category=values.pop("category", "") or str(rule.get("category") or "other"),
-            title=_fill(str(rule.get("title") or ""), row) or _scalar_text(row.get("type")) or "",
+            title=title,
             stage=values.pop("stage", "") or str(rule.get("stage") or "info"),
             status=values.pop("status", "") or str(rule.get("status") or ""),
             tags=_strs(rule.get("tags")),
             correlation=correlation,
             detail=row if detail is None else detail,
             raw=raw,
-            summary=summary_text(row if detail is None else detail, rule.get("summary")),
+            text_templates=templates,
             **values,
         )
+        found = summary_with_template(row if detail is None else detail, rule.get("summary"))
+        return _with_summary(draft, *found) if found is not None else draft
 
     # ---------------------------------------------------------------- 응답 행
 
@@ -516,7 +578,9 @@ class ClaudeCodeClassifier:
                 other = LogEventDraft(
                     **common,
                     category=str(cats.get("other") or "other"),
-                    title=f"응답 블록 · {kind or '?'}",
+                    **_titled(
+                        TextTemplate(template="응답 블록 · {kind}", params={"kind": kind or "?"})
+                    ),
                     detail=block,
                 )
                 events.append(self._summarized(other, cfg, "other"))
@@ -593,7 +657,7 @@ class ClaudeCodeClassifier:
         tags = [TAG_TOOL, *_strs(tags_cfg.get("tool_call"))]
         fields: dict[str, Any] = {
             "category": str(cats.get("tool_call") or "tool"),
-            "title": name or "도구 호출",
+            "title": name or "이름 없는 도구 호출",
             "detail": {"name": name, "input": data},
         }
         delegation = self._find_tool(cfg, "delegation_tools", name)
@@ -611,7 +675,15 @@ class ClaudeCodeClassifier:
             tags += _strs(tags_cfg.get("delegation"))
             fields.update(
                 category=str(cats.get("delegation") or "handoff"),
-                title=f"서브에이전트 위임 · {value}" if value else "서브에이전트 위임",
+                **(
+                    _titled(
+                        TextTemplate(
+                            template="서브에이전트 위임 · {value}", params={"value": value}
+                        )
+                    )
+                    if value
+                    else {"title": "서브에이전트 위임"}
+                ),
                 from_=(thread,) if thread else (),
                 to=(target,),
                 via=str(delegation.get("via") or name),
@@ -782,7 +854,7 @@ class ClaudeCodeClassifier:
             tags += _strs(tags_cfg.get("tool_failed"))
         fields: dict[str, Any] = {
             "category": str(cats.get("tool_result") or "tool"),
-            "title": "도구 결과" + (" (오류)" if failed else ""),
+            "title": "도구 결과 (오류)" if failed else "도구 결과",
         }
         delegation = _cfg_map(cfg, "delegation_result")
         pointer = str(delegation.get("agent_id_pointer") or "")
@@ -793,7 +865,7 @@ class ClaudeCodeClassifier:
             tags += _strs(tags_cfg.get("delegation"))
             fields.update(
                 category=str(cats.get("delegation_result") or "merge"),
-                title="서브에이전트 결과" + (" (오류)" if failed else ""),
+                title="서브에이전트 결과 (오류)" if failed else "서브에이전트 결과",
                 from_=(template.replace("{value}", agent_id),),
                 to=(thread,) if thread else (),
                 via=str(delegation.get("via") or ""),

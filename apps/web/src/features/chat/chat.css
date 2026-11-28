@@ -28,7 +28,7 @@
 .chat-row-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); padding-left: calc(14px + var(--ac-space-1)); }
 .chat-row-sub > .ac-ellipsis { flex: 0 1 auto; }
 .chat-chip { display: inline-flex; align-items: center; flex: none; gap: 2px; padding: 0 6px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); font-size: var(--ac-text-xs); line-height: 18px; white-space: nowrap; color: var(--ac-text); text-decoration: none; }
-.chat-chip[data-tone="waiting"] { color: var(--ac-status-waiting); border-color: var(--ac-status-waiting); }
+.chat-chip[data-tone="waiting"] { color: var(--ac-text); border-color: var(--ac-status-waiting); }
 .chat-chip[data-tone="missing"] { color: var(--ac-text-muted); border-style: dashed; border-color: var(--ac-danger); }
 a.chat-chip:hover { background: var(--ac-surface-3); }
 

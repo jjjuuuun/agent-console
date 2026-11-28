@@ -29,6 +29,11 @@ export function createUsageMessages(t: Translate) {
         tone: "danger",
       },
       // 활동 없음(톤 없음). aria는 접근성 이름. 상태 어휘는 열려 있어 표에 없는 값은 원문으로 보인다.
+      // 로그 추정 블록이 진행 중(톤 없음)
+      active: {
+        label: t("status.active.label"),
+        aria: (window: string) => t("status.active.aria", { window }),
+      },
       idle: {
         label: t("status.idle.label"),
         aria: (window: string) => t("status.idle.aria", { window }),

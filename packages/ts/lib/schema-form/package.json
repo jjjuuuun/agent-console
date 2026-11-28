@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/schema-form",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "JSON Schema-based settings form (rjsf adapter)",
   "private": true,
   "license": "MIT",

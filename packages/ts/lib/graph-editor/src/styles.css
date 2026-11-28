@@ -83,7 +83,11 @@
   color: var(--ac-text-on-accent); font-size: var(--ac-text-xs); font-weight: 600; line-height: 1; overflow: hidden;
 }
 .ac-ge-node-header .ac-ge-avatar { background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral))); }
-.ac-ge-node-titles { flex: 1 1 4em; min-width: 3.5em; }
+.ac-ge-node-titles { flex: 1 1 6em; min-width: 5.5em; }
+.ac-ge-node-header { position: relative; }
+/* 세션 표식(왼쪽 띠·헤더 표식): 제목 줄 폭을 잡아먹지 않게 카드 위 모서리에 얹는다(I.14 B2) */
+.ac-ge-corner { position: absolute; top: -9px; right: var(--ac-space-2); display: inline-flex; gap: var(--ac-space-1); z-index: 1; }
+.ac-ge-node[data-narrow="true"] .ac-ge-node-type { display: none; }
 .ac-ge-node-label { font-weight: 600; line-height: 18px; word-break: keep-all; overflow-wrap: break-word; }
 .ac-ge-root[data-zoom-title="boost"] .ac-ge-node-label { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(1em, calc(12px / var(--ac-ge-zoom))); line-height: max(18px, calc(16px / var(--ac-ge-zoom))); }
 .ac-ge-root[data-zoom-title="boost"] .ac-ge-node-header .ac-ge-badges { display: none; }
@@ -236,7 +240,7 @@
 .ac-ge-rchips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); min-height: 20px; padding: var(--ac-space-1) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); border: 0; border-top: 1px solid var(--ac-border); background: transparent; font: inherit; color: inherit; text-align: left; width: 100%; box-sizing: border-box; }
 .ac-ge-rchips--button { cursor: pointer; }
 .ac-ge-rchips--button:hover { background: var(--ac-surface-3); }
-.ac-ge-rchip { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ac-ge-rchip { display: inline-flex; align-items: center; gap: var(--ac-space-1); height: 20px; padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
 .ac-ge-rchip-count { font-variant-numeric: tabular-nums; }
 
 /* 엣지 칩의 순번·횟수 배지 */
@@ -249,7 +253,7 @@
 .ac-ge-shared-title { color: var(--ac-text-muted); white-space: nowrap; }
 .ac-ge-shared-empty { color: var(--ac-text-muted); }
 .ac-ge-shared-chip { display: inline-flex; align-items: center; max-width: 200px; min-width: 0; border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); }
-.ac-ge-shared-chip-main, .ac-ge-shared-remove, .ac-ge-shared-inherited { font: inherit; color: var(--ac-text); background: transparent; border: 0; cursor: pointer; padding: 0 var(--ac-space-2); height: 22px; display: inline-flex; align-items: center; min-width: 0; }
+.ac-ge-shared-chip-main, .ac-ge-shared-remove, .ac-ge-shared-inherited { font: inherit; color: var(--ac-text); background: transparent; border: 0; cursor: pointer; padding: 0 var(--ac-space-2); height: 22px; display: inline-flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
 .ac-ge-shared-remove { padding: 0 var(--ac-space-1); color: var(--ac-text-muted); }
 .ac-ge-shared-inherited { margin-left: auto; color: var(--ac-text-muted); white-space: nowrap; }
 .ac-ge-shared-mode { color: var(--ac-text-muted); white-space: nowrap; }
@@ -435,7 +439,7 @@ select.ac-ge-lp-input { width: 12em; }
 .ac-ge-hint-chip[data-tone="warning"] { border-color: var(--ac-warning); background: var(--ac-warning-bg); }
 .ac-ge-hint-chip[data-tone="danger"] { border-color: var(--ac-danger); background: var(--ac-danger-bg); color: var(--ac-danger); }
 .ac-ge-hint-chip[data-dashed="true"] { border-style: dashed; }
-.ac-ge-chip-icon { margin-right: 2px; }
+.ac-ge-chip-icon { margin-right: var(--ac-space-1); }
 /* 회차·호출 배지(노드 헤더)와 연결 배지: 높이 18, 12px/600, 숫자 정렬 */
 .ac-ge-run-badge {
   flex: none; display: inline-flex; align-items: center; box-sizing: border-box; height: var(--ac-run-badge-h, 18px); padding: 0 var(--ac-space-1);

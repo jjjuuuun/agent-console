@@ -34,6 +34,7 @@
 .ac-sdd-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* 칩(ToneChip)의 모양·톤은 @agent-console/markdown-doc/styles.css가 맡는다(이 파일이 @import한다). 아래는 칩을 버튼으로 감싸는 것과 접기 화살표 */
+.ac-sdd-task-cell[data-col="ready"] .ac-md-chip { flex: none; max-width: none; }
 .ac-sdd-chip-button { display: inline-flex; align-items: center; gap: 2px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: var(--ac-radius-full); }
 .ac-sdd-caret { display: inline-block; flex: none; width: 0; height: 0; margin: 0 2px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; }
 .ac-sdd-stage .ac-sdd-caret, .ac-sdd-task-title .ac-sdd-caret { border: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid currentColor; }
@@ -72,8 +73,8 @@
 
 /* 스펙 목록: 표 머리와 행이 같은 격자(--ac-sdd-spec-cols)를 쓴다. 좁으면(1100 미만) 지금 단계 열을 감춘다 */
 /* 작업 표·추적 표 열 너비(앱이 .ac-sdd-root 밖에서 덮어쓸 수 있다) */
-.ac-sdd-root { --ac-sdd-col-status: 112px; --ac-sdd-col-ready: 80px; --ac-sdd-col-fields: 208px; --ac-sdd-col-runs: 140px; --ac-sdd-col-actions: 96px; --ac-sdd-trace-col-tasks: 160px; --ac-sdd-trace-col-runs: 140px; --ac-sdd-trace-col-ver: 112px; --ac-sdd-trace-col-gaps: 200px; }
-.ac-sdd-root { --ac-sdd-spec-cols: minmax(160px, 2fr) 150px minmax(80px, 1fr) minmax(120px, 1.6fr) 48px 72px; }
+.ac-sdd-root { --ac-sdd-col-status: 112px; --ac-sdd-col-ready: 112px; --ac-sdd-col-fields: 208px; --ac-sdd-col-runs: 140px; --ac-sdd-col-actions: 96px; --ac-sdd-trace-col-tasks: 160px; --ac-sdd-trace-col-runs: 140px; --ac-sdd-trace-col-ver: 112px; --ac-sdd-trace-col-gaps: 200px; }
+.ac-sdd-root { --ac-sdd-spec-cols: minmax(160px, 2fr) 150px minmax(80px, 1fr) minmax(120px, 1.6fr) 48px 112px; }
 .ac-sdd-spec-grid { display: grid; grid-template-columns: var(--ac-sdd-spec-cols); align-items: center; column-gap: 12px; }
 .ac-sdd-spec { width: 100%; height: 100%; padding: 0 12px; border: 0; border-bottom: 1px solid var(--ac-border-soft); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .ac-sdd-spec[data-menu] { padding-right: 52px; }
@@ -88,7 +89,7 @@
 .ac-sdd-sortbtn:focus-visible { outline: 2px solid var(--ac-focus-ring, currentColor); outline-offset: 1px; }
 .ac-sdd-spec-issues { color: var(--ac-warning); font-weight: 400; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 @media (max-width: 1099px) {
-  .ac-sdd-root { --ac-sdd-spec-cols: minmax(120px, 2fr) 120px minmax(100px, 1.6fr) 40px 64px; }
+  .ac-sdd-root { --ac-sdd-spec-cols: minmax(120px, 2fr) 120px minmax(100px, 1.6fr) 40px 112px; }
   .ac-sdd-spec-grid [data-col="stage"] { display: none; }
 }
 .ac-sdd-spec[data-selected] { background: var(--ac-accent-bg); }

@@ -14,6 +14,7 @@ export { saveLanguage } from "./saveLanguage";
 export { AppI18nProvider, useOptionalI18n } from "./AppI18n";
 export { AppSchemaForm, useSchemaFormI18n } from "./useSchemaFormI18n";
 export { useServerRender, useServerTranslate } from "./useServerTranslate";
+export { localizeEvent, localizeEventPage } from "./localizeLogEvent";
 export type { ServerRender } from "./useServerTranslate";
 export { AppShortcutProvider } from "./AppShortcutProvider";
 export { useMessageTable } from "./useMessageTable";

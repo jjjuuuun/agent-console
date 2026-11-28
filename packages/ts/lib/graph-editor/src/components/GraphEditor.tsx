@@ -17,7 +17,7 @@ import {
 import type { Ref } from "react";
 import type { Connection as FlowConnection, EdgeChange, FinalConnectionState, FitViewOptions, NodeChange, OnConnectStartParams } from "@xyflow/react";
 import type { EdgeLayout, NodeLayout, EdgeTypeDescriptor, Graph, Issue, IssueSuggestion, NodeSpec, EdgeSpec } from "@agent-console/contracts";
-import { format, mergeMessages } from "../messages";
+import { format, formatCount, mergeMessages } from "../messages";
 import { createEdgeShapeRegistry } from "../shapes/registry";
 import { buildFlowModel, inheritedEdgeShape, pickDescriptor } from "../logic/convert";
 import { RESET_PATH_PATCH, countResettableEdges, cycleShape, patchEdgeLayout, patchEdgesLayout, setEdgeLayout } from "../logic/edgeLayoutOps";
@@ -482,7 +482,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     if (regionNodes !== null) {
       const names = regionIds.map((id) => gNodes.find((n) => n.id === id)?.label ?? id);
       const more = names.length > 5 ? ` ${format(m.loopRegionMore, { n: names.length - 5 })}` : "";
-      setAnnounce(format(m.loopRegionAnnounce, { count: names.length, names: names.slice(0, 5).join(", ") + more }));
+      setAnnounce(formatCount(m, "loopRegionAnnounce", names.length, { count: names.length, names: names.slice(0, 5).join(", ") + more }));
     }
   }
 
@@ -837,7 +837,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     const count = eff.nodeIds.length + eff.edgeIds.length;
     emit(next, "remove");
     select(NO_SELECTION);
-    const text = format(m.removed, { count });
+    const text = formatCount(m, "removed", count, { count });
     setAnnounce(text);
     showToast({ text, undo: { previous: graph, after: next } });
   }, [readOnly, eff, graph, emit, select, showToast, m]);
@@ -847,7 +847,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     const { graph: next, newNodeIds } = duplicateNodes(graph, eff.nodeIds, idFactory);
     emit(next, "duplicate");
     select({ nodeIds: newNodeIds, edgeIds: [] });
-    setAnnounce(format(m.duplicated, { count: newNodeIds.length }));
+    setAnnounce(formatCount(m, "duplicated", newNodeIds.length, { count: newNodeIds.length }));
   }, [readOnly, eff.nodeIds, graph, idFactory, emit, select, m]);
 
   const portsLookup = useCallback(
@@ -1818,7 +1818,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
             </Panel>
           )}
           <OffscreenCue
-            label={(n) => format(m.offscreenNodes, { count: n })}
+            label={(n) => formatCount(m, "offscreenNodes", n, { count: n })}
             hint={m.offscreenHint}
             liftedByToggle={onShowMinimapChange !== undefined}
             onShowAll={() => void flow.fitView({ padding: FIT_VIEW_OPTIONS.padding, maxZoom: 1, minZoom: 0.25, duration: 200 })}
@@ -1930,7 +1930,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
               const next = removeSelection(graph, { nodeIds: [], edgeIds: menuIds });
               emit(next, "remove");
               select(NO_SELECTION);
-              const text = format(m.removed, { count: menuIds.length });
+              const text = formatCount(m, "removed", menuIds.length, { count: menuIds.length });
               setAnnounce(text);
               showToast({ text, undo: { previous: graph, after: next } });
             }}

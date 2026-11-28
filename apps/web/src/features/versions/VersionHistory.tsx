@@ -16,7 +16,7 @@ import { VersionList } from "./VersionList";
 import { type VersionSource, useVersionDiff, useVersionDoc, useVersionFiles, useVersionList, versionKeys } from "./useVersionData";
 import { compareTarget, diffTotals, isSameDiff, readIssues, readablePath, sizeOfFile, type CompareMode, type ReadablePathOptions } from "./versionsLogic";
 import "./versions.css";
-import { useT } from "@agent-console/i18n";
+import { useServerText, useT } from "@agent-console/i18n";
 import { createToastText } from "../../app/ToastText";
 
 const useVersionsT = () => useT("versions");
@@ -76,12 +76,19 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
   const fromFiles = useVersionFiles(base, diff.data?.from_hash, hasContent, src);
   const toFiles = useVersionFiles(base, diff.data?.to_hash, hasContent, src);
 
+  const serverText = useServerText();
+  // 스키마 title은 서버가 준 원문이다 -> 화면 언어의 서버 묶음으로 옮긴다(영어 화면에 "로그"가 남지 않게)
+  const translatedPathOptions = useMemo<ReadablePathOptions | undefined>(() => {
+    const resolve = pathOptions?.schemaTitles;
+    if (pathOptions === undefined || resolve === undefined) return pathOptions;
+    return { ...pathOptions, schemaTitles: (segments) => resolve(segments).map((title) => (title === undefined ? undefined : serverText.text(title))) };
+  }, [pathOptions, serverText]);
   const readable = useCallback(
     (change: DiffChange) => {
       const doc = change.op === "add" ? toDoc.data?.content : fromDoc.data?.content;
-      return readablePath(change.path, doc, pathOptions);
+      return readablePath(change.path, doc, translatedPathOptions);
     },
-    [fromDoc.data, toDoc.data, pathOptions],
+    [fromDoc.data, toDoc.data, translatedPathOptions],
   );
 
   const toggle = (hash: string) =>

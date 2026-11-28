@@ -131,23 +131,28 @@ describe("지표 세 상태 (수용 §13-4)", () => {
     const a = cell(container, "a");
     expect(a.textContent).toContain("0회");
     expect(a.querySelector('[data-status="not_collected"]')!.textContent).toBe("–");
-    expect(a.getAttribute("aria-label")).toBe("a, 0회, 토큰 수집 안 됨");
+    expect(a.getAttribute("aria-label")).toBe("a 0회 – 0, 토큰 수집 안 됨");
     const b = cell(container, "b");
     expect(b.getAttribute("data-status")).toBe("not_collected");
     expect(b.textContent).toContain("수집 안 됨");
     expect(b.textContent).not.toMatch(/0회/);
-    expect(b.getAttribute("aria-label")).toBe("b, 수집 안 됨");
+    expect(b.getAttribute("aria-label")).toBe("b 수집 안 됨");
   });
   it("추정은 '추정' 글자 + 점선 밑줄 표식", () => {
     const { container } = renderDiagram(defaultProfileView());
     const piece = cell(container, "llm").querySelector('.ac-arch-metric[data-inferred]')!;
     expect(piece.textContent).toContain("추정");
-    expect(cell(container, "llm").getAttribute("aria-label")).toBe("LLM, 12회, 오류 0, 토큰 41.2k, 소요 1.2초 추정");
+    const name = cell(container, "llm").getAttribute("aria-label") ?? "";
+    expect(name.startsWith("LLM 원격 모델 API 12회 오류 0 41.2k ~1.2s 추정")).toBe(true);
+    expect(name.endsWith(", 토큰 41.2k, 소요 1.2초 추정")).toBe(true);
   });
   it("접근 이름 문법: 이름, 지표 조각, 상태 조각(부분 사유·강조)", () => {
     const { container } = renderDiagram(defaultProfileView(), { highlight: { profile: "p", cells: ["rules"] } });
-    expect(cell(container, "rules").getAttribute("aria-label")).toBe("Rules, 12회, 부분: 도구로 연 문서만 보임(자동 로드는 기록 없음), 선택한 이벤트가 지나감");
-    expect(cell(container, "hook").getAttribute("aria-label")).toBe("Hook, 수집 안 됨");
+    // 이름은 보이는 글자(WCAG 2.5.3)로 시작하고, 보이는 글자에 없는 상태 조각이 뒤에 붙는다.
+    const rules = cell(container, "rules").getAttribute("aria-label") ?? "";
+    expect(rules.startsWith("Rules")).toBe(true);
+    expect(rules).toContain("부분: 도구로 연 문서만 보임(자동 로드는 기록 없음), 선택한 이벤트가 지나감");
+    expect(cell(container, "hook").getAttribute("aria-label")).toBe("Hook 도구 전후 검사 수집 안 됨");
   });
 });
 
@@ -223,7 +228,7 @@ describe("연결 상태 (수용 §13-6)", () => {
     const c = chip(container, "task_submit");
     expect(c.querySelector(".ac-arch-chip-label")!.textContent).toBe("과제 전달");
     expect(c.querySelector(".ac-arch-chip-count")!.textContent).toBe("12");
-    expect(c.getAttribute("aria-label")).toBe("과제 전달, Task input에서 SDK / CLI로, 12회");
+    expect(c.getAttribute("aria-label")).toBe("과제 전달 12, Task input에서 SDK / CLI로, 12회");
   });
   it("오류 연결은 danger 선·칩에 아이콘, 수집 안 됨 연결은 점 모양 + '–'", () => {
     const w = defaultProfileView();
@@ -240,7 +245,7 @@ describe("연결 상태 (수용 §13-6)", () => {
     expect(line.style.stroke).toBe("var(--ac-edge-dead)");
     expect(line.style.strokeDasharray).toBe("var(--ac-edge-pattern-2)");
     expect(chip(container, "mcp_call").querySelector(".ac-arch-chip-count")!.textContent).toBe("–");
-    expect(chip(container, "mcp_call").getAttribute("aria-label")).toBe("MCP 호출, Dispatcher에서 MCP 서버로, 수집 안 됨");
+    expect(chip(container, "mcp_call").getAttribute("aria-label")).toBe("MCP 호출 –, Dispatcher에서 MCP 서버로, 수집 안 됨");
   });
   it("선택·강조 연결은 선 색이 바뀌고 화살촉 색도 같다", () => {
     const { container } = renderDiagram(v, { selection: { kind: "edge", id: "task_submit" }, highlight: { profile: "p", edges: ["work_result"] } });
@@ -353,7 +358,7 @@ describe("맞춤·배율 (수용 §13-9)", () => {
     renderDiagram(v, { onScaleChange: onScale });
     fireEvent.change(screen.getByRole("combobox", { name: "맞춤" }), { target: { value: "100" } });
     expect(onScale).toHaveBeenCalledWith(1);
-    expect(screen.getByRole("button", { name: "100%로 되돌리기" }).textContent).toBe("100%");
+    expect(screen.getByRole("button", { name: "100%, 100%로 되돌리기" }).textContent).toBe("100%");
   });
 });
 

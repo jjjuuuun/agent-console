@@ -54,22 +54,52 @@ export const cellHasErrors = (c: ArchitectureCellView): boolean => c.status !== 
 const loc = (locale: string | undefined): { locale?: string } => (locale === undefined ? {} : { locale });
 
 export function cellAriaLabel(cell: ArchitectureCellView, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
+  return cellAriaParts(cell, messages, options).join(", ");
+}
+
+function cellAriaParts(cell: ArchitectureCellView, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string }): string[] {
   const parts = [cell.label];
   if (cell.status === "not_collected") parts.push(messages.metricNotCollected);
   else parts.push(...metricPieces(cell.metrics, messages, { kinds: options.kinds, ...loc(options.locale) }).map((p) => p.aria));
   if (cell.status === "partial" && cell.partial_reason) parts.push(formatMessage(messages.ariaPartial, { reason: cell.partial_reason }));
   if (options.highlighted) parts.push(messages.ariaHighlighted);
-  return parts.join(", ");
+  return parts;
+}
+
+/**
+ * 칸 단추의 접근 이름. 화면에 보이는 글자(`visible`)를 이름 맨 앞에 그대로 두고(WCAG 2.5.3, 보이는 글자가 이름에 포함),
+ * 보이는 글자에 없는 접근 이름 조각(풀어 쓴 지표·부분 수집 이유·강조)만 뒤에 덧붙인다.
+ */
+export function cellAccessibleName(cell: ArchitectureCellView, visible: string, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
+  const [, ...rest] = cellAriaParts(cell, messages, options);
+  const extra = rest.filter((part) => part && !visible.includes(part));
+  return extra.length > 0 ? `${visible}, ${extra.join(", ")}` : visible;
 }
 
 export function edgeAriaLabel(edge: ArchitectureEdgeView, cellLabels: Readonly<Record<string, string>>, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
+  return edgeAriaParts(edge, cellLabels, messages, options).join(", ");
+}
+
+function edgeAriaParts(edge: ArchitectureEdgeView, cellLabels: Readonly<Record<string, string>>, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string }): string[] {
   const parts = [edge.label || edge.id, formatMessage(messages.ariaEdgeFlow, { from: cellLabels[edge.from] ?? edge.from, to: cellLabels[edge.to] ?? edge.to })];
   if (edge.kind === "structural") parts.push(messages.edgeStructural);
   else if (edge.status === "not_collected") parts.push(messages.metricNotCollected);
   else parts.push(...metricPieces(edge.metrics, messages, { kinds: options.kinds, ...loc(options.locale) }).map((p) => p.aria));
   if (edge.status === "partial" && edge.partial_reason) parts.push(formatMessage(messages.ariaPartial, { reason: edge.partial_reason }));
   if (options.highlighted) parts.push(messages.ariaHighlighted);
-  return parts.join(", ");
+  return parts;
+}
+
+/**
+ * 연결 칩·행의 접근 이름. `cellAccessibleName`과 같은 규칙: 보이는 글자가 이름 맨 앞에 그대로 들어가고,
+ * 보이는 글자에 없는 조각(어디서 어디로·풀어 쓴 지표·부분 수집 이유·강조)만 뒤에 붙는다. 보이는 글자가 없으면 `edgeAriaLabel`과 같다.
+ */
+export function edgeAccessibleName(edge: ArchitectureEdgeView, cellLabels: Readonly<Record<string, string>>, visible: string, messages: ArchViewMessages, options: { highlighted?: boolean; kinds?: Readonly<Record<string, MetricKindSpec>>; locale?: string } = {}): string {
+  const parts = edgeAriaParts(edge, cellLabels, messages, options);
+  visible = visible.trim();
+  if (visible === "") return parts.join(", ");
+  const extra = parts.slice(1).filter((part) => part && !visible.includes(part));
+  return extra.length > 0 ? `${visible}, ${extra.join(", ")}` : visible;
 }
 
 export type EdgeState = "observed" | "structural" | "dead" | "error";

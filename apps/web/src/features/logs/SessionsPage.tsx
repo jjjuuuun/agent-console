@@ -1,4 +1,5 @@
 import { useProjectId } from "../../app/projectScope";
+import { useServerTranslate } from "../../i18n";
 import { useProjects } from "../projects";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -37,6 +38,7 @@ const NO_SEEN: readonly string[] = [];
 /** 세션 목록(`/logs/sessions`): 필터·기간·정렬(시작 시각)·열 구성·보관본·수집. 데이터는 `GET /logs/sessions`. */
 export function SessionsPage() {
   const errorBlockOf = useErrorBlockOf();
+  const tr = useServerTranslate();
   const lv = useLogViewMessages();
   const lvFormatters = useLogViewFormatters();
   const FIELDS = useFilterFields();
@@ -145,7 +147,7 @@ export function SessionsPage() {
           limitReached={list.length >= LOGS_LIMITS.sessionsPage}
           limit={LOGS_LIMITS.sessionsPage}
           height={Math.max(160, height - 64)}
-          sourceLabelFor={(id) => sources.data?.find((s) => s.descriptor.id === id)?.descriptor.title}
+          sourceLabelFor={(id) => { const title = sources.data?.find((s) => s.descriptor.id === id)?.descriptor.title; return title === undefined ? undefined : tr(title); }}
           renderTokenExtra={() => (
             <LinkPart id={LINK_PART_IDS.logsUsageLink}>
               <Link className="logs-linkbtn" to={pathForRole(LINK_ROLES.usage)} title={t.sessions.toUsage} aria-label={t.sessions.toUsage} onClick={(e) => e.stopPropagation()}> ↗</Link>

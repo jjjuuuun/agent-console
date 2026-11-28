@@ -1,7 +1,10 @@
 # Changelog
 
-## 0.1.1 (unreleased)
+## Unreleased
 
+- The `en` catalog now covers every source string of the default profile on its own (the profile title, the LOCAL
+  zone label and description, the LLM cell description, an unavailable item and two edge labels were only in the
+  contracts catalog).
 - Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
   `ac-architecture`, so the web app can show the default architecture map profile (cells, edges and notes) in English
   (data only, no API change).

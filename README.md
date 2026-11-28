@@ -42,12 +42,14 @@ extension point. If a setting is not enough, you add a plugin package instead of
 
 ## Screenshots
 
-![Team graph editor with agent nodes and their connections](assets/readme/team-graph.png)
+![Team graph editor with agent nodes and their connections](assets/readme/en/team-graph.png)
 
 | | |
 | --- | --- |
-| ![Chat handing a task to a team, with run progress next to the conversation](assets/readme/chat-run.png) | ![Run detail showing the delegation flow, hook events and MCP tool calls](assets/readme/run-detail.png) |
-| ![Log view listing Claude Code sessions from a registered project](assets/readme/logs.png) | ![Usage dashboard with 5-hour and weekly windows and token totals](assets/readme/usage.png) |
+| ![Chat handing a task to a team, with run progress next to the conversation](assets/readme/en/chat-run.png) | ![Run detail showing the delegation flow, hook events and MCP tool calls](assets/readme/en/run-detail.png) |
+| ![Log view listing Claude Code sessions from a registered project](assets/readme/en/logs.png) | ![Usage dashboard with 5-hour and weekly windows and token totals](assets/readme/en/usage.png) |
+
+![Team graph editor in dark theme](assets/readme/en/team-graph-dark.png)
 
 ## Requirements
 

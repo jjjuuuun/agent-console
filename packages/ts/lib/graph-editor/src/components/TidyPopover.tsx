@@ -12,7 +12,7 @@ import { SIDE_GLYPH } from "../logic/layout";
 import { fitShift, intersectRects } from "../logic/popoverFit";
 import type { FitRect } from "../logic/popoverFit";
 import type { DirectionSides } from "../logic/layout";
-import { defaultMessages, format } from "../messages";
+import { defaultMessages, format, formatCount } from "../messages";
 import type { GraphEditorMessages } from "../messages";
 import type { EdgeShapeDescriptor } from "../shapes/types";
 
@@ -408,7 +408,7 @@ export function TidyPopover<R>(props: TidyPopoverProps<R>): ReactNode {
       <div className="ac-ge-tidy-reset">
         {confirmReset ? (
           <div role="alertdialog" aria-label={m.tidyResetAllRoutes} className="ac-ge-tidy-confirm">
-            <span>{format(m.routeResetConfirm, { n: pathCount })}</span>
+            <span>{formatCount(m, "routeResetConfirm", pathCount, { n: pathCount })}</span>
             <button
               type="button"
               className="ac-ge-btn ac-ge-btn--danger"

@@ -56,6 +56,7 @@
   "advancedTitle": "고급 설정 ({count})",
   "advancedSetCount": "지정 {count}",
   "advancedErrorCount": "오류 {count}",
+  "advancedErrorCountOne": "오류 {count}",
   "advancedAllHint": "이 폼의 항목은 모두 고급 설정입니다",
   "defaultHint": "기본값: {value}",
   "exampleHint": "예: {value}",

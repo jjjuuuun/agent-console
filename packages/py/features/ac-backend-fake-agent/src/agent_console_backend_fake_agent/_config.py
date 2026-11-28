@@ -66,14 +66,24 @@ class FakeFailure(BaseModel):
         description="실패로 끝낼 때 쓸 오류 코드입니다.",
         json_schema_extra=x_ui(tier="basic", when="다른 오류 상황을 확인하고 싶을 때 바꾸세요."),
     )
-    message: str = Field(
-        default="fake 백엔드가 설정에 따라 실패했습니다",
+    message: str | None = Field(
+        default=None,
         title="오류 문구",
-        description="실패로 끝낼 때 보일 문구입니다.",
+        description=(
+            "실패로 끝낼 때 보일 문구입니다. 비우면 기본 문구(fake 백엔드가 설정에 따라 "
+            "실패했습니다)를 씁니다."
+        ),
         json_schema_extra=x_ui(
-            tier="basic", when="오류 문구가 화면에 어떻게 보이는지 확인할 때 바꾸세요."
+            tier="basic",
+            when="오류 문구가 화면에 어떻게 보이는지 확인할 때 바꾸세요.",
+            example="fake 백엔드가 설정에 따라 실패했습니다",
         ),
     )
+
+    def error_message(self) -> str:
+        """실패 오류 문구(비었으면 기본 문구 — 서버 원문, 화면은 문구 묶음으로 옮긴다)."""
+        return self.message or "fake 백엔드가 설정에 따라 실패했습니다"
+
     after_chunks: int = Field(
         default=0,
         ge=0,

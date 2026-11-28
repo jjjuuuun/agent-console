@@ -4,6 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
+- Duration units (0.2.2): the English minute unit is "m" (was "min"), so waits read "4m 14s" like the app's `duration` formatter.
 - Locale (0.2.1): `MessageList` and `TurnView` take an optional `locale` (BCP 47, normally the display language) for
   the turn time tooltip and the token count; the default is `"en-US"` instead of the host locale.
 - Message data (0.2.0): moved the default messages to `src/locales/ko.json` (`chat`, `interaction`, `composer`,

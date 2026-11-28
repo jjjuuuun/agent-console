@@ -4,6 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 range of an internal dependency bumps the other package's version and is recorded here.
 
 ## [Unreleased]
+- Plural (0.2.1): new message `tokensTotalOne` (singular form, used when the count is 1).
 - Message data (0.2.0): moved the default messages to `src/locales/ko.json` (`defaultTraceMessages` is still Korean)
   and added `en.json`. Subpath exports `./locales/ko` and `./locales/en` (`messages={en}` for English). Added tests that
   check keys and placeholders match and that the source has no Korean strings. The public API only grew, and the

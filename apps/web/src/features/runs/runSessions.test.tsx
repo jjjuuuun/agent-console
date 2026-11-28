@@ -137,7 +137,7 @@ describe("그래프 세션 표시(R0)", () => {
     expect(a["L"]!.stripColor).toBe("var(--ac-session-0)");
     expect(a["L"]!.tags![0]!.text).toBe("서브 1");
     expect(a["W"]!.lead!.text).toBe("S2");
-    expect(a["S1"]!.foot!.title).toBe("노드-L 세션 안 · S1 · 대기(호출 전)");
+    expect(a["S1"]!.foot!.title).toBe("대기(호출 전) · 노드-L 세션 안 · S1");
     const called = buildSessionAnnotations({ ...base, calledNodes: new Set(["S1"]) });
     expect(called["S1"]!.foot!.title).toBe("노드-L 세션 안 · S1");
   });

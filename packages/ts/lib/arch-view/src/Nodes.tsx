@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import type { ReactNode } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
 import type { ArchitectureCellView, ArchitectureZone } from "@agent-console/contracts/architecture";
@@ -6,8 +6,8 @@ import { METRIC_COUNT, METRIC_ERRORS, resolveTone } from "./defaults";
 import { useDiagram } from "./context";
 import { metricPieces } from "./format";
 import type { MetricText } from "./format";
-import { cellAriaLabel, cellHasErrors } from "./model";
-import type { ArchLevel } from "./types";
+import { cellAccessibleName, cellHasErrors } from "./model";
+import type { ArchLevel, MetricKindSpec } from "./types";
 import type { ArchViewMessages } from "./messages";
 
 export type CellNodeData = { cellId: string } & Record<string, unknown>;
@@ -64,13 +64,19 @@ function CellBody({ cell, level, mode }: { cell: ArchitectureCellView; level: Ar
       <span className="ac-arch-cell-title">
         <span className="ac-arch-cell-name">{cell.label}</span>
         {mode === "live" && (highlighted || cell.status === "partial") ? (
+          <>
+          {" "}
           <span className="ac-arch-badges">
             {highlighted ? <span className="ac-arch-badge" data-kind="event">{messages.badgeEvent}</span> : null}
+            {highlighted && cell.status === "partial" ? " " : null}
             {cell.status === "partial" ? <span className="ac-arch-badge" data-kind="partial" title={cell.partial_reason ?? undefined}>{messages.badgePartial}</span> : null}
           </span>
+          </>
         ) : null}
       </span>
-      <span className="ac-arch-cell-desc">{cell.description ?? ""}</span>
+      {" "}
+      <span className="ac-arch-cell-desc" title={cell.description ?? undefined}>{cell.description ?? ""}</span>
+      {" "}
       {mode === "live" ? (
         <span className="ac-arch-cell-metrics">
           {notCollected ? (
@@ -79,7 +85,12 @@ function CellBody({ cell, level, mode }: { cell: ArchitectureCellView; level: Ar
               {messages.metricNotCollected}
             </span>
           ) : (
-            pieces.map((p) => <MetricPiece key={p.name} piece={p} />)
+            pieces.map((p, i) => (
+              <Fragment key={p.name}>
+                {i > 0 ? " " : null}
+                <MetricPiece piece={p} />
+              </Fragment>
+            ))
           )}
         </span>
       ) : (
@@ -87,6 +98,27 @@ function CellBody({ cell, level, mode }: { cell: ArchitectureCellView; level: Ar
       )}
     </>
   );
+}
+
+/**
+ * 칸 단추 안에 보이는 글자를 `CellBody`와 같은 순서로 이어 붙인다(접근 이름이 그 글자를 포함하도록, WCAG 2.5.3).
+ * 요약 배율에서는 숫자만 보이지만 접근 이름은 배율과 상관없이 같도록 전체 글자를 쓰고, 요약 숫자가 거기 없으면 덧붙인다.
+ */
+function cellVisibleText(cell: ArchitectureCellView, level: ArchLevel, highlighted: boolean, messages: ArchViewMessages, kinds: Readonly<Record<string, MetricKindSpec>> | undefined, locale: string | undefined): string {
+  const loc = locale === undefined ? {} : { locale };
+  const pieces = metricPieces(cell.metrics, messages, { kinds, ...loc });
+  const parts = [cell.label];
+  if (highlighted) parts.push(messages.badgeEvent);
+  if (cell.status === "partial") parts.push(messages.badgePartial);
+  if (cell.description) parts.push(cell.description);
+  if (cell.status === "not_collected") parts.push(messages.metricNotCollected);
+  else parts.push(...pieces.map((p) => p.text));
+  const full = parts.join(" ");
+  // 요약 배율에서도 이름이 같도록(§13-8) 전체 배율 이름에도 같은 숫자 낱말을 넣는다
+  if (level !== "summary" && cell.status === "not_collected") return full;
+  const sum = summaryText(cell, metricPieces(cell.metrics, messages, { compact: true, kinds, ...loc }), messages);
+  // 접근 이름 비교는 낱말 단위라(axe label-content-name-mismatch) "5회" 안의 "5"는 보이는 "5"로 치지 않는다 — 낱말로 없으면 덧붙인다
+  return sum === "" || full.split(/\s+/).includes(sum) ? full : `${full} ${sum}`;
 }
 
 export const CellNode = memo(function CellNode({ data }: NodeProps<Node<CellNodeData>>) {
@@ -111,7 +143,7 @@ export const CellNode = memo(function CellNode({ data }: NodeProps<Node<CellNode
       data-highlighted={highlighted && mode === "live" ? "" : undefined}
       data-errors={mode === "live" && cellHasErrors(cell) ? "" : undefined}
       aria-pressed={selected}
-      aria-label={mode === "live" ? cellAriaLabel(cell, messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) }) : cell.label}
+      aria-label={mode === "live" ? cellAccessibleName(cell, cellVisibleText(cell, level, highlighted, messages, ctx.metricKinds, ctx.locale), messages, { highlighted, kinds: ctx.metricKinds, ...(ctx.locale === undefined ? {} : { locale: ctx.locale }) }) : cell.label}
       title={tip}
       style={{ ["--cell-tone" as string]: `var(${tone})` }}
       onClick={() => ctx.activate({ kind: "cell", id: cell.id })}

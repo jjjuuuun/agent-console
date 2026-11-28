@@ -45,7 +45,7 @@ import { useInteractionRespond } from "../interactions";
 import { useConversationList } from "./chatData";
 import { ProjectChip, useProjectRunsBlocked } from "../projects";
 import { useQueryClient } from "@tanstack/react-query";
-import { useChatLocale, useLanguageCode, useServerTranslate } from "../../i18n";
+import { localizeEdgeType, localizeNodeType, useChatLocale, useLanguageCode, useServerTranslate } from "../../i18n";
 
 export interface ChatPaneProps {
   conversationId: string;
@@ -117,9 +117,17 @@ export function ChatPane(props: ChatPaneProps) {
   const sessions = useConversationSessions(id, project, scope.ready && conversation.data !== undefined);
   const sessionView = sessionViewOf(sessions.data);
 
-  const kindMap = useMemo(() => indexById(edgeTypes.data), [edgeTypes.data]);
-  const naming = useMemo<NamingContext>(() => ({ nodeTypes: indexById(nodeTypes.data), agents: indexById(agents.data) }), [nodeTypes.data, agents.data]);
-  const descriptors = useMemo(() => indexById<InteractionKindDescriptor>(kinds.data), [kinds.data]);
+  // 진행 줄 단계 이름(연결 방식·노드 종류 제목)은 서버 원문이라 화면 언어로 옮긴다
+  const kindMap = useMemo(() => indexById(edgeTypes.data?.map((d) => localizeEdgeType(d, serverText))), [edgeTypes.data, serverText]);
+  const naming = useMemo<NamingContext>(
+    () => ({ nodeTypes: indexById(nodeTypes.data?.map((d) => localizeNodeType(d, serverText))), agents: indexById(agents.data) }),
+    [nodeTypes.data, agents.data, serverText],
+  );
+  // 상호작용 종류 이름·설명("도구 승인" 등)은 서버 원문이라 화면 언어로 옮긴다
+  const descriptors = useMemo(
+    () => indexById<InteractionKindDescriptor>(kinds.data?.map((k) => ({ ...k, title: serverText(k.title), ...(typeof k.description === "string" ? { description: serverText(k.description) } : {}) }))),
+    [kinds.data, serverText],
+  );
   const descriptorRecord = useMemo(() => Object.fromEntries(descriptors), [descriptors]);
   const chat = useMemo(() => resolveChatSettings(settings.data?.value.chat, graph.data?.graph.settings?.chat), [settings.data, graph.data]);
   const replyDisplay = typeof chat.reply_display === "string" ? chat.reply_display : "separate";

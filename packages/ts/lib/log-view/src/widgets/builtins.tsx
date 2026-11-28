@@ -81,7 +81,7 @@ function BarBody(p: WidgetRenderProps) {
           </span>
         </div>
       ))}
-      {list.length > shown.length ? <p className="ac-lv-muted">{fmt(p.messages.widgetMoreHidden, { n: list.length - shown.length })}</p> : null}
+      {list.length > shown.length ? <p className="ac-lv-muted">{fmt(list.length - shown.length === 1 ? p.messages.widgetMoreHiddenOne : p.messages.widgetMoreHidden, { n: list.length - shown.length })}</p> : null}
     </div>
   );
 }

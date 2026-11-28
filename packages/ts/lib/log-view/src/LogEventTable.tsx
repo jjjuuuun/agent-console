@@ -266,7 +266,7 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
             )}
           </div>
           {keepHeader ? <div className="ac-lv-empty-body" style={{ height }}>{state}</div> : null}
-          <div ref={scrollRef} className="ac-lv-scroll" style={keepHeader ? { height: 0, overflow: "hidden" } : { height }} onScroll={onScroll}>
+          <div ref={scrollRef} className="ac-lv-scroll" role="rowgroup" tabIndex={keepHeader ? -1 : 0} aria-label={m.eventRows} style={keepHeader ? { height: 0, overflow: "hidden" } : { height }} onScroll={onScroll}>
             <div style={{ height: virt.getTotalSize(), position: "relative" }}>
               {vItems.map((v) => {
                 const item = items[v.index];
@@ -282,7 +282,6 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
                     role="row"
                     aria-rowindex={v.index + 2}
                     aria-selected={selected}
-                    aria-expanded={item.group ? item.group.expanded : undefined}
                     data-error={err || undefined}
                     data-selected={selected || undefined}
                     data-active={row.uid === activeItem?.row.uid || undefined}
@@ -311,7 +310,8 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
                             type="button"
                             tabIndex={-1}
                             className="ac-lv-linkbtn"
-                            aria-label={item.group.expanded ? m.collapseGroup : m.expandGroup}
+                            aria-expanded={item.group.expanded}
+                            aria-label={`${item.group.expanded ? m.collapseGroup : m.expandGroup}, ${fmt(m.groupBlocks, { n: item.group.size })}`}
                             title={fmt(m.groupBlocks, { n: item.group.size })}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -319,7 +319,6 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
                             }}
                           >
                             <span aria-hidden="true">{item.group.expanded ? "▾" : "▸"} {item.group.size}</span>
-                            <span className="ac-lv-sr">{fmt(m.groupBlocks, { n: item.group.size })}</span>
                           </button>
                         ) : null}
                       </div>
@@ -394,7 +393,7 @@ function defaultEventCell(id: string, row: LogEventRow, c: CellCtx): ReactNode {
           {c.isError(row) ? (
             <>
               <ErrorIcon />
-              <NeutralChip>{m.errorBadge}</NeutralChip>
+              <NeutralChip fixed>{m.errorBadge}</NeutralChip>
             </>
           ) : null}
           {row.tool ? <span className="ac-lv-chip ac-lv-mono" title={row.call_id ?? row.tool}>{row.tool}</span> : null}
@@ -419,6 +418,6 @@ function defaultEventCell(id: string, row: LogEventRow, c: CellCtx): ReactNode {
 /** 기본 열 정의(열 id 목록 -> ColumnSpec). 머리글은 messages.columns, 모르는 id는 id 원문. 폭 표는 `widths`로 덮어쓴다. */
 export function eventColumns(ids: readonly string[], messages?: DeepPartial<LogViewMessages>, widths: Readonly<Record<string, number | string>> = {}): ColumnSpec<LogEventRow>[] {
   const m = mergeMessages(messages);
-  const base: Record<string, number | string> = { time: 104, lane: 120, category: 120, title: "minmax(0,2fr)", duration: 72, summary: "minmax(0,2fr)", session: 96 };
+  const base: Record<string, number | string> = { time: 104, lane: 120, category: 168, title: "minmax(0,2fr)", duration: 72, summary: "minmax(0,2fr)", session: 96 };
   return ids.map((id) => ({ id, header: m.columns[id] ?? id, width: widths[id] ?? base[id] ?? "minmax(0,1fr)", align: id === "duration" ? "end" : "start" }));
 }

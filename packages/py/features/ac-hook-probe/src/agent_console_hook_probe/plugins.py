@@ -13,7 +13,7 @@ from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar
 
-from agent_console_contracts import x_ui
+from agent_console_contracts import TextTemplate, render_text_template, x_ui
 from agent_console_contracts.logs import LogClassifierDescriptor, LogSourceDescriptor
 from agent_console_logs import (
     JSONL_CONFIG_SCHEMA,
@@ -138,9 +138,11 @@ def _v1(
         correlation[_text(cfg.get("probe_basis")) or "hook_probe"] = probe_id
     category = _text(cfg.get("category")) or "hook"
     failed = value == "error"
+    started = TextTemplate(template="{label} 시작", params={"label": label})
     start = LogEventDraft(
         category=category,
-        title=f"{label} 시작",
+        title=render_text_template(started),
+        text_templates={"/title": [started]},
         stage="start",
         thread=_text(row.get("agent_id")),
         role=_text(row.get("agent_type")),
@@ -164,6 +166,7 @@ def _v1(
         start,
         category=(_text(cfg.get("error_category")) or "error") if failed else category,
         title=f"{label} → {value} ({outcome})",
+        text_templates={},
         stage="complete",
         status=value,
         time=timestamp(row.get("ended_at")),

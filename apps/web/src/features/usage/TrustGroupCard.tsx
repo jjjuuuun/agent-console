@@ -65,7 +65,7 @@ export function TrustGroupCard({ trust, rows, nameOf, sourceInfo, hasOfficialCar
         })}
       </ul>
       {sameFooter && first !== undefined ? (
-        <p className="usage-source app-muted usage-oneline" title={fmt.dateTimeFull(first.observed_at)}>
+        <p className="usage-source app-muted usage-oneline" title={`${t.cards.sourceLine(sourceInfo(first.source).title)} · ${t.cards.observedAt(fmt.relative(first.observed_at, nowMs))} (${fmt.dateTimeFull(first.observed_at)})`}>
           {t.cards.sourceLine(sourceInfo(first.source).title)} · {t.cards.observedAt(fmt.relative(first.observed_at, nowMs))}
         </p>
       ) : null}

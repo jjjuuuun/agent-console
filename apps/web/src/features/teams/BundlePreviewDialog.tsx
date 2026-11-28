@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { BundlePreview, Graph, Issue, ResourceBundle } from "@agent-console/contracts";
 import { Button, Dialog, ProvenanceBadge } from "@agent-console/ui";
+import { useIssueMessage } from "../../app/appMessages";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { stringifyValue } from "../../lib/format";
 import { Skeleton } from "../settings";
@@ -47,6 +48,7 @@ export function warningsOfSlot(warnings: readonly Issue[], slot: string): Issue[
 
 /** 묶음 경고 영역: 서버 메시지·path·code를 그대로 보인다(줄이거나 숨기지 않는다). 경고가 없으면 영역이 없다. */
 export function BundleWarnings({ warnings }: { warnings: readonly Issue[] }) {
+  const issueMessage = useIssueMessage();
   const t = useTeamMessages();
   if (warnings.length === 0) return null;
   return (
@@ -59,7 +61,7 @@ export function BundleWarnings({ warnings }: { warnings: readonly Issue[] }) {
         {warnings.map((w, i) => (
           <li key={`${i}:${w.code}`} className="app-sev" data-severity={w.severity}>
             <span aria-hidden="true">{w.severity === "error" ? "✕" : w.severity === "warning" ? "▲" : "ℹ"} </span>
-            <span className="team-bundle-warning-text">{w.message}</span>
+            <span className="team-bundle-warning-text">{issueMessage(w)}</span>
             {typeof w.path === "string" ? <span className="app-muted lib-mono"> {w.path}</span> : null}
             <span className="app-muted lib-mono"> {w.code}</span>
           </li>

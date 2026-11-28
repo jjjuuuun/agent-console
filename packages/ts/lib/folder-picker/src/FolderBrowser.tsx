@@ -390,7 +390,7 @@ export function FolderBrowser(props: FolderBrowserProps): ReactElement {
             })}
           </div>
         </div>
-        {load.data?.truncated ? <p className="ac-fp-truncated">{t("folder.browse.truncated", { n: load.data.entries.length })}</p> : null}
+        {load.data?.truncated ? <p className="ac-fp-truncated">{t(load.data.entries.length === 1 ? "folder.browse.truncatedOne" : "folder.browse.truncated", { n: load.data.entries.length })}</p> : null}
       </div>
 
       <div className="ac-fp-browser-foot">

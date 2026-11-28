@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { contractsSchema, getContractSchema, type UsageSourceInfo, type UsageSourceSetting, type UsageWindowSnapshot, type WorkspaceSettings } from "@agent-console/contracts";
 import { InlineMarkdown } from "@agent-console/schema-form";
-import { AppSchemaForm } from "../../../i18n";
+import { AppSchemaForm, useServerTranslate } from "../../../i18n";
 import { Button, ConfirmDialog, Disclosure, TrustBadge } from "@agent-console/ui";
 import { useAppMessages } from "../../../app/appMessages";
 
@@ -137,7 +137,8 @@ export interface PrimaryOrderEditorProps {
 export function PrimaryOrderEditor({ sources, order, onChange, disabled }: PrimaryOrderEditorProps) {
   const m = useAppMessages();
   const t = m.settings.usage;
-  const title = (id: string) => sources.find((s) => s.descriptor.id === id)?.descriptor.title ?? id;
+  const tr = useServerTranslate();
+  const title = (id: string) => tr(sources.find((s) => s.descriptor.id === id)?.descriptor.title ?? id);
   const unselected = sources.map((s) => s.descriptor.id).filter((id) => !order.includes(id));
   const move = (i: number, d: number) => {
     const next = [...order];

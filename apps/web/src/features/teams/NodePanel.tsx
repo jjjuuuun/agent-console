@@ -223,6 +223,7 @@ function FieldWarningSummary({ count }: { count: number }) {
 }
 
 function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: NodeSpec; focusPath?: string | null | undefined }) {
+  const issueMessage = useIssueMessage();
   const t = useTeamMessages();
   const tr = useServerTranslate();
   const eff = useNodeEffective(ctx, node.id);
@@ -258,7 +259,7 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
     ctx.onUndoableChange(withNodeConfig(ctx.graph, node.id, config), (m) => m.settings.ignoredClearDone);
   };
 
-  const fieldWarnings = useMemo(() => Object.fromEntries((eff.data?.warnings ?? []).filter((w) => typeof w.path === "string").map((w) => [w.path as string, `${w.message} (${w.code})`])), [eff.data]);
+  const fieldWarnings = useMemo(() => Object.fromEntries((eff.data?.warnings ?? []).filter((w) => typeof w.path === "string").map((w) => [w.path as string, `${issueMessage(w)} (${w.code})`])), [eff.data, issueMessage]);
   const mergeNotes = useMemo(() => {
     const rules = { ...(ctx.workspace?.settings_merge ?? {}), ...((ctx.graph.settings?.settings_merge ?? {}) as Record<string, string>) };
     return Object.fromEntries(Object.entries(rules).map(([path, strategy]) => [path, `${strategy}`]));

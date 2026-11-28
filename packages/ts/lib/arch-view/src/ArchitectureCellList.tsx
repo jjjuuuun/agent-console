@@ -1,9 +1,10 @@
+import { Fragment } from "react";
 import type { ArchitectureCellView, ArchitectureEdgeView, ArchitectureMembership, ArchitectureView } from "@agent-console/contracts/architecture";
 import { defaultMetricKinds, defaultTones, resolveTone } from "./defaults";
 import { metricPieces } from "./format";
 import { formatMessage, resolveMessages } from "./messages";
 import type { ArchViewMessages } from "./messages";
-import { cellAriaLabel, cellBlockedReason, edgeAriaLabel, edgeBlockedReason, highlightSets, sameSelection } from "./model";
+import { cellAccessibleName, cellBlockedReason, edgeAccessibleName, edgeBlockedReason, highlightSets, sameSelection } from "./model";
 import { MetricPiece } from "./Nodes";
 import type { ArchSelection, BlockedReason, MetricKindSpec } from "./types";
 
@@ -88,16 +89,16 @@ function CellRow({ cell, messages, tones, kinds, locale, selected, highlighted, 
       data-selected={selected ? "" : undefined}
       data-highlighted={highlighted ? "" : undefined}
       aria-pressed={selected}
-      aria-label={cellAriaLabel(cell, messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
+      aria-label={cellAccessibleName(cell, [cell.label, ...(cell.status === "not_collected" ? [messages.metricNotCollected] : pieces.map((p) => p.text)), ...(cell.status === "partial" ? [messages.badgePartial] : []), ...(highlighted ? [messages.badgeEvent] : [])].join(" "), messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
       style={{ ["--cell-tone" as string]: `var(${resolveTone(cell.tone, tones)})` }}
       onClick={onPress}
     >
       <span className="ac-arch-cell-band" aria-hidden="true" />
-      <span className="ac-arch-row-name">{cell.label}</span>
+      <span className="ac-arch-row-name">{cell.label}</span>{" "}
       <span className="ac-arch-row-metrics" aria-hidden="true">
-        {cell.status === "not_collected" ? <span className="ac-arch-metric" data-status="not_collected">{messages.metricNotCollected}</span> : pieces.map((p) => <MetricPiece key={p.name} piece={p} />)}
-      </span>
-      {cell.status === "partial" ? <span className="ac-arch-badge" data-kind="partial" aria-hidden="true">{messages.badgePartial}</span> : null}
+        {cell.status === "not_collected" ? <span className="ac-arch-metric" data-status="not_collected">{messages.metricNotCollected}</span> : pieces.map((p, i) => <Fragment key={p.name}>{i > 0 ? " " : null}<MetricPiece piece={p} /></Fragment>)}
+      </span>{" "}
+      {cell.status === "partial" ? <><span className="ac-arch-badge" data-kind="partial" aria-hidden="true">{messages.badgePartial}</span>{" "}</> : null}
       {highlighted ? <span className="ac-arch-badge" data-kind="event" aria-hidden="true">{messages.badgeEvent}</span> : null}
     </button>
   );
@@ -114,13 +115,13 @@ function EdgeRow({ edge, labels, messages, kinds, locale, selected, highlighted,
       data-selected={selected ? "" : undefined}
       data-highlighted={highlighted ? "" : undefined}
       aria-pressed={selected}
-      aria-label={edgeAriaLabel(edge, labels, messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
+      aria-label={edgeAccessibleName(edge, labels, [edge.label || edge.id, formatMessage(messages.flow, { from: labels[edge.from] ?? edge.from, to: labels[edge.to] ?? edge.to }), ...(edge.kind === "structural" ? [messages.edgeStructural] : edge.status === "not_collected" ? [messages.metricNotCollected] : pieces.map((p) => p.text))].join(" "), messages, { highlighted, kinds, ...(locale === undefined ? {} : { locale }) })}
       onClick={onPress}
     >
-      <span className="ac-arch-row-name">{edge.label || edge.id}</span>
-      <span className="ac-arch-row-flow" aria-hidden="true">{formatMessage(messages.flow, { from: labels[edge.from] ?? edge.from, to: labels[edge.to] ?? edge.to })}</span>
+      <span className="ac-arch-row-name">{edge.label || edge.id}</span>{" "}
+      <span className="ac-arch-row-flow" aria-hidden="true">{formatMessage(messages.flow, { from: labels[edge.from] ?? edge.from, to: labels[edge.to] ?? edge.to })}</span>{" "}
       <span className="ac-arch-row-metrics" aria-hidden="true">
-        {edge.kind === "structural" ? <span className="ac-arch-metric">{messages.edgeStructural}</span> : edge.status === "not_collected" ? <span className="ac-arch-metric" data-status="not_collected">{messages.metricNotCollected}</span> : pieces.map((p) => <MetricPiece key={p.name} piece={p} />)}
+        {edge.kind === "structural" ? <span className="ac-arch-metric">{messages.edgeStructural}</span> : edge.status === "not_collected" ? <span className="ac-arch-metric" data-status="not_collected">{messages.metricNotCollected}</span> : pieces.map((p, i) => <Fragment key={p.name}>{i > 0 ? " " : null}<MetricPiece piece={p} /></Fragment>)}
       </span>
     </button>
   );

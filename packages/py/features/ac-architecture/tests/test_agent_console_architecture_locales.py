@@ -52,3 +52,25 @@ def test_codes_match_between_languages() -> None:
     assert set(ko) == set(en)
     for code, template in en.items():
         assert set(_PLACEHOLDER.findall(template)) == set(_PLACEHOLDER.findall(ko[code])), code
+
+
+def _strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for v in value.values() for s in _strings(v)]
+    if isinstance(value, list):
+        return [s for v in value for s in _strings(v)]
+    return []
+
+
+def test_default_profile_source_strings_are_in_the_package_catalog() -> None:
+    """The default profile's text (titles, labels, notes) is translated by this package alone."""
+    from ruamel.yaml import YAML
+
+    path = files(agent_console_architecture).joinpath("data", "default_architecture.yaml")
+    data = YAML(typ="safe", pure=True).load(path.read_text(encoding="utf-8"))
+    hangul = re.compile(r"[가-힣]")
+    en = _catalog("en").get("text", {})
+    missing = sorted({s for s in _strings(data) if hangul.search(s) and not en.get(s)})
+    assert missing == []

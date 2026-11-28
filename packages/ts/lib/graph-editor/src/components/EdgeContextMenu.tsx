@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
-import { defaultMessages, format } from "../messages";
+import { defaultMessages, format, formatCount } from "../messages";
 import type { GraphEditorMessages } from "../messages";
 import type { EdgeShapeDescriptor } from "../shapes/types";
 
@@ -87,7 +87,7 @@ export function EdgeContextMenu(props: EdgeContextMenuProps): ReactNode {
       </div>
       {confirm ? (
         <div role="alertdialog" aria-label={m.edgeLayoutResetPath} className="ac-ge-tidy-confirm">
-          <span>{format(m.routeResetConfirm, { n: resettable })}</span>
+          <span>{formatCount(m, "routeResetConfirm", resettable, { n: resettable })}</span>
           <button type="button" className="ac-ge-btn ac-ge-btn--danger" data-menu-focus autoFocus onClick={() => pick(props.onResetPaths)}>
             {m.routeResetConfirmYes}
           </button>

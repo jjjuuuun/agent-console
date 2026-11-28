@@ -84,6 +84,7 @@
 .res-content-split[data-preview="true"][data-narrow="false"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .res-editor { min-height: 360px; min-width: 0; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); overflow: hidden; display: flex; flex-direction: column; }
 .res-editor > * { flex: 1 1 0; min-height: 0; }
+.res-preview:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
 .res-preview { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); overflow: auto; min-width: 0; max-height: 640px; }
 .res-statusline { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .res-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ac-space-2); min-width: 0; }

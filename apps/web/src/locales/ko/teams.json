@@ -512,6 +512,6 @@
     "nodeBackendSep": " · ",
     "nodeViewEdge": "연결 보기",
     "nodeSessionList": "들어오는 위임 연결의 세션",
-    "teamSummary": "별도 세션 {n} · 같은 세션 안 {m}"
+    "teamSummary_other": "별도 세션 {count} · 같은 세션 안 {m}"
   }
 }

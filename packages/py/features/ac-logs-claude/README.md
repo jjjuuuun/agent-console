@@ -257,6 +257,8 @@ Known limitations (a consequence of being stateless per row):
 | `source_config_schema()`, `classifier_config_schema()` | Settings schemas (with defaults, copies) |
 | `compile_mcp_pattern(pattern)`, `McpPatternError` | MCP name template → matcher (with placeholder checks) |
 | `summary_text(detail, items)` | Extracts the plain-text summary (the same rules as the `summaries` setting: a pointer or a template) |
+| `summary_with_template(detail, items)` | The same summary plus its source template + values (`TextTemplate`) when a template mixed in values, otherwise `None` |
+| `pointer_text_template(template, values, shown)` / `slot_name(pointer, mode)` | Turns a `{/pointer}` template and its filled values into a source template with `{name}` placeholders (what `LogEvent.text_templates` carries) |
 | `omitted_row(row, keep)`, `OMITTED_KEY` | The value stored instead of the raw data (the same rule as the row rule `store_raw: false`: `keep` values + `omitted`{`bytes`, `sha256`}) |
 | `CLAUDE_CODE_SOURCE_ID`, `CLAUDE_CODE_FORMAT`, `META_KIND_*`, `MCP_PATTERN_GROUPS` | Constants |
 

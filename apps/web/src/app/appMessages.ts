@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { Issue } from "@agent-console/contracts";
 import { issueMessage } from "../lib/issues";
-import type { Translate } from "@agent-console/i18n";
+import { useServerText, type Translate } from "@agent-console/i18n";
 import { useMessageTable } from "../i18n";
 import { useShellMessages } from "./shellMessages";
 import { createModuleTable } from "./moduleMessages";
@@ -162,5 +162,13 @@ export type AppMessages = ReturnType<typeof useAppMessages>;
 /** 현재 화면 언어의 검증기 문장이 들어간 `issueMessage`(컴포넌트 안에서 부른다). */
 export function useIssueMessage(): (issue: Issue) => string {
   const { issueValidators } = useAppMessages();
-  return useCallback((issue) => issueMessage(issue, issueValidators), [issueValidators]);
+  const serverText = useServerText();
+  // 검증기 문장이 있으면 그것, 없으면 서버 이슈 문구를 서버 묶음으로 번역(없으면 원문)
+  return useCallback(
+    (issue) => {
+      const fromValidator = issueMessage(issue, issueValidators);
+      return fromValidator !== issue.message ? fromValidator : serverText.issue(issue.code, issue.details, serverText.text(issue.message));
+    },
+    [issueValidators, serverText],
+  );
 }

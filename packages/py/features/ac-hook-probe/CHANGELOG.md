@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The start event title is `{label} 시작` with `text_templates` (`/title`), so the web app can translate it; the end
+  event carries no template. Message catalog `en` has the template.
 - Message catalog `locales/en.json` is registered as the entry point `agent_console.message_catalogs`
   `ac-hook-probe`, so the web app can show the hook probe log source and classifier in English (data only, no API
   change).

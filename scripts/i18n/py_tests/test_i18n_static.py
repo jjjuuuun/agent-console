@@ -267,3 +267,141 @@ def test_repository_static_sources_cover_reported_texts() -> None:
         "할 일",
     ):
         assert text in out.result.texts, text
+
+
+# ---------------------------------------------------------------- 로그 출처 글자(I.14)
+# 영어 화면에 파서가 만든 한글 이벤트 제목이 남았는데 ``--strict``가 0이었다. 크롤 서버에는 세션
+# 기록이 없어 이벤트 응답이 비고, 분류기 기본 설정의 제목·요약 틀은 스키마 ``default``(데이터)이며,
+# 코드가 정한 제목은 소유자 찾기에만 쓰였기 때문이다.
+
+EVENTS_PY = """\
+from x import LogEventDraft, TextTemplate
+
+
+def make(failed, kind, value, fields):
+    a = LogEventDraft(title="빈 행", summary=None)
+    b = LogEventDraft(title="실패한 행" if failed else "성공한 행")
+    c = LogEventDraft(title=f"값 섞인 제목 {kind}")
+    d = TextTemplate(template="틀 제목 · {kind}", params={"kind": kind})
+    fields.update(title=value or "이름 없는 행")
+    e = {"title": "사전 제목", "other": "안 보는 글자"}
+    f = LogEventDraft(category="안 보는 키워드")
+    return a, b, c, d, e, f
+"""
+
+RULES_JSON: dict[str, Any] = {
+    "rules": [
+        {"title": "고정 제목"},
+        {"title": "hook 요약 · {/hookCount}개"},
+        {"title": "{/output/0/type} 블록 {/output|count}개"},
+        {"title": "{/a/name}와 {/b/name}"},
+        {"title": "{/only}"},
+    ]
+}
+
+
+def _events_repo(repo: Repo) -> None:
+    repo.package("gamma", "agent-console-gamma", {"gamma": EVENTS_PY}, registered=True)
+    data = repo.root / "packages/beta/src/beta/rules.json"
+    data.write_text(json.dumps(RULES_JSON, ensure_ascii=False), "utf-8")
+    repo.write_config(
+        {
+            **CONFIG,
+            "static": {
+                "data": [
+                    {
+                        "files": ["packages/beta/src/beta/rules.json"],
+                        "select": ["/rules/*/title"],
+                        "pointer_slots": True,
+                    }
+                ],
+                "python": [
+                    {
+                        "files": ["packages/gamma/src/**/*.py"],
+                        "calls": ["LogEventDraft", "TextTemplate", "update"],
+                        "keywords": ["title", "template"],
+                        "dict_keys": ["title"],
+                    }
+                ],
+            },
+        }
+    )
+
+
+def test_pointer_key_matches_the_classifier_naming() -> None:
+    from i18n_static import pointer_key
+
+    assert pointer_key("hook 실행 · {/data/hookName}") == "hook 실행 · {hookName}"
+    assert pointer_key("{/output/0/type} 블록 {/output|count}개") == "{type} 블록 {output_count}개"
+    assert pointer_key("목록 {/0} {x}") == "목록 {v0} {{x}}"
+    assert pointer_key("{/a/name}와 {/b/name}") == "{/a/name}와 {/b/name}"  # 이름 겹침
+    assert pointer_key("고정") == "고정"
+
+
+def test_static_python_and_pointer_slots_collect_event_texts(repo: Repo) -> None:
+    _events_repo(repo)
+    out = collect_static(repo.root, repo.config())
+    texts = out.result.texts
+    assert {
+        "빈 행",
+        "실패한 행",
+        "성공한 행",
+        "값 섞인 제목 {…}",
+        "틀 제목 · {kind}",
+        "이름 없는 행",
+        "사전 제목",
+    } <= set(texts)
+    assert "안 보는 글자" not in texts
+    assert "안 보는 키워드" not in texts
+    assert texts["빈 행"][0].startswith("python:packages/gamma/src/gamma/__init__.py:")
+    assert "packages/gamma/src/gamma/__init__.py" in out.python_files
+    assert {"고정 제목", "hook 요약 · {hookCount}개", "{type} 블록 {output_count}개"} <= set(texts)
+    assert "{/a/name}와 {/b/name}" in texts  # 바꿀 수 없는 틀은 그대로(빠진 문구로 보고)
+    assert "hook 요약 · {/hookCount}개" not in texts
+
+
+def test_static_event_texts_are_findings(repo: Repo) -> None:
+    _events_repo(repo)
+    result = analyze(repo.root, repo.config(), crawl_fn=None)
+    rules = {(f.rule, f.key) for f in result.findings}
+    assert ("missing_text", "빈 행") in rules
+    assert ("missing_text", "틀 제목 · {kind}") in rules
+    assert ("dynamic_text", "값 섞인 제목 {…}") in rules  # f-string → 틀 + 값으로 바꾸라는 뜻
+    assert ("missing_text", "고정 제목") in rules
+    # 바꾼 틀은 소스 글자가 아니라 소유자를 모른다(뽑기 대상 아님 — 묶음에 손으로 넣는다)
+    assert ("unowned_text", "hook 요약 · {hookCount}개") in rules
+
+
+def test_static_python_config_errors(repo: Repo) -> None:
+    with pytest.raises(I18nToolError, match="needs calls"):
+        parse_config({**CONFIG, "static": {"python": [{"files": ["x"], "calls": ["A"]}]}})
+    with pytest.raises(I18nToolError, match="pointer_slots"):
+        parse_config({**CONFIG, "static": {"data": [{"files": ["x"], "pointer_slots": "yes"}]}})
+    _events_repo(repo)
+    config = repo.config()
+    for path in (repo.root / "packages/gamma/src").rglob("*.py"):
+        path.unlink()
+    with pytest.raises(I18nToolError, match=r"static\.python: no file matches"):
+        collect_static(repo.root, config)
+
+
+def test_repository_static_sources_cover_log_event_texts() -> None:
+    """I.14: 분류기·출처의 이벤트 제목·요약 틀이 저장소 설정으로 잡힌다."""
+    repo_root = Path(__file__).resolve().parents[3]
+    config = load_config(DEFAULT_CONFIG)
+    if not (repo_root / config.static.schemas[0].document).is_file():
+        pytest.skip("contracts schema document is not in this checkout")
+    texts = collect_static(repo_root, config).result.texts
+    for text in (
+        "내부 추론",
+        "내부 추론 본문 생략",
+        "위임 작업 수신",
+        "서브에이전트 결과 (오류)",
+        "서브에이전트 위임 · {value}",
+        "로그 형식 해석 실패",
+        "hook 요약 · {hookCount}개",
+        "hook 실행 · {hookName}",
+        "MCP 진행 · {serverName}/{toolName} · {status}",
+        "{label} 시작",
+    ):
+        assert text in texts, text

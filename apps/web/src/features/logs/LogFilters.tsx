@@ -1,4 +1,5 @@
 import { useMemo, useReducer, type ReactNode, type Ref } from "react";
+import { useServerTranslate } from "../../i18n";
 import { LogFilterBar, createLocalStorageSavedFilters, type FilterFieldSpec, type LogFilterValue, type SavedFilter, type SavedFilterStore } from "@agent-console/log-view";
 import type { LogSourceInfo } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
@@ -62,13 +63,14 @@ export interface LogFiltersProps {
  */
 export function LogFilters({ value, onChange, options, suggestions, fieldErrors, inputRef, compact, savedExtra, onApplySavedExtra, trailing, search = true }: LogFiltersProps) {
   const lv = useLogViewMessages();
+  const tr = useServerTranslate();
   const fields = useFilterFields();
   const store = useSavedFilterStore();
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const saved = store.list();
   const selectOptions = (name: string) => {
     const def = FILTER_FIELDS.find((f) => f.name === name);
-    if (def?.optionsFrom === "sources") return (options.sources ?? []).map((s) => ({ value: s.descriptor.id, label: s.descriptor.title }));
+    if (def?.optionsFrom === "sources") return (options.sources ?? []).map((s) => ({ value: s.descriptor.id, label: tr(s.descriptor.title) }));
     if (def?.optionsFrom === "categories") return options.categoryIds.map((id) => ({ value: id, label: options.categoryName(id) }));
     return undefined;
   };
