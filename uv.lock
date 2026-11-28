@@ -289,7 +289,7 @@ dev = [
 
 [[package]]
 name = "agent-console-cli"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "apps/cli" }
 dependencies = [
     { name = "agent-console-logs" },
@@ -1882,7 +1882,7 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-i18n"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/py/modules/ac-mod-i18n" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -2937,7 +2937,7 @@ dev = [
 
 [[package]]
 name = "agent-console-server"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "apps/server" }
 dependencies = [
     { name = "agent-console-backend-claude-sdk", extra = ["login"] },

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+## 0.1.1
+
+- Fix: `LanguageInfo.missing` and `complete` no longer count the `text` section for the source language
+  (`source_language`, and its subtags such as `ko-KR`). Its keys are the source text itself and the web stops
+  source-text lookups there, so a fresh Korean screen no longer says thousands of strings show in English.
+  `codes` and `ns` are still counted, other languages are counted as before, and `source_language: null`
+  keeps the old count.
+
 ## 0.1.0
 
 - First release: `GET /i18n` (`I18nInfo`) and `GET /i18n/{lang}` (`MessageCatalog` with `ETag`, 304 on

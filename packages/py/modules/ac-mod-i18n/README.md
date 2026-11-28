@@ -22,7 +22,7 @@ Settings (all optional):
 | --- | --- | --- |
 | `default_language` | `en` | Language when neither the screen setting nor the browser language decides it |
 | `fallback_language` | `en` | Language for text the chosen language lacks; `complete` and `missing` count against it |
-| `source_language` | `ko` | Language the server source text is written in (`I18nInfo.source_language`). The web stops source-text lookups at this language, so a screen in this language shows the source text even when other catalogs are loaded. `null` or empty = unknown (the web looks through the whole fallback chain). Change it only for packages whose source text is in another language |
+| `source_language` | `ko` | Language the server source text is written in (`I18nInfo.source_language`). The web stops source-text lookups at this language, so a screen in this language shows the source text even when other catalogs are loaded. `null` or empty = unknown (the web looks through the whole fallback chain). In this language (and its subtags such as `ko-KR`) `LanguageInfo.missing` does not count the `text` section, whose keys are the source text itself; codes and `ns` are still counted. Change it only for packages whose source text is in another language |
 | `catalog_dirs` | `[]` | Folders with `<language>.json` files. Relative paths are relative to the settings file folder. They come after package catalogs, in list order (later wins) |
 | `disabled_catalogs` | `[]` | Package catalog ids to leave out |
 

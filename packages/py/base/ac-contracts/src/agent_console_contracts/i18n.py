@@ -29,14 +29,16 @@ class LanguageInfo(ContractModel):
     complete: bool = Field(
         description=(
             "기준 언어(`I18nInfo.fallback_language`) 묶음의 키를 빈 값 없이 다 가진다. "
-            "false면 빠진 문구는 대체 언어 → 서버 원문 순으로 보인다."
+            "원문 언어(`I18nInfo.source_language`)와 그 하위 태그는 `text`를 세지 않는다(키가 "
+            "곧 원문이다). false면 빠진 문구는 대체 언어 → 서버 원문 순으로 보인다."
         )
     )
     missing: int | None = Field(
         default=None,
         ge=0,
         description=(
-            "기준 언어 대비 빠졌거나 빈 문구 수(`text`·`codes` 항목과 `ns` 잎을 센다). "
+            "기준 언어 대비 빠졌거나 빈 문구 수(`text`·`codes` 항목과 `ns` 잎을 센다. 원문 "
+            "언어와 그 하위 태그는 `text`를 빼고 센다). "
             "null = 서버가 세지 않음(그때는 `complete`만 본다). `complete`가 true면 0이다."
         ),
     )

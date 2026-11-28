@@ -1,6 +1,6 @@
 [project]
 name = "agent-console-server"
-version = "1.1.0"
+version = "1.1.1"
 description = "Agent Console server: assembles the installed feature modules and serves them over HTTP and WebSocket"
 readme = "README.md"
 requires-python = ">=3.12"

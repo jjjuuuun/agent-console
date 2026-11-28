@@ -43,6 +43,55 @@ def test_info_lists_languages_with_completeness_against_fallback(tmp_path: Path)
     assert [row.code for row in info.languages] == ["de", "en", "ko"]
 
 
+def test_source_language_text_is_not_counted_as_missing(tmp_path: Path) -> None:
+    # ko is the source language: its texts are the keys, so only codes and ns count.
+    write_catalog(tmp_path, "ko", ns={"app": {"save": "저장"}})
+    write_catalog(tmp_path, "ko-KR", text={"저장": "보관"})
+    write_catalog(tmp_path, "de", text={"저장": "Speichern"})
+    write_catalog(tmp_path, "en", ns={"app": {"save": "Save", "open": "Open"}})
+    package = CatalogLoad(
+        catalogs=(
+            Catalog(
+                "en",
+                text={"저장": "Save", "열기": "Open"},
+                codes={"x.y": "{n} failed", "x.z": "gone"},
+                source="pkg",
+            ),
+            Catalog("ko", codes={"x.y": "{n} 실패"}, source="pkg"),
+        )
+    )
+    service = I18nService(packages=package, folders=[tmp_path], source_language="ko")
+    rows = {row.code: (row.complete, row.missing) for row in service.info().languages}
+    # ko: code x.z and ns app.open missing (codes and ns follow the whole chain) → 2; the
+    #   texts are not counted. ko-KR: a subtag of the source language, same rule → codes x.y,
+    #   x.z and ns app.save, app.open → 4. de: not the source language → "열기" + 2 codes + 2 ns
+    #   leaves → 5.
+    assert rows == {"de": (False, 5), "en": (True, 0), "ko": (False, 2), "ko-KR": (False, 4)}
+
+
+def test_source_language_complete_when_codes_and_ns_are_there() -> None:
+    package = CatalogLoad(
+        catalogs=(
+            Catalog("en", text={"저장": "Save"}, codes={"x.y": "{n} failed"}, source="pkg"),
+            Catalog("ko", codes={"x.y": "{n} 실패"}, source="pkg"),
+        )
+    )
+    on = I18nService(packages=package, source_language="KO")
+    assert {(r.code, r.complete, r.missing) for r in on.info().languages} == {
+        ("en", True, 0),
+        ("ko", True, 0),
+    }
+    # source language unknown: the old count (texts included)
+    off = I18nService(packages=package, source_language=None)
+    assert {(r.code, r.complete, r.missing) for r in off.info().languages} == {
+        ("en", True, 0),
+        ("ko", False, 1),
+    }
+    # another source language does not change ko
+    other = I18nService(packages=package, source_language="kok")
+    assert {(r.code, r.missing) for r in other.info().languages} == {("en", 0), ("ko", 1)}
+
+
 def test_catalog_matches_region_and_reports_unknown_language() -> None:
     service = I18nService(packages=PACKAGE)
     assert service.catalog("en-US").catalog.language == "en"

@@ -121,7 +121,8 @@ def test_alone_serves_info_and_catalog(plugin_root: Path) -> None:
         assert (info.default_language, info.fallback_language) == ("en", "en")
         rows = {row.code: row for row in info.languages}
         assert rows["en"].sources == ["alpha", "beta"]
-        assert (rows["en"].complete, rows["ko"].complete, rows["ko"].missing) == (True, False, 2)
+        # ko is the default source language: its texts are the keys, so only codes count (R10.9).
+        assert (rows["en"].complete, rows["ko"].complete, rows["ko"].missing) == (True, True, 0)
         reply = client.get(f"{API}/i18n/en-US")
         assert reply.status_code == 200
         body = MessageCatalog.model_validate(reply.json())
@@ -254,6 +255,13 @@ def test_source_language_setting_reaches_info() -> None:
             assert info.source_language == expected
     with pytest.raises(ValueError, match="language tag"):
         I18nModuleSettings.model_validate({"source_language": "not a language"})
+
+
+def test_source_language_null_counts_texts_again() -> None:
+    with _client(registries=_bundle(), options={"source_language": None}) as client:
+        info = I18nInfo.model_validate(client.get(f"{API}/i18n").json())
+        ko = next(row for row in info.languages if row.code == "ko")
+        assert (ko.complete, ko.missing) == (False, 2)
 
 
 def test_without_a_bundle_reads_installed_entry_points() -> None:

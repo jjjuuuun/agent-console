@@ -23,10 +23,13 @@ from typing import Any, Final
 from agent_console_contracts import Issue
 from agent_console_contracts.i18n import I18nInfo, LanguageInfo, MessageCatalog
 from agent_console_i18n import (
+    SECTIONS,
+    TEXT,
     Catalog,
     CatalogIssue,
     CatalogLoad,
     CatalogSet,
+    Section,
     compare_catalogs,
     folder_catalogs,
 )
@@ -127,7 +130,8 @@ class I18nService:
         default_language: ``I18nInfo.default_language``.
         fallback_language: ``I18nInfo.fallback_language`` and the base of ``complete``.
         source_language: ``I18nInfo.source_language`` (the language of the server source text;
-            None = unknown, the screen then looks through the whole fallback chain).
+            None = unknown, the screen then looks through the whole fallback chain). The ``text``
+            section is not counted in ``missing`` for this language and its subtags.
         read_folders: injected folder reader (tests). Default ``folder_catalogs``.
     """
 
@@ -221,11 +225,29 @@ class I18nService:
         snap.info = info
         return info
 
-    @staticmethod
-    def _missing(base: Catalog | None, merged: Catalog | None) -> int:
+    def _missing(self, base: Catalog | None, merged: Catalog | None) -> int:
+        """Entries of ``base`` that ``merged`` lacks or leaves empty, as the screen would see them.
+
+        In the source language (and its subtags such as ``ko-KR``) the ``text`` section is not
+        counted: its keys are the original strings themselves, and the screen stops the original
+        string lookup there (design §I18N I-18), so nothing shows in the fallback language. Codes
+        and ``ns`` still follow the whole fallback chain and are counted as before.
+        """
         if base is None or merged is None or base.language == merged.language:
             return 0
-        return sum(1 for issue in compare_catalogs(base, merged) if issue.code in _MISSING_CODES)
+        sections: tuple[Section, ...] = SECTIONS
+        if self._in_source_language(merged.language):
+            sections = tuple(s for s in SECTIONS if s != TEXT)
+        issues = compare_catalogs(base, merged, sections=sections)
+        return sum(1 for issue in issues if issue.code in _MISSING_CODES)
+
+    def _in_source_language(self, language: str) -> bool:
+        """Whether ``language`` is the source language or a more specific tag of it."""
+        source = self.source_language
+        if not source:
+            return False
+        code, root = language.casefold(), source.casefold()
+        return code == root or code.startswith(f"{root}-")
 
     def catalog(self, language: str) -> CatalogBody:
         """``GET /i18n/{lang}``: the merged catalog of the language that matches ``language``.

@@ -10,6 +10,8 @@
   examples of the models the web app renders; data only).
 - Docs only: the `ArchitectureDrill` description no longer contains a stray `" "` (a string concatenation inside the
   docstring); the `en` key follows the fixed text.
+- Docs only (`i18n`): `LanguageInfo.complete` and `missing` say that the source language (`I18nInfo.source_language`)
+  and its subtags do not count the `text` section (its keys are the source text).
 
 ## 0.16.1
 

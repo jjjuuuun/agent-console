@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-## [1.1.0] - 2026-11-29
+## [1.1.1] - 2026-11-28
+
+- Display version 1.1.1; `agent-console --version` prints `agent-console 1.1.1`. `serve` runs server 1.1.1 (the
+  dependency range `agent-console-server>=1.0,<2` is unchanged). No command or option changes.
+
+## [1.1.0] - 2026-11-28
 
 - Display version 1.1.0; `agent-console --version` prints `agent-console 1.1.0` (read from the installed metadata).
   `serve` runs server 1.1.0 (the dependency range `agent-console-server>=1.0,<2` is unchanged).

@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-## [1.1.0] - 2026-11-29
+## [1.1.1] - 2026-11-28
+
+- Raised the display version to 1.1.1 (`project.version`). `server_version` in `/health`, `/bootstrap` and
+  `/server-info` and the OpenAPI `info.version` still come from the installed metadata.
+- Bundles `agent-console-mod-i18n` 0.1.1 (the range `>=0.1,<0.2` is unchanged): `GET /api/v1/i18n` no longer counts
+  the source text of the source language (`source_language`, default `ko`) as missing, so the Korean screen is no
+  longer marked as partly translated.
+
+## [1.1.0] - 2026-11-28
 
 - Raised the display version to 1.1.0 (`project.version`). `server_version` in `/health`, `/bootstrap` and
   `/server-info` and the OpenAPI `info.version` still come from the installed metadata.

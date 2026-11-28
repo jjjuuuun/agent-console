@@ -8,7 +8,29 @@ their own versions and changelogs, listed at the end of each release.
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-11-29
+## [1.1.1] - 2026-11-28
+
+A patch release with two fixes. The server, the `agent-console` command and the web app all report version 1.1.1. The
+API contracts are unchanged (0.16.1).
+
+### Fixed
+
+- **Korean marked as partly translated**: *Settings › Appearance › Language* and the **Change language…** list marked
+  Korean as **Partly translated**, with thousands of missing texts shown in English. Korean is the language of the
+  server source text (`modules.options.mod-i18n.source_language`), so its source text no longer counts as missing. Codes
+  and namespaced text are still counted, and other languages are counted as before
+  ([agent-console-mod-i18n](packages/py/modules/ac-mod-i18n/CHANGELOG.md) 0.1.1).
+- **Missing Korean development guide**: the public repository now includes
+  [docs/DEVELOPMENT.ko.md](docs/DEVELOPMENT.ko.md), so its links from the Korean README, the Korean user guide and this
+  changelog work. The link in the 1.1.0 release notes points to the `v1.1.0` tag, which does not have the file; use
+  this release instead.
+
+### Package changelogs
+
+- Languages: [agent-console-mod-i18n](packages/py/modules/ac-mod-i18n/CHANGELOG.md)
+- Apps: [server](apps/server/CHANGELOG.md), [CLI](apps/cli/CHANGELOG.md)
+
+## [1.1.0] - 2026-11-28
 
 The app now runs in English or Korean, the model field fills itself with the models your account can use, and the
 backend sign-in and connection test are one click away from any screen. The server, the `agent-console` command and
@@ -291,6 +313,7 @@ as `folder`; `log_projects`, `uses` and `import_mode` are dropped on save. The `
 - Apps: [server](apps/server/CHANGELOG.md), [CLI](apps/cli/CHANGELOG.md)
 - Every other package under `packages/` keeps a `CHANGELOG.md` next to its README.
 
-[Unreleased]: https://github.com/jjjuuuun/agent-console/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/jjjuuuun/agent-console/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/jjjuuuun/agent-console/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jjjuuuun/agent-console/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jjjuuuun/agent-console/releases/tag/v1.0.0
